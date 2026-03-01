@@ -2,6 +2,7 @@
 
 #include "imgui.h"
 #include "imgui-SFML.h"
+#include <algorithm>
 
 Renderer::Renderer(sf::RenderWindow& w, sf::View& gv, sf::View& uv)
                     : window(w), gameView(gv), uiView(uv), camera(w, &gv), atomShape(5.f)
@@ -24,10 +25,10 @@ Renderer::Renderer(sf::RenderWindow& w, sf::View& gv, sf::View& uv)
 
 void Renderer::wallImage(const Vec3D start, const Vec3D end) {
     constexpr int textureScale = 4;
-    const double worldWidth = end.x - start.x;
-    const double worldHeight = end.y - start.y;
-    const int width = worldWidth * textureScale;
-    const int height = worldHeight * textureScale;
+    const double worldWidth = std::max(1.0, end.x - start.x);
+    const double worldHeight = std::max(1.0, end.y - start.y);
+    const int width = static_cast<int>(worldWidth * textureScale);
+    const int height = static_cast<int>(worldHeight * textureScale);
 
     std::vector<sf::Uint8> forcePixels(width * height * 4, 0);
     for (int y = 0; y < height; ++y) {
@@ -88,9 +89,11 @@ void Renderer::drawShot(const std::vector<Atom>& atoms, const SimBox& box, float
     std::vector<const Atom*> sorted;
     for (const Atom& a : atoms) sorted.push_back(&a);
     std::sort(sorted.begin(), sorted.end(), [](const Atom* a, const Atom* b) {return a->coords.z > b->coords.z;});
+    const sf::Vector2f boxOffset(static_cast<float>(box.start.x), static_cast<float>(box.start.y));
 
     for (const Atom* atom : sorted) {
-        atomShape.setPosition(atom->coords.x, atom->coords.y);
+        atomShape.setPosition(static_cast<float>(atom->coords.x) + boxOffset.x,
+                              static_cast<float>(atom->coords.y) + boxOffset.y);
         atomShape.setRadius(atom->getProps().radius - (atom->coords.z * alpha));
         atomShape.setFillColor(atom->getProps().color);
         if (atom->isSelect)
@@ -110,6 +113,8 @@ void Renderer::drawShot(const std::vector<Atom>& atoms, const SimBox& box, float
                     sf::Vertex(sf::Vector2f(bond.b->coords.x+bond.b->getProps().radius - (bond.b->coords.z * alpha), bond.b->coords.y+bond.b->getProps().radius - (bond.b->coords.z * alpha)))
                 };
                 // цвет линии
+                line[0].position += boxOffset;
+                line[1].position += boxOffset;
                 line[0].color = sf::Color::Blue;
                 line[1].color = sf::Color::Blue;
 
@@ -163,6 +168,7 @@ void Renderer::drawForceField(const sf::Texture& forceTexture, const SimBox& box
         static_cast<float>(box.end.x - box.start.x),
         static_cast<float>(box.end.y - box.start.y)
     ));
+    forceFieldQuad.setPosition(static_cast<float>(box.start.x), static_cast<float>(box.start.y));
     forceFieldQuad.setTexture(&forceTexture, true);
 
     window.draw(forceFieldQuad, &forceFieldShader);

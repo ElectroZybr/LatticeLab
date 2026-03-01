@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cmath>
 #include <algorithm>
+#include "../SimBox.h"
 
 SpatialGrid* Atom::grid = nullptr;
 
@@ -55,10 +56,13 @@ void Atom::PredictPosition(double dt) {
     force = Vec3D(0, 0, 0);
 }
 
-void Atom::SoftWalls(double dt) {
-    applyWall(coords.x, speed.x, force.x, 0.0, static_cast<double>(grid->sizeX - 1));
-    applyWall(coords.y, speed.y, force.y, 0.0, static_cast<double>(grid->sizeY - 1));
-    applyWall(coords.z, speed.z, force.z, 0.0, 2.0);
+void Atom::SoftWalls(SimBox& box, double dt) {
+    const double maxX = box.end.x - box.start.x - 1;
+    const double maxY = box.end.y - box.start.y - 1;
+    const double maxZ = box.end.z - box.start.z - 1;
+    applyWall(coords.x, speed.x, force.x, 0.0, maxX);
+    applyWall(coords.y, speed.y, force.y, 0.0, maxY);
+    applyWall(coords.z, speed.z, force.z, 0.0, maxZ);
 }
 
 inline void Atom::applyWall(double& coord, double& speed, double& force, double min, double max) {
@@ -84,8 +88,8 @@ inline void Atom::applyWall(double& coord, double& speed, double& force, double 
     }
 }
 
-void Atom::ComputeForces(double deltaTime) {
-    SoftWalls(deltaTime);
+void Atom::ComputeForces(SimBox& box, double deltaTime) {
+    SoftWalls(box, deltaTime);
     int curr_x = grid->worldToCellX(coords.x), curr_y = grid->worldToCellY(coords.y);
     int range = 1;
     // проверка взаимодействий с соседними атомами
@@ -107,9 +111,9 @@ void Atom::ComputeForces(double deltaTime) {
                     }
                     
                     if (!flag) {
-                        if (distance < 1.3 * r0 && valence > 0 && other->valence > 0) {
-                            Bond::CreateBond(this, other);
-                        }
+                        // if (distance < 1.3 * r0 && valence > 0 && other->valence > 0) {
+                        //     Bond::CreateBond(this, other);
+                        // }
                         Vec3D force = NonBondedForce(this, other, deltaTime);
                         this->force -= force;
                         other->force += force;
