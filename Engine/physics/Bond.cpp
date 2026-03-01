@@ -10,7 +10,7 @@ std::list<Bond> Bond::bonds_list;
 
 Bond::Bond (Atom* _a, Atom* _b) : a(_a), b(_b) {//, float _r0, float _k, float _D_e, float _alpha
     BondParams bond_params = bond_default_props.get(AtomType(_a->type), AtomType(_b->type));
-    std::cout << "<Bond params> a:" << _a->type << " b: "<< _b->type << " r0: "<< bond_params.r0 << " a: "<< bond_params.a << " De: "<< bond_params.De << std::endl;
+    // std::cout << "<Bond params> a:" << _a->type << " b: "<< _b->type << " r0: "<< bond_params.r0 << " a: "<< bond_params.a << " De: "<< bond_params.De << std::endl;
     params.r0 = bond_params.r0;
     params.a = bond_params.a;
     params.De = bond_params.De;
@@ -69,7 +69,7 @@ void Bond::angleForce(Atom* o, Atom* b, Atom* c) {
 }
 
 Bond* Bond::CreateBond(Atom* a, Atom* b) {
-    std::cout << "<Create bond>" << std::endl;
+    // std::cout << "<Create bond>" << std::endl;
     bonds_list.emplace_back(a, b);
     auto it = std::prev(bonds_list.end());
     a->bonds.push_back(b);
@@ -92,7 +92,7 @@ void Bond::detach() {
 
 void Bond::BreakBond(Bond* bond) {
     if (!bond) return;
-    std::cout << "<Break bond>" << std::endl;
+    // std::cout << "<Break bond>" << std::endl;
     bond->detach();
 
     for (auto it = bonds_list.begin(); it != bonds_list.end(); ++it) {

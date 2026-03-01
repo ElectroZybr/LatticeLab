@@ -24,13 +24,13 @@ public:
     void drawBonds(bool flag);
     void setCameraPos(double x, double y);;
     SimBox& sim_box;
+    Renderer render;
 
 private:
     sf::RenderWindow& window;
     sf::View gameView;
     sf::View uiView;;
     std::vector<Atom> atoms;
-    Renderer render;
 
     bool atomMoveFlag = false;
     bool selectionFrameMoveFlag = false;
