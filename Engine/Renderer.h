@@ -29,11 +29,17 @@ private:
     sf::View& uiView;
     
     std::vector<sf::Vertex> gridLines;
-    sf::CircleShape atomShape;
+    sf::Texture atomTextureLow;
+    sf::Texture atomTextureMid;
+    sf::Texture atomTextureHigh;
+    sf::VertexArray atomBatch{sf::Quads};
+    std::vector<sf::Vertex> bondBatch;
+    std::vector<const Atom*> sortedAtoms;
     sf::RectangleShape frameShape;
     sf::RectangleShape forceFieldQuad;
     sf::Shader forceFieldShader;
     bool forceFieldShaderLoaded = false;
+    void initAtomTexture(sf::Texture& texture, unsigned texSize);
     void drawTransparencyMap(sf::RenderWindow& window, const SpatialGrid& grid);
     void drawForceField(const sf::Texture& forceTexture, const SimBox& box);
     int getWallForce(int coord, int min, int max);

@@ -20,7 +20,7 @@
 #define HEIGHT  600
 
 #define FPS  60
-#define LPS  30
+#define LPS  5
 #define Dt  0.01
 
 #include <vector>
@@ -32,7 +32,7 @@ int main() {
     icon.loadFromFile("icon.png");
     window.setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
 
-    SimBox box(Vec3D(0, 0, 0), Vec3D(50, 50, 3));
+    SimBox box(Vec3D(0, 0, 0), Vec3D(1000, 1000, 3));
     Simulation simulation(window, box);
     simulation.setCameraPos(25, 25);
     // simulation.sim_box.setSizeBox(Vec3D(0, 0, 0), Vec3D(50, 50.5, 3));
@@ -47,8 +47,8 @@ int main() {
     // simulation.addBond(hydrogen_1, oxygen_1);
     // simulation.addBond(hydrogen_2, oxygen_1);
 
-    for (int i = 0; i <= 15; i++) {
-        for (int j = 0; j <= 15; j++) {
+    for (int i = 0; i <= 30; i++) {
+        for (int j = 0; j <= 30; j++) {
             simulation.createAtom(Vec3D(3+i*3, 3+j*3, 1), randomUnitVector3D(0.5), 1);
         }
     }
@@ -73,6 +73,9 @@ int main() {
     double shotTmr = 0.0;
     double simTmr = 0.0;
     double logTmr = 0.0;
+
+    auto duration = std::chrono::microseconds::zero();
+    int i;
     
     while (window.isOpen()) {
         float deltaTime = clock.restart().asSeconds();
@@ -90,18 +93,21 @@ int main() {
 
         shotTmr += deltaTime;
         if (shotTmr >= 1./FPS) {
-            // auto start = std::chrono::high_resolution_clock::now();
             simulation.event();
+            auto start = std::chrono::high_resolution_clock::now();
             simulation.renderShot(shotTmr);
             shotTmr = 0;
-            // auto end = std::chrono::high_resolution_clock::now();
-            // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-
-            // std::cout << "Time: " << duration.count() << " microseconds\n";
+            auto end = std::chrono::high_resolution_clock::now();
+            duration += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+            i++;
         }
 
         logTmr += deltaTime;
         if (logTmr >= 1./LPS) {
+            std::cout << "AverageTime: " << duration.count()/i << " microseconds\n";
+            duration = std::chrono::microseconds::zero();
+            i = 0;
+            // std::cout << "Zoom: " << simulation.render.camera.getZoom() << "\n";
             // simulation.logEnergies();
             // simulation.logAtomPos();
             // simulation.logMousePos();

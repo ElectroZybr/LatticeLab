@@ -111,9 +111,9 @@ void Atom::ComputeForces(SimBox& box, double deltaTime) {
                     }
                     
                     if (!flag) {
-                        // if (distance < 1.3 * r0 && valence > 0 && other->valence > 0) {
-                        //     Bond::CreateBond(this, other);
-                        // }
+                        if (distance < 1.3 * r0 && valence > 0 && other->valence > 0) {
+                            Bond::CreateBond(this, other);
+                        }
                         Vec3D force = NonBondedForce(this, other, deltaTime);
                         this->force -= force;
                         other->force += force;
@@ -173,11 +173,4 @@ float Atom::LennardJonesForce(float d) {
 
 float Atom::kineticEnergy() const {
     return 0.5f * getProps().mass * (speed.x * speed.x + speed.y * speed.y);
-}
-
-float Atom::pairPotentialEnergy(Atom* other) {
-    float dx = other->coords.x - coords.x;
-    float dy = other->coords.y - coords.y;
-    float dist = std::sqrt(dx*dx + dy*dy);
-    return MorsePotential(dist);
 }

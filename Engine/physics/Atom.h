@@ -59,7 +59,6 @@ public:
     void Verlet(double dt);
 
     float kineticEnergy() const;
-    float pairPotentialEnergy(Atom* other);
 
     static void setGrid(SpatialGrid* grid);
 
