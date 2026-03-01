@@ -32,8 +32,7 @@ int main() {
     icon.loadFromFile("icon.png");
     window.setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
 
-    // SpatialGrid grid(50, 50);
-    SimBox box(Vec3D(-10, 0, 0), Vec3D(50, 100, 3));
+    SimBox box(Vec3D(0, 0, 0), Vec3D(50, 50, 3));
     Simulation simulation(window, box);
     simulation.setCameraPos(25, 25);
     // simulation.sim_box.setSizeBox(Vec3D(0, 0, 0), Vec3D(50, 50.5, 3));
@@ -50,7 +49,7 @@ int main() {
 
     for (int i = 0; i <= 15; i++) {
         for (int j = 0; j <= 15; j++) {
-            simulation.createAtom(Vec3D(3+i*3, 3+j*3, 1), Vec3D(0, 0, 0), 1);
+            simulation.createAtom(Vec3D(3+i*3, 3+j*3, 1), randomUnitVector3D(0.5), 1);
         }
     }
 
@@ -107,8 +106,8 @@ int main() {
             // simulation.logAtomPos();
             // simulation.logMousePos();
             // simulation.logBondList();
-            if (simulation.sim_box.end.y > 20)
-                simulation.setSizeBox(Vec3D(0, 0, 0), Vec3D(50, simulation.sim_box.end.y-0.1, 3));
+            // if (simulation.sim_box.end.y > 20)
+            //     simulation.setSizeBox(simulation.sim_box.start, Vec3D(50, simulation.sim_box.end.y-0.05, 3));
             logTmr = 0;
         }
     }

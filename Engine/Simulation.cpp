@@ -14,7 +14,7 @@ Simulation::Simulation(sf::RenderWindow& w, SimBox& box)
         sim_box.setRenderer(&render);
 
         Interface::init(window);
-        Tools::init(&window, &gameView, &render, &sim_box.grid);
+        Tools::init(&window, &gameView, &render, &sim_box.grid, &sim_box);
         Atom::setGrid(&sim_box.grid);
 
         // резервируем место под создание атомов
@@ -28,7 +28,7 @@ void Simulation::update(float dt) {
             for (Atom& atom : atoms)
                 atom.PredictPosition(dt);
             for (Atom& atom : atoms)
-                atom.ComputeForces(dt);
+                atom.ComputeForces(sim_box, dt);
             for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end(); ) {
                 if (it->shouldBreak()) {
                     it->detach();
@@ -71,24 +71,27 @@ void Simulation::event() {
             // создание атома
             if (!Interface::cursorHovered && Interface::getSelectedAtom() != -1) {
                 
-                atoms.emplace_back(Vec3D(Tools::screenToWorld(mouse_pos, zoom)-0.5),
+                Vec2D world = Tools::screenToWorld(mouse_pos, zoom);
+                Vec2D local(world.x - sim_box.start.x, world.y - sim_box.start.y);
+                atoms.emplace_back(Vec3D(local-0.5),
                                    Vec3D(randomUnitVector3D() * randomInRange(1)), Interface::getSelectedAtom());
 
 
                 Atom& atom = atoms.back();
 
-                std::cout << "<Create atom> X: " << ((mouse_pos.x - (window.getSize().x / 2.f)) / zoom) + gameView.getCenter().x << 
-                                            " Y: " << ((mouse_pos.y - (window.getSize().y / 2.f)) / zoom) + gameView.getCenter().y << 
+                std::cout << "<Create atom> X: " << world.x << 
+                                            " Y: " << world.y << 
                                         " | Type: " << Interface::getSelectedAtom() << 
                                     " | Adress: " << &atom << 
                                     " | Speed: " << atom.speed.x << " " << atom.speed.y << std::endl;
 
             } else {
                 // Передвижение атома мышкой
-                Vec2D world = Tools::screenToWorld(mouse_pos, zoom) - 0.5;
+                Vec2D world = Tools::screenToWorld(mouse_pos, zoom);
+                Vec2D local(world.x - sim_box.start.x, world.y - sim_box.start.y);
                 std::unordered_set<Atom*>* block = sim_box.grid.at(
-                    sim_box.grid.worldToCellX(world.x),
-                    sim_box.grid.worldToCellY(world.y)
+                    sim_box.grid.worldToCellX(local.x - 0.5),
+                    sim_box.grid.worldToCellY(local.y - 0.5)
                 );
 
                 if (block != nullptr && !block->empty() && !selectionFrameMoveFlag) {
@@ -117,8 +120,9 @@ void Simulation::event() {
     // Передвижение атома мышкой
     if (atomMoveFlag) {
         float zoom = render.camera.getZoom();
-        selectedMoveAtom->coords.x = ((mouse_pos.x - (window.getSize().x / 2.f)) / zoom) + gameView.getCenter().x-0.5;
-        selectedMoveAtom->coords.y = ((mouse_pos.y - (window.getSize().y / 2.f)) / zoom) + gameView.getCenter().y-0.5;
+        Vec2D world = Tools::screenToBox(mouse_pos, zoom);
+        Vec2D delta = Vec2D(selectedMoveAtom->coords.x, selectedMoveAtom->coords.y) - world;
+        selectedMoveAtom->force -= delta.normalized() * delta.length() * 100;
     }    
 }
 
@@ -168,12 +172,6 @@ void Simulation::logAtomPos() {
 }
 
 void Simulation::logBondList() {
-    // for (Bond& bond : Bond::bonds_list) {
-    //     std::cout 
-    //         << bond.a << " " << bond.a->type << " "
-    //         << bond.b << " " << bond.b->type
-    //         << std::endl;
-    // }
     for (Atom& atom : atoms) {
         if (atom.bonds.size() > 0) {
             std::cout << atom.bonds.size() << std::endl;
@@ -184,6 +182,7 @@ void Simulation::logBondList() {
 void Simulation::logMousePos() {
     sf::Vector2i mouse_pos = sf::Mouse::getPosition(window);
     Vec2D world_pos = Tools::screenToWorld(mouse_pos, render.camera.getZoom());
+    Vec2D local_pos(world_pos.x - sim_box.start.x, world_pos.y - sim_box.start.y);
     std::cout << "<Mouse pos>"
               << " Screen: "
               << "X " << mouse_pos.x
@@ -191,6 +190,9 @@ void Simulation::logMousePos() {
               << " | World: "
               << "X " << world_pos.x
               << " Y " << world_pos.y
+              << " | Local: "
+              << "X " << local_pos.x
+              << " Y " << local_pos.y
               << std::endl;
 }
 
@@ -211,7 +213,7 @@ Vec2D randomUnitVector2D() {
     return Vec2D(std::cos(angle), std::sin(angle));  // x = cos(θ), y = sin(θ)
 }
 
-Vec3D randomUnitVector3D() {
+Vec3D randomUnitVector3D(double amplitude) {
     double u = (double)std::rand() / RAND_MAX;       // in [0,1]
     double v = (double)std::rand() / RAND_MAX;       // in [0,1]
 
@@ -222,10 +224,9 @@ Vec3D randomUnitVector3D() {
     double x = r * std::cos(theta);
     double y = r * std::sin(theta);
 
-    return Vec3D(x, y, z);
+    return Vec3D(x, y, z) * amplitude;  // масштабируем вектор до нужной амплитуды
 }
 
 double randomInRange(int range) {
     return std::rand() % range + 1;
 }
-

@@ -9,7 +9,7 @@
 #include "SpatialGrid.h"
 #include <vector>
 #include <list>
-
+class SimBox;
 
 // Общие данные для всех атомов одного типа
 struct StaticAtomicData {
@@ -45,10 +45,9 @@ public:
     Atom (Vec3D start_coords, Vec3D start_speed, int type, bool fixed = false);
 
     void PredictPosition(double deltaTime);
-    void Bounce();
-    void SoftWalls(double deltaTime);
+    void SoftWalls(SimBox& box, double deltaTime);
     inline void applyWall(double& coord, double& speed, double& force, double min, double max);
-    void ComputeForces(double deltaTime);
+    void ComputeForces(SimBox& box, double deltaTime);
 
     float MorseForce(float distanse);
     float MorsePotential(float distanse);

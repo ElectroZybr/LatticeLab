@@ -22,8 +22,7 @@ public:
     void logBondList();
     void drawGrid(bool flag);
     void drawBonds(bool flag);
-    void setCameraPos(double x, double y);
-    // SpatialGrid grid;
+    void setCameraPos(double x, double y);;
     SimBox& sim_box;
 
 private:
@@ -37,11 +36,8 @@ private:
     bool selectionFrameMoveFlag = false;
     Atom* selectedMoveAtom;
     sf::Vector2i start_mouse_pos;
-    double boxSizeX = 1.0;
-    double boxSizeY = 1.0;
-    double gridReserveRatio = 0.20;
 };
 
 Vec2D randomUnitVector2D();
-Vec3D randomUnitVector3D();
+Vec3D randomUnitVector3D(double amplitude = 1.0);
 double randomInRange(int range);
