@@ -25,23 +25,24 @@ Simulation::Simulation(sf::RenderWindow& w, SimBox& box)
 
 void Simulation::update(float dt) {
     if (!Interface::getPause()) {
-            for (Atom& atom : atoms)
-                atom.PredictPosition(dt);
-            for (Atom& atom : atoms)
-                atom.ComputeForces(sim_box, dt);
-            for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end(); ) {
-                if (it->shouldBreak()) {
-                    it->detach();
-                    it = Bond::bonds_list.erase(it);
-                } else {
-                    ++it;
-                }
+        for (Atom& atom : atoms)
+            atom.PredictPosition(dt);
+        for (Atom& atom : atoms)
+            atom.ComputeForces(sim_box, dt);
+        for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end(); ) {
+            if (it->shouldBreak()) {
+                it->detach();
+                it = Bond::bonds_list.erase(it);
+            } else {
+                ++it;
             }
-            for (Bond& bond : Bond::bonds_list)
-                bond.forceBond(dt);
-            for (Atom& atom : atoms)
-                atom.CorrectVelosity(dt);
         }
+        for (Bond& bond : Bond::bonds_list)
+            bond.forceBond(dt);
+        for (Atom& atom : atoms)
+            atom.CorrectVelosity(dt);
+        sim_step++;
+    }
 }
 
 void Simulation::renderShot(float deltaTime) {
@@ -49,6 +50,8 @@ void Simulation::renderShot(float deltaTime) {
 }
 
 void Simulation::event() {
+    Interface::setAverageEnergy(AverageEnegry());
+    Interface::setSimStep(sim_step);
     Interface::Update();
     sf::Vector2i mouse_pos = sf::Mouse::getPosition(window);
     sf::Event event;
@@ -74,7 +77,7 @@ void Simulation::event() {
                 Vec2D world = Tools::screenToWorld(mouse_pos, zoom);
                 Vec2D local(world.x - sim_box.start.x, world.y - sim_box.start.y);
                 atoms.emplace_back(Vec3D(local-0.5),
-                                   Vec3D(randomUnitVector3D() * randomInRange(1)), Interface::getSelectedAtom());
+                                   Vec3D(((double)std::rand() / RAND_MAX-0.5)*5, ((double)std::rand() / RAND_MAX-0.5)*5, 0), Interface::getSelectedAtom());
 
 
                 Atom& atom = atoms.back();
@@ -122,7 +125,11 @@ void Simulation::event() {
         float zoom = render.camera.getZoom();
         Vec2D world = Tools::screenToBox(mouse_pos, zoom);
         Vec2D delta = Vec2D(selectedMoveAtom->coords.x, selectedMoveAtom->coords.y) - world;
-        selectedMoveAtom->force -= delta.normalized() * delta.length() * 100;
+        Vec3D force = delta.normalized() * delta.length() * 100;
+        // selectedMoveAtom->force -= delta.normalized() * delta.length() * 100;
+        for (Atom* atom : Tools::selected_atom_batch) {
+            atom->force -= force;
+        }
     }    
 }
 
@@ -139,14 +146,14 @@ void Simulation::setSizeBox(Vec3D s, Vec3D e, int cellSize) {
 }
 
 void Simulation::createRandomAtoms(int type, int quantity) {
-    const int r_cut = 3;
+    const double z_mid = (sim_box.end.z - sim_box.start.z) * 0.5;
     for (int i = 0; i < quantity; ++i) {
         for (int j = 0; j < 10; ++j) {
-            double r_x = std::rand() % sim_box.grid.sizeX;
-            double r_y = std::rand() % sim_box.grid.sizeY;
-            Vec3D coords(r_x, r_y, r_cut);
-            if (!checkNeighbor(coords, 3)) {
-                createAtom(coords, randomUnitVector3D(), type);
+            double r_x = std::rand() % int(sim_box.end.x-sim_box.start.x-4);
+            double r_y = std::rand() % int(sim_box.end.y-sim_box.start.y-4);
+            Vec3D coords(r_x+2, r_y+2, z_mid);
+            if (!checkNeighbor(coords, 4)) {
+                createAtom(coords, randomUnitVector3D(5), type);
                 break;
             }
         }
@@ -176,11 +183,32 @@ void Simulation::addBond(Atom* a1, Atom* a2) {
     Bond::CreateBond(a1, a2);
 }
 
-double Simulation::AverageTemp() {
-    // double T;
-    // for (Atom& atom : atoms)
-    //     T += atom.speed.length();
-    // return T / atoms.size();
+double Simulation::AverageEnegry() {
+    // if (atoms.empty()) return 0.0;
+
+    // double KE = 0.0;
+    // double PE = 0.0;
+
+    // for (const Atom& atom : atoms) {
+    //     KE += atom.kineticEnergy();
+    // }
+
+    // for (size_t i = 0; i < atoms.size(); ++i) {
+    //     for (size_t j = i + 1; j < atoms.size(); ++j) {
+    //         Atom& a = atoms[i];
+    //         Atom& b = atoms[j];
+
+    //         bool bonded = std::find(a.bonds.begin(), a.bonds.end(), &b) != a.bonds.end();
+    //         if (bonded) continue;
+
+    //         double dist = (b.coords - a.coords).length();
+    //         if (dist < 1e-6) continue;
+
+    //         PE += a.LennardJonesPotential(dist);
+    //     }
+    // }
+
+    // return (KE + PE) / static_cast<double>(atoms.size());
 }
 
 void Simulation::logAtomPos() {
@@ -226,6 +254,10 @@ void Simulation::drawGrid(bool flag) {
 
 void Simulation::drawBonds(bool flag) {
     render.drawBonds = flag;
+}
+
+void Simulation::speedGradient(bool flag) {
+    render.speedGradient = flag;
 }
 
 void Simulation::setCameraPos(double x, double y) {

@@ -66,25 +66,30 @@ void Atom::SoftWalls(SimBox& box, double dt) {
 }
 
 inline void Atom::applyWall(double& coord, double& speed, double& force, double min, double max) {
-    constexpr double k = 100.0;
+    constexpr double k = 50.0;
     constexpr double border = 2.0;
 
+    // Outside the box: clamp and damp velocity only.
+    // Do not additionally apply spring force from deep penetration.
+    if (coord < min) {
+        coord = min;
+        if (speed < 0.0) speed = -speed * 0.8;
+        return;
+    }
+
+    if (coord > max) {
+        coord = max;
+        if (speed > 0.0) speed = -speed * 0.8;
+        return;
+    }
+
+    // Inside the box near the wall: soft spring force.
     if (coord < min + border) {
         double dist = coord - (min + border);
         force -= k * dist;
-        if (coord < min) {
-            coord = min;
-            speed = -speed * 0.8;
-        }
-    }
-
-    if (coord > max - border) {
+    } else if (coord > max - border) {
         double dist = (max - border) - coord;
         force += k * dist;
-        if (coord > max) {
-            coord = max;
-            speed = -speed * 0.8;
-        }
     }
 }
 
@@ -105,14 +110,14 @@ void Atom::ComputeForces(SimBox& box, double deltaTime) {
                     
                     bool flag = std::find(bonds.begin(), bonds.end(), other) != bonds.end();
 
-                    if (getProps().maxValence - valence == 2) {
+                    if (getProps().maxValence - valence >= 2) {
                         Bond::angleForce(this, bonds[0], bonds[1]);
                     }
                     
                     if (!flag) {
-                        if (distance < 1.3 * r0 && valence > 0 && other->valence > 0) {
-                            Bond::CreateBond(this, other);
-                        }
+                        // if (distance < 1.3 * r0 && valence > 0 && other->valence > 0) {
+                        //     Bond::CreateBond(this, other);
+                        // }
                         Vec3D force = NonBondedForce(this, other, deltaTime);
                         this->force -= force;
                         other->force += force;
@@ -131,14 +136,11 @@ Vec3D Atom::NonBondedForce(Atom *a, Atom *b, double dt) {
     return hat * LennardJonesForce(len);
 }
 
-void Atom::Euler(double dt) {
-    coords += speed * dt;
-}
-
 void Atom::Verlet(double dt) {
     /* Предсказание новой позиции на основе предыдущей и ускорения */
     Vec3D a = force / getProps().mass;
-    coords += speed * dt * 0.8 + a * 0.5 * dt * dt;
+    coords += speed * dt * 0.5 + a * 0.5 * dt * dt;
+    // coords.z = 1.0; // фиксируем z-координату для 2D симуляции
 }
 
 void Atom::CorrectVelosity(double dt) {
@@ -146,18 +148,6 @@ void Atom::CorrectVelosity(double dt) {
     Vec3D a = force / getProps().mass;
     Vec3D pr_a = prev_force / getProps().mass;
     speed += (pr_a + a) * 0.5 * dt;
-}
-
-float Atom::MorsePotential(float distanse) {
-    /* потенциал Морзе */
-    float exponent = std::exp(-a * (distanse - r0));
-    return De * (1 - exponent) * (1 - exponent);
-}
-
-float Atom::MorseForce(float distanse) {
-    /* производная потенциала Морзе по расстоянию */
-    float exp_a = std::exp(-a * (distanse - r0));
-    return 2 * De * a * (exp_a * exp_a - exp_a);
 }
 
 float Atom::LennardJonesPotential(float d) {

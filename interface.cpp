@@ -32,8 +32,10 @@ int Interface::selectedAtom = -1;
 bool Interface::pause;
 bool Interface::cursorHovered = false;
 float Interface::simulationSpeed = 1;
+double Interface::averageEnergy = 0.0;
 int Interface::countSelectedAtom = 0;
 bool Interface::drawToolTrip = false;
+int Interface::sim_step = 0;
 
 
 void Interface::custom_style() {
@@ -135,6 +137,14 @@ void Interface::CheckEvent(const sf::Event& event) {
 
 float Interface::getSimulationSpeed() {
     return simulationSpeed;
+}
+
+void Interface::setAverageEnergy(double energy) {
+    averageEnergy = energy;
+}
+
+void Interface::setSimStep(int step) {
+    sim_step = step;
 }
 
 bool Interface::getPause() {
@@ -362,12 +372,32 @@ int Interface::Update() {
     ImGui::PopFont();
     ImGui::End();
 
+    ImGui::SetNextWindowPos(ImVec2(0, window->getSize().y - (50*current_ui_scale)));
+    ImGui::SetNextWindowSize(ImVec2((180*current_ui_scale), window->getSize().y));
+    ImGui::Begin("sim", nullptr, 
+        ImGuiWindowFlags_NoMove |           // Запретить перемещение
+        ImGuiWindowFlags_NoResize |         // Запретить изменение размера
+        ImGuiWindowFlags_NoCollapse |       // Убрать кнопку сворачивания
+        ImGuiWindowFlags_NoTitleBar |       // Скрыть заголовок
+        ImGuiWindowFlags_NoScrollbar
+    );
+    ImGui::PushFont(Rubik_VariableFont_wght);
+    ImGui::Text("Step: %d", sim_step);
+    ImGui::PopFont();
+    ImGui::End();
+
     if (drawToolTrip) {
         ImVec2 mouse = ImGui::GetMousePos();
-        ImGui::SetNextWindowPos(ImVec2(mouse.x + 12, mouse.y + 12));
+        ImGui::SetNextWindowPos(ImVec2(mouse.x + 3 * current_ui_scale, mouse.y + 3 * current_ui_scale));
 
         ImGui::BeginTooltip();
+        if (Rubik_VariableFont_wght) {
+            ImGui::PushFont(Rubik_VariableFont_wght);
+        }
         ImGui::Text("Selected: %d", countSelectedAtom);
+        if (Rubik_VariableFont_wght) {
+            ImGui::PopFont();
+        }
         ImGui::EndTooltip();
     }
 

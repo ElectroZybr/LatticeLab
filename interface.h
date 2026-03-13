@@ -16,9 +16,11 @@ private:
     static ImFont* Font_Awesome;
     static float current_ui_scale;
     static int selectedAtom;
-    static bool pause;
     static float simulationSpeed;
+    static double averageEnergy;
+    static int sim_step;
 public:
+    static bool pause;
     static int init(sf::RenderWindow& w);
     static void custom_style();
     static int Update();
@@ -26,6 +28,8 @@ public:
     static bool getPause();
     static int getSelectedAtom();
     static float getSimulationSpeed();
+    static void setAverageEnergy(double energy);
+    static void setSimStep(int step);
     static bool cursorHovered;
     static int countSelectedAtom;
     static bool drawToolTrip;

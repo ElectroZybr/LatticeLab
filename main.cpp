@@ -21,7 +21,7 @@
 
 #define FPS  60
 #define LPS  30
-#define Dt  0.01
+#define Dt  0.005
 
 #include <vector>
 
@@ -33,14 +33,16 @@ int main() {
     icon.loadFromFile("icon.png");
     window.setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
 
-    SimBox box(Vec3D(0, 0, 0), Vec3D(100, 100, 3));
+    SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 3));
     Simulation simulation(window, box);
-    simulation.setCameraPos(25, 25);
+    simulation.setCameraPos(0, 0);
     simulation.setCameraZoom(20);
-    // simulation.sim_box.setSizeBox(Vec3D(0, 0, 0), Vec3D(50, 50.5, 3));
+    // simulation.sim_box.setSizeBox(Vec3D(-25, -25, 0), Vec3D(25, 25, 3), 5);
 
     // simulation.drawGrid(true);
-    simulation.drawBonds(true);
+    simulation.drawBonds();
+    simulation.speedGradient();
+    // simulation.render.speedGradientTurbo = true;
 
     // Atom* hydrogen_1 = simulation.createAtom(Vec3D(50.5, 50.86, 1), Vec3D(2, 0, 0), 1);
     // Atom* oxygen_1 = simulation.createAtom(Vec3D(50, 50, 1), Vec3D(0, 0, 0), 8);
@@ -49,26 +51,33 @@ int main() {
     // simulation.addBond(hydrogen_1, oxygen_1);
     // simulation.addBond(hydrogen_2, oxygen_1);
 
-    for (int i = 0; i <= 30; i++) {
-        for (int j = 0; j <= 30; j++) {
-            simulation.createAtom(Vec3D(3+i*3, 3+j*3, 1), randomUnitVector3D(0.5), 1);
+    // Vec3D mid = (simulation.sim_box.start + simulation.sim_box.end) / 2;
+    // Vec3D st = mid;
+
+    // simulation.sim_box.setSizeBox(Vec3D(-100, -100, 0), Vec3D(100, 100, 3), 5);
+    // for (int i = 0; i < 50; i++) {
+    //     for (int j = 0; j < 50; j++) {
+    //         simulation.createAtom(Vec3D(4+i*3.5, 4+j*3.5, 1), randomUnitVector3D(0.5), 1);
+    //     }
+    // }
+
+    for (int i = 0; i <= 15; i++) {
+        for (int j = 0; j <= 15; j++) {
+            simulation.createAtom(Vec3D(3+i*3, 3+j*3, 4), randomUnitVector3D(0.25), 1);
         }
     }
 
     // for (int i = 0; i <= 15; i++) {
-    //     for (int j = 0; j <= 15; j++) {
-    //         simulation.createAtom(Vec3D(3+i*3, 3+j*3, 4), randomUnitVector3D(0.5), 1);
+    //     for (int j = 8; j <= 15; j++) {
+    //         simulation.createAtom(Vec3D(3+i*3, 3+j*3, 4), randomUnitVector3D(0.25), 8);
     //     }
     // }
-
-
-    // auto start = std::chrono::high_resolution_clock::now();
 
     // for (int i = 0; i < 100000; ++i) {
     //     hydrogen_1->SoftWalls(0.1);
     // }
 
-    // simulation.createRandomAtoms(1, 100);
+    // simulation.createRandomAtoms(1, 50);
     // simulation.createRandomAtoms(8, 100);
     
     sf::Clock clock;
@@ -84,40 +93,60 @@ int main() {
         float deltaTime = clock.restart().asSeconds();
 
         simTmr += deltaTime;
-        if (simTmr >= Dt/Interface::getSimulationSpeed()) {
+        if (simTmr >= Dt/Interface::getSimulationSpeed()) { 
+            // auto start = std::chrono::high_resolution_clock::now();
             simulation.update(Dt);
             if (!Interface::getPause()) {
-                // if (sim_step < 5000)
+                // if (simulation.getSimStep() < 6000) {
                 //     simulation.setSizeBox(
-                //         Vec3D(simulation.sim_box.start.x+0.001, simulation.sim_box.start.y+0.001, simulation.sim_box.start.z),
-                //         Vec3D(simulation.sim_box.end.x-0.001, simulation.sim_box.end.y-0.001, simulation.sim_box.end.z));
+                //         Vec3D(simulation.sim_box.start.x+0.005, simulation.sim_box.start.y+0.005, simulation.sim_box.start.z),
+                //         Vec3D(simulation.sim_box.end.x-0.005, simulation.sim_box.end.y-0.005, simulation.sim_box.end.z));
+                // }
+                
+                // if (simulation.getSimStep() > 8000 && simulation.getSimStep() < 8050) {
+                //     simulation.setSizeBox(
+                //         Vec3D(simulation.sim_box.start.x, simulation.sim_box.start.y, simulation.sim_box.start.z),
+                //         Vec3D(simulation.sim_box.end.x-0.075, simulation.sim_box.end.y, simulation.sim_box.end.z));
+                // }
 
-                if (sim_step > 10000 && sim_step < 100000)
-                    simulation.setSizeBox(
-                        Vec3D(simulation.sim_box.start.x-0.001, simulation.sim_box.start.y-0.001, simulation.sim_box.start.z),
-                        Vec3D(simulation.sim_box.end.x+0.001, simulation.sim_box.end.y+0.001, simulation.sim_box.end.z));
-                simTmr = 0;
-                sim_step++;
+                // if (simulation.getSimStep() > 4000 && simulation.getSimStep() < 100000)
+                //     simulation.setSizeBox(
+                //         Vec3D(simulation.sim_box.start.x-0.001, simulation.sim_box.start.y-0.001, simulation.sim_box.start.z),
+                //         Vec3D(simulation.sim_box.end.x+0.001, simulation.sim_box.end.y+0.001, simulation.sim_box.end.z));
             }
+            // if (!Interface::getPause()) {
+            //     simulation.setCameraZoom(simulation.render.camera.getZoom()*(1.f + 0.1 * -0.01));
+            //     sim_step++;
+            // }
+
+            // shotTmr = 0;
+            // auto end = std::chrono::high_resolution_clock::now();
+            // duration += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+            // i++;
+            simTmr = 0;
         }
 
         shotTmr += deltaTime;
         if (shotTmr >= 1./FPS) {
             simulation.event();
-            auto start = std::chrono::high_resolution_clock::now();
+            // auto start = std::chrono::high_resolution_clock::now();
             simulation.renderShot(shotTmr);
             shotTmr = 0;
-            auto end = std::chrono::high_resolution_clock::now();
-            duration += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-            i++;
+            // auto end = std::chrono::high_resolution_clock::now();
+            // duration += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+            // i++;
         }
 
         logTmr += deltaTime;
         if (logTmr >= 1./LPS) {
-            std::cout << "AverageTime: " << duration.count()/i << " microseconds\n";
-            duration = std::chrono::microseconds::zero();
-            i = 0;
+            // std::cout << "AverageTime: " << duration.count()/i << " microseconds\n";
+            // duration = std::chrono::microseconds::zero();
+            // i = 0;
+            // for (Atom& atom : simulation.atoms) {
+            //     std::cout << "Atom Speed: " << atom.speed.length() << "\n";
+            // }
             // std::cout << "Zoom: " << simulation.render.camera.getZoom() << "\n";
+            // std::cout << simulation.AverageEnegry() << "\n";
             // simulation.logEnergies();
             // simulation.logAtomPos();
             // simulation.logMousePos();

@@ -35,8 +35,8 @@ public:
     int valence;
     float r0 = 2.5;
     float De = 0.2;
-    float a = 3.0;
-    float eps = 0.1;
+    float a = 2.0;
+    float eps = 15;
 
     bool isFixed = false;
     bool isSelect = false;
@@ -49,13 +49,10 @@ public:
     inline void applyWall(double& coord, double& speed, double& force, double min, double max);
     void ComputeForces(SimBox& box, double deltaTime);
 
-    float MorseForce(float distanse);
-    float MorsePotential(float distanse);
     float LennardJonesPotential(float d);
     float LennardJonesForce(float d);
     Vec3D NonBondedForce(Atom *a1, Atom *a2, double dt);
     void CorrectVelosity(double dt);
-    void Euler(double dt);
     void Verlet(double dt);
 
     float kineticEnergy() const;

@@ -14,6 +14,7 @@ public:
     static void selectionFrame(sf::Vector2i start_mouse_pos, sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
     static Vec2D screenToWorld(sf::Vector2i mouse_pos, float zoom);
     static Vec2D screenToBox(sf::Vector2i mouse_pos, float zoom);
+    static std::unordered_set<Atom*> selected_atom_batch;
 private:
     static sf::RenderWindow* window;
     static sf::View* gameView;

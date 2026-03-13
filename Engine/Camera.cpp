@@ -47,7 +47,7 @@ float Camera::getZoom() const {
 }
 
 void Camera::setZoom(float new_zoom) {
-    zoom = new_zoom;
+    zoom = std::max(2.f, std::min(new_zoom, 500.f));
 }
 
 void Camera::handleInput(float deltaTime, sf::RenderWindow& window) {

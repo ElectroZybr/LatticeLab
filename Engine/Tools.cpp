@@ -6,6 +6,7 @@ sf::View* Tools::gameView = nullptr;
 Renderer* Tools::render = nullptr;
 SpatialGrid* Tools::grid = nullptr;
 SimBox* Tools::box = nullptr;
+std::unordered_set<Atom*> Tools::selected_atom_batch{};
 
 void Tools::init(sf::RenderWindow* w, sf::View* gv, Renderer* r, SpatialGrid* gr, SimBox* b) {
     window = w;
@@ -47,9 +48,13 @@ void Tools::selectionFrame(sf::Vector2i start_mouse_pos, sf::Vector2i mouse_pos,
     for (Atom& atom : atoms) {
         if (atom.coords.x >= start_pos.x-0.8 && atom.coords.x <= pos.x && atom.coords.y >= start_pos.y-0.8 && atom.coords.y <= pos.y) {
             atom.isSelect = true;
+            selected_atom_batch.insert(&atom);
             count++;
         }
-        else atom.isSelect = false;
+        else {
+            atom.isSelect = false;
+            selected_atom_batch.erase(&atom);
+        }   
     }
     Interface::drawToolTrip = true;
     Interface::countSelectedAtom = count;

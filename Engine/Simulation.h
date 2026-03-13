@@ -15,29 +15,32 @@ public:
     void createRandomAtoms(int type, int quantity);
     Atom* createAtom(Vec3D start_coords, Vec3D start_speed, int type, bool fixed = false);
     void addBond(Atom* a1, Atom* a2);
-    double AverageTemp();
+    double AverageEnegry();
     void logEnergies();
     void logAtomPos();
     void logMousePos();
     void logBondList();
-    void drawGrid(bool flag);
-    void drawBonds(bool flag);
+    void drawGrid(bool flag = true);
+    void drawBonds(bool flag = true);
+    void speedGradient(bool flag = true);
     void setCameraPos(double x, double y);
     void setCameraZoom(float new_zoom);
+    int getSimStep() const { return sim_step; }
     SimBox& sim_box;
     Renderer render;
-
+    std::vector<Atom> atoms;
+    
 private:
     sf::RenderWindow& window;
     sf::View gameView;
-    sf::View uiView;;
-    std::vector<Atom> atoms;
+    sf::View uiView;
 
     bool atomMoveFlag = false;
     bool selectionFrameMoveFlag = false;
     Atom* selectedMoveAtom;
     sf::Vector2i start_mouse_pos;
-
+    int sim_step = 0;
+    
     bool checkNeighbor(Vec3D coords, float delta);
 };
 

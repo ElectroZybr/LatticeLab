@@ -17,6 +17,8 @@ public:
     float alpha = 0.05; // Коэфициент уменьшения по мере удаления атома
     bool drawGrid = false;
     bool drawBonds = false;
+    bool speedGradient = false;
+    bool speedGradientTurbo = false;
     float drawBondsZoom = 25;
     bool drawSelectionFrame = false;
     void setSelectionFrame(Vec2D start, Vec2D end, float scale);
