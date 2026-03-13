@@ -201,7 +201,7 @@ void Renderer::drawShot(const std::vector<Atom>& atoms, const SimBox& box, float
             atomBatch.append(sf::Vertex(sf::Vector2f(outerX, outerY + outerSize), color, uv01));
         }
         if (speedGradient){
-            const float t = std::clamp(static_cast<float>(atom->speed.length()) / 10, 0.0f, 1.0f); // 0..1
+            const float t = std::clamp(static_cast<float>(atom->speed.length()) / 5, 0.0f, 1.0f); // 0..1
             if (speedGradientTurbo) {
                 color = turboColor(t);
             } else {

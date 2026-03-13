@@ -125,7 +125,7 @@ void Simulation::event() {
         float zoom = render.camera.getZoom();
         Vec2D world = Tools::screenToBox(mouse_pos, zoom);
         Vec2D delta = Vec2D(selectedMoveAtom->coords.x, selectedMoveAtom->coords.y) - world;
-        Vec3D force = delta.normalized() * delta.length() * 100;
+        Vec3D force = delta.normalized() * delta.length() * 10 * Interface::getSimulationSpeed();
         // selectedMoveAtom->force -= delta.normalized() * delta.length() * 100;
         for (Atom* atom : Tools::selected_atom_batch) {
             atom->force -= force;
