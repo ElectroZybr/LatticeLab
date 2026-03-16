@@ -6,6 +6,7 @@
 #include <functional>
 #include <memory>
 #include <chrono>
+#include <vector>
 
 #include "imgui.h"
 #include "imgui-SFML.h"
@@ -23,9 +24,7 @@
 #define LPS  30
 #define Dt  0.01
 
-#include <vector>
-
-/* тестовые сцены, можете запускать в main и экспериментировать*/
+/* тестовые сцены, можно запускать в main и экспериментировать*/
 void square15x15H(Simulation& simulation);
 void crystal25x25H(Simulation& simulation);
 void diffusionTest(Simulation& simulation);
@@ -38,17 +37,19 @@ int main() {
     icon.loadFromFile("icon.png");
     window.setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
 
-    SimBox box(Vec3D(-250, -250, 0), Vec3D(250, 250, 3));
+    SimBox box(Vec3D(-250, -250, 0), Vec3D(250, 250, 6));
     Simulation simulation(window, box);
     simulation.setCameraPos(0, 0);
     simulation.setCameraZoom(20);
 
     // simulation.drawGrid(true);
-    simulation.drawBonds();
-    // simulation.speedGradient();
+    // simulation.drawBonds();
+    simulation.speedGradient();
 
     crystal25x25H(simulation);
+
     // simulation.render.speedGradientTurbo = true;
+    Interface::pause = true;
 
     // Atom* hydrogen_1 = simulation.createAtom(Vec3D(50.5, 50.86, 1), Vec3D(2, 0, 0), 1);
     // Atom* oxygen_1 = simulation.createAtom(Vec3D(50, 50, 1), Vec3D(0, 0, 0), 8);
@@ -74,13 +75,12 @@ int main() {
 
         simTmr += deltaTime;
         if (simTmr >= Dt/Interface::getSimulationSpeed()) { 
-            // auto start = std::chrono::high_resolution_clock::now();
             simulation.update(Dt);
             if (!Interface::getPause()) {
-                // if (simulation.getSimStep() < 6000) {
+                // if (simulation.getSimStep() < 12000) {
                 //     simulation.setSizeBox(
-                //         Vec3D(simulation.sim_box.start.x+0.005, simulation.sim_box.start.y+0.005, simulation.sim_box.start.z),
-                //         Vec3D(simulation.sim_box.end.x-0.005, simulation.sim_box.end.y-0.005, simulation.sim_box.end.z));
+                //         Vec3D(simulation.sim_box.start.x+0.001, simulation.sim_box.start.y+0.001, simulation.sim_box.start.z),
+                //         Vec3D(simulation.sim_box.end.x-0.001, simulation.sim_box.end.y-0.001, simulation.sim_box.end.z));
                 // }
                 
                 // if (simulation.getSimStep() > 8000 && simulation.getSimStep() < 8050) {
@@ -94,15 +94,6 @@ int main() {
                 //         Vec3D(simulation.sim_box.start.x-0.001, simulation.sim_box.start.y-0.001, simulation.sim_box.start.z),
                 //         Vec3D(simulation.sim_box.end.x+0.001, simulation.sim_box.end.y+0.001, simulation.sim_box.end.z));
             }
-            // if (!Interface::getPause()) {
-            //     simulation.setCameraZoom(simulation.render.camera.getZoom()*(1.f + 0.1 * -0.01));
-            //     sim_step++;
-            // }
-
-            // shotTmr = 0;
-            // auto end = std::chrono::high_resolution_clock::now();
-            // duration += std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-            // i++;
             simTmr = 0;
         }
 
@@ -128,7 +119,11 @@ int main() {
 }
 
 void square15x15H(Simulation& simulation) {
-    simulation.setSizeBox(Vec3D(-25, -25, 0), Vec3D(25, 25, 3), 5);
+    simulation.setSizeBox(
+        Vec3D(-25, -25, simulation.sim_box.start.z),
+        Vec3D(25, 25, simulation.sim_box.end.z),
+        5
+    );
     for (int i = 0; i < 15; i++) {
         for (int j = 0; j < 15; j++) {
             simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), randomUnitVector3D(0.5), 1);
@@ -138,18 +133,29 @@ void square15x15H(Simulation& simulation) {
 
 void crystal25x25H(Simulation& simulation) {
     simulation.speedGradient();
-    simulation.setSizeBox(Vec3D(-50, -50, 0), Vec3D(50, 50, 3), 5);
-    for (int i = 0; i < 25; i++) {
-        for (int j = 0; j < 25; j++) {
-            Atom* atom = simulation.createAtom(Vec3D(4+i*2.5, 4+j*2.5, 1), randomUnitVector3D(0.5), 1);
+    simulation.setSizeBox(Vec3D(-50, -50, simulation.sim_box.start.z), Vec3D(50, 50, simulation.sim_box.end.z));
+    for (int i = 0; i < 15; i++) {
+        for (int j = 0; j < 15; j++) {
+            Atom* atom = simulation.createAtom(Vec3D(15+i*2.5, 15+j*2.5, 2), randomUnitVector3D(0.5), 1);
             atom->a = 2.0;
             atom->eps = 15;
         }
     }
+    // for (int i = 0; i < 15; i++) {
+    //     for (int j = 0; j < 15; j++) {
+    //         Atom* atom = simulation.createAtom(Vec3D(4+i*2.5, 4+j*2.5, 4.5), randomUnitVector3D(0.5), 1);
+    //         atom->a = 2.0;
+    //         atom->eps = 15;
+    //     }
+    // }
 }
 
 void diffusionTest(Simulation& simulation) {
-    simulation.setSizeBox(Vec3D(-25, -25, 0), Vec3D(25, 25, 3), 5);
+    simulation.setSizeBox(
+        Vec3D(-25, -25, simulation.sim_box.start.z),
+        Vec3D(25, 25, simulation.sim_box.end.z),
+        5
+    );
     for (int i = 0; i < 15; i++) {
         for (int j = 0; j < 8; j++) {
             simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), randomUnitVector3D(0.5), 1);
