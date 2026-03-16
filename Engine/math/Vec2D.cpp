@@ -1,4 +1,5 @@
 #include <cmath>
+#include <stdexcept>
 
 #include "Vec2D.h"
 #include "../Consts.h"
@@ -50,7 +51,7 @@ Vec2D Vec2D::operator/(double number) const {
     if (std::abs(number) > Consts::EPS){
         return Vec2D(x / number, y / number);
     }
-    std::domain_error{"Vec2D::operator/(double number): division by zero"};
+    throw std::domain_error("Vec2D::operator/(double number): division by zero");
 }
 
 // Other useful methods
