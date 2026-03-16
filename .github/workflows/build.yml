@@ -1,0 +1,44 @@
+name: Cross-platform Build Check
+
+on:
+  push:
+    branches: [ "refactor/cmake-fetchcontent" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libx11-dev libxrandr-dev libudev-dev libgl1-mesa-dev \
+          libflac-dev libogg-dev libvorbis-dev libopenal-dev libxcursor-dev \
+          libxi-dev libfreetype6-dev
+
+    - name: Configure and Build (Windows MinGW)
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        export PATH=$(echo $PATH | tr ':' '\n' | grep -v "Git/bin" | tr '\n' ':')
+        cmake -S . -B build -G "MinGW Makefiles" \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DSFML_USE_STATIC_STD_LIBS=ON
+        cmake --build build -j 4
+
+    - name: Configure and Build (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: |
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+        cmake --build build -j 4
