@@ -1,6 +1,6 @@
 #include <SFML/Graphics.hpp>
 
-#include "Interface.h"
+#include "interface.h"
 
 #include <iostream>
 
@@ -11,14 +11,14 @@
 #define ICON_MIN_FA 0xf000
 #define ICON_MAX_FA 0xf897
 
-#define ICON_FA_FLASK u8"\uf0c3"
-#define ICON_FA_COG u8"\uf013"
-#define ICON_FA_PAUSE u8"\uf04c"
-#define ICON_FA_PLAY u8"\uf04b"
-#define ICON_FA_FORWARD u8"\uf04e"
-#define ICON_FA_BACKWARD u8"\uf04a"
-#define ICON_FA_FAST_FORWARD u8"\uf050"
-#define ICON_FA_FAST_BACKWARD u8"\uf049"
+#define ICON_FA_FLASK "\uf0c3"
+#define ICON_FA_COG "\uf013"
+#define ICON_FA_PAUSE "\uf04c"
+#define ICON_FA_PLAY "\uf04b"
+#define ICON_FA_FORWARD "\uf04e"
+#define ICON_FA_BACKWARD "\uf04a"
+#define ICON_FA_FAST_FORWARD "\uf050"
+#define ICON_FA_FAST_BACKWARD "\uf049"
 
 
 sf::RenderWindow* Interface::window = nullptr;
@@ -116,6 +116,7 @@ int Interface::init(sf::RenderWindow& w) {
     Interface::Font_Awesome = ImGui::GetIO().Fonts->AddFontFromFileTTF("Engine/gui/fonts/Font Awesome 5 Free-Solid-900.otf", 40.0f, &config, icon_ranges);
 
     if (!ImGui::SFML::UpdateFontTexture()) return EXIT_FAILURE;
+    return EXIT_SUCCESS;
 }
 
 void Interface::CheckEvent(const sf::Event& event) {
@@ -404,4 +405,5 @@ int Interface::Update() {
 
     // Проверка на вхождение курсора в область
     cursorHovered = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup);
+    return EXIT_SUCCESS;
 }

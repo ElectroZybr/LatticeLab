@@ -1,4 +1,5 @@
 #include <cmath>
+#include <stdexcept>
 
 #include "Vec3D.h"
 #include "../Consts.h"
@@ -54,7 +55,7 @@ Vec3D Vec3D::operator/(double number) const {
     if (std::abs(number) > Consts::EPS) {
         return Vec3D(x / number, y / number, z / number);;
     }
-    std::domain_error{"Vec3D::operator/(double number): division by zero"};
+    throw std::domain_error("Vec3D::operator/(double number): division by zero");
 }
 
 // Other useful methods
