@@ -66,7 +66,7 @@ void Atom::SoftWalls(SimBox& box, double dt) {
 }
 
 inline void Atom::applyWall(double& coord, double& speed, double& force, double min, double max) {
-    constexpr double k = 50.0;
+    constexpr double k = 500.0;
     constexpr double border = 2.0;
 
     // Outside the box: clamp and damp velocity only.
@@ -83,13 +83,13 @@ inline void Atom::applyWall(double& coord, double& speed, double& force, double 
         return;
     }
 
-    // Inside the box near the wall: soft spring force.
+    // Inside the box near the wall: soft repulsion away from the wall.
     if (coord < min + border) {
-        double dist = coord - (min + border);
-        force -= k * dist;
+        double penetration = (min + border) - coord; // >0 near left wall
+        force += k * std::pow(penetration, 6);
     } else if (coord > max - border) {
-        double dist = (max - border) - coord;
-        force += k * dist;
+        double penetration = coord - (max - border); // >0 near right wall
+        force -= k * std::pow(penetration, 6);
     }
 }
 
@@ -139,7 +139,7 @@ Vec3D Atom::NonBondedForce(Atom *a, Atom *b, double dt) {
 void Atom::Verlet(double dt) {
     /* Предсказание новой позиции на основе предыдущей и ускорения */
     Vec3D a = force / getProps().mass;
-    coords += speed * dt * 0.5 + a * 0.5 * dt * dt;
+    coords += speed * dt * 0.8 + a * 0.5 * dt * dt;
     // coords.z = 1.0; // фиксируем z-координату для 2D симуляции
 }
 
