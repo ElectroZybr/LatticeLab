@@ -184,31 +184,16 @@ void Simulation::addBond(Atom* a1, Atom* a2) {
 }
 
 double Simulation::AverageEnegry() {
-    // if (atoms.empty()) return 0.0;
+    if (atoms.empty()) {
+        return 0.0;
+    }
 
-    // double KE = 0.0;
-    // double PE = 0.0;
+    double kineticEnergy = 0.0;
+    for (const Atom& atom : atoms) {
+        kineticEnergy += atom.kineticEnergy();
+    }
 
-    // for (const Atom& atom : atoms) {
-    //     KE += atom.kineticEnergy();
-    // }
-
-    // for (size_t i = 0; i < atoms.size(); ++i) {
-    //     for (size_t j = i + 1; j < atoms.size(); ++j) {
-    //         Atom& a = atoms[i];
-    //         Atom& b = atoms[j];
-
-    //         bool bonded = std::find(a.bonds.begin(), a.bonds.end(), &b) != a.bonds.end();
-    //         if (bonded) continue;
-
-    //         double dist = (b.coords - a.coords).length();
-    //         if (dist < 1e-6) continue;
-
-    //         PE += a.LennardJonesPotential(dist);
-    //     }
-    // }
-
-    // return (KE + PE) / static_cast<double>(atoms.size());
+    return kineticEnergy / static_cast<double>(atoms.size());
 }
 
 void Simulation::logAtomPos() {

@@ -8,6 +8,8 @@
 // #include <SFML/Graphics.hpp>
 
 #include "math/Vec2D.h"
+#include <cstdint>
+#include <string>
 
 namespace Consts {
     const int STANDARD_SCREEN_WIDTH = 1920;
@@ -26,8 +28,8 @@ namespace Consts {
 
     const double RAY_CAST_MAX_DISTANCE = 10000;
 
-    const std::string THIN_FONT = "engine/fonts/Roboto-Thin.ttf";
-    const std::string MEDIUM_FONT = "engine/fonts/Roboto-Medium.ttf";
+    const std::string THIN_FONT = "Engine/gui/fonts/Roboto-Thin.ttf";
+    const std::string MEDIUM_FONT = "Engine/gui/fonts/Roboto-Medium.ttf";
 
     const double LARGEST_TIME_STEP = 1.0 / 15.0;
     const double TAP_DELAY = 0.2;

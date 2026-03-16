@@ -10,11 +10,11 @@
 #include "imgui.h"
 #include "imgui-SFML.h"
 
-#include "engine/physics/Atom.h"
-#include "engine/physics/SpatialGrid.h"
+#include "Engine/physics/Atom.h"
+#include "Engine/physics/SpatialGrid.h"
 #include "interface.h"
 
-#include "engine/Simulation.h"
+#include "Engine/Simulation.h"
 
 #define WIGHT   800
 #define HEIGHT  600
@@ -31,12 +31,12 @@ void crystal25x25H(Simulation& simulation);
 void diffusionTest(Simulation& simulation);
 
 int main() {
-    // sf::RenderWindow window(sf::VideoMode(WIGHT, HEIGHT), "Chemical-simulator");
     sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator", sf::Style::Fullscreen);
 
     sf::Image icon;
-    icon.loadFromFile("icon.png");
-    window.setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
+    if (icon.loadFromFile("icon.png")) {
+        window.setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
+    }
 
     SimBox box(Vec3D(-250, -250, 0), Vec3D(250, 250, 3));
     Simulation simulation(window, box);

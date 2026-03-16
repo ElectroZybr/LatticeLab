@@ -1,7 +1,7 @@
 #pragma once
 
-#include "math\Vec3D.h"
-#include "physics\SpatialGrid.h"
+#include "math/Vec3D.h"
+#include "physics/SpatialGrid.h"
 
 class Renderer;
 
