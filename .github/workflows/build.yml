@@ -33,7 +33,7 @@ jobs:
         export PATH=$(echo $PATH | tr ':' '\n' | grep -v "Git/bin" | tr '\n' ':')
         cmake -S . -B build -G "MinGW Makefiles" \
           -DCMAKE_BUILD_TYPE=Release \
-          -DSFML_USE_STATIC_STD_LIBS=ON
+          -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         cmake --build build -j 4
 
     - name: Configure and Build (Linux/macOS)
