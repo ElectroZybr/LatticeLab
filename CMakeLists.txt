@@ -14,6 +14,12 @@ endif()
 
 include(FetchContent)
 
+# Drop stale cache entries from old in-tree dependencies layout.
+unset(IMGUI_INCLUDE_DIR CACHE)
+unset(IMGUI_SFML_CONFIG_DIR CACHE)
+unset(imgui_SOURCE_DIR CACHE)
+unset(imgui_BINARY_DIR CACHE)
+
 # --- Настройка SFML ---
 FetchContent_Declare(
     sfml
@@ -32,10 +38,7 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG        v1.89
 )
-FetchContent_GetProperties(imgui)
-if(NOT imgui_POPULATED)
-    FetchContent_Populate(imgui)
-endif()
+FetchContent_MakeAvailable(imgui)
 
 # --- Настройка ImGui-SFML ---
 FetchContent_Declare(
@@ -46,6 +49,7 @@ FetchContent_Declare(
 set(IMGUI_SFML_FIND_SFML OFF CACHE BOOL "" FORCE)
 set(IMGUI_SFML_IF_FETCHCONTENT ON CACHE BOOL "" FORCE)
 set(IMGUI_DIR ${imgui_SOURCE_DIR} CACHE PATH "" FORCE)
+set(IMGUI_INCLUDE_DIR ${imgui_SOURCE_DIR} CACHE PATH "" FORCE)
 
 FetchContent_MakeAvailable(imgui-sfml)
 
