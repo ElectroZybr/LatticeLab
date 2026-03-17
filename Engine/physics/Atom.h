@@ -5,10 +5,9 @@
 #include "../math/Vec2D.h"
 #include "../math/Vec3D.h"
 #include "Bond.h"
-#include "BondTable.h"
 #include "SpatialGrid.h"
 #include <vector>
-#include <list>
+
 class SimBox;
 
 // Общие данные для всех атомов одного типа

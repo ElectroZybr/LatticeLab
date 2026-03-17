@@ -12,7 +12,7 @@ public:
 
     Vec2D(const Vec2D &vec);
 
-    explicit Vec2D(double x, double y = 0.0);
+    explicit Vec2D(double x = 0.0, double y = 0.0);
 
     [[nodiscard]] Vec2D operator-() const;
 

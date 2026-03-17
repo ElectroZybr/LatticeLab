@@ -13,7 +13,7 @@ public:
 
     Vec3D(const Vec3D &vec);
 
-    explicit Vec3D(double x, double y = 0.0, double z = 0.0);
+    explicit Vec3D(double x = 0.0, double y = 0.0, double z = 0.0);
 
     Vec3D(const Vec2D &vec, double z = 0.0);
 

@@ -11,7 +11,7 @@ class Bond {
 private:
 public:
     static BondTable bond_default_props;
-    
+
     static Bond* CreateBond(Atom* a, Atom* b);
     static void BreakBond(Bond* bond);
     static std::list<Bond> bonds_list;

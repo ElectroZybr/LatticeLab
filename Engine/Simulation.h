@@ -8,28 +8,38 @@
 class Simulation {
 public:
     Simulation(sf::RenderWindow& window, SimBox& sim_box);
+
     void update(float dt);
+
     void renderShot(float dt);
     void event();
     void setSizeBox(Vec3D s, Vec3D e, int cellSize = -1);
+
     void createRandomAtoms(int type, int quantity);
     Atom* createAtom(Vec3D start_coords, Vec3D start_speed, int type, bool fixed = false);
     void addBond(Atom* a1, Atom* a2);
-    double AverageEnegry();
-    void logEnergies();
-    void logAtomPos();
-    void logMousePos();
-    void logBondList();
+
+    double AverageEnegry() const;
+    void logEnergies() const;
+    void logAtomPos() const;
+    void logMousePos() const;
+    void logBondList() const;
+
     void drawGrid(bool flag = true);
     void drawBonds(bool flag = true);
+
     void speedGradient(bool flag = true);
     void setCameraPos(double x, double y);
     void setCameraZoom(float new_zoom);
     int getSimStep() const { return sim_step; }
+
+    void save(const std::string_view path) const;
+    void load(const std::string_view path);
+    void clear();
+
     SimBox& sim_box;
     Renderer render;
     std::vector<Atom> atoms;
-    
 private:
     sf::RenderWindow& window;
     sf::View gameView;

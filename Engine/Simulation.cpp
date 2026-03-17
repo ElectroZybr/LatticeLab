@@ -1,11 +1,11 @@
+#include <fstream>
+#include <cmath>
+
+#include "imgui-SFML.h"
+
 #include "Simulation.h"
 #include "../interface.h"
 #include "Tools.h"
-#include <cmath>
-#include <algorithm>
-
-#include "imgui.h"
-#include "imgui-SFML.h"
 
 Simulation::Simulation(sf::RenderWindow& w, SimBox& box)
     : window(w), gameView(window.getDefaultView()), uiView(window.getDefaultView()), render(w, gameView, uiView), sim_box(box)
@@ -63,7 +63,7 @@ void Simulation::event() {
 
         if (event.type == sf::Event::Resized) {
             uiView.setSize(event.size.width, event.size.height);
-            uiView.setCenter(event.size.width/2, event.size.height/2);
+            uiView.setCenter(event.size.width/2.f, event.size.height/2.f);
             // ImGui::GetIO().DisplaySize = ImVec2(event.size.width, event.size.height);
         }
 
@@ -180,10 +180,11 @@ Atom* Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, int type, bo
 }
 
 void Simulation::addBond(Atom* a1, Atom* a2) {
+    // FIXME Здесь возможен баг, что если вектор атомов переаллоцирован, то указатели станут не валидными
     Bond::CreateBond(a1, a2);
 }
 
-double Simulation::AverageEnegry() {
+double Simulation::AverageEnegry() const {
     if (atoms.empty()) {
         return 0.0;
     }
@@ -196,9 +197,9 @@ double Simulation::AverageEnegry() {
     return kineticEnergy / static_cast<double>(atoms.size());
 }
 
-void Simulation::logAtomPos() {
+void Simulation::logAtomPos() const {
     int i = 0;
-    for (Atom& atom : atoms) {
+    for (const Atom& atom : atoms) {
         std::cout << "<Pos> Atom (" << i
                   << ") X " << atom.coords.x
                   << " | Y " << atom.coords.y
@@ -208,15 +209,15 @@ void Simulation::logAtomPos() {
     }
 }
 
-void Simulation::logBondList() {
-    for (Atom& atom : atoms) {
+void Simulation::logBondList() const {
+    for (const Atom& atom : atoms) {
         if (atom.bonds.size() > 0) {
             std::cout << atom.bonds.size() << std::endl;
         }
     }
 }
 
-void Simulation::logMousePos() {
+void Simulation::logMousePos() const {
     sf::Vector2i mouse_pos = sf::Mouse::getPosition(window);
     Vec2D world_pos = Tools::screenToWorld(mouse_pos, render.camera.getZoom());
     Vec2D local_pos(world_pos.x - sim_box.start.x, world_pos.y - sim_box.start.y);
@@ -274,4 +275,89 @@ Vec3D randomUnitVector3D(double amplitude) {
 
 double randomInRange(int range) {
     return std::rand() % range + 1;
+}
+
+void Simulation::save(std::string_view path) const
+{
+    std::ofstream file(path.data());
+    if (!file.is_open()) return;
+
+    file << "box "
+         << sim_box.start.x << " " << sim_box.start.y << " " << sim_box.start.z << " "
+         << sim_box.end.x   << " " << sim_box.end.y   << " " << sim_box.end.z   << "\n";
+
+    file << "step " << sim_step << "\n";
+
+    file << "camera "
+         << render.camera.getPosition().x << " "
+         << render.camera.getPosition().y << " "
+         << render.camera.getZoom()       << "\n";
+
+    for (const Atom& atom : atoms) {
+        file << "atom "
+             << atom.coords.x << " " << atom.coords.y << " " << atom.coords.z << " "
+             << atom.speed.x  << " " << atom.speed.y  << " " << atom.speed.z  << " "
+             << atom.type     << " "
+             << atom.a        << " "
+             << atom.eps      << " "
+             << atom.isFixed  << "\n";
+    }
+}
+
+void Simulation::load(std::string_view path) {
+    std::ifstream file(path.data());
+    if (!file.is_open()) return;
+
+    clear();
+
+    // временный буфер чтобы не было реаллокаций
+    struct AtomData {
+        Vec3D coords, speed;
+        int type;
+        float a, eps;
+        bool fixed;
+    };
+    std::vector<AtomData> buffer;
+
+    Vec3D boxStart, boxEnd;
+    int cellSize = -1;
+
+    std::string tag;
+    while (file >> tag) {
+        if (tag == "box") {
+            file >> boxStart.x >> boxStart.y >> boxStart.z
+                 >> boxEnd.x   >> boxEnd.y   >> boxEnd.z;
+        }
+        else if (tag == "step") {
+            file >> sim_step;
+        }
+        else if (tag == "camera") {
+            double cx, cy, zoom;
+            file >> cx >> cy >> zoom;
+            setCameraPos(cx, cy);
+            setCameraZoom(zoom);
+        }
+        else if (tag == "atom") {
+            AtomData d;
+            file >> d.coords.x >> d.coords.y >> d.coords.z
+                 >> d.speed.x  >> d.speed.y  >> d.speed.z
+                 >> d.type >> d.a >> d.eps >> d.fixed;
+            buffer.emplace_back(d);
+        }
+    }
+
+    setSizeBox(boxStart, boxEnd, cellSize);
+
+    atoms.reserve(buffer.size());
+    for (const AtomData& d : buffer) {
+        Atom* atom = createAtom(d.coords, d.speed, d.type, d.fixed);
+        atom->a   = d.a;
+        atom->eps = d.eps;
+    }
+}
+
+void Simulation::clear() {
+    atoms.clear();
+    Bond::bonds_list.clear();
+    sim_step = 0;
 }

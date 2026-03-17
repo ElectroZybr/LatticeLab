@@ -1,5 +1,4 @@
 #include "Atom.h"
-#include <iostream>
 #include <cmath>
 #include <algorithm>
 #include "../SimBox.h"

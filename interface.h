@@ -1,5 +1,3 @@
-// #ifndef interface
-// #define interface
 #pragma once
 
 #include "imgui.h"
@@ -34,5 +32,3 @@ public:
     static int countSelectedAtom;
     static bool drawToolTrip;
 };
-
-// #endif
