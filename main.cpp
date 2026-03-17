@@ -100,6 +100,13 @@ int main() {
         shotTmr += deltaTime;
         if (shotTmr >= 1./FPS) {
             simulation.event();
+            if (Interface::pendingCommand.has_value()) {
+                switch (Interface::pendingCommand.value()) {
+                    case SimCommand::Save: simulation.save(Interface::pendingPath); break;
+                    case SimCommand::Load: simulation.load(Interface::pendingPath); break;
+                }
+                Interface::pendingCommand = std::nullopt;
+            }
             simulation.renderShot(shotTmr);
             shotTmr = 0;
         }

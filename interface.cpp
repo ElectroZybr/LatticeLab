@@ -1,9 +1,9 @@
-#include <SFML/Graphics.hpp>
-
-#include "interface.h"
-
 #include <iostream>
 
+#include <SFML/Graphics.hpp>
+#include "ImGuiFileDialog.h"
+
+#include "interface.h"
 
 #define WIDHT   800
 #define HEIGHT  600
@@ -36,7 +36,8 @@ double Interface::averageEnergy = 0.0;
 int Interface::countSelectedAtom = 0;
 bool Interface::drawToolTrip = false;
 int Interface::sim_step = 0;
-
+std::optional<SimCommand> Interface::pendingCommand = std::nullopt;
+std::string Interface::pendingPath = "";
 
 void Interface::custom_style() {
     Interface::style = &ImGui::GetStyle();
@@ -191,12 +192,25 @@ int Interface::Update() {
 
     // Само выпадающее меню
     if (ImGui::BeginPopup("my_popup")) {
-        if (ImGui::MenuItem("save")) { /* действие */ }
-        if (ImGui::MenuItem("open")) { /* действие */ }
-        
+        if (ImGui::MenuItem("save")) { 
+            ImGuiFileDialog::Instance()->OpenDialog(
+                "SaveDlg", "Save simulation", ".sim",
+                ".", "simulation", 1, nullptr,
+                ImGuiFileDialogFlags_ConfirmOverwrite
+            );
+        }
+        if (ImGui::MenuItem("load")) { 
+            ImGuiFileDialog::Instance()->OpenDialog(
+                "LoadDlg", "Load simulation", ".sim",
+                ".", ""
+            );
+        }
+
         ImGui::Separator();
-        
-        if (ImGui::MenuItem("exit")) { /* действие */ }
+
+        if (ImGui::MenuItem("exit")) { 
+            exit(0);
+        }
         ImGui::EndPopup();
     }
     
@@ -402,6 +416,23 @@ int Interface::Update() {
         ImGui::EndTooltip();
     }
 
+    ImVec2 dlgSize(400 * current_ui_scale, 300 * current_ui_scale);
+
+    if (ImGuiFileDialog::Instance()->Display("SaveDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
+        if (ImGuiFileDialog::Instance()->IsOk()) {
+            pendingPath    = ImGuiFileDialog::Instance()->GetFilePathName();
+            pendingCommand = SimCommand::Save;
+        }
+        ImGuiFileDialog::Instance()->Close();
+    }
+
+    if (ImGuiFileDialog::Instance()->Display("LoadDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
+        if (ImGuiFileDialog::Instance()->IsOk()) {
+            pendingPath    = ImGuiFileDialog::Instance()->GetFilePathName();
+            pendingCommand = SimCommand::Load;
+        }
+        ImGuiFileDialog::Instance()->Close();
+    }
 
     // Проверка на вхождение курсора в область
     cursorHovered = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup);

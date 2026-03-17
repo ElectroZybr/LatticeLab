@@ -1,8 +1,12 @@
 #pragma once
+#include <optional>
+#include <string>
 
 #include "imgui.h"
 #include "imgui-SFML.h"
 #include <SFML/Graphics.hpp>
+
+enum class SimCommand { Save, Load };
 
 class Interface {
 private:
@@ -31,4 +35,6 @@ public:
     static bool cursorHovered;
     static int countSelectedAtom;
     static bool drawToolTrip;
+    static std::optional<SimCommand> pendingCommand;
+    static std::string pendingPath;
 };
