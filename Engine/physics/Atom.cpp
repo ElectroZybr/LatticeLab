@@ -56,12 +56,10 @@ void Atom::PredictPosition(double dt) {
 }
 
 void Atom::SoftWalls(SimBox& box, double dt) {
-    const double maxX = box.end.x - box.start.x - 1;
-    const double maxY = box.end.y - box.start.y - 1;
-    const double maxZ = box.end.z - box.start.z - 1;
-    applyWall(coords.x, speed.x, force.x, 0.0, maxX);
-    applyWall(coords.y, speed.y, force.y, 0.0, maxY);
-    applyWall(coords.z, speed.z, force.z, 0.0, maxZ);
+    const Vec3D max = box.end - box.start - Vec3D(1.0, 1.0, 1.0);
+    applyWall(coords.x, speed.x, force.x, 0.0, max.x);
+    applyWall(coords.y, speed.y, force.y, 0.0, max.y);
+    applyWall(coords.z, speed.z, force.z, 0.0, max.z);
 }
 
 inline void Atom::applyWall(double& coord, double& speed, double& force, double min, double max) {
@@ -85,10 +83,14 @@ inline void Atom::applyWall(double& coord, double& speed, double& force, double 
     // Inside the box near the wall: soft repulsion away from the wall.
     if (coord < min + border) {
         double penetration = (min + border) - coord; // >0 near left wall
-        force += k * std::pow(penetration, 6);
+        const float p2 = penetration * penetration;   // penetration^2
+        const float p4 = p2 * p2;                     // penetration^4
+        force += k * p4 * p2;                         // penetration^6
     } else if (coord > max - border) {
         double penetration = coord - (max - border); // >0 near right wall
-        force -= k * std::pow(penetration, 6);
+        const float p2 = penetration * penetration;   // penetration^2
+        const float p4 = p2 * p2;                     // penetration^4
+        force -= k * p4 * p2;                         // penetration^6
     }
 }
 
@@ -104,10 +106,10 @@ void Atom::ComputeForces(SimBox& box, double deltaTime) {
                     // хитрожопая проверка
                     if (other <= this) continue;
 
-                    Vec3D delta = coords - other->coords;
-                    float distance = sqrt(delta.dot(delta));
+                    // Vec3D delta = coords - other->coords;
+                    // float distance = sqrt(delta.dot(delta));
                     
-                    bool flag = std::find(bonds.begin(), bonds.end(), other) != bonds.end();
+                    bool flag = std::ranges::find(bonds, other) != bonds.end();
 
                     if (getProps().maxValence - valence >= 2) {
                         Bond::angleForce(this, bonds[0], bonds[1]);
@@ -130,16 +132,15 @@ void Atom::ComputeForces(SimBox& box, double deltaTime) {
 Vec3D Atom::NonBondedForce(Atom *a, Atom *b, double dt) {
     /* сумма всех нековалентных сил */
     Vec3D delta = b->coords - a->coords;
-    Vec3D hat = delta.normalized();
     float len = delta.length();
+    Vec3D hat = delta / len;
     return hat * LennardJonesForce(len);
 }
 
 void Atom::Verlet(double dt) {
     /* Предсказание новой позиции на основе предыдущей и ускорения */
     Vec3D a = force / getProps().mass;
-    coords += speed * dt * 0.8 + a * 0.5 * dt * dt;
-    // coords.z = 1.0; // фиксируем z-координату для 2D симуляции
+    coords += (speed * 0.8 + a * 0.5 * dt) * dt;
 }
 
 void Atom::CorrectVelosity(double dt) {
@@ -151,14 +152,26 @@ void Atom::CorrectVelosity(double dt) {
 
 float Atom::LennardJonesPotential(float d) {
     /* потенциал Леннард-Джонса */
-    return 4 * eps * (std::pow(a/d, 12) - std::pow(a/d, 6));
+    const float inv_d2  = 1.f / (d * d);            // 1/d^2
+    const float inv_d6  = inv_d2 * inv_d2 * inv_d2; // 1/d^6
+    const float a2      = a * a;                     // a^2
+    const float a6      = a2 * a2 * a2;              // a^6
+    const float ratio6  = a6 * inv_d6;               // (a/d)^6
+    const float ratio12 = ratio6 * ratio6;           // (a/d)^12
+    return 4.f * eps * (ratio12 - ratio6);
 }
 
 float Atom::LennardJonesForce(float d) {
     /* производная потенциала Леннард-Джонса по расстоянию */
-    return 24 * eps * (2 * std::pow(a, 12) / std::pow(d, 13) - std::pow(a, 6) / std::pow(d, 7));
+    const float inv_d2  = 1.f / (d * d);            // 1/d^2
+    const float inv_d6  = inv_d2 * inv_d2 * inv_d2; // 1/d^6
+    const float a2      = a * a;                    // a^2
+    const float a6      = a2 * a2 * a2;             // a^6
+    const float ratio6  = a6 * inv_d6;              // (a/d)^6
+    const float ratio12 = ratio6 * ratio6;          // (a/d)^12
+    return 24.f * eps * (2.f * ratio12 - ratio6) / d;
 }
 
 float Atom::kineticEnergy() const {
-    return 0.5f * getProps().mass * (speed.x * speed.x + speed.y * speed.y);
+    return 0.5f * getProps().mass * (speed.x * speed.x + speed.y * speed.y + speed.z + speed.z);
 }

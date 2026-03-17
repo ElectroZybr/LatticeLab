@@ -1,5 +1,4 @@
 #include <cmath>
-#include <algorithm>
 
 #include "Bond.h"
 #include "Atom.h"
@@ -18,8 +17,8 @@ Bond::Bond (Atom* _a, Atom* _b) : a(_a), b(_b) {//, float _r0, float _k, float _
 
 void Bond::forceBond(double dt) {
     Vec3D delta = a->coords - b->coords;
-    Vec3D hat = delta.normalized();
     float len = delta.length();
+    Vec3D hat = delta / len;
     Vec3D force = hat * MorseForce(len);
 
     a->force += force;
@@ -28,8 +27,8 @@ void Bond::forceBond(double dt) {
 
 bool Bond::shouldBreak() const {
     Vec3D delta = a->coords - b->coords;
-    float distanse = sqrt(delta.dot(delta));
-    return distanse > 3;
+    float distanseSqr = delta.dot(delta);
+    return distanseSqr > 3.f*3.f;
 }
 
 float Bond::MorseForce(float distanse) {
@@ -43,37 +42,38 @@ void Bond::angleForce(Atom* o, Atom* b, Atom* c) {
     Vec3D delta_ob = b->coords - o->coords; // Вектор направления ob
     Vec3D delta_oc = c->coords - o->coords; // Вектор направления oc
 
-    float len_ob = delta_ob.length(); // Скаляр вектора ob
-    float len_oc = delta_oc.length(); // Скаляр вектора oc
+    double len_ob = delta_ob.length(); // Скаляр вектора ob
+    double len_oc = delta_oc.length(); // Скаляр вектора oc
 
-    Vec3D ob_hat = delta_ob.normalized(); // нормализованный вектор направления ob
-    Vec3D oc_hat = delta_oc.normalized(); // нормализованный вектор направления oc
+    Vec3D ob_hat = delta_ob / len_ob; // нормализованный вектор направления ob
+    Vec3D oc_hat = delta_oc / len_oc; // нормализованный вектор направления oc
 
     double cos_theta = ob_hat.dot(oc_hat); // косинус угла theta
-    double sin_theta = std::sqrt(1-cos_theta*cos_theta); // синус угла theta
+    double sin_theta_sqr = 1.0-cos_theta*cos_theta; // квадрат синуса угла theta
+    if (sin_theta_sqr < 1e-12) return;
+
     double angle_theta = std::acos(cos_theta); // Угол theta в радианах
-    double theta_0 = 60.f / 180.f * M_PI; // Заданный угол theta в градусах
-
+    constexpr double theta_0 = 60.0 / 180.0 * std::numbers::pi; // Заданный угол theta в градусах
     double angle_loss = angle_theta - theta_0; // Текущая ошибка угла
-
-    double k = 50;
     
-    if (sin_theta < 1e-6) return;
-
+    double sin_theta = std::sqrt(sin_theta_sqr);
+    
+    constexpr double k = 50;
     Vec3D force_b = -((oc_hat - ob_hat * cos_theta) / len_ob) * (-k * angle_loss / sin_theta); // градиент сил b
     Vec3D force_c = -((ob_hat - oc_hat * cos_theta) / len_oc) * (-k * angle_loss / sin_theta); // градиент сил c
+    Vec3D force_o = -(force_b + force_c);
 
     b->force += force_b;
     c->force += force_c;
-    Vec3D force_o = -(force_b + force_c);
+    o->force += force_o;
 }
 
 Bond* Bond::CreateBond(Atom* a, Atom* b) {
     // std::cout << "<Create bond>" << std::endl;
     bonds_list.emplace_back(a, b);
     auto it = std::prev(bonds_list.end());
-    a->bonds.push_back(b);
-    b->bonds.push_back(a);
+    a->bonds.emplace_back(b);
+    b->bonds.emplace_back(a);
 
     a->valence--;
     b->valence--;
@@ -82,9 +82,9 @@ Bond* Bond::CreateBond(Atom* a, Atom* b) {
 
 void Bond::detach() {
     std::vector<Atom*>* bonds = &a->bonds;
-    bonds->erase(std::remove(bonds->begin(), bonds->end(), b), bonds->end());
+    std::erase(*bonds, b);
     bonds = &b->bonds;
-    bonds->erase(std::remove(bonds->begin(), bonds->end(), a), bonds->end());
+    std::erase(*bonds, a);
 
     a->valence++;
     b->valence++;
@@ -95,10 +95,8 @@ void Bond::BreakBond(Bond* bond) {
     // std::cout << "<Break bond>" << std::endl;
     bond->detach();
 
-    for (auto it = bonds_list.begin(); it != bonds_list.end(); ++it) {
-        if (&(*it) == bond) {
-            bonds_list.erase(it);
-            return;
-        }
+    if (auto it = std::ranges::find_if(bonds_list, [bond](const Bond& b) { return &b == bond; });
+        it != bonds_list.end()) {
+        bonds_list.erase(it);
     }
 }

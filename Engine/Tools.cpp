@@ -61,8 +61,8 @@ void Tools::selectionFrame(sf::Vector2i start_mouse_pos, sf::Vector2i mouse_pos,
 }
 
 Vec2D Tools::screenToWorld(sf::Vector2i mouse_pos, float zoom) {
-    return Vec2D(((mouse_pos.x - (window->getSize().x / 2.f)) / zoom) + gameView->getCenter().x,
-                 ((mouse_pos.y - (window->getSize().y / 2.f)) / zoom) + gameView->getCenter().y);
+    sf::Vector2f world = (sf::Vector2f(mouse_pos) - sf::Vector2f(window->getSize()) / 2.f) / zoom + gameView->getCenter();
+    return Vec2D(world.x, world.y);
 }
 
 Vec2D Tools::screenToBox(sf::Vector2i mouse_pos, float zoom) {

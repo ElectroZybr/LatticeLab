@@ -14,7 +14,7 @@ public:
     }
 
     void addEdge(Atom* from, Atom* to) {
-        graph[from].push_back(to);
+        graph[from].emplace_back(to);
     }
 
     // void print() {

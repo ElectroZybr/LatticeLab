@@ -132,7 +132,7 @@ void Simulation::event() {
         float zoom = render.camera.getZoom();
         Vec2D world = Tools::screenToBox(mouse_pos, zoom);
         Vec2D delta = Vec2D(selectedMoveAtom->coords.x, selectedMoveAtom->coords.y) - world;
-        Vec3D force = delta * 50 * Interface::getSimulationSpeed();
+        Vec3D force = delta * 30;
         for (Atom* atom : Tools::selected_atom_batch) {
             atom->force -= force;
         }
@@ -172,7 +172,7 @@ bool Simulation::checkNeighbor(Vec3D coords, float delta) {
         for (int j = -1; j <= 1; ++j) {
             if (auto cell = sim_box.grid.at(curr_x - i, curr_y - j)) {
                 for (Atom* other : *cell) {
-                    if ((coords - other->coords).length() < delta) return true;
+                    if ((coords - other->coords).sqrAbs() < delta*delta) return true;
                 }
             }
         }
@@ -261,7 +261,7 @@ void Simulation::setCameraZoom(float new_zoom) {
 }
 
 Vec2D randomUnitVector2D() {
-    double angle = (double)std::rand() / RAND_MAX * 2 * M_PI;
+    double angle = (double)std::rand() / RAND_MAX * 2.0 * std::numbers::pi;
     return Vec2D(std::cos(angle), std::sin(angle));  // x = cos(θ), y = sin(θ)
 }
 
@@ -269,9 +269,9 @@ Vec3D randomUnitVector3D(double amplitude) {
     double u = (double)std::rand() / RAND_MAX;       // in [0,1]
     double v = (double)std::rand() / RAND_MAX;       // in [0,1]
 
-    double theta = 2.0 * M_PI * u;                   // азимут (0..2π)
+    double theta = 2.0 * std::numbers::pi * u;       // азимут (0..2π)
     double z = 2.0 * v - 1.0;                        // равномерно по [-1,1]
-    double r = std::sqrt(1.0 - z * z);               // радиус проекции на xy
+    double r = std::sqrt(1.0 - z * z);             // радиус проекции на xy
 
     double x = r * std::cos(theta);
     double y = r * std::sin(theta);

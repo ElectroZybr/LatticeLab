@@ -34,7 +34,8 @@ public:
 
     std::unordered_set<Atom*>* at(int x, int y) const {
         if (x >= 0 && x < sizeX && y >= 0 && y < sizeY) return grid[x][y];
-        return nullptr; }
+        return nullptr; 
+    }
 
     int worldToCellX(double x) const {
         if (x < 0.0) return -1;
