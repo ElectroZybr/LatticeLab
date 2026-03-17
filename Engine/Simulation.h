@@ -14,7 +14,7 @@ public:
     void renderShot(float dt);
     void pollEvents();
     void event();
-    void setSizeBox(Vec3D s, Vec3D e, int cellSize = -1);
+    void setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize = -1);
 
     void createRandomAtoms(int type, int quantity);
     Atom* createAtom(Vec3D start_coords, Vec3D start_speed, int type, bool fixed = false);

@@ -16,11 +16,11 @@ void SimBox::setRenderer(Renderer* r) {
     }
 }
 
-bool SimBox::setSizeBox(Vec3D s, Vec3D e, int cellSize) {
+bool SimBox::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
     bool resized = false;
 
-    const int newW = std::max(1, static_cast<int>(e.x - s.x));
-    const int newH = std::max(1, static_cast<int>(e.y - s.y));
+    const int newW = std::max(1, static_cast<int>(newEnd.x - newStart.x));
+    const int newH = std::max(1, static_cast<int>(newEnd.y - newStart.y));
     const int oldW = std::max(1, static_cast<int>(end.x - start.x));
     const int oldH = std::max(1, static_cast<int>(end.y - start.y));
     const bool sizeChanged = (newW != oldW) || (newH != oldH);
@@ -31,8 +31,8 @@ bool SimBox::setSizeBox(Vec3D s, Vec3D e, int cellSize) {
         resized = true;
     }
 
-    start = s;
-    end = e;
+    start = newStart;
+    end = newEnd;
 
     if (render && sizeChanged) {
         render->wallImage(start, end);

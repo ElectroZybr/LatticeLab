@@ -217,7 +217,7 @@ int Interface::Update() {
         ImGui::Separator();
 
         if (ImGui::MenuItem("exit")) { 
-            exit(0);
+            window->close();
         }
         ImGui::EndPopup();
     }

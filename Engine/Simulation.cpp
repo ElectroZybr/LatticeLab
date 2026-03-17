@@ -1,5 +1,6 @@
 #include <fstream>
 #include <cmath>
+#include <iostream>
 
 #include "imgui-SFML.h"
 
@@ -139,8 +140,8 @@ void Simulation::event() {
     }    
 }
 
-void Simulation::setSizeBox(Vec3D s, Vec3D e, int cellSize) {
-    if (sim_box.setSizeBox(s, e, cellSize)) {
+void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
+    if (sim_box.setSizeBox(newStart, newEnd, cellSize)) {
         Atom::setGrid(&sim_box.grid);
 
         for (Atom& atom : atoms) {

@@ -42,6 +42,12 @@ FetchContent_Declare(
     GIT_TAG        v1.91.9
 )
 FetchContent_MakeAvailable(imgui)
+add_library(imgui STATIC
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+)
 include_directories(${imgui_SOURCE_DIR})
 
 # --- Настройка ImGui-SFML ---
@@ -63,7 +69,7 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/aiekick/ImGuiFileDialog.git
     GIT_TAG        v0.6.8
 )
-FetchContent_MakeAvailable(ImGuiFileDialog)
+FetchContent_Populate(ImGuiFileDialog)
 add_library(ImGuiFileDialog_lib STATIC
     ${imguifiledialog_SOURCE_DIR}/ImGuiFileDialog.cpp
 )
@@ -71,6 +77,7 @@ target_include_directories(ImGuiFileDialog_lib PUBLIC
     ${imguifiledialog_SOURCE_DIR}
     ${imgui_SOURCE_DIR}
 )
+target_link_libraries(ImGuiFileDialog_lib PUBLIC imgui)
 
 set(SOURCES
     main.cpp

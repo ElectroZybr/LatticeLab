@@ -1,23 +1,19 @@
 #pragma once
 #include <unordered_set>
-#include <iostream>
-#include <algorithm>
+#include <vector>
 #include <cmath>
 
 class Atom;
 
 class SpatialGrid {
 private:
-    std::unordered_set<Atom*>*** grid;
-    void clearGridMemory();
-    void allocateGridMemory(int newSizeX, int newSizeY);
+    std::vector<std::unordered_set<Atom*>> grid;
 public:
     int sizeX;
     int sizeY;
     int cellSize;
 
     SpatialGrid(int sizeX, int sizeY, int cellSize = 3);
-    ~SpatialGrid();
     void resize(int newSizeX, int newSizeY, int newCellSize = -1);
 
     void insert(int x, int y, Atom* val) {
@@ -32,10 +28,17 @@ public:
         }
     }
 
-    std::unordered_set<Atom*>* at(int x, int y) const {
-        if (x >= 0 && x < sizeX && y >= 0 && y < sizeY) return grid[x][y];
-        return nullptr; 
+    std::unordered_set<Atom*>* at(int x, int y) {
+        if (x >= 0 && x < sizeX && y >= 0 && y < sizeY)
+            return &grid[y * sizeX + x];
+        return nullptr;
     }
+    const std::unordered_set<Atom*>* at(int x, int y) const {
+        if (x >= 0 && x < sizeX && y >= 0 && y < sizeY)
+            return &grid[y * sizeX + x];
+        return nullptr;
+    }
+
 
     int worldToCellX(double x) const {
         if (x < 0.0) return -1;

@@ -66,8 +66,10 @@ cmake --build build -j 8
 - `void renderShot(float dt)`
 Вызов рендера кадра.
 - `void event()`
-Обработка событий окна, мыши, UI.
-- `void setSizeBox(Vec3D s, Vec3D e, int cellSize = -1)`
+Обработка событий UI.
+- `void pollEvents()`
+Обработка событий окна.
+- `void setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize = -1)`
 Изменение размеров симуляционного бокса.
 - `Atom* createAtom(Vec3D start_coords, Vec3D start_speed, int type, bool fixed = false)`
 Создание атома.
