@@ -5,60 +5,87 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
-if (UNIX AND NOT APPLE)
-    set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries on Linux" FORCE)
-endif ()
-
-# Настройка SFML
 if (WIN32)
-    set(SFML_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/sfml/lib/cmake/SFML")
-    set(SFML_STATIC_LIBRARIES ON)
-endif ()
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static libraries on Windows" FORCE)
+    set(SFML_USE_STATIC_STD_LIBS ON CACHE BOOL "Use static std libs" FORCE)
+else()
+    set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries on Unix" FORCE)
+endif()
 
-find_package(SFML 2.5 COMPONENTS graphics window system network audio REQUIRED)
+include(FetchContent)
 
-# Добавление ImGui и ImGui-SFML
-set(IMGUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Libraries/imgui")
-add_subdirectory(Libraries/imgui)
-add_subdirectory(Libraries/imgui-sfml)
+# Drop stale cache entries from old in-tree dependencies layout.
+unset(IMGUI_INCLUDE_DIR CACHE)
+unset(IMGUI_SFML_CONFIG_DIR CACHE)
+unset(imgui_SOURCE_DIR CACHE)
+unset(imgui_BINARY_DIR CACHE)
 
-# Исходные файлы
-add_executable(${CMAKE_PROJECT_NAME}
-        # custom files:
-        main.cpp
-        interface.h
-        interface.cpp
-        # engine:
-        Engine/Consts.h
-        Engine/math/Vec2D.h
-        Engine/math/Vec2D.cpp
-        Engine/math/Vec3D.h
-        Engine/math/Vec3D.cpp
-        Engine/physics/Atom.h
-        Engine/physics/Atom.cpp
-        Engine/physics/Bond.h
-        Engine/physics/Bond.cpp
-        Engine/physics/BondTable.h
-        Engine/physics/BondTable.cpp
-        Engine/physics/SpatialGrid.h
-        Engine/physics/SpatialGrid.cpp
-        Engine/Camera.h
-        Engine/Camera.cpp
-        Engine/Renderer.h
-        Engine/Renderer.cpp
-        Engine/Simulation.h
-        Engine/Simulation.cpp
-        Engine/SimBox.h
-        Engine/SimBox.cpp
-        Engine/Tools.h
-        Engine/Tools.cpp
-        )
+# --- Настройка SFML ---
+FetchContent_Declare(
+    sfml
+    GIT_REPOSITORY https://github.com/SFML/SFML.git
+    GIT_TAG        2.6.1
+)
+set(SFML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(SFML_BUILD_DOC OFF CACHE BOOL "" FORCE)
+set(SFML_INSTALL_PKGCONFIG_FILES OFF CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(sfml)
+
+# --- Настройка ImGui ---
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG        v1.89
+)
+FetchContent_MakeAvailable(imgui)
+
+# --- Настройка ImGui-SFML ---
+FetchContent_Declare(
+    imgui-sfml
+    GIT_REPOSITORY https://github.com/SFML/imgui-sfml.git
+    GIT_TAG        v2.6.1
+)
+set(IMGUI_SFML_FIND_SFML OFF CACHE BOOL "" FORCE)
+set(IMGUI_SFML_IF_FETCHCONTENT ON CACHE BOOL "" FORCE)
+set(IMGUI_DIR ${imgui_SOURCE_DIR} CACHE PATH "" FORCE)
+set(IMGUI_INCLUDE_DIR ${imgui_SOURCE_DIR} CACHE PATH "" FORCE)
+
+FetchContent_MakeAvailable(imgui-sfml)
+
+set(SOURCES
+    main.cpp
+    interface.h
+    interface.cpp
+    Engine/math/Vec2D.cpp
+    Engine/math/Vec3D.cpp
+    Engine/physics/Atom.cpp
+    Engine/physics/Bond.cpp
+    Engine/physics/BondTable.cpp
+    Engine/physics/SpatialGrid.cpp
+    Engine/Camera.cpp
+    Engine/Renderer.cpp
+    Engine/Simulation.cpp
+    Engine/SimBox.cpp
+    Engine/Tools.cpp
+)
+
+add_executable(${CMAKE_PROJECT_NAME} ${SOURCES})
 
 if (WIN32)
     set(APP_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/app_icon.rc")
-    target_sources(Chemical-simulator PRIVATE ${APP_ICON_RESOURCE})
+    if(EXISTS ${APP_ICON_RESOURCE})
+        target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${APP_ICON_RESOURCE})
+    endif()
 endif ()
 
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE sfml-system sfml-network sfml-graphics sfml-window sfml-audio)
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE imgui)
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ImGui-SFML::ImGui-SFML)
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE 
+    sfml-graphics 
+    sfml-window 
+    sfml-system 
+    sfml-network 
+    sfml-audio
+    ImGui-SFML::ImGui-SFML
+)
+
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${imgui_SOURCE_DIR})
