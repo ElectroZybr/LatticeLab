@@ -29,7 +29,7 @@ void Camera::zoomAt(float factor, sf::Vector2f mousePos, sf::RenderWindow& windo
     // Изменяем уровень зума с учетом направления к курсору
     float prevZoom = zoom;
     zoom *= (1.f + factor * zoomSpeed);
-    zoom = std::max(1.f, std::min(zoom, 500.f));
+    zoom = std::clamp(zoom, 1.f, 500.f);
 
     speed = moveSpeed / zoom;
     
@@ -45,7 +45,7 @@ float Camera::getZoom() const {
 }
 
 void Camera::setZoom(float new_zoom) {
-    zoom = std::max(2.f, std::min(new_zoom, 500.f));
+    zoom = std::clamp(zoom, 1.f, 500.f);
 }
 
 void Camera::handleInput(float deltaTime, sf::RenderWindow& window) {
@@ -73,12 +73,11 @@ void Camera::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
         if (isDragging) {
             // Перемещение камеры при перетаскивании
             sf::Vector2i currentPixelPos = sf::Mouse::getPosition(window);
-            sf::Vector2f deltaPixel = sf::Vector2f(dragStartPixelPos.x - currentPixelPos.x,
-                                                   dragStartPixelPos.y - currentPixelPos.y);
+            sf::Vector2i deltaPixel = dragStartPixelPos - currentPixelPos;
 
             // Преобразуем разницу в пикселях в мировые координаты
             sf::Vector2f deltaWorld = window.mapPixelToCoords(
-                sf::Vector2i(deltaPixel.x, deltaPixel.y), *view
+                deltaPixel, *view
             ) - window.mapPixelToCoords(sf::Vector2i(0, 0), *view);
 
             position = dragStartCameraPos + deltaWorld;
