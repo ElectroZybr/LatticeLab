@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.17)
 project(Chemical-simulator)
 
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -14,7 +18,6 @@ endif()
 
 include(FetchContent)
 
-# Drop stale cache entries from old in-tree dependencies layout.
 unset(IMGUI_INCLUDE_DIR CACHE)
 unset(IMGUI_SFML_CONFIG_DIR CACHE)
 unset(imgui_SOURCE_DIR CACHE)
