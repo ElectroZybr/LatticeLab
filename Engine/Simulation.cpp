@@ -49,84 +49,90 @@ void Simulation::renderShot(float deltaTime) {
     render.drawShot(atoms, sim_box, deltaTime);
 }
 
+void Simulation::pollEvents() {
+    sf::Vector2i mouse_pos = sf::Mouse::getPosition(window);
+    while (const std::optional<sf::Event> optEvent = window.pollEvent()) {
+        const sf::Event& event = *optEvent;
+        ImGui::SFML::ProcessEvent(window, event);
+
+        if (event.is<sf::Event::Closed>())
+            window.close();
+
+        if (const auto* e = event.getIf<sf::Event::Resized>()) {
+            uiView.setSize(sf::Vector2f(e->size));
+            uiView.setCenter(sf::Vector2f(e->size) / 2.f);
+            // ImGui::GetIO().DisplaySize = ImVec2(e->size.x, e->size.y);
+        }
+
+        Interface::CheckEvent(event);
+
+        if (const auto* e = event.getIf<sf::Event::MouseButtonPressed>()) { 
+            if (e->button == sf::Mouse::Button::Left) {
+                float zoom = render.camera.getZoom();
+                // создание атома
+                if (!Interface::cursorHovered && Interface::getSelectedAtom() != -1) {
+                    
+                    Vec2D world = Tools::screenToWorld(mouse_pos, zoom);
+                    Vec2D local(world.x - sim_box.start.x, world.y - sim_box.start.y);
+                    atoms.emplace_back(Vec3D(local-0.5),
+                                    Vec3D(((double)std::rand() / RAND_MAX-0.5)*5, ((double)std::rand() / RAND_MAX-0.5)*5, 0), Interface::getSelectedAtom());
+
+                    Atom& atom = atoms.back();
+
+                    std::cout << "<Create atom> X: " << world.x <<  " Y: " << world.y << 
+                        " | Type: " << Interface::getSelectedAtom() << 
+                        " | Adress: " << &atom << 
+                        " | Speed: " << atom.speed.x << " " << atom.speed.y << std::endl;
+                }
+                else {
+                    Vec2D world = Tools::screenToWorld(mouse_pos, zoom);
+                    Vec2D local(world.x - sim_box.start.x, world.y - sim_box.start.y);
+                    std::unordered_set<Atom*>* block = sim_box.grid.at(
+                        sim_box.grid.worldToCellX(local.x - 0.5),
+                        sim_box.grid.worldToCellY(local.y - 0.5)
+                    );
+
+                    if (block != nullptr && !block->empty() && !selectionFrameMoveFlag) {
+                        selectedMoveAtom = *block->begin();
+                        atomMoveFlag = true; 
+                    } else if (!Interface::cursorHovered && !selectionFrameMoveFlag) {
+                        selectionFrameMoveFlag = true;
+                        start_mouse_pos = sf::Mouse::getPosition(window);
+                        Tools::selectionFrame(start_mouse_pos, sf::Mouse::getPosition(window), atoms);
+                        render.drawSelectionFrame = true;
+                    }
+                } 
+            } 
+        }
+        
+        if (const auto* e = event.getIf<sf::Event::MouseButtonReleased>()) {
+            if (e->button == sf::Mouse::Button::Left) {
+                atomMoveFlag = false;
+                selectionFrameMoveFlag = false;
+                render.drawSelectionFrame = false;
+                Interface::drawToolTrip = false;
+            }
+        } 
+        render.camera.handleEvent(event, window);
+    }
+}
+
 void Simulation::event() {
     Interface::setAverageEnergy(AverageEnegry());
     Interface::setSimStep(sim_step);
     Interface::Update();
     sf::Vector2i mouse_pos = sf::Mouse::getPosition(window);
-    sf::Event event;
-    while (window.pollEvent(event)) {
-        ImGui::SFML::ProcessEvent(window, event);
-
-        if (event.type == sf::Event::Closed)
-            window.close();
-
-        if (event.type == sf::Event::Resized) {
-            uiView.setSize(event.size.width, event.size.height);
-            uiView.setCenter(event.size.width/2.f, event.size.height/2.f);
-            // ImGui::GetIO().DisplaySize = ImVec2(event.size.width, event.size.height);
-        }
-
-        Interface::CheckEvent(event);
-
-        if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
-            float zoom = render.camera.getZoom();
-            // создание атома
-            if (!Interface::cursorHovered && Interface::getSelectedAtom() != -1) {
-                
-                Vec2D world = Tools::screenToWorld(mouse_pos, zoom);
-                Vec2D local(world.x - sim_box.start.x, world.y - sim_box.start.y);
-                atoms.emplace_back(Vec3D(local-0.5),
-                                   Vec3D(((double)std::rand() / RAND_MAX-0.5)*5, ((double)std::rand() / RAND_MAX-0.5)*5, 0), Interface::getSelectedAtom());
-
-
-                Atom& atom = atoms.back();
-
-                std::cout << "<Create atom> X: " << world.x << 
-                                            " Y: " << world.y << 
-                                        " | Type: " << Interface::getSelectedAtom() << 
-                                    " | Adress: " << &atom << 
-                                    " | Speed: " << atom.speed.x << " " << atom.speed.y << std::endl;
-
-            } else {
-                // Передвижение атома мышкой
-                Vec2D world = Tools::screenToWorld(mouse_pos, zoom);
-                Vec2D local(world.x - sim_box.start.x, world.y - sim_box.start.y);
-                std::unordered_set<Atom*>* block = sim_box.grid.at(
-                    sim_box.grid.worldToCellX(local.x - 0.5),
-                    sim_box.grid.worldToCellY(local.y - 0.5)
-                );
-
-                if (block != nullptr && !block->empty() && !selectionFrameMoveFlag) {
-                    selectedMoveAtom = *block->begin();
-                    atomMoveFlag = true; 
-                } else if (!Interface::cursorHovered && !selectionFrameMoveFlag) {
-                    selectionFrameMoveFlag = true;
-                    start_mouse_pos = sf::Mouse::getPosition(window);
-                    Tools::selectionFrame(start_mouse_pos, sf::Mouse::getPosition(window), atoms);
-                    render.drawSelectionFrame = true;
-                }
-            } 
-        } if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Left) {
-            atomMoveFlag = false;
-            selectionFrameMoveFlag = false;
-            render.drawSelectionFrame = false;
-            Interface::drawToolTrip = false;
-        } 
-        render.camera.handleEvent(event, window);
-    }
 
     if (selectionFrameMoveFlag) {
-        Tools::selectionFrame(start_mouse_pos, sf::Mouse::getPosition(window), atoms);
-    } 
+        Tools::selectionFrame(start_mouse_pos, mouse_pos, atoms);
+    }
 
     // Передвижение атома мышкой
     if (atomMoveFlag) {
         float zoom = render.camera.getZoom();
         Vec2D world = Tools::screenToBox(mouse_pos, zoom);
         Vec2D delta = Vec2D(selectedMoveAtom->coords.x, selectedMoveAtom->coords.y) - world;
-        Vec3D force = delta.normalized() * delta.length() * 50 * Interface::getSimulationSpeed();
-        // selectedMoveAtom->force -= delta.normalized() * delta.length() * 100;
+        Vec3D force = delta * 50 * Interface::getSimulationSpeed();
         for (Atom* atom : Tools::selected_atom_batch) {
             atom->force -= force;
         }

@@ -12,6 +12,7 @@ public:
     void update(float dt);
 
     void renderShot(float dt);
+    void pollEvents();
     void event();
     void setSizeBox(Vec3D s, Vec3D e, int cellSize = -1);
 

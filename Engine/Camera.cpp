@@ -1,8 +1,6 @@
 #include <cmath>
 #include "Camera.h"
 #include "../interface.h"
-#include <iostream>
-
 
 Camera::Camera(sf::RenderWindow& window, sf::View* view, float moveSpeed, float zoomSpeed) 
     : view(view), position(0, 0), zoom(20.f), moveSpeed(moveSpeed), zoomSpeed(zoomSpeed),
@@ -53,40 +51,48 @@ void Camera::setZoom(float new_zoom) {
 void Camera::handleInput(float deltaTime, sf::RenderWindow& window) {
     // Управление WASD
     float deltaSpeed = speed * deltaTime;
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) move(0, -deltaSpeed);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) move(0, deltaSpeed);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) move(-deltaSpeed, 0);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) move(deltaSpeed, 0);
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) move(0, -deltaSpeed);
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) move(0, deltaSpeed);
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) move(-deltaSpeed, 0);
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) move(deltaSpeed, 0);
 }
 
 void Camera::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
-    if (!Interface::cursorHovered && event.type == sf::Event::MouseButtonPressed && 
-        event.mouseButton.button == sf::Mouse::Right) {
-        // Начало перетаскивания
-        isDragging = true;
-        dragStartPixelPos = sf::Mouse::getPosition(window);
-        dragStartCameraPos = position;
-    } 
-    else if (event.type == sf::Event::MouseMoved && isDragging) {
-        // Перемещение камеры при перетаскивании
-        sf::Vector2i currentPixelPos = sf::Mouse::getPosition(window);
-        sf::Vector2f deltaPixel = sf::Vector2f(dragStartPixelPos.x - currentPixelPos.x,
-                                               dragStartPixelPos.y - currentPixelPos.y);
-        
-        // Преобразуем разницу в пикселях в мировые координаты
-        sf::Vector2f deltaWorld = window.mapPixelToCoords(
-            sf::Vector2i(deltaPixel.x, deltaPixel.y), *view
-        ) - window.mapPixelToCoords(sf::Vector2i(0, 0), *view);
-        
-        position = dragStartCameraPos + deltaWorld;
+    if (!Interface::cursorHovered) {
+        if (const auto* e = event.getIf<sf::Event::MouseButtonPressed>()) {
+            if (e->button == sf::Mouse::Button::Right) {
+                // Начало перетаскивания
+                isDragging = true;
+                dragStartPixelPos = sf::Mouse::getPosition(window);
+                dragStartCameraPos = position;
+            }
+        }
     }
-    else if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Right) {
-        // Конец перетаскивания
-        isDragging = false;
+
+    if (const auto* e = event.getIf<sf::Event::MouseMoved>()) {
+        if (isDragging) {
+            // Перемещение камеры при перетаскивании
+            sf::Vector2i currentPixelPos = sf::Mouse::getPosition(window);
+            sf::Vector2f deltaPixel = sf::Vector2f(dragStartPixelPos.x - currentPixelPos.x,
+                                                   dragStartPixelPos.y - currentPixelPos.y);
+
+            // Преобразуем разницу в пикселях в мировые координаты
+            sf::Vector2f deltaWorld = window.mapPixelToCoords(
+                sf::Vector2i(deltaPixel.x, deltaPixel.y), *view
+            ) - window.mapPixelToCoords(sf::Vector2i(0, 0), *view);
+
+            position = dragStartCameraPos + deltaWorld;
+        }
     }
-    else if (event.type == sf::Event::MouseWheelScrolled) {
-        if (event.mouseWheelScroll.wheel == sf::Mouse::VerticalWheel) {
-            zoomAt(event.mouseWheelScroll.delta, sf::Vector2f(event.mouseWheelScroll.x, event.mouseWheelScroll.y), window);
+    else if (const auto* e = event.getIf<sf::Event::MouseButtonReleased>()) {
+        if (e->button == sf::Mouse::Button::Right) {
+            // Конец перетаскивания
+            isDragging = false;
+        }
+    }
+    else if (const auto* e = event.getIf<sf::Event::MouseWheelScrolled>()) {
+        if (e->wheel == sf::Mouse::Wheel::Vertical) {
+            zoomAt(e->delta, sf::Vector2f(e->position), window);
         }
     }
 }

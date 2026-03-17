@@ -131,13 +131,13 @@ int Interface::init(sf::RenderWindow& w) {
 }
 
 void Interface::CheckEvent(const sf::Event& event) {
-    if (event.type == sf::Event::Resized) {
+    if (const auto* e = event.getIf<sf::Event::Resized>()) {
         // Пересчитываем масштаб ImGui
         // window->setView(sf::View(sf::FloatRect(0, 0, event.size.width, event.size.height)));
         // ImGui::GetIO().DisplaySize = ImVec2(event.size.width, event.size.height);
-        float scale_W = static_cast<float>(event.size.width) / WIDHT;
-        float scale_H = static_cast<float>(event.size.height) / HEIGHT;
-        current_ui_scale = scale_H < scale_W ? scale_H : scale_W;
+        sf::Vector2f scale = sf::Vector2f(e->size) / sf::Vector2f(WIDHT, HEIGHT);
+
+        current_ui_scale = scale.y < scale.x ? scale.y : scale.x;
         // current_ui_scale = std::clamp(current_ui_scale, 1.0f, 1.5f);
         ImGui::GetStyle() = baseStyle;
         style->ScaleAllSizes(current_ui_scale);
@@ -174,7 +174,6 @@ int Interface::getSelectedAtom() {
 
 int Interface::Update() {
     ImGui::SFML::Update(*window, clock.restart());
-    
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(122*current_ui_scale, 65*current_ui_scale));
@@ -202,18 +201,17 @@ int Interface::Update() {
 
     // Само выпадающее меню
     if (ImGui::BeginPopup("my_popup")) {
-        if (ImGui::MenuItem("save")) { 
-            ImGuiFileDialog::Instance()->OpenDialog(
-                "SaveDlg", "Save simulation", ".sim",
-                ".", "simulation", 1, nullptr,
-                ImGuiFileDialogFlags_ConfirmOverwrite
-            );
+        IGFD::FileDialogConfig config;
+        config.path = ".";
+        config.fileName = "simulation";
+        config.countSelectionMax = 1;
+        config.flags = ImGuiFileDialogFlags_ConfirmOverwrite;
+
+        if (ImGui::MenuItem("save")) {
+            ImGuiFileDialog::Instance()->OpenDialog("SaveDlg", "Save simulation", ".sim", config);
         }
-        if (ImGui::MenuItem("load")) { 
-            ImGuiFileDialog::Instance()->OpenDialog(
-                "LoadDlg", "Load simulation", ".sim",
-                ".", ""
-            );
+        if (ImGui::MenuItem("load")) {
+            ImGuiFileDialog::Instance()->OpenDialog("LoadDlg", "Load simulation", ".sim", config);
         }
 
         ImGui::Separator();

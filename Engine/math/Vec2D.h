@@ -1,7 +1,5 @@
-#include <array>
-
-#ifndef VEC2D_H  // Если VEC2D_H не определён,
-#define VEC2D_H  // то определяем его и продолжаем компиляцию.
+#pragma once
+#include <SFML/System/Vector2.hpp>
 
 class Vec2D {
 private:
@@ -13,6 +11,9 @@ public:
     Vec2D(const Vec2D &vec);
 
     explicit Vec2D(double x = 0.0, double y = 0.0);
+
+    // Операторы приведения типа
+    operator sf::Vector2f() const;
 
     [[nodiscard]] Vec2D operator-() const;
 
@@ -38,5 +39,3 @@ public:
     [[nodiscard]] Vec2D normalized() const; // Returns normalized vector without changing
     [[nodiscard]] double length() const;
 };
-
-#endif
