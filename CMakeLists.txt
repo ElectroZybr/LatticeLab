@@ -39,6 +39,7 @@ FetchContent_Declare(
     GIT_TAG        v1.89
 )
 FetchContent_MakeAvailable(imgui)
+include_directories(${imgui_SOURCE_DIR})
 
 # --- Настройка ImGui-SFML ---
 FetchContent_Declare(
@@ -52,6 +53,21 @@ set(IMGUI_DIR ${imgui_SOURCE_DIR} CACHE PATH "" FORCE)
 set(IMGUI_INCLUDE_DIR ${imgui_SOURCE_DIR} CACHE PATH "" FORCE)
 
 FetchContent_MakeAvailable(imgui-sfml)
+
+# --- Настройка ImGuiFileDialog ---
+FetchContent_Declare(
+    ImGuiFileDialog
+    GIT_REPOSITORY https://github.com/aiekick/ImGuiFileDialog.git
+    GIT_TAG        v0.6.5
+)
+FetchContent_MakeAvailable(ImGuiFileDialog)
+add_library(ImGuiFileDialog_lib STATIC
+    ${imguifiledialog_SOURCE_DIR}/ImGuiFileDialog.cpp
+)
+target_include_directories(ImGuiFileDialog_lib PUBLIC
+    ${imguifiledialog_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}
+)
 
 set(SOURCES
     main.cpp
@@ -86,6 +102,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     sfml-network 
     sfml-audio
     ImGui-SFML::ImGui-SFML
+    ImGuiFileDialog_lib
 )
 
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${imgui_SOURCE_DIR})
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${imguifiledialog_SOURCE_DIR} ${imgui_SOURCE_DIR} )
