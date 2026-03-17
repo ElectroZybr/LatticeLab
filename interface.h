@@ -16,6 +16,7 @@ private:
     static ImGuiStyle baseStyle;
     static ImFont* Rubik_VariableFont_wght;
     static ImFont* Font_Awesome;
+    static ImFont* DialogFont;
     static float current_ui_scale;
     static int selectedAtom;
     static float simulationSpeed;

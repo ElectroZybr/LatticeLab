@@ -20,12 +20,12 @@
 #define ICON_FA_FAST_FORWARD "\uf050"
 #define ICON_FA_FAST_BACKWARD "\uf049"
 
-
 sf::RenderWindow* Interface::window = nullptr;
 ImGuiStyle* Interface::style = nullptr;
 ImGuiStyle Interface::baseStyle;
 ImFont* Interface::Rubik_VariableFont_wght = nullptr;
 ImFont* Interface::Font_Awesome = nullptr;
+ImFont* Interface::DialogFont = nullptr;
 sf::Clock Interface::clock;
 float Interface::current_ui_scale;
 int Interface::selectedAtom = -1;
@@ -116,6 +116,16 @@ int Interface::init(sf::RenderWindow& w) {
     static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
     Interface::Font_Awesome = ImGui::GetIO().Fonts->AddFontFromFileTTF("Engine/gui/fonts/Font Awesome 5 Free-Solid-900.otf", 40.0f, &config, icon_ranges);
 
+
+    ImFontConfig dlg_config;
+    dlg_config.MergeMode = true;
+    dlg_config.GlyphMinAdvanceX = 16.0f;
+    static const ImWchar dlg_icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+
+    Interface::DialogFont = ImGui::GetIO().Fonts->AddFontFromFileTTF(
+        "Engine/gui/fonts/Rubik-VariableFont_wght.ttf", 20.0f
+    );
+
     if (!ImGui::SFML::UpdateFontTexture()) return EXIT_FAILURE;
     return EXIT_SUCCESS;
 }
@@ -132,7 +142,7 @@ void Interface::CheckEvent(const sf::Event& event) {
         ImGui::GetStyle() = baseStyle;
         style->ScaleAllSizes(current_ui_scale);
         
-        ImGui::GetIO().FontGlobalScale = current_ui_scale*(1./4.*3);
+        ImGui::GetIO().FontGlobalScale = current_ui_scale*(3.0 / 4.0);
         std::cout << current_ui_scale << ' ' << ImGui::GetIO().FontGlobalScale << std::endl;
     }
 }
@@ -418,6 +428,8 @@ int Interface::Update() {
 
     ImVec2 dlgSize(400 * current_ui_scale, 300 * current_ui_scale);
 
+    ImGui::PushFont(DialogFont);
+
     if (ImGuiFileDialog::Instance()->Display("SaveDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             pendingPath    = ImGuiFileDialog::Instance()->GetFilePathName();
@@ -433,6 +445,8 @@ int Interface::Update() {
         }
         ImGuiFileDialog::Instance()->Close();
     }
+
+    ImGui::PopFont();
 
     // Проверка на вхождение курсора в область
     cursorHovered = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup);
