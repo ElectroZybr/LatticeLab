@@ -34,7 +34,7 @@ private:
     sf::Texture atomTextureLow;
     sf::Texture atomTextureMid;
     sf::Texture atomTextureHigh;
-    sf::VertexArray atomBatch{sf::Quads};
+    sf::VertexArray atomBatch{sf::PrimitiveType::Triangles};
     std::vector<sf::Vertex> bondBatch;
     std::vector<const Atom*> sortedAtoms;
     sf::RectangleShape frameShape;

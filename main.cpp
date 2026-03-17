@@ -17,12 +17,12 @@
 
 #include "Engine/Simulation.h"
 
-#define WIGHT   800
-#define HEIGHT  600
+constexpr int WIGHT = 800;
+constexpr int HEIGHT = 600;
 
-#define FPS  60
-#define LPS  30
-#define Dt  0.01
+constexpr int FPS = 60;
+constexpr int LPS = 30;
+constexpr double Dt = 0.01;
 
 /* тестовые сцены, можно запускать в main и экспериментировать*/
 void square15x15H(Simulation& simulation);
@@ -30,11 +30,11 @@ void crystal25x25H(Simulation& simulation);
 void diffusionTest(Simulation& simulation);
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator", sf::Style::Fullscreen);
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator", sf::State::Fullscreen);
 
     sf::Image icon;
     if (icon.loadFromFile("icon.png")) {
-        window.setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
+        window.setIcon(icon.getSize(), icon.getPixelsPtr());
     }
 
     SimBox box(Vec3D(-250, -250, 0), Vec3D(250, 250, 6));
@@ -98,8 +98,9 @@ int main() {
         }
 
         shotTmr += deltaTime;
+        simulation.pollEvents(); // Обработка событий окна
         if (shotTmr >= 1./FPS) {
-            simulation.event();
+            simulation.event(); // Обработка взаимодейсвия интерфейса с миросм (перетаскивание атомов)
             if (Interface::pendingCommand.has_value()) {
                 switch (Interface::pendingCommand.value()) {
                     case SimCommand::Save: simulation.save(Interface::pendingPath); break;

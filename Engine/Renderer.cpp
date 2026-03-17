@@ -1,11 +1,9 @@
 #include "Renderer.h"
 
-#include "imgui.h"
 #include "imgui-SFML.h"
 
 #include <algorithm>
 #include <cmath>
-#include <chrono>
 
 namespace {
 sf::Color turboColor(float t) {
@@ -15,9 +13,9 @@ sf::Color turboColor(float t) {
     const float b = 27.20f + t * (3211.10f + t * (-15327.97f + t * (27814.00f + t * (-22569.18f + t * 6838.66f))));
 
     return sf::Color(
-        static_cast<sf::Uint8>(std::clamp(r, 0.0f, 255.0f)),
-        static_cast<sf::Uint8>(std::clamp(g, 0.0f, 255.0f)),
-        static_cast<sf::Uint8>(std::clamp(b, 0.0f, 255.0f))
+        static_cast<std::uint8_t>(std::clamp(r, 0.0f, 255.0f)),
+        static_cast<std::uint8_t>(std::clamp(g, 0.0f, 255.0f)),
+        static_cast<std::uint8_t>(std::clamp(b, 0.0f, 255.0f))
     );
 }
 }
@@ -34,8 +32,8 @@ Renderer::Renderer(sf::RenderWindow& w, sf::View& gv, sf::View& uv)
         gridLines.push_back(sf::Vertex(sf::Vector2f(1000, y), sf::Color(60, 60, 60)));
     }
 
-    forceFieldShaderLoaded = forceFieldShader.loadFromFile("force_shader.frag", sf::Shader::Fragment);
-    forceFieldQuad.setPosition(0.f, 0.f);
+    forceFieldShaderLoaded = forceFieldShader.loadFromFile("force_shader.frag", sf::Shader::Type::Fragment);
+    forceFieldQuad.setPosition(sf::Vector2f(0.f, 0.f));
 
     initAtomTexture(atomTextureLow, 16);
     initAtomTexture(atomTextureMid, 32);
@@ -45,8 +43,7 @@ Renderer::Renderer(sf::RenderWindow& w, sf::View& gv, sf::View& uv)
 }
 
 void Renderer::initAtomTexture(sf::Texture& texture, unsigned texSize) {
-    sf::Image image;
-    image.create(texSize, texSize, sf::Color(255, 255, 255, 0));
+    sf::Image image({texSize, texSize}, sf::Color(255, 255, 255, 0));
 
     const float center = (texSize - 1) * 0.5f;
     const float radius = center - 1.0f;
@@ -57,7 +54,7 @@ void Renderer::initAtomTexture(sf::Texture& texture, unsigned texSize) {
             const float dx = static_cast<float>(x) - center;
             const float dy = static_cast<float>(y) - center;
             if (dx * dx + dy * dy <= radiusSq) {
-                image.setPixel(x, y, sf::Color::White);
+                image.setPixel({x, y}, sf::Color::White);
             }
         }
     }
@@ -72,10 +69,10 @@ void Renderer::wallImage(const Vec3D start, const Vec3D end) {
     constexpr int textureScale = 4;
     const double worldWidth = std::max(1.0, end.x - start.x);
     const double worldHeight = std::max(1.0, end.y - start.y);
-    const int width = static_cast<int>(worldWidth * textureScale);
-    const int height = static_cast<int>(worldHeight * textureScale);
+    const unsigned int width = static_cast<unsigned int>(worldWidth * textureScale);
+    const unsigned int height = static_cast<unsigned int>(worldHeight * textureScale);
 
-    std::vector<sf::Uint8> forcePixels(width * height * 4, 0);
+    std::vector<std::uint8_t> forcePixels(width * height * 4, 0);
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             const int idx = 4 * (y * width + x);
@@ -85,11 +82,11 @@ void Renderer::wallImage(const Vec3D start, const Vec3D end) {
 
             int alphaValue = getWallForce(x, 0, width - 1) + getWallForce(y, 0, height - 1);
             if (alphaValue > 255) alphaValue = 255;
-            forcePixels[idx + 3] = static_cast<sf::Uint8>(alphaValue);
+            forcePixels[idx + 3] = static_cast<std::uint8_t>(alphaValue);
         }
     }
 
-    forceTexture.create(width, height);
+    forceTexture.resize({width, height});
     forceTexture.update(forcePixels.data());
     forceTexture.setSmooth(true);
     // forceTexture.generateMipmap();
@@ -123,7 +120,7 @@ void Renderer::drawShot(const std::vector<Atom>& atoms, const SimBox& box, float
     window.clear(sf::Color(35, 35, 35, 255));
     window.setView(gameView);
 
-    window.draw(&gridLines[0], gridLines.size(), sf::Lines);
+    window.draw(&gridLines[0], gridLines.size(), sf::PrimitiveType::Lines);
     drawForceField(forceTexture, box);
 
     if (drawGrid) {
@@ -140,10 +137,8 @@ void Renderer::drawShot(const std::vector<Atom>& atoms, const SimBox& box, float
     const sf::Vector2f viewCenter = gameView.getCenter();
     const sf::Vector2f viewSize = gameView.getSize();
     const sf::FloatRect viewRect(
-        viewCenter.x - viewSize.x * 0.5f,
-        viewCenter.y - viewSize.y * 0.5f,
-        viewSize.x,
-        viewSize.y
+        viewCenter - viewSize * 0.5f,
+        viewSize
     );
 
     const float zoom = camera.getZoom();
@@ -188,32 +183,36 @@ void Renderer::drawShot(const std::vector<Atom>& atoms, const SimBox& box, float
         const float cullY = drawOutline ? outerY : y;
         const float cullSize = drawOutline ? outerSize : size;
 
-        if (cullX + cullSize < viewRect.left || cullX > viewRect.left + viewRect.width ||
-            cullY + cullSize < viewRect.top || cullY > viewRect.top + viewRect.height) {
+        if (cullX + cullSize < viewRect.position.x || cullX > viewRect.position.x + viewRect.size.x ||
+            cullY + cullSize < viewRect.position.y || cullY > viewRect.position.y + viewRect.size.y) {
             continue;
         }
 
         sf::Color color = atom->isSelect ? sf::Color::Red : sf::Color::Black;
         if (drawOutline) {
-            atomBatch.append(sf::Vertex(sf::Vector2f(outerX, outerY), color, uv00));
-            atomBatch.append(sf::Vertex(sf::Vector2f(outerX + outerSize, outerY), color, uv10));
+            atomBatch.append(sf::Vertex(sf::Vector2f(outerX, outerY),                         color, uv00));
+            atomBatch.append(sf::Vertex(sf::Vector2f(outerX + outerSize, outerY),             color, uv10));
             atomBatch.append(sf::Vertex(sf::Vector2f(outerX + outerSize, outerY + outerSize), color, uv11));
-            atomBatch.append(sf::Vertex(sf::Vector2f(outerX, outerY + outerSize), color, uv01));
+            atomBatch.append(sf::Vertex(sf::Vector2f(outerX, outerY),                         color, uv00));
+            atomBatch.append(sf::Vertex(sf::Vector2f(outerX + outerSize, outerY + outerSize), color, uv11));
+            atomBatch.append(sf::Vertex(sf::Vector2f(outerX, outerY + outerSize),             color, uv01));
         }
         if (speedGradient){
             const float t = std::clamp(static_cast<float>(atom->speed.length()) / 5, 0.0f, 1.0f); // 0..1
             if (speedGradientTurbo) {
                 color = turboColor(t);
             } else {
-                color = sf::Color(static_cast<sf::Uint8>(255.0f * t), 0, static_cast<sf::Uint8>(255.0f * (1.0f - t))); // old: blue -> red
+                color = sf::Color(static_cast<std::uint8_t>(255.0f * t), 0, static_cast<std::uint8_t>(255.0f * (1.0f - t))); // old: blue -> red
             }
         } else {
             color = atom->getProps().color;
         }
-        atomBatch.append(sf::Vertex(sf::Vector2f(x, y), color, uv00));
-        atomBatch.append(sf::Vertex(sf::Vector2f(x + size, y), color, uv10));
+        atomBatch.append(sf::Vertex(sf::Vector2f(x, y),               color, uv00));
+        atomBatch.append(sf::Vertex(sf::Vector2f(x + size, y),        color, uv10));
         atomBatch.append(sf::Vertex(sf::Vector2f(x + size, y + size), color, uv11));
-        atomBatch.append(sf::Vertex(sf::Vector2f(x, y + size), color, uv01));
+        atomBatch.append(sf::Vertex(sf::Vector2f(x, y),               color, uv00));
+        atomBatch.append(sf::Vertex(sf::Vector2f(x + size, y + size), color, uv11));
+        atomBatch.append(sf::Vertex(sf::Vector2f(x, y + size),        color, uv01));
     }
 
     if (atomBatch.getVertexCount() > 0) {
@@ -244,7 +243,7 @@ void Renderer::drawShot(const std::vector<Atom>& atoms, const SimBox& box, float
         }
 
         if (!bondBatch.empty()) {
-            window.draw(bondBatch.data(), bondBatch.size(), sf::Lines);
+            window.draw(bondBatch.data(), bondBatch.size(), sf::PrimitiveType::Lines);
         }
     }
 
@@ -267,10 +266,10 @@ void Renderer::drawTransparencyMap(sf::RenderWindow& window, const SpatialGrid& 
     for (int y = 0; y < grid.sizeY; ++y) {
         for (int x = 0; x < grid.sizeX; ++x) {
             if (auto cell = grid.at(x, y); cell && !cell->empty()) {
-                cellRect.setPosition(
+                cellRect.setPosition({
                     static_cast<float>(x * grid.cellSize),
                     static_cast<float>(y * grid.cellSize)
-                );
+                });
                 window.draw(cellRect);
             }
         }
@@ -283,18 +282,15 @@ void Renderer::drawForceField(const sf::Texture& forceTexture, const SimBox& box
     }
 
     forceFieldShader.setUniform("field", forceTexture);
-    forceFieldQuad.setSize(sf::Vector2f(
-        static_cast<float>(box.end.x - box.start.x),
-        static_cast<float>(box.end.y - box.start.y)
-    ));
-    forceFieldQuad.setPosition(static_cast<float>(box.start.x), static_cast<float>(box.start.y));
+    forceFieldQuad.setSize(box.end - box.start);
+    forceFieldQuad.setPosition(box.start);
     forceFieldQuad.setTexture(&forceTexture, true);
 
     window.draw(forceFieldQuad, &forceFieldShader);
 }
 
 void Renderer::setSelectionFrame(Vec2D start, Vec2D end, float scale) {
-    frameShape.setPosition(start.x, start.y);
+    frameShape.setPosition(start);
     frameShape.setSize(sf::Vector2f(end.x - start.x, end.y - start.y));
 
     frameShape.setFillColor(sf::Color::Transparent);

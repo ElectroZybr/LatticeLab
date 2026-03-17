@@ -10,6 +10,14 @@ Vec3D::Vec3D(double x, double y, double z) : x(x), y(y), z(z){}
 
 Vec3D::Vec3D(const Vec2D &vec, double z) : x(vec.x), y(vec.y), z(z){}
 
+Vec3D::operator sf::Vector2f() const {
+    return sf::Vector2f(static_cast<float>(x), static_cast<float>(y));
+}
+
+Vec3D::operator sf::Vector3f() const {
+    return sf::Vector3f(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z));
+}
+
 Vec3D Vec3D::operator-() const {
     return Vec3D(-x, -y, -z);
 }

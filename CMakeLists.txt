@@ -27,7 +27,7 @@ unset(imgui_BINARY_DIR CACHE)
 FetchContent_Declare(
     sfml
     GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG        2.6.1
+    GIT_TAG        3.0.2
 )
 set(SFML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(SFML_BUILD_DOC OFF CACHE BOOL "" FORCE)
@@ -39,7 +39,7 @@ FetchContent_MakeAvailable(sfml)
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG        v1.89
+    GIT_TAG        v1.91.9
 )
 FetchContent_MakeAvailable(imgui)
 include_directories(${imgui_SOURCE_DIR})
@@ -48,7 +48,7 @@ include_directories(${imgui_SOURCE_DIR})
 FetchContent_Declare(
     imgui-sfml
     GIT_REPOSITORY https://github.com/SFML/imgui-sfml.git
-    GIT_TAG        v2.6.1
+    GIT_TAG        v3.0
 )
 set(IMGUI_SFML_FIND_SFML OFF CACHE BOOL "" FORCE)
 set(IMGUI_SFML_IF_FETCHCONTENT ON CACHE BOOL "" FORCE)
@@ -61,7 +61,7 @@ FetchContent_MakeAvailable(imgui-sfml)
 FetchContent_Declare(
     ImGuiFileDialog
     GIT_REPOSITORY https://github.com/aiekick/ImGuiFileDialog.git
-    GIT_TAG        v0.6.5
+    GIT_TAG        v0.6.8
 )
 FetchContent_MakeAvailable(ImGuiFileDialog)
 add_library(ImGuiFileDialog_lib STATIC

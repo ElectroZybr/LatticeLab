@@ -1,8 +1,7 @@
-#ifndef VEC3D
-#define VEC3D
+#pragma once
 
 #include "Vec2D.h"
-#include <array>
+#include <SFML/System/Vector3.hpp>
 
 class Vec3D final {
 private:
@@ -16,6 +15,10 @@ public:
     explicit Vec3D(double x = 0.0, double y = 0.0, double z = 0.0);
 
     Vec3D(const Vec2D &vec, double z = 0.0);
+
+    // Операторы приведения типа
+    operator sf::Vector2f() const;
+    operator sf::Vector3f() const;
 
     [[nodiscard]] Vec3D operator-() const;
 
@@ -45,6 +48,3 @@ public:
 
     static Vec3D Random();
 };
-
-
-#endif
