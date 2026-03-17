@@ -161,8 +161,7 @@ cmake --build build -j 8
 
 ## Лицензии
 
-Сторонние библиотеки лежат в `Libraries/` и распространяются по их лицензиям:
-
-- SFML
-- ImGui
-- ImGui-SFML
+Сторонние библиотеки загружаются в процессе сборки через FetchContent. Все они распространяются согласно их оригинальным лицензиям:
+- [SFML](https://github.com/SFML/SFML)
+- [ImGui](https://github.com/ocornut/imgui)
+- [ImGui-SFML](https://github.com/SFML/imgui-sfml)
