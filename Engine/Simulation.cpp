@@ -71,20 +71,34 @@ void Simulation::pollEvents() {
         if (const auto* e = event.getIf<sf::Event::MouseButtonPressed>()) { 
             if (e->button == sf::Mouse::Button::Left) {
                 float zoom = render.camera.getZoom();
+
                 // создание атома
                 if (!Interface::cursorHovered && Interface::getSelectedAtom() != -1) {
-                    
-                    Vec2D world = Tools::screenToWorld(mouse_pos, zoom);
-                    Vec2D local(world.x - sim_box.start.x, world.y - sim_box.start.y);
-                    atoms.emplace_back(Vec3D(local-0.5),
-                                    Vec3D(((double)std::rand() / RAND_MAX-0.5)*5, ((double)std::rand() / RAND_MAX-0.5)*5, 0), Interface::getSelectedAtom());
+                    const Vec2D world = Tools::screenToWorld(mouse_pos, zoom);
+                    const Vec2D local(world.x - sim_box.start.x, world.y - sim_box.start.y);
 
-                    Atom& atom = atoms.back();
+                    const double atomRadius = Atom::getProps(Interface::getSelectedAtom()).radius;
+                    const Vec3D spawnPos = Vec3D(local - atomRadius / 2.0);
 
-                    std::cout << "<Create atom> X: " << world.x <<  " Y: " << world.y << 
-                        " | Type: " << Interface::getSelectedAtom() << 
-                        " | Adress: " << &atom << 
-                        " | Speed: " << atom.speed.x << " " << atom.speed.y << std::endl;
+                    bool hasNearAtom = false;
+                    for (Atom& atom : atoms) {
+                        if ((atom.coords - spawnPos).abs() <= atom.getProps().radius + atomRadius) {
+                            hasNearAtom = true;
+                            break;
+                        }
+                    }
+
+                    if (!hasNearAtom) {
+                        atoms.emplace_back(spawnPos,
+                                        Vec3D(((double)std::rand() / RAND_MAX-0.5)*5, ((double)std::rand() / RAND_MAX-0.5)*5, 0), Interface::getSelectedAtom());
+    
+                        Atom& atom = atoms.back();
+    
+                        std::cout << "<Create atom> X: " << world.x <<  " Y: " << world.y << 
+                            " | Type: " << Interface::getSelectedAtom() << 
+                            " | Adress: " << &atom << 
+                            " | Speed: " << atom.speed.x << " " << atom.speed.y << std::endl;
+                    }
                 }
                 else {
                     Vec2D world = Tools::screenToWorld(mouse_pos, zoom);

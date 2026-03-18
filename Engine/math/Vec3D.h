@@ -31,6 +31,8 @@ public:
     void operator+=(const Vec3D &vec);
     void operator-=(const Vec3D &vec);
 
+    [[nodiscard]] Vec3D operator-(double num) const;
+
     [[nodiscard]] double dot(const Vec3D &vec) const; // Returns dot product
     [[nodiscard]] Vec3D cross(const Vec3D &vec) const; // Returns cross product
 

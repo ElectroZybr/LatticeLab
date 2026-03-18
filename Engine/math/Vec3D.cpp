@@ -51,6 +51,10 @@ void Vec3D::operator-=(const Vec3D &vec) {
     z = z - vec.z;
 }
 
+Vec3D Vec3D::operator-(double num) const {
+    return Vec3D(x - num, y - num, z - num);
+}
+
 Vec3D Vec3D::operator*(double number) const {
     return Vec3D(x * number, y * number, z * number);
 }

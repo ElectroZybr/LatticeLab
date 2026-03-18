@@ -61,4 +61,8 @@ public:
     const StaticAtomicData& getProps() const {
         return properties.at(type);
     }
+
+    static const StaticAtomicData& getProps(int type) {
+        return properties.at(type);
+    }
 };
