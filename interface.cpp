@@ -1,12 +1,7 @@
-#include <iostream>
-
 #include <SFML/Graphics.hpp>
 #include "ImGuiFileDialog.h"
 
 #include "interface.h"
-
-#define WIDHT   800
-#define HEIGHT  600
 
 #define ICON_MIN_FA 0xf000
 #define ICON_MAX_FA 0xf897
@@ -28,7 +23,6 @@ ImFont* Interface::Rubik_VariableFont_wght = nullptr;
 ImFont* Interface::Font_Awesome = nullptr;
 ImFont* Interface::DialogFont = nullptr;
 sf::Clock Interface::clock;
-float Interface::current_ui_scale;
 int Interface::selectedAtom = -1;
 bool Interface::pause;
 bool Interface::cursorHovered = false;
@@ -39,72 +33,14 @@ bool Interface::drawToolTrip = false;
 int Interface::sim_step = 0;
 DebugPanel Interface::debugPanel;
 FileDialogManager Interface::fileDialog;
-
-void Interface::custom_style() {
-    Interface::style = &ImGui::GetStyle();
-    ImVec4* colors = style->Colors;
-
-    style->WindowPadding = ImVec2(7.5, 7.5);
-    style->WindowRounding = 7.5;
-    style->FramePadding = ImVec2(2.5, 2.5);
-    style->ItemSpacing = ImVec2(6, 4);
-    style->ItemInnerSpacing = ImVec2(4, 3);
-    style->IndentSpacing = 12.5;
-    style->ScrollbarSize = 7.5;
-    style->ScrollbarRounding = 7.5;
-    style->GrabMinSize = 15;
-    style->GrabRounding = 3.5;
-    style->FrameRounding = 5;
-
-    colors[ImGuiCol_Text] = ImVec4(0.95, 0.96, 0.98, 1.00);
-    colors[ImGuiCol_TextDisabled] = ImVec4(0.36, 0.42, 0.47, 1.00);
-    colors[ImGuiCol_WindowBg] = ImVec4(0.11, 0.15, 0.17, 1.00);
-    colors[ImGuiCol_ChildBg] = ImVec4(0.15, 0.18, 0.22, 1.00);
-    colors[ImGuiCol_PopupBg] = ImVec4(0.08, 0.08, 0.08, 0.94);
-    colors[ImGuiCol_Border] = ImVec4(0.43, 0.43, 0.50, 0.50);
-    colors[ImGuiCol_BorderShadow] = ImVec4(0.00, 0.00, 0.00, 0.00);
-    colors[ImGuiCol_FrameBg] = ImVec4(0.20, 0.25, 0.29, 1.00);
-    colors[ImGuiCol_FrameBgHovered] = ImVec4(0.12, 0.20, 0.28, 1.00);
-    colors[ImGuiCol_FrameBgActive] = ImVec4(0.09, 0.12, 0.14, 1.00);
-    colors[ImGuiCol_TitleBg] = ImVec4(0.09, 0.12, 0.14, 0.65);
-    colors[ImGuiCol_TitleBgActive] = ImVec4(0.00, 0.00, 0.00, 0.51);
-    colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.08, 0.10, 0.12, 1.00);
-    colors[ImGuiCol_MenuBarBg] = ImVec4(0.15, 0.18, 0.22, 1.00);
-    colors[ImGuiCol_ScrollbarBg] = ImVec4(0.02, 0.02, 0.02, 0.39);
-    colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.20, 0.25, 0.29, 1.00);
-    colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.18, 0.22, 0.25, 1.00);
-    colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.09, 0.21, 0.31, 1.00);
-    colors[ImGuiCol_CheckMark] = ImVec4(0.28, 0.56, 1.00, 1.00);
-    colors[ImGuiCol_SliderGrab] = ImVec4(0.28, 0.56, 1.00, 1.00);
-    colors[ImGuiCol_SliderGrabActive] = ImVec4(0.37, 0.61, 1.00, 1.00);
-    colors[ImGuiCol_Button] = ImVec4(0.20, 0.25, 0.29, 1.00);
-    colors[ImGuiCol_ButtonHovered] = ImVec4(0.18, 0.23, 0.25, 1.00);
-    colors[ImGuiCol_ButtonActive] = ImVec4(0.06, 0.53, 0.98, 1.00);
-    colors[ImGuiCol_Header] = ImVec4(0.20, 0.25, 0.29, 0.55);
-    colors[ImGuiCol_HeaderHovered] = ImVec4(0.26, 0.59, 0.98, 0.80);
-    colors[ImGuiCol_HeaderActive] = ImVec4(0.26, 0.59, 0.98, 1.00);
-    colors[ImGuiCol_ResizeGrip] = ImVec4(0.26, 0.59, 0.98, 0.25);
-    colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.26, 0.59, 0.98, 0.67);
-    colors[ImGuiCol_ResizeGripActive] = ImVec4(0.06, 0.05, 0.07, 1.00);
-    colors[ImGuiCol_PlotLines] = ImVec4(0.61, 0.61, 0.61, 1.00);
-    colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00, 0.43, 0.35, 1.00);
-    colors[ImGuiCol_PlotHistogram] = ImVec4(0.90, 0.70, 0.00, 1.00);
-    colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00, 0.60, 0.00, 1.00);
-    colors[ImGuiCol_TextSelectedBg] = ImVec4(0.25, 1.00, 0.00, 0.43);
-    colors[ImGuiCol_ModalWindowDimBg] = ImVec4(1.00, 0.98, 0.95, 0.73);
-    baseStyle = *style;
-    current_ui_scale = 1;
-}
+StyleManager Interface::styleManager;
 
 int Interface::init(sf::RenderWindow& w) {
     window = &w;
 
     if (!ImGui::SFML::Init(*window)) return EXIT_FAILURE;
 
-    custom_style();
-
-    // style->ScaleAllSizes(0.5);
-    ImGui::GetIO().FontGlobalScale = 0.75;
+    styleManager.applyCustomStyle();
 
     // Загружаем шрифты
     Interface::Rubik_VariableFont_wght = ImGui::GetIO().Fonts->AddFontFromFileTTF("Engine/gui/fonts/Rubik-VariableFont_wght.ttf", 50.0f);
@@ -135,18 +71,7 @@ void Interface::CheckEvent(const sf::Event& event) {
         }
     }
     else if (const auto* e = event.getIf<sf::Event::Resized>()) {
-        // Пересчитываем масштаб ImGui
-        // window->setView(sf::View(sf::FloatRect(0, 0, event.size.width, event.size.height)));
-        // ImGui::GetIO().DisplaySize = ImVec2(event.size.width, event.size.height);
-        sf::Vector2f scale = sf::Vector2f(e->size) / sf::Vector2f(WIDHT, HEIGHT);
-
-        current_ui_scale = scale.y < scale.x ? scale.y : scale.x;
-        // current_ui_scale = std::clamp(current_ui_scale, 1.0f, 1.5f);
-        ImGui::GetStyle() = baseStyle;
-        style->ScaleAllSizes(current_ui_scale);
-        
-        ImGui::GetIO().FontGlobalScale = current_ui_scale*(3.0 / 4.0);
-        std::cout << current_ui_scale << ' ' << ImGui::GetIO().FontGlobalScale << std::endl;
+        styleManager.onResize(e->size);
     }
 }
 
@@ -179,7 +104,7 @@ int Interface::Update() {
     ImGui::SFML::Update(*window, clock.restart());
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2(183*current_ui_scale, 65*current_ui_scale));
+    ImGui::SetNextWindowSize(ImVec2(183*styleManager.getScale(), 65*styleManager.getScale()));
 
     ImGui::Begin("Tools", nullptr, 
         ImGuiWindowFlags_NoMove |           // Запретить перемещение
@@ -192,13 +117,13 @@ int Interface::Update() {
     
     ImGui::PushFont(Rubik_VariableFont_wght);
 
-    // ImGui::BeginChild("dsd", ImVec2(100*current_ui_scale, 50*current_ui_scale), true);
+    // ImGui::BeginChild("dsd", ImVec2(100*styleManager.getScale(), 50*styleManager.getScale()), true);
 
-    if (ImGui::Button(ICON_FA_COG, ImVec2(50*current_ui_scale, 50*current_ui_scale))) {
+    if (ImGui::Button(ICON_FA_COG, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
         ImGui::OpenPopup("my_popup");
     }
     ImGui::SameLine();
-    if (ImGui::Button(ICON_FA_FLASK, ImVec2(50*current_ui_scale, 50*current_ui_scale))) {
+    if (ImGui::Button(ICON_FA_FLASK, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
         ImGui::OpenPopup("my_popup");
     }
     ImGui::SameLine();
@@ -208,7 +133,7 @@ int Interface::Update() {
         ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.06, 0.53, 0.98, 1.00));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.06, 0.53, 0.98, 1.00));
     }
-    if (ImGui::Button(ICON_FA_BUG, ImVec2(50*current_ui_scale, 50*current_ui_scale))) {
+    if (ImGui::Button(ICON_FA_BUG, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
         debugPanel.toggle();
     }
     if (wasDebugPanelVisible) {
@@ -236,11 +161,11 @@ int Interface::Update() {
     
     ImGui::PopFont();
     ImGui::End();
-    const float top_panel_width = 387.0f * current_ui_scale;
-    const float top_panel_height = 142.0f * current_ui_scale;
+    const float top_panel_width = 387.0f * styleManager.getScale();
+    const float top_panel_height = 142.0f * styleManager.getScale();
     const float top_panel_x = window->getSize().x * 0.5f - top_panel_width * 0.5f;
-    const float tab_width = 180.0f * current_ui_scale;
-    const float tab_height = 8.0f * current_ui_scale;
+    const float tab_width = 180.0f * styleManager.getScale();
+    const float tab_height = 8.0f * styleManager.getScale();
     const float tab_x = window->getSize().x * 0.5f - tab_width * 0.5f;
 
     static float top_panel_anim = 0.0f; // 0 - hidden, 1 - shown
@@ -307,7 +232,7 @@ int Interface::Update() {
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.06, 0.53, 0.98, 1.00));
         }
         
-        if (ImGui::Button(keys[i], ImVec2(40*current_ui_scale, 40*current_ui_scale))) {
+        if (ImGui::Button(keys[i], ImVec2(40*styleManager.getScale(), 40*styleManager.getScale()))) {
             flag = true;
         }
         
@@ -325,7 +250,7 @@ int Interface::Update() {
         
 
         // Располагаем кнопки в ряд с отступами
-        if ((i + 1) % 8 != 0) ImGui::SameLine(0.0f, 7.5f*current_ui_scale);
+        if ((i + 1) % 8 != 0) ImGui::SameLine(0.0f, 7.5f*styleManager.getScale());
     }
 
     ImGui::PopFont();
@@ -333,8 +258,8 @@ int Interface::Update() {
 
 
     
-    ImGui::SetNextWindowPos(ImVec2(window->getSize().x - (122*current_ui_scale), 0));
-    ImGui::SetNextWindowSize(ImVec2(122*current_ui_scale, 111*current_ui_scale));
+    ImGui::SetNextWindowPos(ImVec2(window->getSize().x - (122*styleManager.getScale()), 0));
+    ImGui::SetNextWindowSize(ImVec2(122*styleManager.getScale(), 111*styleManager.getScale()));
 
     ImGui::Begin("Poops", nullptr, 
         ImGuiWindowFlags_NoMove |           // Запретить перемещение
@@ -347,14 +272,14 @@ int Interface::Update() {
 
     static int fast = 0;    // 0 - обычная скорость, 1 - x2, 2 - x3
     if (fast == 0) {
-        if (ImGui::Button(ICON_FA_FORWARD, ImVec2(50*current_ui_scale, 50*current_ui_scale))) {
+        if (ImGui::Button(ICON_FA_FORWARD, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
             fast++;
         }
     } else if (fast == 1) {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06, 0.53, 0.98, 1.00));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.06, 0.53, 0.98, 1.00));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.06, 0.53, 0.98, 1.00));
-        if (ImGui::Button(ICON_FA_FORWARD, ImVec2(50*current_ui_scale, 50*current_ui_scale))) {
+        if (ImGui::Button(ICON_FA_FORWARD, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
             fast++;
         }
         ImGui::PopStyleColor(3);
@@ -362,7 +287,7 @@ int Interface::Update() {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06, 0.53, 0.98, 1.00));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.06, 0.53, 0.98, 1.00));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.06, 0.53, 0.98, 1.00));
-        if (ImGui::Button(ICON_FA_FAST_FORWARD, ImVec2(50*current_ui_scale, 50*current_ui_scale))) {
+        if (ImGui::Button(ICON_FA_FAST_FORWARD, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
             fast = 0;
         }
         ImGui::PopStyleColor(3);
@@ -370,16 +295,16 @@ int Interface::Update() {
     ImGui::SameLine();
 
     if (pause) {
-        if (ImGui::Button(ICON_FA_PLAY, ImVec2(50*current_ui_scale, 50*current_ui_scale))) {
+        if (ImGui::Button(ICON_FA_PLAY, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
             pause = false;
         }
     } else {
-        if (ImGui::Button(ICON_FA_PAUSE, ImVec2(50*current_ui_scale, 50*current_ui_scale))) {
+        if (ImGui::Button(ICON_FA_PAUSE, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
             pause = true;
         }
     }
 
-    ImGui::PushItemWidth(106*current_ui_scale);
+    ImGui::PushItemWidth(106*styleManager.getScale());
     ImGui::SliderFloat("##Speed", &simulationSpeed, 0.1, 50, "%.1f", ImGuiSliderFlags_Logarithmic);
     ImGui::PopItemWidth();
 
@@ -390,7 +315,7 @@ int Interface::Update() {
     ImGui::PopFont();
     ImGui::End();
 
-    ImGui::SetNextWindowPos(ImVec2(window->getSize().x - (150*current_ui_scale), window->getSize().y - (50*current_ui_scale)));
+    ImGui::SetNextWindowPos(ImVec2(window->getSize().x - (150*styleManager.getScale()), window->getSize().y - (50*styleManager.getScale())));
     ImGui::SetNextWindowSize(ImVec2(window->getSize().x, window->getSize().y));
     ImGui::Begin("Stats", nullptr, 
         ImGuiWindowFlags_NoMove |           // Запретить перемещение
@@ -406,7 +331,7 @@ int Interface::Update() {
 
     if (drawToolTrip) {
         ImVec2 mouse = ImGui::GetMousePos();
-        ImGui::SetNextWindowPos(ImVec2(mouse.x + 3 * current_ui_scale, mouse.y + 3 * current_ui_scale));
+        ImGui::SetNextWindowPos(ImVec2(mouse.x + 3 * styleManager.getScale(), mouse.y + 3 * styleManager.getScale()));
 
         ImGui::BeginTooltip();
         if (Rubik_VariableFont_wght) {
@@ -419,13 +344,13 @@ int Interface::Update() {
         ImGui::EndTooltip();
     }
 
-    ImVec2 dlgSize(400 * current_ui_scale, 300 * current_ui_scale);
+    ImVec2 dlgSize(400 * styleManager.getScale(), 300 * styleManager.getScale());
 
     ImGui::PushFont(DialogFont);
-    fileDialog.draw(current_ui_scale);
+    fileDialog.draw(styleManager.getScale());
     ImGui::PopFont();
 
-    debugPanel.draw(current_ui_scale, window->getSize());
+    debugPanel.draw(styleManager.getScale(), window->getSize());
 
     // Проверка на вхождение курсора в область
     cursorHovered = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup);

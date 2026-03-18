@@ -6,6 +6,7 @@
 
 #include "Engine/gui/interface/debug_panel/DebugPanel.h"
 #include "Engine/gui/interface/file_dialog/FileDialogManager.h"
+#include "Engine/gui/interface/style/StyleManager.h"
 
 class Interface {
 private:
@@ -16,7 +17,6 @@ private:
     static ImFont* Rubik_VariableFont_wght;
     static ImFont* Font_Awesome;
     static ImFont* DialogFont;
-    static float current_ui_scale;
     static int selectedAtom;
     static float simulationSpeed;
     static double averageEnergy;
@@ -24,7 +24,6 @@ private:
 public:
     static bool pause;
     static int init(sf::RenderWindow& w);
-    static void custom_style();
     static int Update();
     static void CheckEvent(const sf::Event& event);
     static bool getPause();
@@ -37,4 +36,5 @@ public:
     static bool drawToolTrip;
     static DebugPanel debugPanel;
     static FileDialogManager fileDialog;
+    static StyleManager styleManager;
 };
