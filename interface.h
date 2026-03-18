@@ -9,6 +9,7 @@
 #include "Engine/gui/interface/style/StyleManager.h"
 #include "Engine/gui/interface/tools_panel/ToolsPanel.h"
 #include "Engine/gui/interface/sim_control_panel/SimControlPanel.h"
+#include "Engine/gui/interface/periodic_panel/PeriodicPanel.h"
 
 class Interface {
 private:
@@ -41,4 +42,5 @@ public:
     static StyleManager styleManager;
     static ToolsPanel toolsPanel;
     static SimControlPanel simControlPanel;
+    static PeriodicPanel periodicPanel;
 };
