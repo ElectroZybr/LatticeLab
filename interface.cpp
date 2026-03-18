@@ -206,7 +206,8 @@ int Interface::Update() {
         ImGui::OpenPopup("my_popup");
     }
     ImGui::SameLine();
-    if (Interface::debugPanel.isVisible()) {
+    const bool wasDebugPanelVisible = Interface::debugPanel.isVisible();
+    if (wasDebugPanelVisible) {
         ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.06, 0.53, 0.98, 1.00));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.06, 0.53, 0.98, 1.00));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.06, 0.53, 0.98, 1.00));
@@ -214,7 +215,7 @@ int Interface::Update() {
     if (ImGui::Button(ICON_FA_BUG, ImVec2(50*current_ui_scale, 50*current_ui_scale))) {
         debugPanel.toggle();
     }
-    if (Interface::debugPanel.isVisible()) {
+    if (wasDebugPanelVisible) {
         ImGui::PopStyleColor(3);
     }
 

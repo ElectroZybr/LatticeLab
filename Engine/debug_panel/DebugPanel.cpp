@@ -45,7 +45,8 @@ void DebugPanel::draw(float uiScale, sf::Vector2u windowSize) {
 void DebugPanel::loadFont(std::string_view path, float size) {
     static const ImWchar ranges[] = {
         0x0020, 0x00FF, // Латиница
-        0x0400, 0x044F, // Кириллица
+        0x0400, 0x04FF, // Кириллица
+        0,
     };
     font = ImGui::GetIO().Fonts->AddFontFromFileTTF(path.data(), size, nullptr, ranges);
 }
