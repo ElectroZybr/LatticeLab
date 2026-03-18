@@ -15,15 +15,15 @@
 
 ## Стек и зависимости
 
-- C++ (проект на CMake)
-- SFML
+- C++20 (проект на CMake)
+- SFML 3.0.2
 - ImGui + ImGui-SFML
-- MinGW-w64 (для Windows-сборки)
+- MinGW-w64 (для Windows-сборки, GCC с поддержкой C++20)
 
-## для сборки проекта необходимо дополнительно установить:
+## Для сборки проекта необходимо дополнительно установить:
 
-- **MinGW-w64 (компилятор C++)**  
-  https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/7.3.0/threads-posix/seh/x86_64-7.3.0-release-posix-seh-rt_v5-rev0.7z/download
+- **MinGW-w64 (компилятор C++, GCC 14+ / C++20)**  
+  https://github.com/brechtsanders/winlibs_mingw/releases/download/14.2.0posix-19.1.1-12.0.0-ucrt-r2/winlibs-x86_64-posix-seh-gcc-14.2.0-mingw-w64ucrt-12.0.0-r2.7z
 
 - **CMake**  
   https://cmake.org/download/
