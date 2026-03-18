@@ -15,10 +15,12 @@ void DebugPanel::draw(float uiScale, sf::Vector2u windowSize) {
     if (animProgress < 0.01f) return;
 
     const float panelWidth  = 300.f * uiScale;
-    const float panelHeight = static_cast<float>(windowSize.y);
-    const float x = windowSize.x - panelWidth * animProgress;
+    const float topOffset   = 70.f * uiScale;
+    const float rawHeight   = static_cast<float>(windowSize.y) - topOffset;
+    const float panelHeight = (rawHeight > 0.f) ? rawHeight : 0.f;
+    const float x = -panelWidth + panelWidth * animProgress;
 
-    ImGui::SetNextWindowPos(ImVec2(x, 0));
+    ImGui::SetNextWindowPos(ImVec2(x, topOffset));
     ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
     ImGui::Begin("##DebugPanel", nullptr,
         ImGuiWindowFlags_NoMove    |

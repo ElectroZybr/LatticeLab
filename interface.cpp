@@ -413,20 +413,6 @@ int Interface::Update() {
     ImGui::PopFont();
     ImGui::End();
 
-    ImGui::SetNextWindowPos(ImVec2(0, window->getSize().y - (50*current_ui_scale)));
-    ImGui::SetNextWindowSize(ImVec2((180*current_ui_scale), window->getSize().y));
-    ImGui::Begin("sim", nullptr, 
-        ImGuiWindowFlags_NoMove |           // Запретить перемещение
-        ImGuiWindowFlags_NoResize |         // Запретить изменение размера
-        ImGuiWindowFlags_NoCollapse |       // Убрать кнопку сворачивания
-        ImGuiWindowFlags_NoTitleBar |       // Скрыть заголовок
-        ImGuiWindowFlags_NoScrollbar
-    );
-    ImGui::PushFont(Rubik_VariableFont_wght);
-    ImGui::Text("Step: %d", sim_step);
-    ImGui::PopFont();
-    ImGui::End();
-
     if (drawToolTrip) {
         ImVec2 mouse = ImGui::GetMousePos();
         ImGui::SetNextWindowPos(ImVec2(mouse.x + 3 * current_ui_scale, mouse.y + 3 * current_ui_scale));

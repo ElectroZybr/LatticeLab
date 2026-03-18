@@ -61,6 +61,7 @@ int main() {
     {
         DebugSeries("Кинетическая энергия"),
         DebugValue ("Количество атомов"),
+        DebugValue ("Шаги симуляции"),
         DebugValue ("Физика (мс)"),
         DebugValue ("Рендер (мс)"),
     }));
@@ -71,6 +72,7 @@ int main() {
     }));
 
     debugSim->add_data("Количество атомов", simulation.atoms.size());
+    debugSim->add_data("Шаги симуляции", simulation.getSimStep());
 
     // Atom* hydrogen_1 = simulation.createAtom(Vec3D(25.5, 25.86, 1), Vec3D(2, 0, 0), 1);
     // Atom* oxygen_1 = simulation.createAtom(Vec3D(25, 25, 1), Vec3D(0, 0, 0), 8);
@@ -148,6 +150,7 @@ int main() {
             debugSim->add_data("Кинетическая энергия", simulation.AverageEnegry());
             debugSim->add_data("Рендер (мс)", renderTimer.elapsedMilliseconds());
             debugSim->add_data("Физика (мс)", physicsTimer.elapsedMilliseconds());
+            debugSim->add_data("Шаги симуляции", simulation.getSimStep());
         }
 
         logTmr += deltaTime;
