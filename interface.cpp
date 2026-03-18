@@ -117,11 +117,8 @@ int Interface::init(sf::RenderWindow& w) {
     static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
     Interface::Font_Awesome = ImGui::GetIO().Fonts->AddFontFromFileTTF("Engine/gui/fonts/Font Awesome 5 Free-Solid-900.otf", 40.0f, &config, icon_ranges);
 
-    ImFontConfig dlg_config;
-    dlg_config.MergeMode = true;
-    dlg_config.GlyphMinAdvanceX = 16.0f;
     Interface::DialogFont = ImGui::GetIO().Fonts->AddFontFromFileTTF(
-        "Engine/gui/fonts/Rubik-VariableFont_wght.ttf", 20.0f, &dlg_config
+        "Engine/gui/fonts/Rubik-VariableFont_wght.ttf", 20.0f
     );
 
     Interface::debugPanel.loadFont("Engine/gui/fonts/Rubik-VariableFont_wght.ttf", 20.0f);
@@ -229,6 +226,7 @@ int Interface::Update() {
         if (ImGui::MenuItem("save")) {
             ImGuiFileDialog::Instance()->OpenDialog("SaveDlg", "Save simulation", ".sim", config);
         }
+        config.flags = ImGuiFileDialogFlags_None;
         if (ImGui::MenuItem("load")) {
             ImGuiFileDialog::Instance()->OpenDialog("LoadDlg", "Load simulation", ".sim", config);
         }
@@ -441,10 +439,10 @@ int Interface::Update() {
         ImGui::EndTooltip();
     }
 
-    ImVec2 dlgSize(400 * current_ui_scale, 300 * current_ui_scale);
-
+    
     ImGui::PushFont(DialogFont);
-
+    
+    ImVec2 dlgSize(400 * current_ui_scale, 300 * current_ui_scale);
     if (ImGuiFileDialog::Instance()->Display("SaveDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             pendingPath    = ImGuiFileDialog::Instance()->GetFilePathName();
