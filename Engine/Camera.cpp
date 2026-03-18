@@ -1,9 +1,10 @@
 #include <cmath>
+#include <algorithm>
 #include "Camera.h"
 #include "../interface.h"
 
 Camera::Camera(sf::RenderWindow& window, sf::View* view, float moveSpeed, float zoomSpeed) 
-    : view(view), position(0, 0), zoom(20.f), moveSpeed(moveSpeed), zoomSpeed(zoomSpeed),
+    : view(view), position(0, 0), zoom(20.f), speed(moveSpeed / 20.f), moveSpeed(moveSpeed), zoomSpeed(zoomSpeed),
         isDragging(false), lastMousePos(0, 0) {}
     
 void Camera::update(float deltaTime, sf::RenderWindow& window) {
@@ -45,7 +46,8 @@ float Camera::getZoom() const {
 }
 
 void Camera::setZoom(float new_zoom) {
-    zoom = std::clamp(zoom, 1.f, 500.f);
+    zoom = std::clamp(new_zoom, 1.f, 500.f);
+    speed = moveSpeed / zoom;
 }
 
 void Camera::handleInput(float deltaTime, sf::RenderWindow& window) {

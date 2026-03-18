@@ -59,7 +59,9 @@ void Renderer::initAtomTexture(sf::Texture& texture, unsigned texSize) {
         }
     }
 
-    texture.loadFromImage(image);
+    if (!texture.loadFromImage(image)) {
+        return;
+    }
     // if (smooth) {
     //     texture.generateMipmap();
     // }
@@ -86,7 +88,9 @@ void Renderer::wallImage(const Vec3D start, const Vec3D end) {
         }
     }
 
-    forceTexture.resize({width, height});
+    if (!forceTexture.resize({width, height})) {
+        return;
+    }
     forceTexture.update(forcePixels.data());
     forceTexture.setSmooth(true);
     // forceTexture.generateMipmap();
@@ -206,7 +210,7 @@ void Renderer::drawShot(const std::vector<Atom>& atoms, const SimBox& box, float
         } else {
             color = atom->getProps().color;
         }
-        atomBatch.append(sf::Vertex(sf::Vector2f(x, y),                  color, uv00));
+        atomBatch.append(sf::Vertex(sf::Vector2f(x, y),               color, uv00));
         atomBatch.append(sf::Vertex(sf::Vector2f(x + size, y),        color, uv10));
         atomBatch.append(sf::Vertex(sf::Vector2f(x + size, y + size), color, uv11));
         atomBatch.append(sf::Vertex(sf::Vector2f(x, y),               color, uv00));

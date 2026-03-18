@@ -1,11 +1,9 @@
 cmake_minimum_required(VERSION 3.17)
 project(Chemical-simulator)
 
-if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
-    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
-endif()
-
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
@@ -69,15 +67,10 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/aiekick/ImGuiFileDialog.git
     GIT_TAG        v0.6.8
 )
-FetchContent_Populate(ImGuiFileDialog)
-add_library(ImGuiFileDialog_lib STATIC
-    ${imguifiledialog_SOURCE_DIR}/ImGuiFileDialog.cpp
-)
-target_include_directories(ImGuiFileDialog_lib PUBLIC
-    ${imguifiledialog_SOURCE_DIR}
-    ${imgui_SOURCE_DIR}
-)
-target_link_libraries(ImGuiFileDialog_lib PUBLIC imgui)
+FetchContent_MakeAvailable(ImGuiFileDialog)
+if(TARGET ImGuiFileDialog AND TARGET imgui)
+    target_link_libraries(ImGuiFileDialog PUBLIC imgui)
+endif()
 
 set(SOURCES
     main.cpp
@@ -112,7 +105,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     sfml-network 
     sfml-audio
     ImGui-SFML::ImGui-SFML
-    ImGuiFileDialog_lib
+    ImGuiFileDialog
 )
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${imguifiledialog_SOURCE_DIR} ${imgui_SOURCE_DIR} )
