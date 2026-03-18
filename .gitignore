@@ -12,6 +12,7 @@ Testing/
 .cmake/
 
 # Binaries and libraries
+Chemical-simulator
 *.exe
 *.dll
 *.so
