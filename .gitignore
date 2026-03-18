@@ -13,7 +13,6 @@ Testing/
 
 # Binaries and libraries
 *.exe
-!Chemical-simulator.exe
 *.dll
 *.so
 *.dylib
