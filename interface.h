@@ -10,6 +10,7 @@
 #include "Engine/gui/interface/tools_panel/ToolsPanel.h"
 #include "Engine/gui/interface/sim_control_panel/SimControlPanel.h"
 #include "Engine/gui/interface/periodic_panel/PeriodicPanel.h"
+#include "Engine/gui/interface/stats_panel/StatsPanel.h"
 
 class Interface {
 private:
@@ -43,4 +44,5 @@ public:
     static ToolsPanel toolsPanel;
     static SimControlPanel simControlPanel;
     static PeriodicPanel periodicPanel;
+    static StatsPanel statsPanel;
 };

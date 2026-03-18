@@ -36,6 +36,7 @@ StyleManager Interface::styleManager;
 ToolsPanel Interface::toolsPanel;
 SimControlPanel Interface::simControlPanel;
 PeriodicPanel Interface::periodicPanel;
+StatsPanel Interface::statsPanel;
 
 int Interface::init(sf::RenderWindow& w) {
     window = &w;
@@ -101,26 +102,10 @@ int Interface::Update() {
     ImGui::SFML::Update(*window, clock.restart());
 
     ImGui::PushFont(Rubik_VariableFont_wght);
-
-    toolsPanel.draw(styleManager.getScale(), *window, debugPanel, fileDialog);
-
-    periodicPanel.draw(styleManager.getScale(), window->getSize(), selectedAtom);
-
-    simControlPanel.draw(styleManager.getScale(), window->getSize(), pause, simulationSpeed);
-
-    ImGui::SetNextWindowPos(ImVec2(window->getSize().x - (150*styleManager.getScale()), window->getSize().y - (50*styleManager.getScale())));
-    ImGui::SetNextWindowSize(ImVec2(window->getSize().x, window->getSize().y));
-    ImGui::Begin("Stats", nullptr, 
-        ImGuiWindowFlags_NoMove |           // Запретить перемещение
-        ImGuiWindowFlags_NoResize |         // Запретить изменение размера
-        ImGuiWindowFlags_NoCollapse |       // Убрать кнопку сворачивания
-        ImGuiWindowFlags_NoTitleBar |       // Скрыть заголовок
-        ImGuiWindowFlags_NoScrollbar
-    );
-
-    ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-    ImGui::End();
-
+        toolsPanel.draw(styleManager.getScale(), *window, debugPanel, fileDialog);
+        periodicPanel.draw(styleManager.getScale(), window->getSize(), selectedAtom);
+        simControlPanel.draw(styleManager.getScale(), window->getSize(), pause, simulationSpeed);
+        statsPanel.draw(styleManager.getScale(), window->getSize());
     ImGui::PopFont();
     
     if (drawToolTrip) {
