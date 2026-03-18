@@ -11,16 +11,12 @@
 #include "panels/sim_control/SimControlPanel.h"
 #include "panels/periodic/PeriodicPanel.h"
 #include "panels/stats/StatsPanel.h"
+#include "font_manager/FontManager.h"
 
 class Interface {
 private:
     static sf::RenderWindow* window;
     static sf::Clock clock;
-    static ImGuiStyle* style;
-    static ImGuiStyle baseStyle;
-    static ImFont* Rubik_VariableFont_wght;
-    static ImFont* Font_Awesome;
-    static ImFont* DialogFont;
     static int selectedAtom;
     static float simulationSpeed;
     static double averageEnergy;
@@ -38,6 +34,9 @@ public:
     static bool cursorHovered;
     static int countSelectedAtom;
     static bool drawToolTrip;
+
+    static FontManager fontManager;
+
     static DebugPanel debugPanel;
     static FileDialogManager fileDialog;
     static StyleManager styleManager;

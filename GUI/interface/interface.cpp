@@ -16,11 +16,6 @@
 #define ICON_FA_BUG "\uf188"
 
 sf::RenderWindow* Interface::window = nullptr;
-ImGuiStyle* Interface::style = nullptr;
-ImGuiStyle Interface::baseStyle;
-ImFont* Interface::Rubik_VariableFont_wght = nullptr;
-ImFont* Interface::Font_Awesome = nullptr;
-ImFont* Interface::DialogFont = nullptr;
 sf::Clock Interface::clock;
 int Interface::selectedAtom = -1;
 bool Interface::pause;
@@ -30,6 +25,9 @@ double Interface::averageEnergy = 0.0;
 int Interface::countSelectedAtom = 0;
 bool Interface::drawToolTrip = false;
 int Interface::sim_step = 0;
+
+FontManager Interface::fontManager;
+
 DebugPanel Interface::debugPanel;
 FileDialogManager Interface::fileDialog;
 StyleManager Interface::styleManager;
@@ -45,23 +43,7 @@ int Interface::init(sf::RenderWindow& w) {
 
     styleManager.applyCustomStyle();
 
-    // Загружаем шрифты
-    Interface::Rubik_VariableFont_wght = ImGui::GetIO().Fonts->AddFontFromFileTTF("GUI/fonts/Rubik-VariableFont_wght.ttf", 50.0f);
-
-    // Загружаем иконки
-    ImFontConfig config;
-    config.MergeMode = true; // Важно!
-    config.GlyphMinAdvanceX = 40.0f;
-    static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
-    Interface::Font_Awesome = ImGui::GetIO().Fonts->AddFontFromFileTTF("GUI/fonts/Font Awesome 5 Free-Solid-900.otf", 40.0f, &config, icon_ranges);
-
-    static const ImWchar ranges[] = {
-        0x0020, 0x00FF, // Латиница
-        0x0400, 0x04FF, // Кириллица
-        0,
-    };
-    Interface::DialogFont = ImGui::GetIO().Fonts->AddFontFromFileTTF("GUI/fonts/Rubik-VariableFont_wght.ttf", 20.0f, nullptr, ranges);
-
+    if (!fontManager.load()) return EXIT_FAILURE;
     if (!ImGui::SFML::UpdateFontTexture()) return EXIT_FAILURE;
     return EXIT_SUCCESS;
 }
@@ -103,7 +85,7 @@ int Interface::getSelectedAtom() {
 int Interface::Update() {
     ImGui::SFML::Update(*window, clock.restart());
 
-    ImGui::PushFont(Rubik_VariableFont_wght);
+    ImGui::PushFont(fontManager.main);
         toolsPanel.draw(styleManager.getScale(), *window, debugPanel, fileDialog);
         periodicPanel.draw(styleManager.getScale(), window->getSize(), selectedAtom);
         simControlPanel.draw(styleManager.getScale(), window->getSize(), pause, simulationSpeed);
@@ -118,7 +100,7 @@ int Interface::Update() {
         }
     ImGui::PopFont();
 
-    ImGui::PushFont(DialogFont);
+    ImGui::PushFont(fontManager.dialog);
         fileDialog.draw(styleManager.getScale());
         debugPanel.draw(styleManager.getScale(), window->getSize());
     ImGui::PopFont();
