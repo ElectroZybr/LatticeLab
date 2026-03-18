@@ -34,6 +34,8 @@ int Interface::sim_step = 0;
 DebugPanel Interface::debugPanel;
 FileDialogManager Interface::fileDialog;
 StyleManager Interface::styleManager;
+ToolsPanel Interface::toolsPanel;
+
 
 int Interface::init(sf::RenderWindow& w) {
     window = &w;
@@ -103,64 +105,10 @@ int Interface::getSelectedAtom() {
 int Interface::Update() {
     ImGui::SFML::Update(*window, clock.restart());
 
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2(183*styleManager.getScale(), 65*styleManager.getScale()));
-
-    ImGui::Begin("Tools", nullptr, 
-        ImGuiWindowFlags_NoMove |           // Запретить перемещение
-        ImGuiWindowFlags_NoResize |         // Запретить изменение размера
-        ImGuiWindowFlags_NoCollapse |       // Убрать кнопку сворачивания
-        ImGuiWindowFlags_NoTitleBar |       // Скрыть заголовок
-        ImGuiWindowFlags_NoScrollbar
-    );
-    // std::cout << ImGui::GetContentRegionAvail().x << std::endl;
-    
     ImGui::PushFont(Rubik_VariableFont_wght);
-
-    // ImGui::BeginChild("dsd", ImVec2(100*styleManager.getScale(), 50*styleManager.getScale()), true);
-
-    if (ImGui::Button(ICON_FA_COG, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
-        ImGui::OpenPopup("my_popup");
-    }
-    ImGui::SameLine();
-    if (ImGui::Button(ICON_FA_FLASK, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
-        ImGui::OpenPopup("my_popup");
-    }
-    ImGui::SameLine();
-    const bool wasDebugPanelVisible = Interface::debugPanel.isVisible();
-    if (wasDebugPanelVisible) {
-        ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.06, 0.53, 0.98, 1.00));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.06, 0.53, 0.98, 1.00));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.06, 0.53, 0.98, 1.00));
-    }
-    if (ImGui::Button(ICON_FA_BUG, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
-        debugPanel.toggle();
-    }
-    if (wasDebugPanelVisible) {
-        ImGui::PopStyleColor(3);
-    }
-
-    // Само выпадающее меню
-    if (ImGui::BeginPopup("my_popup")) {
-        IGFD::FileDialogConfig config;
-        config.path = ".";
-        config.fileName = "simulation";
-        config.countSelectionMax = 1;
-        config.flags = ImGuiFileDialogFlags_ConfirmOverwrite;
-
-        if (ImGui::MenuItem("save")) { fileDialog.openSave(); }
-        if (ImGui::MenuItem("load")) { fileDialog.openLoad(); }
-
-        ImGui::Separator();
-
-        if (ImGui::MenuItem("exit")) { 
-            window->close();
-        }
-        ImGui::EndPopup();
-    }
-    
+    toolsPanel.draw(styleManager.getScale(), *window, debugPanel, fileDialog);
     ImGui::PopFont();
-    ImGui::End();
+
     const float top_panel_width = 387.0f * styleManager.getScale();
     const float top_panel_height = 142.0f * styleManager.getScale();
     const float top_panel_x = window->getSize().x * 0.5f - top_panel_width * 0.5f;

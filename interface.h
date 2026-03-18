@@ -7,6 +7,7 @@
 #include "Engine/gui/interface/debug_panel/DebugPanel.h"
 #include "Engine/gui/interface/file_dialog/FileDialogManager.h"
 #include "Engine/gui/interface/style/StyleManager.h"
+#include "Engine/gui/interface/tools_panel/ToolsPanel.h"
 
 class Interface {
 private:
@@ -37,4 +38,5 @@ public:
     static DebugPanel debugPanel;
     static FileDialogManager fileDialog;
     static StyleManager styleManager;
+    static ToolsPanel toolsPanel;
 };
