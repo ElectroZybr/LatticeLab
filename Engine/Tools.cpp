@@ -5,12 +5,12 @@
 
 sf::RenderWindow* Tools::window = nullptr;
 sf::View* Tools::gameView = nullptr;
-Renderer* Tools::render = nullptr;
+IRenderer* Tools::render = nullptr;
 SpatialGrid* Tools::grid = nullptr;
 SimBox* Tools::box = nullptr;
 std::unordered_set<Atom*> Tools::selected_atom_batch{};
 
-void Tools::init(sf::RenderWindow* w, sf::View* gv, Renderer* r, SpatialGrid* gr, SimBox* b) {
+void Tools::init(sf::RenderWindow* w, sf::View* gv, IRenderer* r, SpatialGrid* gr, SimBox* b) {
     window = w;
     gameView = gv;
     render = r;

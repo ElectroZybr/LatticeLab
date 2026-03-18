@@ -1,4 +1,4 @@
-#include "Renderer.h"
+#include "Renderer2D.h"
 
 #include "imgui-SFML.h"
 
@@ -20,8 +20,8 @@ namespace {
     }
 }
 
-Renderer::Renderer(sf::RenderWindow& w, sf::View& gv, sf::View& uv)
-    : window(w), gameView(gv), uiView(uv), camera(w, &gv) {
+Renderer2D::Renderer2D(sf::RenderWindow& w, sf::View& gv, sf::View& uv)
+    : window(w), gameView(gv), uiView(uv), IRenderer(w, gv) {
     const int gridSize = 50;
     for (int x = -1000; x <= 1000; x += gridSize) {
         gridLines.emplace_back(sf::Vector2f(x, -1000), sf::Color(60, 60, 60));
@@ -42,7 +42,7 @@ Renderer::Renderer(sf::RenderWindow& w, sf::View& gv, sf::View& uv)
     sortedAtoms.reserve(16384);
 }
 
-void Renderer::initAtomTexture(sf::Texture& texture, unsigned texSize) {
+void Renderer2D::initAtomTexture(sf::Texture& texture, unsigned texSize) {
     sf::Image image({texSize, texSize}, sf::Color(255, 255, 255, 0));
 
     const float center = (texSize - 1) * 0.5f;
@@ -67,7 +67,7 @@ void Renderer::initAtomTexture(sf::Texture& texture, unsigned texSize) {
     // }
 }
 
-void Renderer::wallImage(const Vec3D start, const Vec3D end) {
+void Renderer2D::wallImage(const Vec3D start, const Vec3D end) {
     constexpr int textureScale = 4;
     const double worldWidth = std::max(1.0, end.x - start.x);
     const double worldHeight = std::max(1.0, end.y - start.y);
@@ -96,7 +96,7 @@ void Renderer::wallImage(const Vec3D start, const Vec3D end) {
     // forceTexture.generateMipmap();
 }
 
-int Renderer::getWallForce(int coord, int min, int max) {
+int Renderer2D::getWallForce(int coord, int min, int max) {
     constexpr int border = 7;
     constexpr double k = 255.0 / static_cast<double>(border * border);
     double force = 0.0;
@@ -115,7 +115,7 @@ int Renderer::getWallForce(int coord, int min, int max) {
     return static_cast<int>(force);
 }
 
-void Renderer::drawShot(const std::vector<Atom>& atoms, const SimBox& box, float deltaTime) {
+void Renderer2D::drawShot(const std::vector<Atom>& atoms, const SimBox& box, float deltaTime) {
     // 1: 7000 мкс - отрисовка 225 атомов
     // 2: оптимизация батч на gpu. 1000 мкс - отрисовка 961 атома
     camera.handleInput(deltaTime, window);
@@ -257,7 +257,7 @@ void Renderer::drawShot(const std::vector<Atom>& atoms, const SimBox& box, float
     window.display();
 }
 
-void Renderer::drawTransparencyMap(sf::RenderWindow& window, const SpatialGrid& grid) {
+void Renderer2D::drawTransparencyMap(sf::RenderWindow& window, const SpatialGrid& grid) {
     sf::RectangleShape cellRect(sf::Vector2f(
         static_cast<float>(grid.cellSize),
         static_cast<float>(grid.cellSize)
@@ -279,7 +279,7 @@ void Renderer::drawTransparencyMap(sf::RenderWindow& window, const SpatialGrid& 
     }
 }
 
-void Renderer::drawForceField(const sf::Texture& forceTexture, const SimBox& box) {
+void Renderer2D::drawForceField(const sf::Texture& forceTexture, const SimBox& box) {
     if (!forceFieldShaderLoaded || forceTexture.getSize().x == 0 || forceTexture.getSize().y == 0) {
         return;
     }
@@ -292,7 +292,7 @@ void Renderer::drawForceField(const sf::Texture& forceTexture, const SimBox& box
     window.draw(forceFieldQuad, &forceFieldShader);
 }
 
-void Renderer::setSelectionFrame(Vec2D start, Vec2D end, float scale) {
+void Renderer2D::setSelectionFrame(Vec2D start, Vec2D end, float scale) {
     frameShape.setPosition(start);
     frameShape.setSize(end - start);
 
