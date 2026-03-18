@@ -8,6 +8,7 @@
 #include "Engine/gui/interface/file_dialog/FileDialogManager.h"
 #include "Engine/gui/interface/style/StyleManager.h"
 #include "Engine/gui/interface/tools_panel/ToolsPanel.h"
+#include "Engine/gui/interface/sim_control_panel/SimControlPanel.h"
 
 class Interface {
 private:
@@ -39,4 +40,5 @@ public:
     static FileDialogManager fileDialog;
     static StyleManager styleManager;
     static ToolsPanel toolsPanel;
+    static SimControlPanel simControlPanel;
 };

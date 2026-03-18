@@ -1,5 +1,4 @@
 #include "ToolsPanel.h"
-#include "imgui.h"
 #include "../debug_panel/DebugPanel.h"
 #include "../file_dialog/FileDialogManager.h"
 
@@ -7,19 +6,12 @@
 #define ICON_FA_COG     "\uf013"
 #define ICON_FA_BUG     "\uf188"
 
-static constexpr ImGuiWindowFlags FIXED_FLAGS =
-    ImGuiWindowFlags_NoMove     |
-    ImGuiWindowFlags_NoResize   |
-    ImGuiWindowFlags_NoCollapse |
-    ImGuiWindowFlags_NoTitleBar |
-    ImGuiWindowFlags_NoScrollbar;
-
 void ToolsPanel::draw(float scale, sf::RenderWindow& window,
                       DebugPanel& debug, FileDialogManager& fileDialog)
 {
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(183*scale, 65*scale));
-    ImGui::Begin("Tools", nullptr, FIXED_FLAGS);
+    ImGui::Begin("Tools", nullptr, PANEL_FLAGS);
 
     if (ImGui::Button(ICON_FA_COG,   ImVec2(50*scale, 50*scale))) ImGui::OpenPopup("tools_popup");
     ImGui::SameLine();

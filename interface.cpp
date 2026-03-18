@@ -35,7 +35,7 @@ DebugPanel Interface::debugPanel;
 FileDialogManager Interface::fileDialog;
 StyleManager Interface::styleManager;
 ToolsPanel Interface::toolsPanel;
-
+SimControlPanel Interface::simControlPanel;
 
 int Interface::init(sf::RenderWindow& w) {
     window = &w;
@@ -204,64 +204,14 @@ int Interface::Update() {
     ImGui::PopFont();
     ImGui::End();
 
-
-    
+  
     ImGui::SetNextWindowPos(ImVec2(window->getSize().x - (122*styleManager.getScale()), 0));
     ImGui::SetNextWindowSize(ImVec2(122*styleManager.getScale(), 111*styleManager.getScale()));
 
-    ImGui::Begin("Poops", nullptr, 
-        ImGuiWindowFlags_NoMove |           // Запретить перемещение
-        ImGuiWindowFlags_NoResize |         // Запретить изменение размера
-        ImGuiWindowFlags_NoCollapse |       // Убрать кнопку сворачивания
-        ImGuiWindowFlags_NoTitleBar |       // Скрыть заголовок
-        ImGuiWindowFlags_NoScrollbar
-    );
+
     ImGui::PushFont(Rubik_VariableFont_wght);
-
-    static int fast = 0;    // 0 - обычная скорость, 1 - x2, 2 - x3
-    if (fast == 0) {
-        if (ImGui::Button(ICON_FA_FORWARD, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
-            fast++;
-        }
-    } else if (fast == 1) {
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06, 0.53, 0.98, 1.00));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.06, 0.53, 0.98, 1.00));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.06, 0.53, 0.98, 1.00));
-        if (ImGui::Button(ICON_FA_FORWARD, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
-            fast++;
-        }
-        ImGui::PopStyleColor(3);
-    } else if (fast == 2) {
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06, 0.53, 0.98, 1.00));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.06, 0.53, 0.98, 1.00));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.06, 0.53, 0.98, 1.00));
-        if (ImGui::Button(ICON_FA_FAST_FORWARD, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
-            fast = 0;
-        }
-        ImGui::PopStyleColor(3);
-    }
-    ImGui::SameLine();
-
-    if (pause) {
-        if (ImGui::Button(ICON_FA_PLAY, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
-            pause = false;
-        }
-    } else {
-        if (ImGui::Button(ICON_FA_PAUSE, ImVec2(50*styleManager.getScale(), 50*styleManager.getScale()))) {
-            pause = true;
-        }
-    }
-
-    ImGui::PushItemWidth(106*styleManager.getScale());
-    ImGui::SliderFloat("##Speed", &simulationSpeed, 0.1, 50, "%.1f", ImGuiSliderFlags_Logarithmic);
-    ImGui::PopItemWidth();
-
-    // if (ImGui::IsItemHovered()) {
-    //     ImGui::SetTooltip("podscazka");
-    // }
-
+    simControlPanel.draw(styleManager.getScale(), window->getSize(), pause, simulationSpeed);
     ImGui::PopFont();
-    ImGui::End();
 
     ImGui::SetNextWindowPos(ImVec2(window->getSize().x - (150*styleManager.getScale()), window->getSize().y - (50*styleManager.getScale())));
     ImGui::SetNextWindowSize(ImVec2(window->getSize().x, window->getSize().y));
