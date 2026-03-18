@@ -134,6 +134,9 @@ void Interface::CheckEvent(const sf::Event& event) {
         if (e->code == sf::Keyboard::Key::P) {
             debugPanel.toggle();
         }
+        else if (e->code == sf::Keyboard::Key::Space) {
+            pause = !pause;
+        }
     }
     else if (const auto* e = event.getIf<sf::Event::Resized>()) {
         // Пересчитываем масштаб ImGui
