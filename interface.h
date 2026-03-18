@@ -7,7 +7,7 @@
 #include "imgui-SFML.h"
 #include <SFML/Graphics.hpp>
 
-#include "Engine/debug_panel/DebugPanel.h"
+#include "Engine/gui/interface/debug_panel/DebugPanel.h"
 
 enum class SimCommand: std::uint8_t { Save, Load };
 

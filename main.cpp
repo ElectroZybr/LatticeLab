@@ -17,7 +17,7 @@
 
 #include "Engine/Simulation.h"
 
-#include "Engine/debug_panel/view/DebugView.h"
+#include "Engine/gui/interface/debug_panel/view/DebugView.h"
 #include "Engine/physics/Bond.h"
 #include "Engine/utils/Timer.h"
 

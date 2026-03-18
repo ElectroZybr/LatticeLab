@@ -77,25 +77,15 @@ target_include_directories(ImGuiFileDialog_lib PUBLIC
 )
 target_link_libraries(ImGuiFileDialog_lib PUBLIC imgui)
 
-set(SOURCES
-    main.cpp
-    interface.h
-    interface.cpp
-    Engine/math/Vec2D.cpp
-    Engine/math/Vec3D.cpp
-    Engine/physics/Atom.cpp
-    Engine/physics/Bond.cpp
-    Engine/physics/BondTable.cpp
-    Engine/physics/SpatialGrid.cpp
-    Engine/Camera.cpp
-    Engine/Renderer.cpp
-    Engine/Simulation.cpp
-    Engine/SimBox.cpp
-    Engine/Tools.cpp
-    Engine/debug_panel/DebugPanel.cpp
-    Engine/debug_panel/view/DebugView.cpp
-    Engine/utils/Timer.cpp
+file(GLOB_RECURSE SOURCES 
+    "main.cpp"
+    "interface.cpp"
+    "Engine/*.cpp"
 )
+list(FILTER SOURCES EXCLUDE REGEX "build/.*")
+foreach(src ${SOURCES})
+    message(STATUS "Source file: ${src}")
+endforeach()
 
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCES})
 
