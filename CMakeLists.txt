@@ -67,10 +67,15 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/aiekick/ImGuiFileDialog.git
     GIT_TAG        v0.6.8
 )
-FetchContent_MakeAvailable(ImGuiFileDialog)
-if(TARGET ImGuiFileDialog AND TARGET imgui)
-    target_link_libraries(ImGuiFileDialog PUBLIC imgui)
-endif()
+FetchContent_Populate(ImGuiFileDialog)
+add_library(ImGuiFileDialog_lib STATIC
+    ${imguifiledialog_SOURCE_DIR}/ImGuiFileDialog.cpp
+)
+target_include_directories(ImGuiFileDialog_lib PUBLIC
+    ${imguifiledialog_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}
+)
+target_link_libraries(ImGuiFileDialog_lib PUBLIC imgui)
 
 set(SOURCES
     main.cpp
@@ -87,6 +92,9 @@ set(SOURCES
     Engine/Simulation.cpp
     Engine/SimBox.cpp
     Engine/Tools.cpp
+    Engine/debug_panel/DebugPanel.cpp
+    Engine/debug_panel/view/DebugView.cpp
+    Engine/utils/Timer.cpp
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCES})
@@ -105,7 +113,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     sfml-network 
     sfml-audio
     ImGui-SFML::ImGui-SFML
-    ImGuiFileDialog
+    ImGuiFileDialog_lib
 )
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${imguifiledialog_SOURCE_DIR} ${imgui_SOURCE_DIR} )

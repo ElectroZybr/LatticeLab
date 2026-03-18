@@ -17,6 +17,10 @@
 
 #include "Engine/Simulation.h"
 
+#include "Engine/debug_panel/view/DebugView.h"
+#include "Engine/physics/Bond.h"
+#include "Engine/utils/Timer.h"
+
 constexpr int WIGHT = 800;
 constexpr int HEIGHT = 600;
 
@@ -31,11 +35,13 @@ void diffusionTest(Simulation& simulation);
 
 int main() {
     sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator", sf::State::Fullscreen);
-
     sf::Image icon;
     if (icon.loadFromFile("icon.png")) {
         window.setIcon(icon.getSize(), icon.getPixelsPtr());
     }
+
+    Timer physicsTimer;
+    Timer renderTimer;
 
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(window, box);
@@ -50,6 +56,23 @@ int main() {
 
     // simulation.render.speedGradientTurbo = true;
     Interface::pause = true;
+
+    DebugView* debugSim = Interface::debugPanel.addView(DebugView("Симуляция", 
+    {
+        DebugSeries("Кинетическая энергия"),
+        DebugValue ("Количество атомов"),
+        DebugValue ("Шаги симуляции"),
+        DebugValue ("Физика (мс)"),
+        DebugValue ("Рендер (мс)"),
+    }));
+
+    DebugView* debugAtom = Interface::debugPanel.addView(DebugView("Атом",
+    {
+        DebugValue ("В разработке"),
+    }));
+
+    debugSim->add_data("Количество атомов", simulation.atoms.size());
+    debugSim->add_data("Шаги симуляции", simulation.getSimStep());
 
     // Atom* hydrogen_1 = simulation.createAtom(Vec3D(25.5, 25.86, 1), Vec3D(2, 0, 0), 1);
     // Atom* oxygen_1 = simulation.createAtom(Vec3D(25, 25, 1), Vec3D(0, 0, 0), 8);
@@ -80,10 +103,10 @@ int main() {
 
         simTmr += deltaTime;
         if (simTmr >= Dt/Interface::getSimulationSpeed()) { 
-            const auto physics_start = std::chrono::high_resolution_clock::now();
+            physicsTimer.start();
             simulation.update(Dt);
-            const auto physics_end = std::chrono::high_resolution_clock::now();
-            physics_time_ms_accum += std::chrono::duration<double, std::milli>(physics_end - physics_start).count();
+            physicsTimer.stop();
+            physics_time_ms_accum += physicsTimer.elapsedMilliseconds();
             physics_steps_per_second++;
             if (!Interface::getPause()) {
                 // if (simulation.getSimStep() < 12000) {
@@ -109,7 +132,7 @@ int main() {
         shotTmr += deltaTime;
         simulation.pollEvents(); // Обработка событий окна
         if (shotTmr >= 1./FPS) {
-            simulation.event(); // Обработка взаимодейсвия интерфейса с миросм (перетаскивание атомов)
+            simulation.event(); // Обработка взаимодейсвия интерфейса с миром (перетаскивание атомов)
             if (Interface::pendingCommand.has_value()) {
                 switch (Interface::pendingCommand.value()) {
                     case SimCommand::Save: simulation.save(Interface::pendingPath); break;
@@ -117,12 +140,17 @@ int main() {
                 }
                 Interface::pendingCommand = std::nullopt;
             }
-            const auto render_start = std::chrono::high_resolution_clock::now();
+            renderTimer.start();
             simulation.renderShot(shotTmr);
-            const auto render_end = std::chrono::high_resolution_clock::now();
-            render_time_ms_accum += std::chrono::duration<double, std::milli>(render_end - render_start).count();
+            renderTimer.stop();
+            render_time_ms_accum += renderTimer.elapsedMilliseconds();
             render_frames_per_second++;
             shotTmr = 0;
+
+            debugSim->add_data("Кинетическая энергия", simulation.AverageEnegry());
+            debugSim->add_data("Рендер (мс)", renderTimer.elapsedMilliseconds());
+            debugSim->add_data("Физика (мс)", physicsTimer.elapsedMilliseconds());
+            debugSim->add_data("Шаги симуляции", simulation.getSimStep());
         }
 
         logTmr += deltaTime;

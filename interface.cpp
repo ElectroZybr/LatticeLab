@@ -19,6 +19,7 @@
 #define ICON_FA_BACKWARD "\uf04a"
 #define ICON_FA_FAST_FORWARD "\uf050"
 #define ICON_FA_FAST_BACKWARD "\uf049"
+#define ICON_FA_BUG "\uf188"
 
 sf::RenderWindow* Interface::window = nullptr;
 ImGuiStyle* Interface::style = nullptr;
@@ -36,6 +37,7 @@ double Interface::averageEnergy = 0.0;
 int Interface::countSelectedAtom = 0;
 bool Interface::drawToolTrip = false;
 int Interface::sim_step = 0;
+DebugPanel Interface::debugPanel;
 std::optional<SimCommand> Interface::pendingCommand = std::nullopt;
 std::string Interface::pendingPath = "";
 
@@ -95,7 +97,6 @@ void Interface::custom_style() {
     current_ui_scale = 1;
 }
 
-
 int Interface::init(sf::RenderWindow& w) {
     window = &w;
 
@@ -116,22 +117,28 @@ int Interface::init(sf::RenderWindow& w) {
     static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
     Interface::Font_Awesome = ImGui::GetIO().Fonts->AddFontFromFileTTF("Engine/gui/fonts/Font Awesome 5 Free-Solid-900.otf", 40.0f, &config, icon_ranges);
 
-
     ImFontConfig dlg_config;
     dlg_config.MergeMode = true;
     dlg_config.GlyphMinAdvanceX = 16.0f;
-    static const ImWchar dlg_icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
-
     Interface::DialogFont = ImGui::GetIO().Fonts->AddFontFromFileTTF(
-        "Engine/gui/fonts/Rubik-VariableFont_wght.ttf", 20.0f
+        "Engine/gui/fonts/Rubik-VariableFont_wght.ttf", 20.0f, &dlg_config
     );
 
+    Interface::debugPanel.loadFont("Engine/gui/fonts/Rubik-VariableFont_wght.ttf", 20.0f);
     if (!ImGui::SFML::UpdateFontTexture()) return EXIT_FAILURE;
     return EXIT_SUCCESS;
 }
 
 void Interface::CheckEvent(const sf::Event& event) {
-    if (const auto* e = event.getIf<sf::Event::Resized>()) {
+    if (const auto* e = event.getIf<sf::Event::KeyPressed>()) {
+        if (e->code == sf::Keyboard::Key::P) {
+            debugPanel.toggle();
+        }
+        else if (e->code == sf::Keyboard::Key::Space) {
+            pause = !pause;
+        }
+    }
+    else if (const auto* e = event.getIf<sf::Event::Resized>()) {
         // Пересчитываем масштаб ImGui
         // window->setView(sf::View(sf::FloatRect(0, 0, event.size.width, event.size.height)));
         // ImGui::GetIO().DisplaySize = ImVec2(event.size.width, event.size.height);
@@ -176,7 +183,7 @@ int Interface::Update() {
     ImGui::SFML::Update(*window, clock.restart());
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2(122*current_ui_scale, 65*current_ui_scale));
+    ImGui::SetNextWindowSize(ImVec2(183*current_ui_scale, 65*current_ui_scale));
 
     ImGui::Begin("Tools", nullptr, 
         ImGuiWindowFlags_NoMove |           // Запретить перемещение
@@ -197,6 +204,19 @@ int Interface::Update() {
     ImGui::SameLine();
     if (ImGui::Button(ICON_FA_FLASK, ImVec2(50*current_ui_scale, 50*current_ui_scale))) {
         ImGui::OpenPopup("my_popup");
+    }
+    ImGui::SameLine();
+    const bool wasDebugPanelVisible = Interface::debugPanel.isVisible();
+    if (wasDebugPanelVisible) {
+        ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.06, 0.53, 0.98, 1.00));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.06, 0.53, 0.98, 1.00));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.06, 0.53, 0.98, 1.00));
+    }
+    if (ImGui::Button(ICON_FA_BUG, ImVec2(50*current_ui_scale, 50*current_ui_scale))) {
+        debugPanel.toggle();
+    }
+    if (wasDebugPanelVisible) {
+        ImGui::PopStyleColor(3);
     }
 
     // Само выпадающее меню
@@ -379,8 +399,6 @@ int Interface::Update() {
     ImGui::PopFont();
     ImGui::End();
 
-
-
     ImGui::SetNextWindowPos(ImVec2(window->getSize().x - (150*current_ui_scale), window->getSize().y - (50*current_ui_scale)));
     ImGui::SetNextWindowSize(ImVec2(window->getSize().x, window->getSize().y));
     ImGui::Begin("Stats", nullptr, 
@@ -392,20 +410,6 @@ int Interface::Update() {
     );
     ImGui::PushFont(Rubik_VariableFont_wght);
     ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-    ImGui::PopFont();
-    ImGui::End();
-
-    ImGui::SetNextWindowPos(ImVec2(0, window->getSize().y - (50*current_ui_scale)));
-    ImGui::SetNextWindowSize(ImVec2((180*current_ui_scale), window->getSize().y));
-    ImGui::Begin("sim", nullptr, 
-        ImGuiWindowFlags_NoMove |           // Запретить перемещение
-        ImGuiWindowFlags_NoResize |         // Запретить изменение размера
-        ImGuiWindowFlags_NoCollapse |       // Убрать кнопку сворачивания
-        ImGuiWindowFlags_NoTitleBar |       // Скрыть заголовок
-        ImGuiWindowFlags_NoScrollbar
-    );
-    ImGui::PushFont(Rubik_VariableFont_wght);
-    ImGui::Text("Step: %d", sim_step);
     ImGui::PopFont();
     ImGui::End();
 
@@ -445,6 +449,8 @@ int Interface::Update() {
     }
 
     ImGui::PopFont();
+
+    debugPanel.draw(current_ui_scale, window->getSize());
 
     // Проверка на вхождение курсора в область
     cursorHovered = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup);
