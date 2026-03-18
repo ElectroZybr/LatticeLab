@@ -52,8 +52,8 @@ void Simulation::renderShot(float deltaTime) {
 }
 
 void Simulation::pollEvents() {
-    sf::Vector2i mouse_pos = sf::Mouse::getPosition(window);
     while (const std::optional<sf::Event> optEvent = window.pollEvent()) {
+        sf::Vector2i mouse_pos = sf::Mouse::getPosition(window);
         const sf::Event& event = *optEvent;
         ImGui::SFML::ProcessEvent(window, event);
 
