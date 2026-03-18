@@ -55,11 +55,13 @@ int Interface::init(sf::RenderWindow& w) {
     static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
     Interface::Font_Awesome = ImGui::GetIO().Fonts->AddFontFromFileTTF("Engine/gui/fonts/Font Awesome 5 Free-Solid-900.otf", 40.0f, &config, icon_ranges);
 
-    Interface::DialogFont = ImGui::GetIO().Fonts->AddFontFromFileTTF(
-        "Engine/gui/fonts/Rubik-VariableFont_wght.ttf", 20.0f
-    );
+    static const ImWchar ranges[] = {
+        0x0020, 0x00FF, // Латиница
+        0x0400, 0x04FF, // Кириллица
+        0,
+    };
+    Interface::DialogFont = ImGui::GetIO().Fonts->AddFontFromFileTTF("Engine/gui/fonts/Rubik-VariableFont_wght.ttf", 20.0f, nullptr, ranges);
 
-    Interface::debugPanel.loadFont("Engine/gui/fonts/Rubik-VariableFont_wght.ttf", 20.0f);
     if (!ImGui::SFML::UpdateFontTexture()) return EXIT_FAILURE;
     return EXIT_SUCCESS;
 }
@@ -106,30 +108,20 @@ int Interface::Update() {
         periodicPanel.draw(styleManager.getScale(), window->getSize(), selectedAtom);
         simControlPanel.draw(styleManager.getScale(), window->getSize(), pause, simulationSpeed);
         statsPanel.draw(styleManager.getScale(), window->getSize());
-    ImGui::PopFont();
+        if (drawToolTrip) {
+            ImVec2 mouse = ImGui::GetMousePos();
+            ImGui::SetNextWindowPos(ImVec2(mouse.x + 3 * styleManager.getScale(), mouse.y + 3 * styleManager.getScale()));
     
-    if (drawToolTrip) {
-        ImVec2 mouse = ImGui::GetMousePos();
-        ImGui::SetNextWindowPos(ImVec2(mouse.x + 3 * styleManager.getScale(), mouse.y + 3 * styleManager.getScale()));
-
-        ImGui::BeginTooltip();
-        if (Rubik_VariableFont_wght) {
-            ImGui::PushFont(Rubik_VariableFont_wght);
+            ImGui::BeginTooltip();
+            ImGui::Text("Selected: %d", countSelectedAtom);
+            ImGui::EndTooltip();
         }
-        ImGui::Text("Selected: %d", countSelectedAtom);
-        if (Rubik_VariableFont_wght) {
-            ImGui::PopFont();
-        }
-        ImGui::EndTooltip();
-    }
-
-    ImVec2 dlgSize(400 * styleManager.getScale(), 300 * styleManager.getScale());
+    ImGui::PopFont();
 
     ImGui::PushFont(DialogFont);
-    fileDialog.draw(styleManager.getScale());
+        fileDialog.draw(styleManager.getScale());
+        debugPanel.draw(styleManager.getScale(), window->getSize());
     ImGui::PopFont();
-
-    debugPanel.draw(styleManager.getScale(), window->getSize());
 
     // Проверка на вхождение курсора в область
     cursorHovered = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup);
