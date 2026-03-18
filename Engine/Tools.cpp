@@ -1,5 +1,7 @@
 #include "Tools.h"
+
 #include "SimBox.h"
+#include "GUI/interface/interface.h"
 
 sf::RenderWindow* Tools::window = nullptr;
 sf::View* Tools::gameView = nullptr;

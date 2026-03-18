@@ -3,21 +3,18 @@
 #include <cmath>
 
 #include <iostream>
-#include <functional>
-#include <memory>
 #include <chrono>
 #include <vector>
 
-#include "imgui.h"
 #include "imgui-SFML.h"
 
 #include "Engine/physics/Atom.h"
 #include "Engine/physics/SpatialGrid.h"
-#include "interface.h"
 
 #include "Engine/Simulation.h"
 
-#include "Engine/gui/interface/debug_panel/view/DebugView.h"
+#include "GUI/interface/interface.h"
+#include "GUI/interface/panels/debug/view/DebugView.h"
 #include "Engine/physics/Bond.h"
 #include "Engine/utils/Timer.h"
 

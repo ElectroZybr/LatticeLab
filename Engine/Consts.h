@@ -6,6 +6,7 @@
 // #define SHOOTER_CONSTS_H
 
 // #include <SFML/Graphics.hpp>
+#pragma once
 
 #include "math/Vec2D.h"
 #include <cstdint>
@@ -28,8 +29,8 @@ namespace Consts {
 
     const double RAY_CAST_MAX_DISTANCE = 10000;
 
-    const std::string THIN_FONT = "Engine/gui/fonts/Roboto-Thin.ttf";
-    const std::string MEDIUM_FONT = "Engine/gui/fonts/Roboto-Medium.ttf";
+    const std::string THIN_FONT = "GUI/fonts/Roboto-Thin.ttf";
+    const std::string MEDIUM_FONT = "GUI/fonts/Roboto-Medium.ttf";
 
     const double LARGEST_TIME_STEP = 1.0 / 15.0;
     const double TAP_DELAY = 0.2;

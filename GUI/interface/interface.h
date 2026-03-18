@@ -4,13 +4,13 @@
 #include "imgui-SFML.h"
 #include <SFML/Graphics.hpp>
 
-#include "Engine/gui/interface/debug_panel/DebugPanel.h"
-#include "Engine/gui/interface/file_dialog/FileDialogManager.h"
-#include "Engine/gui/interface/style/StyleManager.h"
-#include "Engine/gui/interface/tools_panel/ToolsPanel.h"
-#include "Engine/gui/interface/sim_control_panel/SimControlPanel.h"
-#include "Engine/gui/interface/periodic_panel/PeriodicPanel.h"
-#include "Engine/gui/interface/stats_panel/StatsPanel.h"
+#include "file_dialog/FileDialogManager.h"
+#include "style/StyleManager.h"
+#include "panels/debug/DebugPanel.h"
+#include "panels/tools/ToolsPanel.h"
+#include "panels/sim_control/SimControlPanel.h"
+#include "panels/periodic/PeriodicPanel.h"
+#include "panels/stats/StatsPanel.h"
 
 class Interface {
 private:
