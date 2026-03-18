@@ -173,5 +173,5 @@ float Atom::LennardJonesForce(float d) {
 }
 
 float Atom::kineticEnergy() const {
-    return 0.5f * getProps().mass * (speed.x * speed.x + speed.y * speed.y + speed.z + speed.z);
+    return 0.5f * getProps().mass * speed.sqrAbs();
 }

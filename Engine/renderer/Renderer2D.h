@@ -1,35 +1,28 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
-#include <list>
-#include <vector>
-#include "Camera.h"
-#include "SimBox.h"
 
-#include "physics/Atom.h"
-#include "physics/SpatialGrid.h"
+#include "IRenderer.h"
+#include "Engine/physics/SpatialGrid.h"
+#include "Engine/physics/Bond.h"
 
-class Renderer {
+class Renderer2D : public IRenderer {
 public:
-    Renderer(sf::RenderWindow& window, sf::View& gameView, sf::View& uiView);
-    void drawShot(const std::vector<Atom>& atoms, const SimBox& box, float deltaTime);
-    Camera camera;
-    float alpha = 0.05; // Коэфициент уменьшения по мере удаления атома
-    bool drawGrid = false;
-    bool drawBonds = false;
-    bool speedGradient = false;
-    bool speedGradientTurbo = false;
-    float drawBondsZoom = 25;
-    bool drawSelectionFrame = false;
-    void setSelectionFrame(Vec2D start, Vec2D end, float scale);
+    Renderer2D(sf::RenderWindow& window, sf::View& gameView, sf::View& uiView);
+
+    void drawShot(const std::vector<Atom>& atoms,
+                  const SimBox& box, float deltaTime) override;
+    void setSelectionFrame(Vec2D start, Vec2D end, float scale) override;
+    void wallImage(Vec3D start, Vec3D end) override;
+    void showSelectionFrame(bool show) override { drawSelectionFrame = show; }
+
     sf::Texture forceTexture;
-    void wallImage(const Vec3D start, const Vec3D end);
-    
+
 private:
     sf::RenderWindow& window;
     sf::View& gameView;
     sf::View& uiView;
-    
+
     std::vector<sf::Vertex> gridLines;
     sf::Texture atomTextureLow;
     sf::Texture atomTextureMid;
@@ -41,6 +34,8 @@ private:
     sf::RectangleShape forceFieldQuad;
     sf::Shader forceFieldShader;
     bool forceFieldShaderLoaded = false;
+    bool drawSelectionFrame     = false;
+
     void initAtomTexture(sf::Texture& texture, unsigned texSize);
     void drawTransparencyMap(sf::RenderWindow& window, const SpatialGrid& grid);
     void drawForceField(const sf::Texture& forceTexture, const SimBox& box);

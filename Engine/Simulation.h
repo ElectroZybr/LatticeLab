@@ -1,15 +1,16 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
-#include "Renderer.h"
 
 #include "physics/Atom.h"
 #include "physics/SpatialGrid.h"
 #include "SimBox.h"
+#include "renderer/IRenderer.h"
 
 class Simulation {
 public:
     Simulation(sf::RenderWindow& window, SimBox& sim_box);
+    void setRenderer(IRenderer* r);
 
     void update(float dt);
 
@@ -36,12 +37,15 @@ public:
     void setCameraZoom(float new_zoom);
     int getSimStep() const { return sim_step; }
 
+    sf::View& getGameView() { return gameView; }
+    sf::View& getUiView()   { return uiView;   }
+
     void save(const std::string_view path) const;
     void load(const std::string_view path);
     void clear();
 
     SimBox& sim_box;
-    Renderer render;
+    IRenderer* render;
     std::vector<Atom> atoms;
 private:
     sf::RenderWindow& window;

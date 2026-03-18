@@ -1,7 +1,7 @@
-#include "SimBox.h"
-#include "Renderer.h"
-
 #include <algorithm>
+
+#include "SimBox.h"
+#include "renderer/IRenderer.h"
 
 SimBox::SimBox(Vec3D s, Vec3D e)
     : start(s),
@@ -9,7 +9,7 @@ SimBox::SimBox(Vec3D s, Vec3D e)
       grid(std::max(1, static_cast<int>(e.x - s.x)),
            std::max(1, static_cast<int>(e.y - s.y))) {}
 
-void SimBox::setRenderer(Renderer* r) {
+void SimBox::setRenderer(IRenderer* r) {
     render = r;
     if (render) {
         render->wallImage(start, end);
