@@ -6,7 +6,7 @@
 #include "imgui-SFML.h"
 
 #include "Simulation.h"
-#include "../interface.h"
+#include "GUI/interface/interface.h"
 #include "Tools.h"
 
 Simulation::Simulation(sf::RenderWindow& w, SimBox& box)

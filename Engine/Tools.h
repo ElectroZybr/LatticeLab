@@ -1,8 +1,9 @@
+#pragma once
+
 #include <SFML/Graphics.hpp>
 #include <vector>
 
 #include "physics/SpatialGrid.h"
-#include "../interface.h"
 #include "math/Vec2D.h"
 #include "Renderer.h"
 

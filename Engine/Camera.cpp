@@ -1,7 +1,9 @@
+#include "Camera.h"
+
 #include <cmath>
 #include <algorithm>
-#include "Camera.h"
-#include "../interface.h"
+
+#include "GUI/interface/interface.h"
 
 Camera::Camera(sf::RenderWindow& window, sf::View* view, float moveSpeed, float zoomSpeed) 
     : view(view), position(0, 0), zoom(20.f), speed(moveSpeed / 20.f), moveSpeed(moveSpeed), zoomSpeed(zoomSpeed),

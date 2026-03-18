@@ -1,6 +1,6 @@
 #include "ToolsPanel.h"
-#include "../debug_panel/DebugPanel.h"
-#include "../file_dialog/FileDialogManager.h"
+#include "GUI/interface/panels/debug/DebugPanel.h"
+#include "GUI/interface/file_dialog/FileDialogManager.h"
 
 #define ICON_FA_FLASK   "\uf0c3"
 #define ICON_FA_COG     "\uf013"

@@ -79,13 +79,10 @@ target_link_libraries(ImGuiFileDialog_lib PUBLIC imgui)
 
 file(GLOB_RECURSE SOURCES 
     "main.cpp"
-    "interface.cpp"
     "Engine/*.cpp"
+    "GUI/*.cpp"
 )
 list(FILTER SOURCES EXCLUDE REGEX "build/.*")
-foreach(src ${SOURCES})
-    message(STATUS "Source file: ${src}")
-endforeach()
 
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCES})
 
@@ -106,4 +103,8 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     ImGuiFileDialog_lib
 )
 
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${imguifiledialog_SOURCE_DIR} ${imgui_SOURCE_DIR} )
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE 
+    ${CMAKE_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}
+    ${imguifiledialog_SOURCE_DIR}
+)
