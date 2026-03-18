@@ -92,6 +92,9 @@ set(SOURCES
     Engine/Simulation.cpp
     Engine/SimBox.cpp
     Engine/Tools.cpp
+    Engine/debug_panel/DebugPanel.cpp
+    Engine/debug_panel/view/DebugView.cpp
+    Engine/utils/Timer.cpp
 )
 
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCES})
