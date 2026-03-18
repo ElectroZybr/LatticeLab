@@ -1,4 +1,4 @@
-#include <SFML/Graphics.hpp>
+﻿#include <SFML/Graphics.hpp>
 #include <SFML/Window/WindowHandle.hpp>
 #include <cmath>
 
@@ -21,7 +21,7 @@ constexpr int WIGHT = 800;
 constexpr int HEIGHT = 600;
 
 constexpr int FPS = 60;
-constexpr int LPS = 30;
+constexpr int LPS = 1;
 constexpr double Dt = 0.01;
 
 /* тестовые сцены, можно запускать в main и экспериментировать*/
@@ -37,23 +37,23 @@ int main() {
         window.setIcon(icon.getSize(), icon.getPixelsPtr());
     }
 
-    SimBox box(Vec3D(-250, -250, 0), Vec3D(250, 250, 6));
+    SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(window, box);
     simulation.setCameraPos(0, 0);
     simulation.setCameraZoom(20);
 
     // simulation.drawGrid(true);
-    // simulation.drawBonds();
-    simulation.speedGradient();
+    simulation.drawBonds();
+    // simulation.speedGradient();
 
     crystal25x25H(simulation);
 
     // simulation.render.speedGradientTurbo = true;
     Interface::pause = true;
 
-    // Atom* hydrogen_1 = simulation.createAtom(Vec3D(50.5, 50.86, 1), Vec3D(2, 0, 0), 1);
-    // Atom* oxygen_1 = simulation.createAtom(Vec3D(50, 50, 1), Vec3D(0, 0, 0), 8);
-    // Atom* hydrogen_2 = simulation.createAtom(Vec3D(51, 50, 1), Vec3D(0, 0, 0), 1);
+    // Atom* hydrogen_1 = simulation.createAtom(Vec3D(25.5, 25.86, 1), Vec3D(2, 0, 0), 1);
+    // Atom* oxygen_1 = simulation.createAtom(Vec3D(25, 25, 1), Vec3D(0, 0, 0), 8);
+    // Atom* hydrogen_2 = simulation.createAtom(Vec3D(26, 25, 1), Vec3D(0, 0, 0), 1);
 
     // simulation.addBond(hydrogen_1, oxygen_1);
     // simulation.addBond(hydrogen_2, oxygen_1);
@@ -69,13 +69,22 @@ int main() {
     auto duration = std::chrono::microseconds::zero();
     int i = 0;
     int sim_step = 0;
+    int while_cycle_per_second = 0;
+    double physics_time_ms_accum = 0.0;
+    double render_time_ms_accum = 0.0;
+    int physics_steps_per_second = 0;
+    int render_frames_per_second = 0;
     
     while (window.isOpen()) {
         float deltaTime = clock.restart().asSeconds();
 
         simTmr += deltaTime;
         if (simTmr >= Dt/Interface::getSimulationSpeed()) { 
+            const auto physics_start = std::chrono::high_resolution_clock::now();
             simulation.update(Dt);
+            const auto physics_end = std::chrono::high_resolution_clock::now();
+            physics_time_ms_accum += std::chrono::duration<double, std::milli>(physics_end - physics_start).count();
+            physics_steps_per_second++;
             if (!Interface::getPause()) {
                 // if (simulation.getSimStep() < 12000) {
                 //     simulation.setSizeBox(
@@ -108,18 +117,38 @@ int main() {
                 }
                 Interface::pendingCommand = std::nullopt;
             }
+            const auto render_start = std::chrono::high_resolution_clock::now();
             simulation.renderShot(shotTmr);
+            const auto render_end = std::chrono::high_resolution_clock::now();
+            render_time_ms_accum += std::chrono::duration<double, std::milli>(render_end - render_start).count();
+            render_frames_per_second++;
             shotTmr = 0;
         }
 
         logTmr += deltaTime;
         if (logTmr >= 1./LPS) {
+            const double avg_physics_ms = (physics_steps_per_second > 0) ? (physics_time_ms_accum / physics_steps_per_second) : 0.0;
+            const double avg_render_ms  = (render_frames_per_second > 0) ? (render_time_ms_accum / render_frames_per_second) : 0.0;
+            std::cout << "[perf] loop/s: " << while_cycle_per_second
+                      << " | phys/s: " << physics_steps_per_second
+                      << " | phys avg ms: " << avg_physics_ms
+                      << " | phys total ms: " << physics_time_ms_accum
+                      << " | render/s: " << render_frames_per_second
+                      << " | render avg ms: " << avg_render_ms
+                      << " | render total ms: " << render_time_ms_accum
+                      << std::endl;
+            while_cycle_per_second=0;
+            physics_time_ms_accum = 0.0;
+            render_time_ms_accum = 0.0;
+            physics_steps_per_second = 0;
+            render_frames_per_second = 0;
             // simulation.logEnergies();
             // simulation.logAtomPos();
             // simulation.logMousePos();
             // simulation.logBondList();
             logTmr = 0;
         }
+        while_cycle_per_second++;
     }
     ImGui::SFML::Shutdown();
     
@@ -149,13 +178,6 @@ void crystal25x25H(Simulation& simulation) {
             atom->eps = 15;
         }
     }
-    // for (int i = 0; i < 15; i++) {
-    //     for (int j = 0; j < 15; j++) {
-    //         Atom* atom = simulation.createAtom(Vec3D(4+i*2.5, 4+j*2.5, 4.5), randomUnitVector3D(0.5), 1);
-    //         atom->a = 2.0;
-    //         atom->eps = 15;
-    //     }
-    // }
 }
 
 void diffusionTest(Simulation& simulation) {
