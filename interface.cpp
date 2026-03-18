@@ -38,8 +38,7 @@ int Interface::countSelectedAtom = 0;
 bool Interface::drawToolTrip = false;
 int Interface::sim_step = 0;
 DebugPanel Interface::debugPanel;
-std::optional<SimCommand> Interface::pendingCommand = std::nullopt;
-std::string Interface::pendingPath = "";
+FileDialogManager Interface::fileDialog;
 
 void Interface::custom_style() {
     Interface::style = &ImGui::GetStyle();
@@ -117,11 +116,8 @@ int Interface::init(sf::RenderWindow& w) {
     static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
     Interface::Font_Awesome = ImGui::GetIO().Fonts->AddFontFromFileTTF("Engine/gui/fonts/Font Awesome 5 Free-Solid-900.otf", 40.0f, &config, icon_ranges);
 
-    ImFontConfig dlg_config;
-    dlg_config.MergeMode = true;
-    dlg_config.GlyphMinAdvanceX = 16.0f;
     Interface::DialogFont = ImGui::GetIO().Fonts->AddFontFromFileTTF(
-        "Engine/gui/fonts/Rubik-VariableFont_wght.ttf", 20.0f, &dlg_config
+        "Engine/gui/fonts/Rubik-VariableFont_wght.ttf", 20.0f
     );
 
     Interface::debugPanel.loadFont("Engine/gui/fonts/Rubik-VariableFont_wght.ttf", 20.0f);
@@ -227,12 +223,8 @@ int Interface::Update() {
         config.countSelectionMax = 1;
         config.flags = ImGuiFileDialogFlags_ConfirmOverwrite;
 
-        if (ImGui::MenuItem("save")) {
-            ImGuiFileDialog::Instance()->OpenDialog("SaveDlg", "Save simulation", ".sim", config);
-        }
-        if (ImGui::MenuItem("load")) {
-            ImGuiFileDialog::Instance()->OpenDialog("LoadDlg", "Load simulation", ".sim", config);
-        }
+        if (ImGui::MenuItem("save")) { fileDialog.openSave(); }
+        if (ImGui::MenuItem("load")) { fileDialog.openLoad(); }
 
         ImGui::Separator();
 
@@ -388,8 +380,7 @@ int Interface::Update() {
     }
 
     ImGui::PushItemWidth(106*current_ui_scale);
-    if (ImGui::SliderFloat("##Speed", &simulationSpeed, 0.1, 50, "%.1f", ImGuiSliderFlags_Logarithmic));
-        // simulationSpeed = 0.25 * (int)(simulationSpeed / 0.25);
+    ImGui::SliderFloat("##Speed", &simulationSpeed, 0.1, 50, "%.1f", ImGuiSliderFlags_Logarithmic);
     ImGui::PopItemWidth();
 
     // if (ImGui::IsItemHovered()) {
@@ -431,23 +422,7 @@ int Interface::Update() {
     ImVec2 dlgSize(400 * current_ui_scale, 300 * current_ui_scale);
 
     ImGui::PushFont(DialogFont);
-
-    if (ImGuiFileDialog::Instance()->Display("SaveDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
-        if (ImGuiFileDialog::Instance()->IsOk()) {
-            pendingPath    = ImGuiFileDialog::Instance()->GetFilePathName();
-            pendingCommand = SimCommand::Save;
-        }
-        ImGuiFileDialog::Instance()->Close();
-    }
-
-    if (ImGuiFileDialog::Instance()->Display("LoadDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
-        if (ImGuiFileDialog::Instance()->IsOk()) {
-            pendingPath    = ImGuiFileDialog::Instance()->GetFilePathName();
-            pendingCommand = SimCommand::Load;
-        }
-        ImGuiFileDialog::Instance()->Close();
-    }
-
+    fileDialog.draw(current_ui_scale);
     ImGui::PopFont();
 
     debugPanel.draw(current_ui_scale, window->getSize());

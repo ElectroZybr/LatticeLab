@@ -133,12 +133,11 @@ int main() {
         simulation.pollEvents(); // Обработка событий окна
         if (shotTmr >= 1./FPS) {
             simulation.event(); // Обработка взаимодейсвия интерфейса с миром (перетаскивание атомов)
-            if (Interface::pendingCommand.has_value()) {
-                switch (Interface::pendingCommand.value()) {
-                    case SimCommand::Save: simulation.save(Interface::pendingPath); break;
-                    case SimCommand::Load: simulation.load(Interface::pendingPath); break;
+            if (auto result = Interface::fileDialog.popResult()) {
+                switch (result->command) {
+                    case SimCommand::Save: simulation.save(result->path); break;
+                    case SimCommand::Load: simulation.load(result->path); break;
                 }
-                Interface::pendingCommand = std::nullopt;
             }
             renderTimer.start();
             simulation.renderShot(shotTmr);
