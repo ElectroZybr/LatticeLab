@@ -49,25 +49,6 @@ int Interface::init(sf::RenderWindow& w) {
     return EXIT_SUCCESS;
 }
 
-void Interface::CheckEvent(const sf::Event& event) {
-    if (const auto* e = event.getIf<sf::Event::KeyPressed>()) {
-        if (e->code == sf::Keyboard::Key::P) {
-            debugPanel.toggle();
-        }
-        else if (e->code == sf::Keyboard::Key::Space) {
-            pause = !pause;
-        }
-    }
-    else if (const auto* e = event.getIf<sf::Event::Resized>()) {
-        styleManager.onResize(e->size);
-        if (fontManager.load(styleManager.getScale())) {
-            if (!ImGui::SFML::UpdateFontTexture()) {
-                // Keep current font pointers if texture update failed.
-            }
-        }
-    }
-}
-
 float Interface::getSimulationSpeed() {
     return simulationSpeed;
 }

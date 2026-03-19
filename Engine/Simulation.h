@@ -15,8 +15,6 @@ public:
     void update(float dt);
 
     void renderShot(float dt);
-    void pollEvents();
-    void event();
     void setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize = -1);
 
     void createRandomAtoms(int type, int quantity);
@@ -28,9 +26,6 @@ public:
     void logAtomPos() const;
     void logMousePos() const;
     void logBondList() const;
-
-    void drawGrid(bool flag = true);
-    void drawBonds(bool flag = true);
 
     int getSimStep() const { return sim_step; }
 
@@ -49,10 +44,6 @@ private:
     sf::View gameView;
     sf::View uiView;
 
-    bool atomMoveFlag = false;
-    bool selectionFrameMoveFlag = false;
-    Atom* selectedMoveAtom = nullptr;
-    sf::Vector2i start_mouse_pos;
     int sim_step = 0;
 
     bool checkNeighbor(Vec3D coords, float delta);

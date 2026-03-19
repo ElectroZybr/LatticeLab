@@ -197,8 +197,6 @@ void Renderer3D::updateMatrices() {
 void Renderer3D::drawShot(const std::vector<Atom>& atoms,
                            const SimBox& box, float deltaTime)
 {
-    camera.handleInput(deltaTime, window);
-
     updateMatrices();
 
     // собираем инстансинг данные

@@ -4,6 +4,8 @@
 #include <glm/glm.hpp>
 
 class Camera {
+    friend class Mouse;
+    friend class Keyboard;
 private:
     sf::View* view;
     sf::Vector2f position;
@@ -44,7 +46,4 @@ public:
     glm::vec3 getEyePosition() const;
     glm::mat4 getViewMatrix() const;
     // void resize(sf::Vector2f newSize);
-    
-    void handleInput(float deltaTime, sf::RenderWindow& window);
-    void handleEvent(const sf::Event& event, sf::RenderWindow& window);
 };

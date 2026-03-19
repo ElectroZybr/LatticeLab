@@ -118,7 +118,6 @@ int Renderer2D::getWallForce(int coord, int min, int max) {
 void Renderer2D::drawShot(const std::vector<Atom>& atoms, const SimBox& box, float deltaTime) {
     // 1: 7000 мкс - отрисовка 225 атомов
     // 2: оптимизация батч на gpu. 1000 мкс - отрисовка 961 атома
-    camera.handleInput(deltaTime, window);
     camera.update(deltaTime, window);
 
     window.clear(sf::Color(35, 35, 35, 255));

@@ -11,6 +11,8 @@
 #include "Engine/physics/Atom.h"
 #include "Engine/physics/SpatialGrid.h"
 
+#include "Engine/io/manager/EventManager.h"
+
 #include "Engine/Simulation.h"
 
 #include "GUI/interface/interface.h"
@@ -54,6 +56,8 @@ int main() {
                                      simulation.getGameView(),
                                      simulation.getUiView());
     simulation.setRenderer(renderer);
+
+    EventManager::init(&window, &simulation.getUiView(), renderer, &simulation.sim_box, &simulation.atoms);
 
     renderer->camera.setPosition(0, 0);
     renderer->camera.setZoom(20);
@@ -139,9 +143,14 @@ int main() {
         }
 
         shotTmr += deltaTime;
-        simulation.pollEvents(); // Обработка событий окна
+        EventManager::poll();
         if (shotTmr >= 1./FPS) {
-            simulation.event(); // Обработка взаимодейсвия интерфейса с миром (перетаскивание атомов)
+            EventManager::frame(shotTmr);
+
+            Interface::setAverageEnergy(simulation.AverageEnegry());
+            Interface::setSimStep(simulation.getSimStep());
+            Interface::Update();
+
             if (auto result = Interface::fileDialog.popResult()) {
                 switch (result->command) {
                     case FileDialogCommand::Save: simulation.save(result->path); break;
@@ -164,6 +173,7 @@ int main() {
                         );
                         break;
                 }
+                EventManager::updateRenderer(renderer);
                 simulation.setRenderer(renderer);
                 delete oldRenderer;
             }
