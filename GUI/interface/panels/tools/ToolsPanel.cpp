@@ -1,6 +1,7 @@
 #include "ToolsPanel.h"
 #include "GUI/interface/panels/debug/DebugPanel.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
+#include <cmath>
 
 #define ICON_FA_FLASK   "\uf0c3"
 #define ICON_FA_COG     "\uf013"
@@ -9,26 +10,37 @@
 void ToolsPanel::draw(float scale, sf::RenderWindow& window,
                       DebugPanel& debug, FileDialogManager& fileDialog)
 {
-    constexpr float sizeButton = 50.f;
-    constexpr int countButton = 4;
-    constexpr float padding = 3.f;
-    constexpr float windowW = (sizeButton + padding) * countButton + padding;
-    constexpr float windowH = sizeButton + 2.f * padding;
+    constexpr float baseTopOffset = 0.0f;
+    constexpr float baseLeftOffset = 0.0f;
+    constexpr float baseSpacing = 4.0f;
+    constexpr float baseButtonSize = 50.0f;
+    constexpr float basePaddingX = 6.0f;
+    constexpr float basePaddingY = 6.0f;
+    constexpr float buttonCount = 4.0f;
 
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2(windowW * scale, windowH * scale));
+    const float buttonSize = std::round(baseButtonSize * scale);
+    const float spacingX = std::round(baseSpacing * scale);
+    const float panelPaddingX = std::round(basePaddingX * scale);
+    const float panelPaddingY = std::round(basePaddingY * scale);
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padding * scale, padding * scale));
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,   ImVec2(padding * scale, 0.f));
+    const float panelWidth = std::round((panelPaddingX * 2.0f) + (buttonCount * buttonSize) + ((buttonCount - 1.0f) * spacingX));
+    const float panelHeight = std::round((panelPaddingY * 2.0f) + buttonSize);
+    const float x = std::round(baseLeftOffset * scale);
+    const float y = std::round(baseTopOffset * scale);
+
+    ImGui::SetNextWindowPos(ImVec2(x, y));
+    ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(panelPaddingX, panelPaddingY));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacingX, 0.0f));
     ImGui::Begin("Tools", nullptr, PANEL_FLAGS);
-    ImGui::PopStyleVar(2);
 
-    if (ImGui::Button(ICON_FA_COG,   ImVec2(sizeButton * scale, sizeButton * scale))) ImGui::OpenPopup("tools_popup");
+    if (ImGui::Button(ICON_FA_COG, ImVec2(buttonSize, buttonSize))) ImGui::OpenPopup("tools_popup");
     ImGui::SameLine();
-    if (ImGui::Button(ICON_FA_FLASK, ImVec2(sizeButton * scale, sizeButton * scale))) ImGui::OpenPopup("tools_popup");
+    if (ImGui::Button(ICON_FA_FLASK, ImVec2(buttonSize, buttonSize))) ImGui::OpenPopup("tools_popup");
     ImGui::SameLine();
 
-    if (ImGui::Button(is3D ? "3D" : "2D", ImVec2(sizeButton * scale, sizeButton * scale)))
+    if (ImGui::Button(is3D ? "3D" : "2D", ImVec2(buttonSize, buttonSize)))
     {
         is3D = !is3D;
         pendingResult = is3D ? ToolsCommand::ToggleRenderer3D : ToolsCommand::ToggleRenderer2D;
@@ -41,7 +53,7 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window,
         ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.06f, 0.53f, 0.98f, 1.00f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.06f, 0.53f, 0.98f, 1.00f));
     }
-    if (ImGui::Button(ICON_FA_BUG, ImVec2(sizeButton * scale, sizeButton * scale)))
+    if (ImGui::Button(ICON_FA_BUG, ImVec2(buttonSize, buttonSize)))
         debug.toggle();
     if (debugVisible)
         ImGui::PopStyleColor(3);
@@ -55,6 +67,7 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window,
     }
 
     ImGui::End();
+    ImGui::PopStyleVar(2);
 }
 
 std::optional<ToolsCommand> ToolsPanel::popResult() {

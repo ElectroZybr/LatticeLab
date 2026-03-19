@@ -24,6 +24,9 @@ public:
     static void selectionFrame(sf::Vector2i start_mouse_pos, sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
     static Vec2D screenToWorld(sf::Vector2i mouse_pos, float zoom);
     static Vec2D screenToBox(sf::Vector2i mouse_pos, float zoom);
+    static void onLeftPressed(sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
+    static void onLeftReleased();
+    static void onFrame(std::vector<Atom>& atoms);
 
     static Mode currentMode();
     static bool isSelectionMode(Mode mode);
@@ -38,4 +41,9 @@ private:
     static SpatialGrid* grid;
     static IRenderer* render;
     static SimBox* box;
+
+    static bool atomMoveFlag;
+    static bool selectionFrameMoveFlag;
+    static Atom* selectedMoveAtom;
+    static sf::Vector2i start_mouse_pos;
 };

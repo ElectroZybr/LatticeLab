@@ -67,10 +67,12 @@ void rebuildGrid(SpatialGrid* grid, std::vector<Atom>& atoms) {
         return;
     }
 
-    for (int y = 0; y < grid->sizeY; ++y) {
-        for (int x = 0; x < grid->sizeX; ++x) {
-            if (auto* cell = grid->at(x, y)) {
-                cell->clear();
+    for (int z = 0; z < grid->sizeZ; ++z) {
+        for (int y = 0; y < grid->sizeY; ++y) {
+            for (int x = 0; x < grid->sizeX; ++x) {
+                if (auto* cell = grid->at(x, y, z)) {
+                    cell->clear();
+                }
             }
         }
     }
@@ -83,7 +85,7 @@ void rebuildGrid(SpatialGrid* grid, std::vector<Atom>& atoms) {
     }
 }
 
-bool removeAtomInternal(Atom* target, SpatialGrid* grid, std::vector<Atom>& atoms, Atom*& selectedMoveAtom) {
+bool removeAtomInternal(Atom* target, SpatialGrid* grid, std::vector<Atom>& atoms, Atom*& selectedMoveAtom, bool rebuildAfterRemove) {
     if (!target || atoms.empty()) {
         return false;
     }
@@ -109,7 +111,9 @@ bool removeAtomInternal(Atom* target, SpatialGrid* grid, std::vector<Atom>& atom
     }
 
     atoms.pop_back();
-    rebuildGrid(grid, atoms);
+    if (rebuildAfterRemove) {
+        rebuildGrid(grid, atoms);
+    }
     return true;
 }
 
@@ -128,6 +132,10 @@ IRenderer* Tools::render = nullptr;
 SpatialGrid* Tools::grid = nullptr;
 SimBox* Tools::box = nullptr;
 std::unordered_set<Atom*> Tools::selected_atom_batch{};
+bool Tools::atomMoveFlag = false;
+bool Tools::selectionFrameMoveFlag = false;
+Atom* Tools::selectedMoveAtom = nullptr;
+sf::Vector2i Tools::start_mouse_pos = {};
 
 void Tools::init(sf::RenderWindow* w, sf::View* gv, IRenderer* r, SpatialGrid* gr, SimBox* b) {
     window = w;
@@ -135,6 +143,99 @@ void Tools::init(sf::RenderWindow* w, sf::View* gv, IRenderer* r, SpatialGrid* g
     render = r;
     grid = gr;
     box = b;
+}
+
+void Tools::onLeftPressed(sf::Vector2i mouse_pos, std::vector<Atom>& atoms) {
+    if (Interface::cursorHovered || !render) {
+        return;
+    }
+
+    atomMoveFlag = false;
+    selectionFrameMoveFlag = false;
+    Interface::drawToolTrip = false;
+    render->showSelectionFrame(false);
+
+    const auto beginFrameSelection = [&]() {
+        selectionFrameMoveFlag = true;
+        start_mouse_pos = mouse_pos;
+        selectionFrame(start_mouse_pos, mouse_pos, atoms);
+        render->showSelectionFrame(true);
+    };
+
+    switch (currentMode()) {
+    case Mode::AddAtom:
+        tryAddAtom(mouse_pos, atoms, Interface::getSelectedAtom());
+        break;
+    case Mode::RemoveAtom:
+        tryRemoveAtom(mouse_pos, atoms, selectedMoveAtom);
+        break;
+    case Mode::Frame:
+        beginFrameSelection();
+        break;
+    case Mode::Lasso: {
+        Atom* pickedAtom = pickAtom(mouse_pos);
+        if (pickedAtom != nullptr && pickedAtom->isSelect && !selected_atom_batch.empty()) {
+            selectedMoveAtom = pickedAtom;
+            atomMoveFlag = true;
+        } else {
+            beginFrameSelection();
+        }
+        break;
+    }
+    case Mode::Cursor:
+    default:
+        if (Atom* pickedAtom = pickAtom(mouse_pos)) {
+            selectedMoveAtom = pickedAtom;
+            atomMoveFlag = true;
+
+            if (!selected_atom_batch.contains(pickedAtom)) {
+                selected_atom_batch.clear();
+                for (Atom& atom : atoms) {
+                    atom.isSelect = false;
+                }
+                pickedAtom->isSelect = true;
+                selected_atom_batch.insert(pickedAtom);
+                Interface::countSelectedAtom = 1;
+            }
+        }
+        break;
+    }
+}
+
+void Tools::onLeftReleased() {
+    atomMoveFlag = false;
+    selectionFrameMoveFlag = false;
+
+    if (render) {
+        render->showSelectionFrame(false);
+    }
+    Interface::drawToolTrip = false;
+}
+
+void Tools::onFrame(std::vector<Atom>& atoms) {
+    if (!window || !render) {
+        return;
+    }
+
+    const sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
+
+    if (selectionFrameMoveFlag) {
+        selectionFrame(start_mouse_pos, mouse_pos, atoms);
+    }
+
+    if (atomMoveFlag && selectedMoveAtom != nullptr) {
+        const float zoom = render->camera.getZoom();
+        const Vec2D world = screenToBox(mouse_pos, zoom);
+        const Vec2D delta = Vec2D(selectedMoveAtom->coords.x, selectedMoveAtom->coords.y) - world;
+        const Vec3D force = delta * 30;
+        if (!selected_atom_batch.empty()) {
+            for (Atom* atom : selected_atom_batch) {
+                atom->force -= force;
+            }
+        } else {
+            selectedMoveAtom->force -= force;
+        }
+    }
 }
 
 void Tools::selectionFrame(sf::Vector2i start_mouse_pos, sf::Vector2i mouse_pos, std::vector<Atom>& atoms) {
@@ -239,15 +340,7 @@ Atom* Tools::pickAtom(sf::Vector2i mouse_pos) {
         }
     }
 
-    if (best) {
-        return best;
-    }
-
-    if (auto* cell = grid->at(cellX, cellY); cell && !cell->empty()) {
-        return *cell->begin();
-    }
-
-    return nullptr;
+    return best;
 }
 
 bool Tools::tryAddAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, int atomType) {
@@ -292,14 +385,17 @@ bool Tools::tryRemoveAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, Atom
     if (target->isSelect && !selected_atom_batch.empty()) {
         while (!selected_atom_batch.empty()) {
             Atom* selectedTarget = *selected_atom_batch.begin();
-            if (!removeAtomInternal(selectedTarget, grid, atoms, selectedMoveAtom)) {
+            if (!removeAtomInternal(selectedTarget, grid, atoms, selectedMoveAtom, false)) {
                 selected_atom_batch.erase(selectedTarget);
                 continue;
             }
             removed = true;
         }
+        if (removed) {
+            rebuildGrid(grid, atoms);
+        }
     } else {
-        removed = removeAtomInternal(target, grid, atoms, selectedMoveAtom);
+        removed = removeAtomInternal(target, grid, atoms, selectedMoveAtom, true);
     }
 
     Interface::countSelectedAtom = static_cast<int>(selected_atom_batch.size());
