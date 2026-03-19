@@ -10,20 +10,24 @@
 #include "Tools.h"
 
 Simulation::Simulation(sf::RenderWindow& w, SimBox& box)
-    : window(w), gameView(window.getDefaultView()), uiView(window.getDefaultView()), render(w, gameView, uiView), sim_box(box)
-    {
-        // sim_box = box;
-        sim_box.setRenderer(&render);
+    : window(w), gameView(window.getDefaultView()), uiView(window.getDefaultView()), sim_box(box)
+{
+    // sim_box = box;
+    Interface::init(window);
+    Tools::init(&window, &gameView, render, &sim_box.grid, &sim_box);
+    Atom::setGrid(&sim_box.grid);
 
-        Interface::init(window);
-        Tools::init(&window, &gameView, &render, &sim_box.grid, &sim_box);
-        Atom::setGrid(&sim_box.grid);
+    // резервируем место под создание атомов
+    atoms.reserve(50000);
 
-        // резервируем место под создание атомов
-        atoms.reserve(50000);
+    // setSizeBox(sizeX, sizeY);
+}
 
-        // setSizeBox(sizeX, sizeY);
-    }
+void Simulation::setRenderer(IRenderer* r) {
+    render = r;
+    sim_box.setRenderer(render);
+    Tools::init(&window, &gameView, render, &sim_box.grid, &sim_box);
+}
 
 void Simulation::update(float dt) {
     if (!Interface::getPause()) {
@@ -48,7 +52,7 @@ void Simulation::update(float dt) {
 }
 
 void Simulation::renderShot(float deltaTime) {
-    render.drawShot(atoms, sim_box, deltaTime);
+    render->drawShot(atoms, sim_box, deltaTime);
 }
 
 void Simulation::pollEvents() {
@@ -70,7 +74,7 @@ void Simulation::pollEvents() {
 
         if (const auto* e = event.getIf<sf::Event::MouseButtonPressed>()) { 
             if (e->button == sf::Mouse::Button::Left) {
-                float zoom = render.camera.getZoom();
+                float zoom = render->camera.getZoom();
 
                 // создание атома
                 if (!Interface::cursorHovered && Interface::getSelectedAtom() != -1) {
@@ -115,7 +119,7 @@ void Simulation::pollEvents() {
                         selectionFrameMoveFlag = true;
                         start_mouse_pos = sf::Mouse::getPosition(window);
                         Tools::selectionFrame(start_mouse_pos, sf::Mouse::getPosition(window), atoms);
-                        render.drawSelectionFrame = true;
+                        render->showSelectionFrame(true);
                     }
                 } 
             } 
@@ -125,11 +129,11 @@ void Simulation::pollEvents() {
             if (e->button == sf::Mouse::Button::Left) {
                 atomMoveFlag = false;
                 selectionFrameMoveFlag = false;
-                render.drawSelectionFrame = false;
+                render->showSelectionFrame(false);
                 Interface::drawToolTrip = false;
             }
         } 
-        render.camera.handleEvent(event, window);
+        render->camera.handleEvent(event, window);
     }
 }
 
@@ -145,7 +149,7 @@ void Simulation::event() {
 
     // Передвижение атома мышкой
     if (atomMoveFlag) {
-        float zoom = render.camera.getZoom();
+        float zoom = render->camera.getZoom();
         Vec2D world = Tools::screenToBox(mouse_pos, zoom);
         Vec2D delta = Vec2D(selectedMoveAtom->coords.x, selectedMoveAtom->coords.y) - world;
         Vec3D force = delta * 30;
@@ -241,7 +245,7 @@ void Simulation::logBondList() const {
 
 void Simulation::logMousePos() const {
     sf::Vector2i mouse_pos = sf::Mouse::getPosition(window);
-    Vec2D world_pos = Tools::screenToWorld(mouse_pos, render.camera.getZoom());
+    Vec2D world_pos = Tools::screenToWorld(mouse_pos, render->camera.getZoom());
     Vec2D local_pos(world_pos.x - sim_box.start.x, world_pos.y - sim_box.start.y);
     std::cout << "<Mouse pos>"
               << " Screen: "
@@ -257,23 +261,23 @@ void Simulation::logMousePos() const {
 }
 
 void Simulation::drawGrid(bool flag) {
-    render.drawGrid = flag;
+    render->drawGrid = flag;
 }
 
 void Simulation::drawBonds(bool flag) {
-    render.drawBonds = flag;
+    render->drawBonds = flag;
 }
 
 void Simulation::speedGradient(bool flag) {
-    render.speedGradient = flag;
+    render->speedGradient = flag;
 }
 
 void Simulation::setCameraPos(double x, double y) {
-    render.camera.setPosition(x, y);
+    render->camera.setPosition(x, y);
 }
 
 void Simulation::setCameraZoom(float new_zoom) {
-    render.camera.setZoom(new_zoom);
+    render->camera.setZoom(new_zoom);
 }
 
 Vec2D randomUnitVector2D() {
@@ -311,9 +315,9 @@ void Simulation::save(std::string_view path) const
     file << "step " << sim_step << "\n";
 
     file << "camera "
-         << render.camera.getPosition().x << " "
-         << render.camera.getPosition().y << " "
-         << render.camera.getZoom()       << "\n";
+         << render->camera.getPosition().x << " "
+         << render->camera.getPosition().y << " "
+         << render->camera.getZoom()       << "\n";
 
     for (const Atom& atom : atoms) {
         file << "atom "

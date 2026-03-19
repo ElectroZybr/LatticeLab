@@ -18,6 +18,8 @@
 #include "Engine/physics/Bond.h"
 #include "Engine/utils/Timer.h"
 
+#include "Engine/renderer/Renderer2D.h"
+
 constexpr int WIGHT = 800;
 constexpr int HEIGHT = 600;
 
@@ -28,6 +30,7 @@ constexpr double Dt = 0.01;
 /* тестовые сцены, можно запускать в main и экспериментировать*/
 void square15x15H(Simulation& simulation);
 void crystal25x25H(Simulation& simulation);
+void crystal100x100H(Simulation& simulation);
 void diffusionTest(Simulation& simulation);
 
 int main() {
@@ -42,6 +45,12 @@ int main() {
 
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(window, box);
+
+    IRenderer* renderer = new Renderer2D(window,
+                                     simulation.getGameView(),
+                                     simulation.getUiView());
+    simulation.setRenderer(renderer);
+
     simulation.setCameraPos(0, 0);
     simulation.setCameraZoom(20);
 
@@ -197,6 +206,20 @@ void crystal25x25H(Simulation& simulation) {
     simulation.setSizeBox(Vec3D(-50, -50, simulation.sim_box.start.z), Vec3D(50, 50, simulation.sim_box.end.z));
     for (int i = 0; i < 15; i++) {
         for (int j = 0; j < 15; j++) {
+            Atom* atom = simulation.createAtom(Vec3D(15+i*2.5, 15+j*2.5, 2), randomUnitVector3D(0.5), 1);
+            atom->a = 2.0;
+            atom->eps = 15;
+        }
+    }
+}
+
+void crystal100x100H(Simulation& simulation) {
+    constexpr int N = 100;
+    constexpr int size = 175;
+    simulation.speedGradient();
+    simulation.setSizeBox(Vec3D(-size, -size, simulation.sim_box.start.z), Vec3D(size, size, simulation.sim_box.end.z));
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
             Atom* atom = simulation.createAtom(Vec3D(15+i*2.5, 15+j*2.5, 2), randomUnitVector3D(0.5), 1);
             atom->a = 2.0;
             atom->eps = 15;
