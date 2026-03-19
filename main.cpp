@@ -50,7 +50,7 @@ int main() {
     SimBox box(Vec3D(-25, -25, -25), Vec3D(25, 25, 25));
     Simulation simulation(window, box);
 
-    IRenderer* renderer = new Renderer3D(window,
+    IRenderer* renderer = new Renderer2D(window,
                                      simulation.getGameView(),
                                      simulation.getUiView());
     simulation.setRenderer(renderer);
@@ -145,10 +145,30 @@ int main() {
             simulation.event(); // Обработка взаимодейсвия интерфейса с миром (перетаскивание атомов)
             if (auto result = Interface::fileDialog.popResult()) {
                 switch (result->command) {
-                    case SimCommand::Save: simulation.save(result->path); break;
-                    case SimCommand::Load: simulation.load(result->path); break;
+                    case FileDialogCommand::Save: simulation.save(result->path); break;
+                    case FileDialogCommand::Load: simulation.load(result->path); break;
                 }
             }
+
+            if (auto result = Interface::toolsPanel.popResult()) {
+                IRenderer* oldRenderer = renderer;
+                switch (result.value()) {
+                    case ToolsCommand::ToggleRenderer2D:
+                        renderer = new Renderer2D(window,
+                            simulation.getGameView(),
+                            simulation.getUiView());
+                        break;
+                    case ToolsCommand::ToggleRenderer3D:
+                        renderer = new Renderer3D(window,
+                            simulation.getGameView(),
+                            simulation.getUiView()
+                        );
+                        break;
+                }
+                simulation.setRenderer(renderer);
+                delete oldRenderer;
+            }
+
             renderTimer.start();
             simulation.renderShot(shotTmr);
             renderTimer.stop();
@@ -188,7 +208,8 @@ int main() {
         while_cycle_per_second++;
     }
     ImGui::SFML::Shutdown();
-    
+    delete renderer;
+
     return 0;
 }
 

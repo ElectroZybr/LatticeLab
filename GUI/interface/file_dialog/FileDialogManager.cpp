@@ -23,8 +23,8 @@ void FileDialogManager::draw(float scale) {
 
     if (ImGuiFileDialog::Instance()->Display("SaveDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
-            pendingResult = FileDialogResult{
-                SimCommand::Save,
+            pendingResult = InterfaceCommand{
+                FileDialogCommand::Save,
                 ImGuiFileDialog::Instance()->GetFilePathName()
             };
         }
@@ -33,8 +33,8 @@ void FileDialogManager::draw(float scale) {
 
     if (ImGuiFileDialog::Instance()->Display("LoadDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
-            pendingResult = FileDialogResult{
-                SimCommand::Load,
+            pendingResult = InterfaceCommand{
+                FileDialogCommand::Load,
                 ImGuiFileDialog::Instance()->GetFilePathName()
             };
         }
@@ -42,7 +42,7 @@ void FileDialogManager::draw(float scale) {
     }
 }
 
-std::optional<FileDialogResult> FileDialogManager::popResult() {
+std::optional<InterfaceCommand> FileDialogManager::popResult() {
     auto result = pendingResult;
     pendingResult = std::nullopt;
     return result;
