@@ -5,7 +5,7 @@
 
 #include "physics/SpatialGrid.h"
 #include "math/Vec2D.h"
-#include "Renderer/BaseRenderer.h"
+#include "Rendering/BaseRenderer.h"
 
 class SimBox;
 

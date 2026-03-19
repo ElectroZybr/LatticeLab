@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Renderer/camera/Camera.h"
+#include "Rendering/camera/Camera.h"
 #include "Engine/physics/Atom.h"
 #include "Engine/SimBox.h"
 #include "Engine/math/Vec2D.h"

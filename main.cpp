@@ -20,8 +20,8 @@
 #include "Engine/physics/Bond.h"
 #include "Engine/utils/Timer.h"
 
-#include "Renderer/2d/Renderer2D.h"
-#include "Renderer/3d/Renderer3D.h"
+#include "Rendering/2d/Renderer2D.h"
+#include "Rendering/3d/Renderer3D.h"
 
 constexpr int WIDTH = 800;
 constexpr int HEIGHT = 600;

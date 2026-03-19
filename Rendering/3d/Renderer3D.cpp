@@ -88,8 +88,8 @@ void Renderer3D::initBoxGL() {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glBindVertexArray(0);
 
-    GLuint vert = loadShader(GL_VERTEX_SHADER,   "Renderer/3d/shaders/box.vert");
-    GLuint frag = loadShader(GL_FRAGMENT_SHADER, "Renderer/3d/shaders/box.frag");
+    GLuint vert = loadShader(GL_VERTEX_SHADER,   "Rendering/3d/shaders/box.vert");
+    GLuint frag = loadShader(GL_FRAGMENT_SHADER, "Rendering/3d/shaders/box.frag");
     boxShader = glCreateProgram();
     glAttachShader(boxShader, vert);
     glAttachShader(boxShader, frag);
@@ -165,8 +165,8 @@ GLuint Renderer3D::compileShader(GLenum type, std::string_view src) {
 }
 
 void Renderer3D::initShaders() {
-    GLuint vert = loadShader(GL_VERTEX_SHADER,   "Renderer/3d/shaders/atom.vert");
-    GLuint frag = loadShader(GL_FRAGMENT_SHADER, "Renderer/3d/shaders/atom.frag");
+    GLuint vert = loadShader(GL_VERTEX_SHADER,   "Rendering/3d/shaders/atom.vert");
+    GLuint frag = loadShader(GL_FRAGMENT_SHADER, "Rendering/3d/shaders/atom.frag");
 
     shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vert);

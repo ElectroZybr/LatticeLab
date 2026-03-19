@@ -32,7 +32,7 @@ Renderer2D::Renderer2D(sf::RenderWindow& w, sf::View& gv, sf::View& uv)
         gridLines.emplace_back(sf::Vector2f(1000, y), sf::Color(60, 60, 60));
     }
 
-    forceFieldShaderLoaded = forceFieldShader.loadFromFile("Renderer/2d/shaders/force_shader.frag", sf::Shader::Type::Fragment);
+    forceFieldShaderLoaded = forceFieldShader.loadFromFile("Rendering/2d/shaders/force_shader.frag", sf::Shader::Type::Fragment);
     forceFieldQuad.setPosition(sf::Vector2f(0.f, 0.f));
 
     initAtomTexture(atomTextureLow, 16);

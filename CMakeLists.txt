@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.17)
 project(Chemical-simulator)
 
+# CMake 4.x: allow legacy dependencies that declare very old minimum policies.
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -99,7 +104,7 @@ file(GLOB_RECURSE SOURCES
     "main.cpp"
     "Engine/*.cpp"
     "GUI/*.cpp"
-    "Renderer/*.cpp"
+    "Rendering/*.cpp"
 )
 list(FILTER SOURCES EXCLUDE REGEX "build/.*")
 
