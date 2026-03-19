@@ -266,14 +266,16 @@ void Renderer2D::drawTransparencyMap(sf::RenderWindow& window, const SpatialGrid
     cellRect.setOutlineColor(sf::Color(120, 0, 0, 180));
     cellRect.setOutlineThickness(-1.0f);
 
-    for (int y = 0; y < grid.sizeY; ++y) {
-        for (int x = 0; x < grid.sizeX; ++x) {
-            if (auto cell = grid.at(x, y); cell && !cell->empty()) {
-                cellRect.setPosition({
-                    static_cast<float>(x * grid.cellSize),
-                    static_cast<float>(y * grid.cellSize)
-                });
-                window.draw(cellRect);
+    for (int z = 0; z < grid.sizeZ; ++z) {
+        for (int y = 0; y < grid.sizeY; ++y) {
+            for (int x = 0; x < grid.sizeX; ++x) {
+                if (auto cell = grid.at(x, y, z); cell && !cell->empty()) {
+                    cellRect.setPosition({
+                        static_cast<float>(x * grid.cellSize),
+                        static_cast<float>(y * grid.cellSize)
+                    });
+                    window.draw(cellRect);
+                }
             }
         }
     }

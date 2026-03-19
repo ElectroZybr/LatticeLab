@@ -105,11 +105,12 @@ void Simulation::pollEvents() {
                     }
                 }
                 else {
-                    Vec2D world = Tools::screenToWorld(mouse_pos, zoom);
-                    Vec2D local(world.x - sim_box.start.x, world.y - sim_box.start.y);
+                    Vec3D world = Tools::screenToWorld(mouse_pos, zoom);
+                    Vec3D local = world - sim_box.start;
                     std::unordered_set<Atom*>* block = sim_box.grid.at(
                         sim_box.grid.worldToCellX(local.x - 0.5),
-                        sim_box.grid.worldToCellY(local.y - 0.5)
+                        sim_box.grid.worldToCellY(local.y - 0.5),
+                        sim_box.grid.worldToCellY(local.z - 0.5)
                     );
 
                     if (block != nullptr && !block->empty() && !selectionFrameMoveFlag) {
@@ -166,7 +167,8 @@ void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
         for (Atom& atom : atoms) {
             const int cellX = sim_box.grid.worldToCellX(atom.coords.x);
             const int cellY = sim_box.grid.worldToCellY(atom.coords.y);
-            sim_box.grid.insert(cellX, cellY, &atom);
+            const int cellZ = sim_box.grid.worldToCellY(atom.coords.z);
+            sim_box.grid.insert(cellX, cellY, cellZ, &atom);
         }
     }
 }
@@ -187,12 +189,16 @@ void Simulation::createRandomAtoms(int type, int quantity) {
 }
 
 bool Simulation::checkNeighbor(Vec3D coords, float delta) {
-    int curr_x = sim_box.grid.worldToCellX(coords.x), curr_y = sim_box.grid.worldToCellY(coords.y);
+    int curr_x = sim_box.grid.worldToCellX(coords.x);
+    int curr_y = sim_box.grid.worldToCellY(coords.y);
+    int curr_z = sim_box.grid.worldToCellY(coords.z);
     for (int i = -1; i <= 1; ++i) {
         for (int j = -1; j <= 1; ++j) {
-            if (auto cell = sim_box.grid.at(curr_x - i, curr_y - j)) {
-                for (Atom* other : *cell) {
-                    if ((coords - other->coords).sqrAbs() < delta*delta) return true;
+            for (int k = -1; k <= 1; ++k) {
+                if (auto cell = sim_box.grid.at(curr_x - i, curr_y - j, curr_z - k)) {
+                    for (Atom* other : *cell) {
+                        if ((coords - other->coords).sqrAbs() < delta*delta) return true;
+                    }
                 }
             }
         }

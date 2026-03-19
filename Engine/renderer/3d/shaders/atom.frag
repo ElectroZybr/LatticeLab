@@ -1,0 +1,37 @@
+#version 330 core
+in vec3 fragAtomPos;
+in float fragRadius;
+in vec3 fragColor;
+in vec2 fragQuadPos;
+
+uniform vec3 lightDir;
+uniform mat4 projection;
+uniform mat4 view;
+
+out vec4 outColor;
+
+void main() {
+    float d = dot(fragQuadPos, fragQuadPos);
+    if (d > 1.0) discard;
+
+    float z = sqrt(1.0 - d);
+    vec3 normal = normalize(vec3(fragQuadPos, z));
+
+    vec4 viewPos = view * vec4(fragAtomPos, 1.0);
+    viewPos.z   += z * fragRadius;
+
+    vec4 clipPos = projection * viewPos;
+
+    gl_FragDepth = (clipPos.z / clipPos.w) * 0.5 + 0.5;
+
+    vec3 light  = normalize(lightDir);
+    float diff  = max(dot(normal, light), 0.0);
+    vec3 refl   = reflect(-light, normal);
+    float spec  = pow(max(dot(vec3(0,0,1), refl), 0.0), 32.0);
+
+    vec3 ambient  = 0.2 * fragColor;
+    vec3 diffuse  = 0.7 * diff * fragColor;
+    vec3 specular = 0.4 * spec * vec3(1.0);
+
+    outColor = vec4(ambient + diffuse + specular, 1.0);
+}
