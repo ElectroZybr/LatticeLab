@@ -47,7 +47,7 @@ int main() {
     Timer physicsTimer;
     Timer renderTimer;
 
-    SimBox box(Vec3D(-25, -25, -25), Vec3D(25, 25, 25));
+    SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 3));
     Simulation simulation(window, box);
 
     IRenderer* renderer = new Renderer2D(window,
@@ -55,14 +55,13 @@ int main() {
                                      simulation.getUiView());
     simulation.setRenderer(renderer);
 
-    simulation.setCameraPos(0, 0);
-    simulation.setCameraZoom(20);
-
+    renderer->camera.setPosition(0, 0);
+    renderer->camera.setZoom(20);
+    renderer->drawBonds = true;
     // simulation.drawGrid(true);
-    simulation.drawBonds();
     // simulation.speedGradient();
 
-    crystal25x25x25H(simulation);
+    crystal25x25H(simulation);
 
     // simulation.render.speedGradientTurbo = true;
     Interface::pause = true;
@@ -227,7 +226,7 @@ void square15x15H(Simulation& simulation) {
 }
 
 void crystal25x25H(Simulation& simulation) {
-    simulation.speedGradient();
+    simulation.render->speedGradient = true;
     simulation.setSizeBox(Vec3D(-50, -50, simulation.sim_box.start.z), Vec3D(50, 50, simulation.sim_box.end.z));
     for (int i = 0; i < 15; i++) {
         for (int j = 0; j < 15; j++) {
@@ -239,7 +238,7 @@ void crystal25x25H(Simulation& simulation) {
 }
 
 void crystal25x25x25H(Simulation& simulation) {
-    simulation.speedGradient();
+    simulation.render->speedGradient = true;
     Vec3D start=Vec3D(-50, -50, -50);
     simulation.setSizeBox(start, -start);
 

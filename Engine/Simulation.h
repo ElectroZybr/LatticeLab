@@ -32,9 +32,6 @@ public:
     void drawGrid(bool flag = true);
     void drawBonds(bool flag = true);
 
-    void speedGradient(bool flag = true);
-    void setCameraPos(double x, double y);
-    void setCameraZoom(float new_zoom);
     int getSimStep() const { return sim_step; }
 
     sf::View& getGameView() { return gameView; }
@@ -45,7 +42,7 @@ public:
     void clear();
 
     SimBox& sim_box;
-    IRenderer* render;
+    IRenderer* render = nullptr;
     std::vector<Atom> atoms;
 private:
     sf::RenderWindow& window;
@@ -54,10 +51,10 @@ private:
 
     bool atomMoveFlag = false;
     bool selectionFrameMoveFlag = false;
-    Atom* selectedMoveAtom;
+    Atom* selectedMoveAtom = nullptr;
     sf::Vector2i start_mouse_pos;
     int sim_step = 0;
-    
+
     bool checkNeighbor(Vec3D coords, float delta);
 };
 

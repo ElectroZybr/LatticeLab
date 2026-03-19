@@ -157,7 +157,7 @@ void Simulation::event() {
         for (Atom* atom : Tools::selected_atom_batch) {
             atom->force -= force;
         }
-    }    
+    }
 }
 
 void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
@@ -266,26 +266,6 @@ void Simulation::logMousePos() const {
               << std::endl;
 }
 
-void Simulation::drawGrid(bool flag) {
-    render->drawGrid = flag;
-}
-
-void Simulation::drawBonds(bool flag) {
-    render->drawBonds = flag;
-}
-
-void Simulation::speedGradient(bool flag) {
-    render->speedGradient = flag;
-}
-
-void Simulation::setCameraPos(double x, double y) {
-    render->camera.setPosition(x, y);
-}
-
-void Simulation::setCameraZoom(float new_zoom) {
-    render->camera.setZoom(new_zoom);
-}
-
 Vec2D randomUnitVector2D() {
     double angle = (double)std::rand() / RAND_MAX * 2.0 * std::numbers::pi;
     return Vec2D(std::cos(angle), std::sin(angle));  // x = cos(θ), y = sin(θ)
@@ -366,8 +346,8 @@ void Simulation::load(std::string_view path) {
         else if (tag == "camera") {
             double cx, cy, zoom;
             file >> cx >> cy >> zoom;
-            setCameraPos(cx, cy);
-            setCameraZoom(zoom);
+            render->camera.setPosition(cx, cy);
+            render->camera.setZoom(zoom);
         }
         else if (tag == "atom") {
             AtomData d;
