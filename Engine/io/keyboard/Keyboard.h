@@ -1,6 +1,8 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+
 #include "Engine/renderer/IRenderer.h"
+#include "Engine/io/keyboard/KeyboardCommand.h"
 
 class Keyboard {
     friend class EventManager;
@@ -10,6 +12,9 @@ public:
     static void onEvent(const sf::Event& event);
     static void onFrame(float deltaTime);
 
+    static std::optional<KeyboardCommand> popResult();
 private:
     static IRenderer* render;
+
+    static std::optional<KeyboardCommand> pendingResult;
 };
