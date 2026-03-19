@@ -32,7 +32,7 @@ Renderer2D::Renderer2D(sf::RenderWindow& w, sf::View& gv, sf::View& uv)
         gridLines.emplace_back(sf::Vector2f(1000, y), sf::Color(60, 60, 60));
     }
 
-    forceFieldShaderLoaded = forceFieldShader.loadFromFile("force_shader.frag", sf::Shader::Type::Fragment);
+    forceFieldShaderLoaded = forceFieldShader.loadFromFile("Rendering/2d/shaders/force_shader.frag", sf::Shader::Type::Fragment);
     forceFieldQuad.setPosition(sf::Vector2f(0.f, 0.f));
 
     initAtomTexture(atomTextureLow, 16);
@@ -118,7 +118,6 @@ int Renderer2D::getWallForce(int coord, int min, int max) {
 void Renderer2D::drawShot(const std::vector<Atom>& atoms, const SimBox& box, float deltaTime) {
     // 1: 7000 мкс - отрисовка 225 атомов
     // 2: оптимизация батч на gpu. 1000 мкс - отрисовка 961 атома
-    camera.handleInput(deltaTime, window);
     camera.update(deltaTime, window);
 
     window.clear(sf::Color(35, 35, 35, 255));
@@ -266,14 +265,16 @@ void Renderer2D::drawTransparencyMap(sf::RenderWindow& window, const SpatialGrid
     cellRect.setOutlineColor(sf::Color(120, 0, 0, 180));
     cellRect.setOutlineThickness(-1.0f);
 
-    for (int y = 0; y < grid.sizeY; ++y) {
-        for (int x = 0; x < grid.sizeX; ++x) {
-            if (auto cell = grid.at(x, y); cell && !cell->empty()) {
-                cellRect.setPosition({
-                    static_cast<float>(x * grid.cellSize),
-                    static_cast<float>(y * grid.cellSize)
-                });
-                window.draw(cellRect);
+    for (int z = 0; z < grid.sizeZ; ++z) {
+        for (int y = 0; y < grid.sizeY; ++y) {
+            for (int x = 0; x < grid.sizeX; ++x) {
+                if (auto cell = grid.at(x, y, z); cell && !cell->empty()) {
+                    cellRect.setPosition({
+                        static_cast<float>(x * grid.cellSize),
+                        static_cast<float>(y * grid.cellSize)
+                    });
+                    window.draw(cellRect);
+                }
             }
         }
     }

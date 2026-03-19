@@ -5,7 +5,7 @@
 #include "physics/Atom.h"
 #include "physics/SpatialGrid.h"
 #include "SimBox.h"
-#include "renderer/BaseRenderer.h"
+#include "Rendering/BaseRenderer.h"
 
 class Simulation {
 public:
@@ -15,8 +15,6 @@ public:
     void update(float dt);
 
     void renderShot(float dt);
-    void pollEvents();
-    void event();
     void setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize = -1);
 
     void createRandomAtoms(int type, int quantity);
@@ -29,12 +27,6 @@ public:
     void logMousePos() const;
     void logBondList() const;
 
-    void drawGrid(bool flag = true);
-    void drawBonds(bool flag = true);
-
-    void speedGradient(bool flag = true);
-    void setCameraPos(double x, double y);
-    void setCameraZoom(float new_zoom);
     int getSimStep() const { return sim_step; }
 
     sf::View& getGameView() { return gameView; }
@@ -45,22 +37,19 @@ public:
     void clear();
 
     SimBox& sim_box;
-    IRenderer* render;
+    IRenderer* render = nullptr;
     std::vector<Atom> atoms;
 private:
     sf::RenderWindow& window;
     sf::View gameView;
     sf::View uiView;
 
-    bool atomMoveFlag = false;
-    bool selectionFrameMoveFlag = false;
-    Atom* selectedMoveAtom = nullptr;
-    sf::Vector2i start_mouse_pos;
     int sim_step = 0;
-    
+
     bool checkNeighbor(Vec3D coords, float delta);
 };
 
 Vec2D randomUnitVector2D();
 Vec3D randomUnitVector3D(double amplitude = 1.0);
 double randomInRange(int range);
+

@@ -35,20 +35,26 @@ Atom::Atom(Vec3D start_coords, Vec3D start_speed, int type, bool fixed) : coords
     valence = getProps().maxValence;
     bonds.reserve(getProps().maxValence);
     Bond::bond_default_props.init();
-    int curr_x = grid->worldToCellX(coords.x), curr_y = grid->worldToCellY(coords.y);
-    grid->insert(curr_x, curr_y, this);
+    int curr_x = grid->worldToCellX(coords.x);
+    int curr_y = grid->worldToCellY(coords.y);
+    int curr_z = grid->worldToCellY(coords.z);
+    grid->insert(curr_x, curr_y, curr_z, this);
 }
 
 void Atom::PredictPosition(double dt) {
-    int prev_x = grid->worldToCellX(coords.x), prev_y = grid->worldToCellY(coords.y);
-    
+    int prev_x = grid->worldToCellX(coords.x);
+    int prev_y = grid->worldToCellY(coords.y);
+    int prev_z = grid->worldToCellY(coords.z);
+
     if (isFixed == false)
         Verlet(dt); 
     
-    int curr_x = grid->worldToCellX(coords.x), curr_y = grid->worldToCellY(coords.y);
-    if (prev_x != curr_x || prev_y != curr_y) {
-        grid->erase(prev_x, prev_y, this);
-        grid->insert(curr_x, curr_y, this);
+    int curr_x = grid->worldToCellX(coords.x);
+    int curr_y = grid->worldToCellY(coords.y);
+    int curr_z = grid->worldToCellY(coords.z);
+    if (prev_x != curr_x || prev_y != curr_y || prev_z != curr_z) {
+        grid->erase(prev_x, prev_y, prev_z, this);
+        grid->insert(curr_x, curr_y, curr_z, this);
     }
 
     prev_force = force;
@@ -96,32 +102,36 @@ inline void Atom::applyWall(double& coord, double& speed, double& force, double 
 
 void Atom::ComputeForces(SimBox& box, double deltaTime) {
     SoftWalls(box, deltaTime);
-    int curr_x = grid->worldToCellX(coords.x), curr_y = grid->worldToCellY(coords.y);
+    int curr_x = grid->worldToCellX(coords.x);
+    int curr_y = grid->worldToCellY(coords.y);
+    int curr_z = grid->worldToCellY(coords.z);
     static int range = 1;
     // проверка взаимодействий с соседними атомами
     for (int i = -range; i <= range; ++i) {
         for (int j = -range; j <= range; ++j) {
-            if (auto cell = grid->at(curr_x - i, curr_y - j)) {
-                for (Atom* other : *cell) {
-                    // хитрожопая проверка
-                    if (other <= this) continue;
+            for (int k = -range; k <= range; ++k) {
+                if (auto cell = grid->at(curr_x - i, curr_y - j, curr_z - k)) {
+                    for (Atom* other : *cell) {
+                        // хитрожопая проверка
+                        if (other <= this) continue;
 
-                    // Vec3D delta = coords - other->coords;
-                    // float distance = sqrt(delta.dot(delta));
-                    
-                    bool flag = std::ranges::find(bonds, other) != bonds.end();
+                        // Vec3D delta = coords - other->coords;
+                        // float distance = sqrt(delta.dot(delta));
+                        
+                        bool flag = std::ranges::find(bonds, other) != bonds.end();
 
-                    if (getProps().maxValence - valence >= 2) {
-                        Bond::angleForce(this, bonds[0], bonds[1]);
-                    }
-                    
-                    if (!flag) {
-                        // if (distance < 1.3 * r0 && valence > 0 && other->valence > 0) {
-                        //     Bond::CreateBond(this, other);
-                        // }
-                        Vec3D force = NonBondedForce(this, other, deltaTime);
-                        this->force -= force;
-                        other->force += force;
+                        if (getProps().maxValence - valence >= 2) {
+                            Bond::angleForce(this, bonds[0], bonds[1]);
+                        }
+                        
+                        if (!flag) {
+                            // if (distance < 1.3 * r0 && valence > 0 && other->valence > 0) {
+                            //     Bond::CreateBond(this, other);
+                            // }
+                            Vec3D force = NonBondedForce(this, other, deltaTime);
+                            this->force -= force;
+                            other->force += force;
+                        }
                     }
                 }
             }

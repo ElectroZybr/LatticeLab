@@ -78,7 +78,8 @@ void rebuildGrid(SpatialGrid* grid, std::vector<Atom>& atoms) {
     for (Atom& atom : atoms) {
         const int cellX = grid->worldToCellX(atom.coords.x);
         const int cellY = grid->worldToCellY(atom.coords.y);
-        grid->insert(cellX, cellY, &atom);
+        const int cellZ = grid->worldToCellZ(atom.coords.z);
+        grid->insert(cellX, cellY, cellZ, &atom);
     }
 }
 

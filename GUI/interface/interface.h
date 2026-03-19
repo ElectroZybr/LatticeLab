@@ -1,6 +1,5 @@
 #pragma once
 
-#include "imgui.h"
 #include "imgui-SFML.h"
 #include <SFML/Graphics.hpp>
 
@@ -26,7 +25,6 @@ public:
     static bool pause;
     static int init(sf::RenderWindow& w);
     static int Update();
-    static void CheckEvent(const sf::Event& event);
     static bool getPause();
     static int getSelectedAtom();
     static float getSimulationSpeed();

@@ -2,11 +2,15 @@
 #include <stdexcept>
 
 #include "Vec2D.h"
+#include "Vec3D.h"
 #include "../Consts.h"
 
 Vec2D::Vec2D(const Vec2D &vec) : x(vec.x), y(vec.y){}
 
 Vec2D::Vec2D(double x, double y) : x(x), y(y) {}
+
+Vec2D::Vec2D(const Vec3D& vec3d) : x(vec3d.x), y(vec3d.y) {}
+
 
 Vec2D::operator sf::Vector2f() const {
     return sf::Vector2f(static_cast<float>(x), static_cast<float>(y));

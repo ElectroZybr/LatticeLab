@@ -4,12 +4,14 @@
 
 #include <iostream>
 #include <chrono>
-#include <vector>
 
 #include "imgui-SFML.h"
 
 #include "Engine/physics/Atom.h"
 #include "Engine/physics/SpatialGrid.h"
+
+#include "GUI/io/manager/EventManager.h"
+#include "GUI/io/keyboard/Keyboard.h"
 
 #include "Engine/Simulation.h"
 
@@ -18,9 +20,10 @@
 #include "Engine/physics/Bond.h"
 #include "Engine/utils/Timer.h"
 
-#include "Engine/renderer/Renderer2D.h"
+#include "Rendering/2d/Renderer2D.h"
+#include "Rendering/3d/Renderer3D.h"
 
-constexpr int WIGHT = 800;
+constexpr int WIDTH = 800;
 constexpr int HEIGHT = 600;
 
 constexpr int FPS = 60;
@@ -30,11 +33,14 @@ constexpr double Dt = 0.01;
 /* тестовые сцены, можно запускать в main и экспериментировать*/
 void square15x15H(Simulation& simulation);
 void crystal25x25H(Simulation& simulation);
-void crystal100x100H(Simulation& simulation);
+void crystal15x15x15H(Simulation& simulation);
 void diffusionTest(Simulation& simulation);
 
 int main() {
-    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator", sf::State::Fullscreen);
+    sf::ContextSettings settings;
+    settings.depthBits = 24;
+
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator", sf::State::Fullscreen, settings);
     sf::Image icon;
     if (icon.loadFromFile("icon.png")) {
         window.setIcon(icon.getSize(), icon.getPixelsPtr());
@@ -43,20 +49,22 @@ int main() {
     Timer physicsTimer;
     Timer renderTimer;
 
-    SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
+    SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 3));
     Simulation simulation(window, box);
 
     IRenderer* renderer = new Renderer2D(window, simulation.getGameView(), simulation.getUiView());
     simulation.setRenderer(renderer);
 
-    simulation.setCameraPos(0, 0);
-    simulation.setCameraZoom(20);
+    EventManager::init(&window, &simulation.getUiView(), renderer, &simulation.sim_box, &simulation.atoms);
 
+    renderer->camera.setPosition(0, 0);
+    renderer->camera.setZoom(20);
+    renderer->drawBonds = true;
     // simulation.drawGrid(true);
-    simulation.drawBonds();
     // simulation.speedGradient();
 
     crystal25x25H(simulation);
+    // crystal15x15x15H(simulation);
 
     // simulation.render.speedGradientTurbo = true;
     Interface::pause = true;
@@ -107,12 +115,12 @@ int main() {
 
         simTmr += deltaTime;
         if (simTmr >= Dt/Interface::getSimulationSpeed()) { 
-            physicsTimer.start();
-            simulation.update(Dt);
-            physicsTimer.stop();
-            physics_time_ms_accum += physicsTimer.elapsedMilliseconds();
-            physics_steps_per_second++;
             if (!Interface::getPause()) {
+                physicsTimer.start();
+                simulation.update(Dt);
+                physicsTimer.stop();
+                physics_time_ms_accum += physicsTimer.elapsedMilliseconds();
+                physics_steps_per_second++;
                 // if (simulation.getSimStep() < 12000) {
                 //     simulation.setSizeBox(
                 //         Vec3D(simulation.sim_box.start.x+0.001, simulation.sim_box.start.y+0.001, simulation.sim_box.start.z),
@@ -134,15 +142,55 @@ int main() {
         }
 
         shotTmr += deltaTime;
-        simulation.pollEvents(); // Обработка событий окна
+        EventManager::poll();
         if (shotTmr >= 1./FPS) {
-            simulation.event(); // Обработка взаимодейсвия интерфейса с миром (перетаскивание атомов)
-            if (auto result = Interface::fileDialog.popResult()) {
-                switch (result->command) {
-                    case SimCommand::Save: simulation.save(result->path); break;
-                    case SimCommand::Load: simulation.load(result->path); break;
+            EventManager::frame(shotTmr);
+
+            Interface::setAverageEnergy(simulation.AverageEnegry());
+            Interface::setSimStep(simulation.getSimStep());
+            Interface::Update();
+
+            if (auto result = Keyboard::popResult()) {
+                switch (result.value()) {
+                    case KeyboardCommand::StepPhysics:
+                    {
+                        physicsTimer.start();
+                        simulation.update(Dt);
+                        physicsTimer.stop();
+                        physics_time_ms_accum += physicsTimer.elapsedMilliseconds();
+                        physics_steps_per_second++;
+                        break;
+                    }
                 }
             }
+
+            if (auto result = Interface::fileDialog.popResult()) {
+                switch (result->command) {
+                    case FileDialogCommand::Save: simulation.save(result->path); break;
+                    case FileDialogCommand::Load: simulation.load(result->path); break;
+                }
+            }
+
+            if (auto result = Interface::toolsPanel.popResult()) {
+                IRenderer* oldRenderer = renderer;
+                switch (result.value()) {
+                    case ToolsCommand::ToggleRenderer2D:
+                        renderer = new Renderer2D(window,
+                            simulation.getGameView(),
+                            simulation.getUiView());
+                        break;
+                    case ToolsCommand::ToggleRenderer3D:
+                        renderer = new Renderer3D(window,
+                            simulation.getGameView(),
+                            simulation.getUiView()
+                        );
+                        break;
+                }
+                EventManager::updateRenderer(renderer);
+                simulation.setRenderer(renderer);
+                delete oldRenderer;
+            }
+
             renderTimer.start();
             simulation.renderShot(shotTmr);
             renderTimer.stop();
@@ -182,7 +230,8 @@ int main() {
         while_cycle_per_second++;
     }
     ImGui::SFML::Shutdown();
-    
+    delete renderer;
+
     return 0;
 }
 
@@ -200,7 +249,7 @@ void square15x15H(Simulation& simulation) {
 }
 
 void crystal25x25H(Simulation& simulation) {
-    simulation.speedGradient();
+    simulation.render->speedGradient = true;
     simulation.setSizeBox(Vec3D(-50, -50, simulation.sim_box.start.z), Vec3D(50, 50, simulation.sim_box.end.z));
     for (int i = 0; i < 15; i++) {
         for (int j = 0; j < 15; j++) {
@@ -211,16 +260,19 @@ void crystal25x25H(Simulation& simulation) {
     }
 }
 
-void crystal100x100H(Simulation& simulation) {
-    constexpr int N = 100;
-    constexpr int size = 175;
-    simulation.speedGradient();
-    simulation.setSizeBox(Vec3D(-size, -size, simulation.sim_box.start.z), Vec3D(size, size, simulation.sim_box.end.z));
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            Atom* atom = simulation.createAtom(Vec3D(15+i*2.5, 15+j*2.5, 2), randomUnitVector3D(0.5), 1);
-            atom->a = 2.0;
-            atom->eps = 15;
+void crystal15x15x15H(Simulation& simulation) {
+    simulation.render->speedGradient = true;
+    Vec3D start=Vec3D(-30, -30, -30);
+    simulation.setSizeBox(start, -start);
+
+    for (int x = 0; x < 15; x++) {
+        for (int y = 0; y < 15; y++) {
+            for (int z = 0; z < 15; z++) {
+                Vec3D pos(x, y, z);
+                Atom* atom = simulation.createAtom(Vec3D(15, 15, 15) + pos * 3, randomUnitVector3D(0.5), 1);
+                atom->a = 2.0;
+                atom->eps = 15;
+            }
         }
     }
 }

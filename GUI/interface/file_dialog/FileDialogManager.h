@@ -1,14 +1,15 @@
 #pragma once
-#include <optional>
-#include <string>
 #include <cstdint>
+#include <string>
+#include <optional>
 
-enum class SimCommand : std::uint8_t { Save, Load };
+enum class FileDialogCommand : std::uint8_t { Save, Load };
 
-struct FileDialogResult {
-    SimCommand command;
+struct InterfaceCommand {
+    FileDialogCommand command;
     std::string path;
 };
+
 
 class FileDialogManager {
 public:
@@ -16,7 +17,7 @@ public:
     void openLoad();
     void draw(float scale);
 
-    std::optional<FileDialogResult> popResult();
+    std::optional<InterfaceCommand> popResult();
 private:
-    std::optional<FileDialogResult> pendingResult;
+    std::optional<InterfaceCommand> pendingResult;
 };
