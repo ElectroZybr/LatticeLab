@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
+#include <glm/glm.hpp>
 
 class Camera {
 private:
@@ -16,7 +17,10 @@ private:
 
     sf::Vector2i dragStartPixelPos;
     sf::Vector2f dragStartCameraPos;
-    
+
+    bool orbitMode = false;
+    float azimuth   = 0.f;
+    float elevation = 1.0f; 
 public:
     Camera(sf::RenderWindow& window, sf::View* view, float moveSpeed = 500.f, float zoomSpeed = 0.1f);
     
@@ -25,6 +29,7 @@ public:
     void move(float offsetX, float offsetY);
     
     void setPosition(float x, float y);
+    void setOrbitMode(bool enabled) { orbitMode = enabled; }
     
     sf::Vector2f getPosition() const;
     
@@ -35,6 +40,9 @@ public:
     void setZoom(float new_zoom);
     
     const sf::View& getView() const;
+
+    glm::vec3 getEyePosition() const;
+    glm::mat4 getViewMatrix() const;
     // void resize(sf::Vector2f newSize);
     
     void handleInput(float deltaTime, sf::RenderWindow& window);
