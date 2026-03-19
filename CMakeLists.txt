@@ -99,6 +99,7 @@ file(GLOB_RECURSE SOURCES
     "main.cpp"
     "Engine/*.cpp"
     "GUI/*.cpp"
+    "Renderer/*.cpp"
 )
 list(FILTER SOURCES EXCLUDE REGEX "build/.*")
 

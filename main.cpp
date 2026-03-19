@@ -4,15 +4,14 @@
 
 #include <iostream>
 #include <chrono>
-#include <vector>
 
 #include "imgui-SFML.h"
 
 #include "Engine/physics/Atom.h"
 #include "Engine/physics/SpatialGrid.h"
 
-#include "Engine/io/manager/EventManager.h"
-#include "Engine/io/keyboard/Keyboard.h"
+#include "GUI/io/manager/EventManager.h"
+#include "GUI/io/keyboard/Keyboard.h"
 
 #include "Engine/Simulation.h"
 
@@ -21,8 +20,8 @@
 #include "Engine/physics/Bond.h"
 #include "Engine/utils/Timer.h"
 
-#include "Engine/renderer/2d/Renderer2D.h"
-#include "Engine/renderer/3d/Renderer3D.h"
+#include "Renderer/2d/Renderer2D.h"
+#include "Renderer/3d/Renderer3D.h"
 
 constexpr int WIDTH = 800;
 constexpr int HEIGHT = 600;

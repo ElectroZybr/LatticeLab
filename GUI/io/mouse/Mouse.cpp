@@ -1,4 +1,4 @@
-#include "Engine/io/mouse/Mouse.h"
+#include "GUI/io/mouse/Mouse.h"
 
 #include <limits>
 
@@ -27,11 +27,20 @@ void Mouse::onEvent(const sf::Event& event) {
     if (const auto* e = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (e->button == sf::Mouse::Button::Left)
             onLeftPressed(mouse_pos);
+
+        if (e->button == sf::Mouse::Button::Right && !Interface::cursorHovered) {
+            render->camera.isDragging = true;
+            render->camera.dragStartPixelPos = mouse_pos;
+            render->camera.dragStartCameraPos = render->camera.position;
+        }
     }
 
     if (const auto* e = event.getIf<sf::Event::MouseButtonReleased>()) {
         if (e->button == sf::Mouse::Button::Left)
             onLeftReleased();
+
+        if (e->button == sf::Mouse::Button::Right)
+            render->camera.isDragging = false;
     }
 
     if (const auto* e = event.getIf<sf::Event::MouseMoved>()) {

@@ -1,7 +1,7 @@
 #include <algorithm>
 
 #include "SimBox.h"
-#include "renderer/BaseRenderer.h"
+#include "Renderer/BaseRenderer.h"
 
 SimBox::SimBox(Vec3D s, Vec3D e)
     : start(s),
