@@ -1,8 +1,9 @@
-#include "Camera.h"
-
 #include <cmath>
 #include <algorithm>
 
+#include <glm/gtc/matrix_transform.hpp>
+
+#include "Camera.h"
 #include "GUI/interface/interface.h"
 
 Camera::Camera(sf::RenderWindow& window, sf::View* view, float moveSpeed, float zoomSpeed) 
@@ -53,12 +54,22 @@ void Camera::setZoom(float new_zoom) {
 }
 
 void Camera::handleInput(float deltaTime, sf::RenderWindow& window) {
-    // Управление WASD
-    float deltaSpeed = speed * deltaTime;
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) move(0, -deltaSpeed);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) move(0, deltaSpeed);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) move(-deltaSpeed, 0);
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) move(deltaSpeed, 0);
+    if (!orbitMode) {
+        float deltaSpeed = speed * deltaTime;
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) move(0, -deltaSpeed);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) move(0, deltaSpeed);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) move(-deltaSpeed, 0);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) move(deltaSpeed, 0);
+    }
+    else {
+        float rotSpeed = 1.5f * deltaTime;
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
+            elevation = std::clamp(elevation + rotSpeed, -1.5f, 1.5f);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S))
+            elevation = std::clamp(elevation - rotSpeed, -1.5f, 1.5f);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) azimuth -= rotSpeed;
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) azimuth += rotSpeed;
+    }
 }
 
 void Camera::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
@@ -98,4 +109,19 @@ void Camera::handleEvent(const sf::Event& event, sf::RenderWindow& window) {
             zoomAt(e->delta, sf::Vector2f(e->position), window);
         }
     }
+}
+
+glm::vec3 Camera::getEyePosition() const {
+    return glm::vec3(
+        zoom * std::cos(elevation) * std::sin(azimuth),
+        zoom * std::sin(elevation),
+        zoom * std::cos(elevation) * std::cos(azimuth)
+    );
+}
+
+glm::mat4 Camera::getViewMatrix() const {
+    // камера всегда смотрит в центр мира
+    glm::vec3 eye = getEyePosition();
+    return glm::lookAt(eye, glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f));
+
 }

@@ -2,7 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "IRenderer.h"
+#include "../IRenderer.h"
 #include "Engine/physics/SpatialGrid.h"
 #include "Engine/physics/Bond.h"
 
