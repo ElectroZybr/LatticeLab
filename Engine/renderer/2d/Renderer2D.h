@@ -2,7 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "BaseRenderer.h"
+#include "../BaseRenderer.h"
 #include "Engine/physics/SpatialGrid.h"
 #include "Engine/physics/Bond.h"
 
