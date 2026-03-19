@@ -249,7 +249,12 @@ void Renderer2D::drawShot(const std::vector<Atom>& atoms, const SimBox& box, flo
         }
     }
 
-    if (drawSelectionFrame) window.draw(frameShape);
+    if (drawSelectionFrame) {
+        window.draw(frameShape);
+    }
+    if (drawLassoContour && lassoContour.getVertexCount() > 1) {
+        window.draw(lassoContour);
+    }
 
     window.setView(uiView);
     ImGui::SFML::Render(window);
@@ -300,4 +305,23 @@ void Renderer2D::setSelectionFrame(Vec2D start, Vec2D end, float scale) {
     frameShape.setFillColor(sf::Color::Transparent);
     frameShape.setOutlineColor(sf::Color(60, 60, 60));
     frameShape.setOutlineThickness(1.f / scale);
+}
+
+void Renderer2D::setLassoContour(const std::vector<Vec2D>& points, float scale) {
+    lassoContour.clear();
+    if (points.empty()) {
+        return;
+    }
+
+    (void)scale;
+    const sf::Color contourColor(60, 60, 60);
+
+    for (const Vec2D& point : points) {
+        lassoContour.append(sf::Vertex(sf::Vector2f(point.x, point.y), contourColor));
+    }
+
+    if (points.size() > 2) {
+        const Vec2D& first = points.front();
+        lassoContour.append(sf::Vertex(sf::Vector2f(first.x, first.y), contourColor));
+    }
 }

@@ -1,6 +1,7 @@
 #include "Tools.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <limits>
 
@@ -124,6 +125,65 @@ Vec3D randomSpawnVelocity() {
         0.0
     );
 }
+
+bool pointOnSegment(const Vec2D& p, const Vec2D& a, const Vec2D& b) {
+    const Vec2D ab = b - a;
+    const Vec2D ap = p - a;
+    const double cross = ab.x * ap.y - ab.y * ap.x;
+    if (std::abs(cross) > 1e-6) {
+        return false;
+    }
+
+    const double dot = ap.dot(ab);
+    if (dot < 0.0) {
+        return false;
+    }
+
+    return dot <= ab.sqrAbs();
+}
+
+bool isPointInsidePolygon(const Vec2D& p, const std::vector<Vec2D>& polygon) {
+    if (polygon.size() < 3) {
+        return false;
+    }
+
+    bool inside = false;
+    std::size_t j = polygon.size() - 1;
+    for (std::size_t i = 0; i < polygon.size(); ++i) {
+        const Vec2D& a = polygon[i];
+        const Vec2D& b = polygon[j];
+
+        if (pointOnSegment(p, a, b)) {
+            return true;
+        }
+
+        const bool intersects = ((a.y > p.y) != (b.y > p.y))
+            && (p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x);
+
+        if (intersects) {
+            inside = !inside;
+        }
+
+        j = i;
+    }
+
+    return inside;
+}
+
+void syncLassoContour(IRenderer* render, const SimBox* box, const std::vector<Vec2D>& localPoints) {
+    if (!render || !box) {
+        return;
+    }
+
+    std::vector<Vec2D> worldPoints;
+    worldPoints.reserve(localPoints.size());
+    const Vec2D boxOffset(box->start.x, box->start.y);
+    for (const Vec2D& point : localPoints) {
+        worldPoints.push_back(point + boxOffset);
+    }
+
+    render->setLassoContour(worldPoints, render->camera.getZoom());
+}
 }
 
 sf::RenderWindow* Tools::window = nullptr;
@@ -134,8 +194,10 @@ SimBox* Tools::box = nullptr;
 std::unordered_set<Atom*> Tools::selected_atom_batch{};
 bool Tools::atomMoveFlag = false;
 bool Tools::selectionFrameMoveFlag = false;
+bool Tools::lassoSelectionMoveFlag = false;
 Atom* Tools::selectedMoveAtom = nullptr;
 sf::Vector2i Tools::start_mouse_pos = {};
+std::vector<Vec2D> Tools::lassoPoints{};
 
 void Tools::init(sf::RenderWindow* w, sf::View* gv, IRenderer* r, SpatialGrid* gr, SimBox* b) {
     window = w;
@@ -152,8 +214,11 @@ void Tools::onLeftPressed(sf::Vector2i mouse_pos, std::vector<Atom>& atoms) {
 
     atomMoveFlag = false;
     selectionFrameMoveFlag = false;
+    lassoSelectionMoveFlag = false;
     Interface::drawToolTrip = false;
     render->showSelectionFrame(false);
+    render->showLassoContour(false);
+    render->setLassoContour({}, render->camera.getZoom());
 
     const auto beginFrameSelection = [&]() {
         selectionFrameMoveFlag = true;
@@ -173,13 +238,12 @@ void Tools::onLeftPressed(sf::Vector2i mouse_pos, std::vector<Atom>& atoms) {
         beginFrameSelection();
         break;
     case Mode::Lasso: {
-        Atom* pickedAtom = pickAtom(mouse_pos);
-        if (pickedAtom != nullptr && pickedAtom->isSelect && !selected_atom_batch.empty()) {
-            selectedMoveAtom = pickedAtom;
-            atomMoveFlag = true;
-        } else {
-            beginFrameSelection();
-        }
+        lassoSelectionMoveFlag = true;
+        lassoPoints.clear();
+        start_mouse_pos = mouse_pos;
+        lassoPoints.push_back(screenToBox(mouse_pos, render->camera.getZoom()));
+        syncLassoContour(render, box, lassoPoints);
+        render->showLassoContour(true);
         break;
     }
     case Mode::Cursor:
@@ -202,12 +266,46 @@ void Tools::onLeftPressed(sf::Vector2i mouse_pos, std::vector<Atom>& atoms) {
     }
 }
 
-void Tools::onLeftReleased() {
+void Tools::onLeftReleased(std::vector<Atom>& atoms) {
+    if (lassoSelectionMoveFlag && window && render) {
+        const sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
+        const float zoom = render->camera.getZoom();
+        const Vec2D local = screenToBox(mouse_pos, zoom);
+        if (lassoPoints.empty() || (lassoPoints.back() - local).sqrAbs() > 1e-6) {
+            lassoPoints.push_back(local);
+        }
+
+        int count = 0;
+        if (lassoPoints.size() >= 3) {
+            selected_atom_batch.clear();
+            for (Atom& atom : atoms) {
+                const Vec2D atomCenter(
+                    atom.coords.x + atom.getProps().radius,
+                    atom.coords.y + atom.getProps().radius
+                );
+                const bool selected = isPointInsidePolygon(atomCenter, lassoPoints);
+                atom.isSelect = selected;
+                if (selected) {
+                    selected_atom_batch.insert(&atom);
+                    ++count;
+                }
+            }
+        }
+
+        Interface::countSelectedAtom = count;
+        lassoPoints.clear();
+        render->setLassoContour({}, render->camera.getZoom());
+    }
+
     atomMoveFlag = false;
     selectionFrameMoveFlag = false;
+    lassoSelectionMoveFlag = false;
+    selectedMoveAtom = nullptr;
 
     if (render) {
         render->showSelectionFrame(false);
+        render->showLassoContour(false);
+        render->setLassoContour({}, render->camera.getZoom());
     }
     Interface::drawToolTrip = false;
 }
@@ -221,6 +319,23 @@ void Tools::onFrame(std::vector<Atom>& atoms) {
 
     if (selectionFrameMoveFlag) {
         selectionFrame(start_mouse_pos, mouse_pos, atoms);
+    }
+
+    if (lassoSelectionMoveFlag) {
+        const float zoom = render->camera.getZoom();
+        const Vec2D local = screenToBox(mouse_pos, zoom);
+        const float minWorldStep = 4.0f / std::max(zoom, 1.0f);
+        const double minWorldStepSqr = static_cast<double>(minWorldStep * minWorldStep);
+
+        if (lassoPoints.empty() || (lassoPoints.back() - local).sqrAbs() >= minWorldStepSqr) {
+            lassoPoints.push_back(local);
+        }
+
+        std::vector<Vec2D> contourPoints = lassoPoints;
+        if (contourPoints.empty() || (contourPoints.back() - local).sqrAbs() > 1e-6) {
+            contourPoints.push_back(local);
+        }
+        syncLassoContour(render, box, contourPoints);
     }
 
     if (atomMoveFlag && selectedMoveAtom != nullptr) {

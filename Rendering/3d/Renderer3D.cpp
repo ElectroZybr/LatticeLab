@@ -272,10 +272,18 @@ void Renderer3D::setSelectionFrame(Vec2D start, Vec2D end, float scale) {
     // TODO: реализовать для 3D
 }
 
+void Renderer3D::setLassoContour(const std::vector<Vec2D>& points, float scale) {
+    // TODO: реализовать для 3D
+}
+
 void Renderer3D::wallImage(Vec3D start, Vec3D end) {
     // TODO: реализовать для 3D
 }
 
 void Renderer3D::showSelectionFrame(bool show) {
+    // TODO: реализовать для 3D
+}
+
+void Renderer3D::showLassoContour(bool show) {
     // TODO: реализовать для 3D
 }

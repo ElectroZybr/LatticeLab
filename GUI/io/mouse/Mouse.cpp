@@ -32,7 +32,7 @@ void Mouse::onEvent(const sf::Event& event) {
 
     if (const auto* e = event.getIf<sf::Event::MouseButtonReleased>()) {
         if (e->button == sf::Mouse::Button::Left) {
-            Tools::onLeftReleased();
+            Tools::onLeftReleased(*atoms);
         }
 
         if (e->button == sf::Mouse::Button::Right) {

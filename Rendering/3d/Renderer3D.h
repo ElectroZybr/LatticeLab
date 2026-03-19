@@ -20,9 +20,11 @@ public:
     void drawShot(const std::vector<Atom>& atoms,
                   const SimBox& box, float deltaTime) override;
     void setSelectionFrame(Vec2D start, Vec2D end, float scale) override;
+    void setLassoContour(const std::vector<Vec2D>& points, float scale) override;
     void wallImage(Vec3D start, Vec3D end) override;
 
     void showSelectionFrame(bool show) override;
+    void showLassoContour(bool show) override;
 private:
     sf::RenderWindow& window;
     sf::View& uiView;

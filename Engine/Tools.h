@@ -25,7 +25,7 @@ public:
     static Vec2D screenToWorld(sf::Vector2i mouse_pos, float zoom);
     static Vec2D screenToBox(sf::Vector2i mouse_pos, float zoom);
     static void onLeftPressed(sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
-    static void onLeftReleased();
+    static void onLeftReleased(std::vector<Atom>& atoms);
     static void onFrame(std::vector<Atom>& atoms);
 
     static Mode currentMode();
@@ -44,6 +44,8 @@ private:
 
     static bool atomMoveFlag;
     static bool selectionFrameMoveFlag;
+    static bool lassoSelectionMoveFlag;
     static Atom* selectedMoveAtom;
     static sf::Vector2i start_mouse_pos;
+    static std::vector<Vec2D> lassoPoints;
 };
