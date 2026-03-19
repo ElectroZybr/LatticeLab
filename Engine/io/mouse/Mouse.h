@@ -4,7 +4,7 @@
 
 #include "Engine/physics/Atom.h"
 #include "Engine/SimBox.h"
-#include "Engine/renderer/IRenderer.h"
+#include "Engine/renderer/BaseRenderer.h"
 
 class Mouse {
     friend class EventManager;
