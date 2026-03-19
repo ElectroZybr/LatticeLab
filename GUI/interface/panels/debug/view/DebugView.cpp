@@ -36,7 +36,9 @@ void DebugView::draw(float uiScale) {
             const float val = std::get<float>(d.history);
             const std::string valStr = (val == std::floor(val))
                 ? std::format("{:.0f}", val)
-                : std::format("{:f}", val);
+                : (label.find("(мс)") != std::string::npos
+                    ? std::format("{:.4f}", val)
+                    : std::format("{:f}", val));
             ImGui::TextDisabled("%s", label.data());
             ImGui::SameLine();
             ImGui::Text("%s", valStr.data());
