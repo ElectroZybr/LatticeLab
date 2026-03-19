@@ -7,9 +7,10 @@ class SideToolsPanel {
 public:
     enum class Tool : int {
         Cursor = 0,
-        Bond = 1,
-        Erase = 2,
-        Measure = 3,
+        Frame = 1,
+        Lasso = 2,
+        AddAtom = 3,
+        RemoveAtom = 4,
     };
 
     static constexpr ImGuiWindowFlags PANEL_FLAGS =

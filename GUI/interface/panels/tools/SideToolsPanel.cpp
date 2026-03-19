@@ -3,9 +3,10 @@
 #include <cmath>
 
 #define ICON_FA_MOUSE_POINTER "\uf245"
-#define ICON_FA_LINK          "\uf0c1"
-#define ICON_FA_ERASER        "\uf12d"
-#define ICON_FA_RULER         "\uf545"
+#define ICON_FA_VECTOR_SQUARE "\uf5cb"
+#define ICON_FA_DRAW_POLYGON  "\uf5ee"
+#define ICON_FA_PLUS          "\uf067"
+#define ICON_FA_MINUS         "\uf068"
 
 namespace {
     constexpr ImVec4 ACTIVE_COLOR = ImVec4(0.06f, 0.53f, 0.98f, 1.00f);
@@ -16,11 +17,12 @@ namespace {
         const char* tooltip;
     };
 
-    constexpr std::array<ToolItem, 4> TOOL_ITEMS{{
-        {SideToolsPanel::Tool::Cursor,  ICON_FA_MOUSE_POINTER, "Pointer"},
-        {SideToolsPanel::Tool::Bond,    ICON_FA_LINK,          "Bond"},
-        {SideToolsPanel::Tool::Erase,   ICON_FA_ERASER,        "Erase"},
-        {SideToolsPanel::Tool::Measure, ICON_FA_RULER,         "Measure"},
+    constexpr std::array<ToolItem, 5> TOOL_ITEMS{{
+        {SideToolsPanel::Tool::Cursor,     ICON_FA_MOUSE_POINTER, "Мышка"},
+        {SideToolsPanel::Tool::Frame,      ICON_FA_VECTOR_SQUARE, "Рамка"},
+        {SideToolsPanel::Tool::Lasso,      ICON_FA_DRAW_POLYGON,  "Лассо"},
+        {SideToolsPanel::Tool::AddAtom,    ICON_FA_PLUS,          "Добавить атом"},
+        {SideToolsPanel::Tool::RemoveAtom, ICON_FA_MINUS,         "Удалить атом"},
     }};
 
     bool drawToolButton(const char* icon, const char* tooltip, bool selected, float buttonSize, ImFont* textFont) {
