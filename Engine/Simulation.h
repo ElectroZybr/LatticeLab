@@ -5,7 +5,7 @@
 #include "physics/Atom.h"
 #include "physics/SpatialGrid.h"
 #include "SimBox.h"
-#include "renderer/IRenderer.h"
+#include "renderer/BaseRenderer.h"
 
 class Simulation {
 public:
