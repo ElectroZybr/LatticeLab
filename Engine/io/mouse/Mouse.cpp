@@ -1,6 +1,6 @@
 #include "Engine/io/mouse/Mouse.h"
 
-#include <iostream>
+#include <limits>
 
 #include "Engine/Tools.h"
 #include "GUI/interface/interface.h"
@@ -68,57 +68,67 @@ void Mouse::onFrame() {
 }
 
 void Mouse::onLeftPressed(sf::Vector2i mouse_pos) {
+    if (Interface::cursorHovered) return;
+
     float zoom = render->camera.getZoom();
+    Vec3D world = Tools::screenToWorld(mouse_pos, zoom);
+    Vec3D local = world - box->start;
 
-    if (!Interface::cursorHovered && Interface::getSelectedAtom() != -1) {
-        const Vec2D world = Tools::screenToWorld(mouse_pos, zoom);
-        const Vec2D local(world.x - box->start.x, world.y - box->start.y);
-        const double atomRadius = Atom::getProps(Interface::getSelectedAtom()).radius;
-        const Vec3D spawnPos = Vec3D(local - atomRadius / 2.0);
+    switch (Interface::sideToolsPanel.getSelectedTool()) {
+        case SideToolsPanel::Tool::AddAtom:
+        {
+            if (Interface::getSelectedAtom() == -1) break;
+            const double atomRadius = Atom::getProps(Interface::getSelectedAtom()).radius;
+            const Vec3D spawnPos = Vec3D(local - atomRadius / 2.0);
 
-        bool hasNearAtom = false;
-        for (Atom& atom : *atoms) {
-            if ((atom.coords - spawnPos).abs() <= atom.getProps().radius + atomRadius) {
-                hasNearAtom = true;
-                break;
+            bool hasNearAtom = false;
+            for (Atom& atom : *atoms) {
+                if ((atom.coords - spawnPos).abs() <= atom.getProps().radius + atomRadius) {
+                    hasNearAtom = true;
+                    break;
+                }
             }
-        }
-
-        if (!hasNearAtom) {
-            atoms->emplace_back(spawnPos,
-                Vec3D(((double)std::rand() / RAND_MAX - 0.5) * 5,
-                      ((double)std::rand() / RAND_MAX - 0.5) * 5, 0),
-                Interface::getSelectedAtom());
-        }
-    }
-    else {
-        Vec3D world = Tools::screenToWorld(mouse_pos, zoom);
-        Vec3D local = world - box->start;
-        std::unordered_set<Atom*>* block = box->grid.at(
-            box->grid.worldToCellX(local.x - 0.5),
-            box->grid.worldToCellY(local.y - 0.5)
-        );
-
-        if (block != nullptr && !block->empty()) {
-            Atom* clicked = *block->begin();
-
-            // если кликнули на выделенный атом — двигаем всю группу
-            // если не выделен — двигаем одиночный
-            selectedMoveAtom = clicked;
-            atomMoveFlag = true;
-
-            // если кликнули на невыделенный — сбрасываем батч
-            if (!Tools::selected_atom_batch.count(clicked)) {
-                Tools::selected_atom_batch.clear();
-                for (Atom& a : *atoms) a.isSelect = false;
+            if (!hasNearAtom) {
+                atoms->emplace_back(spawnPos,
+                    Vec3D(((double)std::rand() / RAND_MAX - 0.5) * 5,
+                          ((double)std::rand() / RAND_MAX - 0.5) * 5, 0),
+                    Interface::getSelectedAtom());
             }
+            break;
         }
-        else if (!Interface::cursorHovered) {
-            // кликнули на пустое место — начинаем выделение
+        case SideToolsPanel::Tool::RemoveAtom:
+        {
+            // TODO работает как-то криво
+            Atom* clicked = findAtomAt(local);
+            if (clicked != nullptr) {
+                std::erase_if(*atoms, [clicked](const Atom& a) { return &a == clicked; });
+            }
+            break;
+        }
+        case SideToolsPanel::Tool::Cursor:
+        {
+            Atom* clicked = findAtomAt(local);
+            if (clicked != nullptr) {
+                selectedMoveAtom = clicked;
+                atomMoveFlag = true;
+                if (!Tools::selected_atom_batch.contains(clicked)) {
+                    Tools::selected_atom_batch.clear();
+                    for (Atom& a : *atoms) a.isSelect = false;
+                    Tools::selected_atom_batch.insert(clicked);
+                    clicked->isSelect = true;
+                }
+            }
+            break;
+        }
+        case SideToolsPanel::Tool::Lasso:
+            // TODO Написать лассо
+        case SideToolsPanel::Tool::Frame:
+        {
             selectionFrameMoveFlag = true;
             start_mouse_pos = mouse_pos;
             Tools::selectionFrame(start_mouse_pos, mouse_pos, *atoms);
             render->showSelectionFrame(true);
+            break;
         }
     }
 }
@@ -128,4 +138,32 @@ void Mouse::onLeftReleased() {
     selectionFrameMoveFlag = false;
     render->showSelectionFrame(false);
     Interface::drawToolTrip = false;
+}
+
+Atom* Mouse::findAtomAt(Vec3D local) {
+    static std::unordered_set<Atom*> result;
+    result.clear();
+
+    int cx = box->grid.worldToCellX(local.x);
+    int cy = box->grid.worldToCellY(local.y);
+
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            auto* block = box->grid.at(cx + dx, cy + dy);
+            if (block) result.insert(block->begin(), block->end());
+        }
+    }
+
+    Atom* closest = nullptr;
+    float minDist = std::numeric_limits<float>::max();
+    for (Atom* a : result) {
+        float dist = (Vec2D(a->coords) - Vec2D(local)).abs();
+
+        float hitDist = dist - a->getProps().radius;
+        if (hitDist < minDist) {
+            minDist = hitDist;
+            closest = a;
+        }
+    }
+    return closest;
 }

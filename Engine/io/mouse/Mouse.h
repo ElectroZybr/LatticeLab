@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
+
 #include "Engine/physics/Atom.h"
 #include "Engine/SimBox.h"
 #include "Engine/renderer/IRenderer.h"
@@ -16,6 +17,8 @@ public:
 private:
     static void onLeftPressed(sf::Vector2i mouse_pos);
     static void onLeftReleased();
+
+    static Atom* findAtomAt(Vec3D local);
 
     static sf::RenderWindow* window;
     static IRenderer*        render;

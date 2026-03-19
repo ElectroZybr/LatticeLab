@@ -1,6 +1,8 @@
 #pragma once
 #include <SFML/System/Vector2.hpp>
 
+class Vec3D;
+
 class Vec2D {
 private:
     static bool isNear(double a, double b);
@@ -11,6 +13,7 @@ public:
     Vec2D(const Vec2D &vec);
 
     explicit Vec2D(double x = 0.0, double y = 0.0);
+    explicit Vec2D(const Vec3D& vec3d);
 
     // Операторы приведения типа
     operator sf::Vector2f() const;
