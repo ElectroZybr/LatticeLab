@@ -1,5 +1,7 @@
 #include "Engine/io/mouse/Mouse.h"
 
+#include <iostream>
+
 #include "Engine/Tools.h"
 #include "GUI/interface/interface.h"
 
@@ -55,7 +57,7 @@ void Mouse::onFrame() {
     if (selectionFrameMoveFlag)
         Tools::selectionFrame(start_mouse_pos, mouse_pos, *atoms);
 
-    if (atomMoveFlag) {
+    if (atomMoveFlag && selectedMoveAtom != nullptr) {
         float zoom  = render->camera.getZoom();
         Vec2D world = Tools::screenToBox(mouse_pos, zoom);
         Vec2D delta = Vec2D(selectedMoveAtom->coords.x, selectedMoveAtom->coords.y) - world;
@@ -88,22 +90,34 @@ void Mouse::onLeftPressed(sf::Vector2i mouse_pos) {
                       ((double)std::rand() / RAND_MAX - 0.5) * 5, 0),
                 Interface::getSelectedAtom());
         }
-    } else {
+    }
+    else {
         Vec3D world = Tools::screenToWorld(mouse_pos, zoom);
         Vec3D local = world - box->start;
         std::unordered_set<Atom*>* block = box->grid.at(
             box->grid.worldToCellX(local.x - 0.5),
-            box->grid.worldToCellY(local.y - 0.5),
-            box->grid.worldToCellY(local.z - 0.5)
+            box->grid.worldToCellY(local.y - 0.5)
         );
 
-        if (block != nullptr && !block->empty() && !selectionFrameMoveFlag) {
-            selectedMoveAtom = *block->begin();
+        if (block != nullptr && !block->empty()) {
+            Atom* clicked = *block->begin();
+
+            // если кликнули на выделенный атом — двигаем всю группу
+            // если не выделен — двигаем одиночный
+            selectedMoveAtom = clicked;
             atomMoveFlag = true;
-        } else if (!Interface::cursorHovered && !selectionFrameMoveFlag) {
+
+            // если кликнули на невыделенный — сбрасываем батч
+            if (!Tools::selected_atom_batch.count(clicked)) {
+                Tools::selected_atom_batch.clear();
+                for (Atom& a : *atoms) a.isSelect = false;
+            }
+        }
+        else if (!Interface::cursorHovered) {
+            // кликнули на пустое место — начинаем выделение
             selectionFrameMoveFlag = true;
-            start_mouse_pos = sf::Mouse::getPosition(*window);
-            Tools::selectionFrame(start_mouse_pos, sf::Mouse::getPosition(*window), *atoms);
+            start_mouse_pos = mouse_pos;
+            Tools::selectionFrame(start_mouse_pos, mouse_pos, *atoms);
             render->showSelectionFrame(true);
         }
     }

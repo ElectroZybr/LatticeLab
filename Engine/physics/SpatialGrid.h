@@ -29,17 +29,29 @@ public:
         }
     }
 
+    std::unordered_set<Atom*>* at(int x, int y) {
+        static std::unordered_set<Atom*> result;
+        result.clear();
+        for (int z = 0; z < sizeZ; z++) {
+            if (x >= 0 && x < sizeX && y >= 0 && y < sizeY) {
+                auto& cell = grid[z * sizeY * sizeX + y * sizeX + x];
+                result.insert(cell.begin(), cell.end());
+            }
+        }
+        return result.empty() ? nullptr : &result;
+    }
+    const std::unordered_set<Atom*>* at(int x, int y) const {
+        return this->at(x, y);
+    }
+
     std::unordered_set<Atom*>* at(int x, int y, int z) {
         if (x >= 0 && x < sizeX && y >= 0 && y < sizeY && z >= 0 && z < sizeZ)
             return &grid[z * sizeY * sizeX + y * sizeX + x];
         return nullptr;
     }
     const std::unordered_set<Atom*>* at(int x, int y, int z) const {
-        if (x >= 0 && x < sizeX && y >= 0 && y < sizeY && z >= 0 && z < sizeZ)
-            return &grid[z * sizeY * sizeX + y * sizeX + x];
-        return nullptr;
+        return this->at(x, y, z);
     }
-
 
     int worldToCellX(double x) const {
         if (x < 0.0) return -1;
