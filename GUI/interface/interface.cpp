@@ -32,6 +32,7 @@ DebugPanel Interface::debugPanel;
 FileDialogManager Interface::fileDialog;
 StyleManager Interface::styleManager;
 ToolsPanel Interface::toolsPanel;
+SideToolsPanel Interface::sideToolsPanel;
 SimControlPanel Interface::simControlPanel;
 PeriodicPanel Interface::periodicPanel;
 StatsPanel Interface::statsPanel;
@@ -89,6 +90,7 @@ int Interface::Update() {
         toolsPanel.draw(styleManager.getScale(), *window, debugPanel, fileDialog);
         periodicPanel.draw(styleManager.getScale(), window->getSize(), selectedAtom);
         simControlPanel.draw(styleManager.getScale(), window->getSize(), pause, simulationSpeed);
+        sideToolsPanel.draw(styleManager.getScale(), window->getSize(), fontManager.icons, fontManager.dialog);
         statsPanel.draw(styleManager.getScale(), window->getSize());
         if (drawToolTrip) {
             ImVec2 mouse = ImGui::GetMousePos();

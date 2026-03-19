@@ -7,4 +7,5 @@ public:
 
     ImFont* main   = nullptr;
     ImFont* dialog = nullptr;
+    ImFont* icons  = nullptr;
 };

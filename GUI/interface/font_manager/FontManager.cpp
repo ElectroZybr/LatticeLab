@@ -20,6 +20,16 @@ bool FontManager::load() {
         "GUI/fonts/Font Awesome 5 Free-Solid-900.otf",
         40.0f, &iconConfig, iconRanges);
 
+    // Отдельный шрифт иконок для сайд-панели: более четкий рендер на малых размерах.
+    ImFontConfig sideIconConfig;
+    sideIconConfig.PixelSnapH = true;
+    sideIconConfig.OversampleH = 4;
+    sideIconConfig.OversampleV = 4;
+    icons = fonts->AddFontFromFileTTF(
+        "GUI/fonts/Font Awesome 5 Free-Solid-900.otf",
+        30.0f, &sideIconConfig, iconRanges);
+    if (!icons) return false;
+
     // Диалоговый шрифт с кириллицей
     static const ImWchar ruRanges[] = {
         0x0020, 0x00FF,
@@ -28,7 +38,7 @@ bool FontManager::load() {
     };
     dialog = fonts->AddFontFromFileTTF(
         "GUI/fonts/Rubik-VariableFont_wght.ttf",
-        20.0f, nullptr, ruRanges);
+        25.0f, nullptr, ruRanges);
     if (!dialog) return false;
 
     return true;

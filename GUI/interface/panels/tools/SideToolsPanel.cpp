@@ -1,0 +1,102 @@
+#include "SideToolsPanel.h"
+#include <array>
+#include <cmath>
+
+#define ICON_FA_MOUSE_POINTER "\uf245"
+#define ICON_FA_LINK          "\uf0c1"
+#define ICON_FA_ERASER        "\uf12d"
+#define ICON_FA_RULER         "\uf545"
+
+namespace {
+    constexpr ImVec4 ACTIVE_COLOR = ImVec4(0.06f, 0.53f, 0.98f, 1.00f);
+
+    struct ToolItem {
+        SideToolsPanel::Tool tool;
+        const char* icon;
+        const char* tooltip;
+    };
+
+    constexpr std::array<ToolItem, 4> TOOL_ITEMS{{
+        {SideToolsPanel::Tool::Cursor,  ICON_FA_MOUSE_POINTER, "Pointer"},
+        {SideToolsPanel::Tool::Bond,    ICON_FA_LINK,          "Bond"},
+        {SideToolsPanel::Tool::Erase,   ICON_FA_ERASER,        "Erase"},
+        {SideToolsPanel::Tool::Measure, ICON_FA_RULER,         "Measure"},
+    }};
+
+    bool drawToolButton(const char* icon, const char* tooltip, bool selected, float buttonSize, ImFont* textFont) {
+        if (selected) {
+            ImGui::PushStyleColor(ImGuiCol_Button,        ACTIVE_COLOR);
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ACTIVE_COLOR);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ACTIVE_COLOR);
+        }
+
+        const bool pressed = ImGui::Button(icon, ImVec2(buttonSize, buttonSize));
+
+        if (selected) {
+            ImGui::PopStyleColor(3);
+        }
+
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+            ImGui::BeginTooltip();
+            if (textFont) {
+                ImGui::PushFont(textFont);
+            }
+            ImGui::TextUnformatted(tooltip);
+            if (textFont) {
+                ImGui::PopFont();
+            }
+            ImGui::EndTooltip();
+        }
+
+        return pressed;
+    }
+}
+
+void SideToolsPanel::draw(float scale, sf::Vector2u windowSize, ImFont* iconFont, ImFont* textFont) {
+    constexpr float baseTopOffset = 114.0f;
+    constexpr float baseRightOffset = 0.0f;
+    constexpr float baseSpacing = 4.0f;
+    constexpr float baseButtonSize = 44.0f;
+    constexpr float basePaddingX = 6.0f;
+    constexpr float basePaddingY = 6.0f;
+    const float buttonCount = static_cast<float>(TOOL_ITEMS.size());
+
+    const float buttonSize = std::round(baseButtonSize * scale);
+    const float spacingY = std::round(baseSpacing * scale);
+    const float panelPaddingX = std::round(basePaddingX * scale);
+    const float panelPaddingY = std::round(basePaddingY * scale);
+    const float rightOffset = std::round(baseRightOffset * scale);
+
+    const float panelWidthRaw = (panelPaddingX * 2.0f) + buttonSize;
+    const float panelHeightRaw = (panelPaddingY * 2.0f) + (buttonCount * buttonSize) + ((buttonCount - 1.0f) * spacingY);
+    const float xRaw = static_cast<float>(windowSize.x) - panelWidthRaw - rightOffset;
+    const float yRaw = baseTopOffset * scale;
+
+    const float panelWidth = std::round(panelWidthRaw);
+    const float panelHeight = std::round(panelHeightRaw);
+    const float x = std::round(xRaw);
+    const float y = std::round(yRaw);
+
+    ImGui::SetNextWindowPos(ImVec2(x, y));
+    ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(panelPaddingX, panelPaddingY));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, spacingY));
+    ImGui::Begin("SideTools", nullptr, PANEL_FLAGS);
+
+    if (iconFont) {
+        ImGui::PushFont(iconFont);
+    }
+
+    for (const ToolItem& item : TOOL_ITEMS) {
+        if (drawToolButton(item.icon, item.tooltip, selectedTool == item.tool, buttonSize, textFont)) {
+            selectedTool = item.tool;
+        }
+    }
+
+    if (iconFont) {
+        ImGui::PopFont();
+    }
+
+    ImGui::End();
+    ImGui::PopStyleVar(2);
+}
