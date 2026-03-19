@@ -44,7 +44,7 @@ int Interface::init(sf::RenderWindow& w) {
 
     styleManager.applyCustomStyle();
 
-    if (!fontManager.load()) return EXIT_FAILURE;
+    if (!fontManager.load(styleManager.getScale())) return EXIT_FAILURE;
     if (!ImGui::SFML::UpdateFontTexture()) return EXIT_FAILURE;
     return EXIT_SUCCESS;
 }
@@ -60,6 +60,11 @@ void Interface::CheckEvent(const sf::Event& event) {
     }
     else if (const auto* e = event.getIf<sf::Event::Resized>()) {
         styleManager.onResize(e->size);
+        if (fontManager.load(styleManager.getScale())) {
+            if (!ImGui::SFML::UpdateFontTexture()) {
+                // Keep current font pointers if texture update failed.
+            }
+        }
     }
 }
 

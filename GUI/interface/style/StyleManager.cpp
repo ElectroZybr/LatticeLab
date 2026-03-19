@@ -56,7 +56,7 @@ void StyleManager::applyCustomStyle() {
 
     baseStyle = style;
     scale = 1;
-    ImGui::GetIO().FontGlobalScale = 0.75f;
+    ImGui::GetIO().FontGlobalScale = 1.0f;
 }
 
 void StyleManager::onResize(sf::Vector2u newSize) {
@@ -67,5 +67,5 @@ void StyleManager::onResize(sf::Vector2u newSize) {
 
     ImGui::GetStyle() = baseStyle;
     ImGui::GetStyle().ScaleAllSizes(scale);
-    ImGui::GetIO().FontGlobalScale = scale * 0.75f;
+    ImGui::GetIO().FontGlobalScale = 1.0f;
 }
