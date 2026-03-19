@@ -46,9 +46,7 @@ int main() {
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(window, box);
 
-    IRenderer* renderer = new Renderer2D(window,
-                                     simulation.getGameView(),
-                                     simulation.getUiView());
+    IRenderer* renderer = new Renderer2D(window, simulation.getGameView(), simulation.getUiView());
     simulation.setRenderer(renderer);
 
     simulation.setCameraPos(0, 0);

@@ -54,7 +54,7 @@ private:
 
     bool atomMoveFlag = false;
     bool selectionFrameMoveFlag = false;
-    Atom* selectedMoveAtom;
+    Atom* selectedMoveAtom = nullptr;
     sf::Vector2i start_mouse_pos;
     int sim_step = 0;
     

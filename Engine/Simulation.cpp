@@ -72,59 +72,54 @@ void Simulation::pollEvents() {
 
         Interface::CheckEvent(event);
 
-        if (const auto* e = event.getIf<sf::Event::MouseButtonPressed>()) { 
+        if (const auto* e = event.getIf<sf::Event::MouseButtonPressed>()) {
             if (e->button == sf::Mouse::Button::Left) {
-                float zoom = render->camera.getZoom();
-
-                // создание атома
-                if (!Interface::cursorHovered && Interface::getSelectedAtom() != -1) {
-                    const Vec2D world = Tools::screenToWorld(mouse_pos, zoom);
-                    const Vec2D local(world.x - sim_box.start.x, world.y - sim_box.start.y);
-
-                    const double atomRadius = Atom::getProps(Interface::getSelectedAtom()).radius;
-                    const Vec3D spawnPos = Vec3D(local - atomRadius / 2.0);
-
-                    bool hasNearAtom = false;
-                    for (Atom& atom : atoms) {
-                        if ((atom.coords - spawnPos).abs() <= atom.getProps().radius + atomRadius) {
-                            hasNearAtom = true;
-                            break;
-                        }
-                    }
-
-                    if (!hasNearAtom) {
-                        atoms.emplace_back(spawnPos,
-                                        Vec3D(((double)std::rand() / RAND_MAX-0.5)*5, ((double)std::rand() / RAND_MAX-0.5)*5, 0), Interface::getSelectedAtom());
-    
-                        Atom& atom = atoms.back();
-    
-                        std::cout << "<Create atom> X: " << world.x <<  " Y: " << world.y << 
-                            " | Type: " << Interface::getSelectedAtom() << 
-                            " | Adress: " << &atom << 
-                            " | Speed: " << atom.speed.x << " " << atom.speed.y << std::endl;
-                    }
+                if (Interface::cursorHovered) {
+                    continue;
                 }
-                else {
-                    Vec2D world = Tools::screenToWorld(mouse_pos, zoom);
-                    Vec2D local(world.x - sim_box.start.x, world.y - sim_box.start.y);
-                    std::unordered_set<Atom*>* block = sim_box.grid.at(
-                        sim_box.grid.worldToCellX(local.x - 0.5),
-                        sim_box.grid.worldToCellY(local.y - 0.5)
-                    );
 
-                    if (block != nullptr && !block->empty() && !selectionFrameMoveFlag) {
-                        selectedMoveAtom = *block->begin();
-                        atomMoveFlag = true; 
-                    } else if (!Interface::cursorHovered && !selectionFrameMoveFlag) {
-                        selectionFrameMoveFlag = true;
-                        start_mouse_pos = sf::Mouse::getPosition(window);
-                        Tools::selectionFrame(start_mouse_pos, sf::Mouse::getPosition(window), atoms);
-                        render->showSelectionFrame(true);
+                atomMoveFlag = false;
+                selectionFrameMoveFlag = false;
+                Interface::drawToolTrip = false;
+                render->showSelectionFrame(false);
+
+                const auto beginFrameSelection = [&]() {
+                    selectionFrameMoveFlag = true;
+                    start_mouse_pos = sf::Mouse::getPosition(window);
+                    Tools::selectionFrame(start_mouse_pos, sf::Mouse::getPosition(window), atoms);
+                    render->showSelectionFrame(true);
+                };
+
+                switch (Tools::currentMode()) {
+                case Tools::Mode::AddAtom:
+                    Tools::tryAddAtom(mouse_pos, atoms, Interface::getSelectedAtom());
+                    break;
+                case Tools::Mode::RemoveAtom:
+                    Tools::tryRemoveAtom(mouse_pos, atoms, selectedMoveAtom);
+                    break;
+                case Tools::Mode::Frame:
+                case Tools::Mode::Lasso:
+                    if (Atom* pickedAtom = Tools::pickAtom(mouse_pos);
+                        pickedAtom != nullptr && pickedAtom->isSelect && !Tools::selected_atom_batch.empty()) {
+                        selectedMoveAtom = pickedAtom;
+                        atomMoveFlag = true;
+                    } else {
+                        beginFrameSelection();
                     }
-                } 
-            } 
+                    break;
+                case Tools::Mode::Cursor:
+                default:
+                    if (Atom* pickedAtom = Tools::pickAtom(mouse_pos)) {
+                        selectedMoveAtom = pickedAtom;
+                        atomMoveFlag = true;
+                    } else {
+                        beginFrameSelection();
+                    }
+                    break;
+                }
+            }
         }
-        
+
         if (const auto* e = event.getIf<sf::Event::MouseButtonReleased>()) {
             if (e->button == sf::Mouse::Button::Left) {
                 atomMoveFlag = false;
@@ -132,7 +127,7 @@ void Simulation::pollEvents() {
                 render->showSelectionFrame(false);
                 Interface::drawToolTrip = false;
             }
-        } 
+        }
         render->camera.handleEvent(event, window);
     }
 }
@@ -148,13 +143,17 @@ void Simulation::event() {
     }
 
     // Передвижение атома мышкой
-    if (atomMoveFlag) {
+    if (atomMoveFlag && selectedMoveAtom != nullptr) {
         float zoom = render->camera.getZoom();
         Vec2D world = Tools::screenToBox(mouse_pos, zoom);
         Vec2D delta = Vec2D(selectedMoveAtom->coords.x, selectedMoveAtom->coords.y) - world;
         Vec3D force = delta * 30;
-        for (Atom* atom : Tools::selected_atom_batch) {
-            atom->force -= force;
+        if (!Tools::selected_atom_batch.empty()) {
+            for (Atom* atom : Tools::selected_atom_batch) {
+                atom->force -= force;
+            }
+        } else {
+            selectedMoveAtom->force -= force;
         }
     }    
 }
@@ -387,3 +386,4 @@ void Simulation::clear() {
     Bond::bonds_list.clear();
     sim_step = 0;
 }
+
