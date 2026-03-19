@@ -89,7 +89,6 @@ add_executable(${CMAKE_PROJECT_NAME} ${SOURCES})
 target_compile_options(Chemical-simulator PRIVATE
     -O3
     -march=native
-    -ffast-math
 )
 
 if (WIN32)
