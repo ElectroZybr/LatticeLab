@@ -66,8 +66,8 @@ int main() {
     // simulation.drawGrid(true);
     // simulation.speedGradient();
 
-    // crystal25x25H(simulation);
-    crystal15x15x15H(simulation);
+    crystal25x25H(simulation);
+    // crystal15x15x15H(simulation);
 
     // simulation.render.speedGradientTurbo = true;
     Interface::pause = true;

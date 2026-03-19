@@ -1,7 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 
-#include "Engine/renderer/IRenderer.h"
+#include "Engine/renderer/BaseRenderer.h"
 #include "Engine/io/keyboard/KeyboardCommand.h"
 
 class Keyboard {
