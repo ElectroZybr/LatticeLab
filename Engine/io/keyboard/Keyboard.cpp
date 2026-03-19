@@ -2,6 +2,7 @@
 #include "GUI/interface/interface.h"
 
 IRenderer* Keyboard::render = nullptr;
+std::optional<KeyboardCommand> Keyboard::pendingResult = std::nullopt;
 
 void Keyboard::init(IRenderer* r) {
     render = r;
@@ -13,6 +14,10 @@ void Keyboard::onEvent(const sf::Event& event) {
             Interface::debugPanel.toggle();
         else if (e->code == sf::Keyboard::Key::Space)
             Interface::pause = !Interface::pause;
+        else if (e->code == sf::Keyboard::Key::Right && Interface::getPause())
+        {
+            pendingResult = KeyboardCommand::StepPhysics;
+        }
     }
 }
 
@@ -23,7 +28,8 @@ void Keyboard::onFrame(float deltaTime) {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) render->camera.move(0,  deltaSpeed);
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) render->camera.move(-deltaSpeed, 0);
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) render->camera.move( deltaSpeed, 0);
-    } else {
+    }
+    else {
         float rotSpeed = 1.5f * deltaTime;
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
             render->camera.elevation = std::clamp(render->camera.elevation + rotSpeed, -1.5f, 1.5f);
@@ -32,4 +38,10 @@ void Keyboard::onFrame(float deltaTime) {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) render->camera.azimuth -= rotSpeed;
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) render->camera.azimuth += rotSpeed;
     }
+}
+
+std::optional<KeyboardCommand> Keyboard::popResult() {
+    auto result = pendingResult;
+    pendingResult = std::nullopt;
+    return result;
 }

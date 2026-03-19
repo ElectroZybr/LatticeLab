@@ -12,6 +12,7 @@
 #include "Engine/physics/SpatialGrid.h"
 
 #include "Engine/io/manager/EventManager.h"
+#include "Engine/io/keyboard/Keyboard.h"
 
 #include "Engine/Simulation.h"
 
@@ -33,7 +34,7 @@ constexpr double Dt = 0.01;
 /* тестовые сцены, можно запускать в main и экспериментировать*/
 void square15x15H(Simulation& simulation);
 void crystal25x25H(Simulation& simulation);
-void crystal25x25x25H(Simulation& simulation);
+void crystal15x15x15H(Simulation& simulation);
 void diffusionTest(Simulation& simulation);
 
 int main() {
@@ -65,7 +66,8 @@ int main() {
     // simulation.drawGrid(true);
     // simulation.speedGradient();
 
-    crystal25x25H(simulation);
+    // crystal25x25H(simulation);
+    crystal15x15x15H(simulation);
 
     // simulation.render.speedGradientTurbo = true;
     Interface::pause = true;
@@ -116,12 +118,12 @@ int main() {
 
         simTmr += deltaTime;
         if (simTmr >= Dt/Interface::getSimulationSpeed()) { 
-            physicsTimer.start();
-            simulation.update(Dt);
-            physicsTimer.stop();
-            physics_time_ms_accum += physicsTimer.elapsedMilliseconds();
-            physics_steps_per_second++;
             if (!Interface::getPause()) {
+                physicsTimer.start();
+                simulation.update(Dt);
+                physicsTimer.stop();
+                physics_time_ms_accum += physicsTimer.elapsedMilliseconds();
+                physics_steps_per_second++;
                 // if (simulation.getSimStep() < 12000) {
                 //     simulation.setSizeBox(
                 //         Vec3D(simulation.sim_box.start.x+0.001, simulation.sim_box.start.y+0.001, simulation.sim_box.start.z),
@@ -150,6 +152,20 @@ int main() {
             Interface::setAverageEnergy(simulation.AverageEnegry());
             Interface::setSimStep(simulation.getSimStep());
             Interface::Update();
+
+            if (auto result = Keyboard::popResult()) {
+                switch (result.value()) {
+                    case KeyboardCommand::StepPhysics:
+                    {
+                        physicsTimer.start();
+                        simulation.update(Dt);
+                        physicsTimer.stop();
+                        physics_time_ms_accum += physicsTimer.elapsedMilliseconds();
+                        physics_steps_per_second++;
+                        break;
+                    }
+                }
+            }
 
             if (auto result = Interface::fileDialog.popResult()) {
                 switch (result->command) {
@@ -247,14 +263,14 @@ void crystal25x25H(Simulation& simulation) {
     }
 }
 
-void crystal25x25x25H(Simulation& simulation) {
+void crystal15x15x15H(Simulation& simulation) {
     simulation.render->speedGradient = true;
-    Vec3D start=Vec3D(-50, -50, -50);
+    Vec3D start=Vec3D(-30, -30, -30);
     simulation.setSizeBox(start, -start);
 
-    for (int x = 0; x < 25; x++) {
-        for (int y = 0; y < 25; y++) {
-            for (int z = 0; z < 25; z++) {
+    for (int x = 0; x < 15; x++) {
+        for (int y = 0; y < 15; y++) {
+            for (int z = 0; z < 15; z++) {
                 Vec3D pos(x, y, z);
                 Atom* atom = simulation.createAtom(Vec3D(15, 15, 15) + pos * 3, randomUnitVector3D(0.5), 1);
                 atom->a = 2.0;

@@ -30,25 +30,23 @@ void Simulation::setRenderer(IRenderer* r) {
 }
 
 void Simulation::update(float dt) {
-    if (!Interface::getPause()) {
-        for (Atom& atom : atoms)
-            atom.PredictPosition(dt);
-        for (Atom& atom : atoms)
-            atom.ComputeForces(sim_box, dt);
-        for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end(); ) {
-            if (it->shouldBreak()) {
-                it->detach();
-                it = Bond::bonds_list.erase(it);
-            } else {
-                ++it;
-            }
+    for (Atom& atom : atoms)
+        atom.PredictPosition(dt);
+    for (Atom& atom : atoms)
+        atom.ComputeForces(sim_box, dt);
+    for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end(); ) {
+        if (it->shouldBreak()) {
+            it->detach();
+            it = Bond::bonds_list.erase(it);
+        } else {
+            ++it;
         }
-        for (Bond& bond : Bond::bonds_list)
-            bond.forceBond(dt);
-        for (Atom& atom : atoms)
-            atom.CorrectVelosity(dt);
-        sim_step++;
     }
+    for (Bond& bond : Bond::bonds_list)
+        bond.forceBond(dt);
+    for (Atom& atom : atoms)
+        atom.CorrectVelosity(dt);
+    sim_step++;
 }
 
 void Simulation::renderShot(float deltaTime) {
