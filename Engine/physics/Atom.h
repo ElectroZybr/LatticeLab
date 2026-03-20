@@ -5,7 +5,6 @@
 #include "../math/Vec2D.h"
 #include "../math/Vec3D.h"
 #include "Bond.h"
-#include "SpatialGrid.h"
 #include <vector>
 
 class SimBox;
@@ -17,12 +16,12 @@ struct StaticAtomicData {
     const char maxValence;
     const double defaultCharge;
     const sf::Color color;
+    const double ljA0;
+    const double ljEps;
 };
-
 
 class Atom {
 private:
-    static SpatialGrid* grid;
     static const std::array<StaticAtomicData, 118> properties;
 public:
     Vec3D coords;
@@ -33,10 +32,6 @@ public:
     int type;
     int valence;
     float potential_energy = 0.0;
-    float r0 = 2.5;
-    float De = 0.2;
-    float a0 = 3.0;
-    float eps = 0.1;
 
     bool isFixed = false;
     bool isSelect = false;
@@ -44,18 +39,7 @@ public:
 
     Atom (Vec3D start_coords, Vec3D start_speed, int type, bool fixed = false);
 
-    void PredictPosition(double deltaTime);
-    void SoftWalls(SimBox& box, double deltaTime);
-    inline void applyWall(double& coord, double& speed, double& force, double min, double max);
-    void ComputeForces(SimBox& box, double deltaTime);
-
-    void pairNonBondedInteraction(Atom *a1, Atom *a2);
-    void CorrectVeloсity(double dt);
-    void Verlet(double dt);
-
     float kineticEnergy() const;
-
-    static void setGrid(SpatialGrid* grid);
 
     const StaticAtomicData& getProps() const {
         return properties.at(type);

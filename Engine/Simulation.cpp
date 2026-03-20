@@ -13,8 +13,10 @@ Simulation::Simulation(sf::RenderWindow& w, SimBox& box)
     : window(w), gameView(window.getDefaultView()), uiView(window.getDefaultView()), sim_box(box), step()
 {
     Interface::init(window);
-    Tools::init(&window, &gameView, render, &sim_box.grid, &sim_box);
-    Atom::setGrid(&sim_box.grid);
+    Tools::init(&window, &gameView, render, &sim_box.grid, &sim_box,
+        [this](Vec3D coords, Vec3D speed, int type, bool fixed) {
+            return createAtom(coords, speed, type, fixed);
+        });
     step.setGrid(&sim_box.grid);
 
     // резервируем место под создание атомов
@@ -24,7 +26,10 @@ Simulation::Simulation(sf::RenderWindow& w, SimBox& box)
 void Simulation::setRenderer(IRenderer* r) {
     render = r;
     sim_box.setRenderer(render);
-    Tools::init(&window, &gameView, render, &sim_box.grid, &sim_box);
+    Tools::init(&window, &gameView, render, &sim_box.grid, &sim_box,
+        [this](Vec3D coords, Vec3D speed, int type, bool fixed) {
+            return createAtom(coords, speed, type, fixed);
+        });
 }
 
 void Simulation::update(float dt) {
@@ -40,7 +45,6 @@ void Simulation::renderShot(float deltaTime) {
 
 void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
     if (sim_box.setSizeBox(newStart, newEnd, cellSize)) {
-        Atom::setGrid(&sim_box.grid);
         step.setGrid(&sim_box.grid);
 
         for (Atom& atom : atoms) {
@@ -87,7 +91,12 @@ bool Simulation::checkNeighbor(Vec3D coords, float delta) {
 
 Atom* Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, int type, bool fixed) {
     atoms.emplace_back(start_coords, start_speed, type, fixed);
-    return &atoms.back();
+    Atom* atom = &atoms.back();
+    const int cellX = sim_box.grid.worldToCellX(atom->coords.x);
+    const int cellY = sim_box.grid.worldToCellY(atom->coords.y);
+    const int cellZ = sim_box.grid.worldToCellZ(atom->coords.z);
+    sim_box.grid.insert(cellX, cellY, cellZ, atom);
+    return atom;
 }
 
 void Simulation::addBond(Atom* a1, Atom* a2) {
@@ -209,8 +218,6 @@ void Simulation::save(std::string_view path) const
              << atom.coords.x << " " << atom.coords.y << " " << atom.coords.z << " "
              << atom.speed.x  << " " << atom.speed.y  << " " << atom.speed.z  << " "
              << atom.type     << " "
-             << atom.a0       << " "
-             << atom.eps      << " "
              << atom.isFixed  << "\n";
     }
 }
@@ -262,8 +269,6 @@ void Simulation::load(std::string_view path) {
     atoms.reserve(buffer.size());
     for (const AtomData& d : buffer) {
         Atom* atom = createAtom(d.coords, d.speed, d.type, d.fixed);
-        atom->a0  = d.a0;
-        atom->eps = d.eps;
     }
 }
 
@@ -272,5 +277,3 @@ void Simulation::clear() {
     Bond::bonds_list.clear();
     sim_step = 0;
 }
-
-

@@ -1,10 +1,40 @@
 #include "ForceField.h"
 
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
 
 #include "Atom.h"
 #include "Bond.h"
 #include "../SimBox.h"
+
+ForceField::ForceField() : ljPairTable(buildLJPairTable()) {}
+
+ForceField::LJPairTable ForceField::buildLJPairTable() {
+    LJPairTable table{};
+    constexpr int typeCount = static_cast<int>(table.size());
+
+    for (int i = 0; i < typeCount; ++i) {
+        const auto& pi = Atom::getProps(i);
+        const float a0i = static_cast<float>(pi.ljA0);
+        const float epsi = static_cast<float>(pi.ljEps);
+
+        for (int j = i; j < typeCount; ++j) {
+            const auto& pj = Atom::getProps(j);
+            const float a0j = static_cast<float>(pj.ljA0);
+            const float epsj = static_cast<float>(pj.ljEps);
+
+            LJParams params{};
+            params.a0 = 0.5f * (a0i + a0j);       // усреднение для параметра a0
+            params.eps = std::sqrt(epsi * epsj);  // геометрическое среднее для параметра eps
+
+            table[i][j] = params;
+            table[j][i] = params;
+        }
+    }
+
+    return table;
+}
 
 void ForceField::compute(std::vector<Atom>& atoms, SimBox& box, double dt) const {
     for (Atom& atom : atoms) {
@@ -101,27 +131,28 @@ void ForceField::ComputeForces(Atom& atom, SimBox& box, double dt) const {
 }
 
 void ForceField::pairNonBondedInteraction(Atom& a, Atom& b) const {
-    /* расчет парных взаимодействий */
     Vec3D delta = b.coords - a.coords;
     const float d = delta.length();
-    if (d <= 1e-9f) return;         // расстояние между атомами
-    const Vec3D hat = delta / d;    // единичный вектор от a к b
+    if (d <= 1e-9f) return;
+    const Vec3D hat = delta / d;
 
-    const float inv_d2  = 1.f / (d * d);            // 1/d^2
-    const float inv_d6  = inv_d2 * inv_d2 * inv_d2; // 1/d^6
-    const float a2      = a.a0 * a.a0;              // a^2
-    const float a6      = a2 * a2 * a2;             // a^6
-    const float ratio6  = a6 * inv_d6;              // (a/d)^6
-    const float ratio12 = ratio6 * ratio6;          // (a/d)^12
+    LJParams params = ljPairTable[static_cast<std::size_t>(a.type)][static_cast<std::size_t>(b.type)];
+
+    const float inv_d2 = 1.f / (d * d);
+    const float inv_d6 = inv_d2 * inv_d2 * inv_d2;
+    const float a2 = params.a0 * params.a0;
+    const float a6 = a2 * a2 * a2;
+    const float ratio6 = a6 * inv_d6;
+    const float ratio12 = ratio6 * ratio6;
 
     /* силы леннард джонса */
-    const Vec3D force = hat * 24.0f * a.eps * (2.0f * ratio12 - ratio6) / d;
+    const Vec3D force = hat * 24.0f * params.eps * (2.0f * ratio12 - ratio6) / d;
     a.force -= force;
     b.force += force;
 
     /* потенциал леннард джонса */
     // TODO: убрать расчет на каждой итерации
-    const float potential = 4.0f * a.eps * (ratio12 - ratio6);
+    const float potential = 4.0f * params.eps * (ratio12 - ratio6);
     a.potential_energy += 0.5f * potential;
     b.potential_energy += 0.5f * potential;
 }
