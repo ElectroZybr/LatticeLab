@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <limits>
+#include <utility>
 
 #include "SimBox.h"
 #include "GUI/interface/interface.h"
@@ -191,6 +192,7 @@ sf::View* Tools::gameView = nullptr;
 IRenderer* Tools::render = nullptr;
 SpatialGrid* Tools::grid = nullptr;
 SimBox* Tools::box = nullptr;
+Tools::AtomCreator Tools::atomCreator = {};
 std::unordered_set<Atom*> Tools::selected_atom_batch{};
 bool Tools::atomMoveFlag = false;
 bool Tools::selectionFrameMoveFlag = false;
@@ -199,12 +201,13 @@ Atom* Tools::selectedMoveAtom = nullptr;
 sf::Vector2i Tools::start_mouse_pos = {};
 std::vector<Vec2D> Tools::lassoPoints{};
 
-void Tools::init(sf::RenderWindow* w, sf::View* gv, IRenderer* r, SpatialGrid* gr, SimBox* b) {
+void Tools::init(sf::RenderWindow* w, sf::View* gv, IRenderer* r, SpatialGrid* gr, SimBox* b, AtomCreator createAtomFn) {
     window = w;
     gameView = gv;
     render = r;
     grid = gr;
     box = b;
+    atomCreator = std::move(createAtomFn);
 }
 
 void Tools::onLeftPressed(sf::Vector2i mouse_pos, std::vector<Atom>& atoms) {
@@ -459,7 +462,7 @@ Atom* Tools::pickAtom(sf::Vector2i mouse_pos) {
 }
 
 bool Tools::tryAddAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, int atomType) {
-    if (!render || !box || atomType < 0) {
+    if (!render || !box || atomType < 0 || !atomCreator) {
         return false;
     }
 
@@ -482,8 +485,7 @@ bool Tools::tryAddAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, int ato
         return false;
     }
 
-    atoms.emplace_back(spawnPos, randomSpawnVelocity(), atomType);
-    return true;
+    return atomCreator(spawnPos, randomSpawnVelocity(), atomType, false) != nullptr;
 }
 
 bool Tools::tryRemoveAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, Atom*& selectedMoveAtom) {

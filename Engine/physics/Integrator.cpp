@@ -3,6 +3,7 @@
 #include <cassert>
 
 #include "Atom.h"
+#include "SpatialGrid.h"
 
 Integrator::Integrator() {
     setScheme(Scheme::Verlet);
@@ -75,7 +76,7 @@ Integrator::StepFn Integrator::selectCorrectStep(Scheme scheme) const {
 
 void Integrator::verletPredict(Atom& atom, double dt) const {
     /* Предсказание новой позиции на основе предыдущей и ускорения */
-    constexpr float dempfer = 1.f; // демпфирование для устойчивости
+    constexpr float dempfer = 0.6f; // демпфирование для устойчивости
     Vec3D a = atom.force / atom.getProps().mass;
     atom.coords += (atom.speed * dempfer + a * 0.5f * dt) * dt;
 }
