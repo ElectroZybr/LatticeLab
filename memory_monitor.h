@@ -3,7 +3,12 @@
 #if defined(_WIN32) || defined(_WIN64)
     #include <windows.h>
     #include <psapi.h>
-#elif defined(__unix__) || defined(__unix) || defined(unix) || (defined(__APPLE__) && defined(__MACH__))
+#elif defined(__APPLE__) && defined(__MACH__)
+    #include <mach/mach.h>
+    #include <unistd.h>
+    #include <sys/resource.h>
+    #include <cstdio>
+#elif defined(__unix__) || defined(__unix) || defined(unix)
     #include <unistd.h>
     #include <sys/resource.h>
     #include <cstdio>
