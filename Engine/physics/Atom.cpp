@@ -59,6 +59,7 @@ void Atom::PredictPosition(double dt) {
 
     prev_force = force;
     force = Vec3D(0, 0, 0);
+    potential_energy = 0.0;
 }
 
 void Atom::SoftWalls(SimBox& box, double dt) {
@@ -128,9 +129,7 @@ void Atom::ComputeForces(SimBox& box, double deltaTime) {
                             // if (distance < 1.3 * r0 && valence > 0 && other->valence > 0) {
                             //     Bond::CreateBond(this, other);
                             // }
-                            Vec3D force = NonBondedForce(this, other, deltaTime);
-                            this->force -= force;
-                            other->force += force;
+                            pairNonBondedInteraction(this, other);
                         }
                     }
                 }
@@ -139,18 +138,28 @@ void Atom::ComputeForces(SimBox& box, double deltaTime) {
     }
 }
 
-Vec3D Atom::NonBondedForce(Atom *a, Atom *b, double dt) {
-    /* сумма всех нековалентных сил */
+void Atom::pairNonBondedInteraction(Atom *a, Atom *b) {
+    /* расчет парных взаимодействий */
     Vec3D delta = b->coords - a->coords;
-    float len = delta.length();
-    Vec3D hat = delta / len;
-    return hat * LennardJonesForce(len);
+    float len = delta.length(); // расстояние между атомами
+    Vec3D hat = delta / len;    // единичный вектор от a к b
+
+    /* силы леннард джонса */
+    Vec3D force = hat * LennardJonesForce(len);
+    a->force -= force;
+    b->force += force;
+
+    /* потенциал леннард джонса */
+    float potential = LennardJonesPotential(len);
+    a->potential_energy += 0.5f * potential;
+    b->potential_energy += 0.5f * potential;
 }
 
 void Atom::Verlet(double dt) {
     /* Предсказание новой позиции на основе предыдущей и ускорения */
+    constexpr float dempfer = 1.f; // демпфирование для устойчивости
     Vec3D a = force / getProps().mass;
-    coords += (speed * 0.8 + a * 0.5 * dt) * dt;
+    coords += (speed * dempfer + a * 0.5 * dt) * dt;
 }
 
 void Atom::CorrectVelosity(double dt) {
@@ -164,10 +173,10 @@ float Atom::LennardJonesPotential(float d) {
     /* потенциал Леннард-Джонса */
     const float inv_d2  = 1.f / (d * d);            // 1/d^2
     const float inv_d6  = inv_d2 * inv_d2 * inv_d2; // 1/d^6
-    const float a2      = a * a;                     // a^2
-    const float a6      = a2 * a2 * a2;              // a^6
-    const float ratio6  = a6 * inv_d6;               // (a/d)^6
-    const float ratio12 = ratio6 * ratio6;           // (a/d)^12
+    const float a2      = a * a;                    // a^2
+    const float a6      = a2 * a2 * a2;             // a^6
+    const float ratio6  = a6 * inv_d6;              // (a/d)^6
+    const float ratio12 = ratio6 * ratio6;          // (a/d)^12
     return 4.f * eps * (ratio12 - ratio6);
 }
 

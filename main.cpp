@@ -64,14 +64,13 @@ int main() {
     // simulation.speedGradient();
 
     crystal25x25H(simulation);
-    // crystal15x15x15H(simulation);
 
     // simulation.render.speedGradientTurbo = true;
     Interface::pause = true;
 
     DebugView* debugSim = Interface::debugPanel.addView(DebugView("Симуляция", 
     {
-        DebugSeries("Кинетическая энергия"),
+        DebugSeries("Полная энергия"),
         DebugValue ("Количество атомов"),
         DebugValue ("Шаги симуляции"),
         DebugValue ("Физика (мс)"),
@@ -146,8 +145,8 @@ int main() {
         if (shotTmr >= 1./FPS) {
             EventManager::frame(shotTmr);
 
-            Interface::setAverageEnergy(simulation.AverageEnegry());
-            Interface::setSimStep(simulation.getSimStep());
+            // Interface::setAverageEnergy(simulation.AverageEnegry());
+            // Interface::setSimStep(simulation.getSimStep());
             Interface::Update();
 
             if (auto result = Keyboard::popResult()) {
@@ -198,7 +197,9 @@ int main() {
             render_frames_per_second++;
             shotTmr = 0;
 
-            debugSim->add_data("Кинетическая энергия", simulation.AverageEnegry());
+            // debugSim->add_data("Кинетическая энергия", simulation.averageKineticEnegry());
+            // debugSim->add_data("Потенциальная энергия", simulation.averagePotentialEnergy());
+            debugSim->add_data("Полная энергия", simulation.fullAverageEnergy());
             debugSim->add_data("Рендер (мс)", renderTimer.elapsedMilliseconds());
             debugSim->add_data("Физика (мс)", physicsTimer.elapsedMilliseconds());
             debugSim->add_data("Количество атомов", static_cast<float>(simulation.atoms.size()));

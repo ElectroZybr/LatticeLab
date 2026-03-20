@@ -21,7 +21,10 @@ public:
     Atom* createAtom(Vec3D start_coords, Vec3D start_speed, int type, bool fixed = false);
     void addBond(Atom* a1, Atom* a2);
 
-    double AverageEnegry() const;
+    double averageKineticEnegry() const;
+    double averagePotentialEnergy() const;
+    double fullAverageEnergy() const;
+
     void logEnergies() const;
     void logAtomPos() const;
     void logMousePos() const;

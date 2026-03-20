@@ -32,6 +32,7 @@ public:
 
     int type;
     int valence;
+    float potential_energy = 0.0;
     float r0 = 2.5;
     float De = 0.2;
     float a = 3.0;
@@ -50,7 +51,7 @@ public:
 
     float LennardJonesPotential(float d);
     float LennardJonesForce(float d);
-    Vec3D NonBondedForce(Atom *a1, Atom *a2, double dt);
+    void pairNonBondedInteraction(Atom *a1, Atom *a2);
     void CorrectVelosity(double dt);
     void Verlet(double dt);
 

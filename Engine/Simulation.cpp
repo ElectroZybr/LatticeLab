@@ -12,15 +12,12 @@
 Simulation::Simulation(sf::RenderWindow& w, SimBox& box)
     : window(w), gameView(window.getDefaultView()), uiView(window.getDefaultView()), sim_box(box)
 {
-    // sim_box = box;
     Interface::init(window);
     Tools::init(&window, &gameView, render, &sim_box.grid, &sim_box);
     Atom::setGrid(&sim_box.grid);
 
     // резервируем место под создание атомов
     atoms.reserve(50000);
-
-    // setSizeBox(sizeX, sizeY);
 }
 
 void Simulation::setRenderer(IRenderer* r) {
@@ -109,7 +106,8 @@ void Simulation::addBond(Atom* a1, Atom* a2) {
     Bond::CreateBond(a1, a2);
 }
 
-double Simulation::AverageEnegry() const {
+double Simulation::averageKineticEnegry() const {
+    /* расчет средней кинетической энергии */
     if (atoms.empty()) {
         return 0.0;
     }
@@ -120,6 +118,25 @@ double Simulation::AverageEnegry() const {
     }
 
     return kineticEnergy / static_cast<double>(atoms.size());
+}
+
+double Simulation::averagePotentialEnergy() const {
+    /* расчет средней потенциальной энергии */
+    if (atoms.empty()) {
+        return 0.0;
+    }
+
+    double potentialEnergy = 0.0;
+    for (const Atom& atom : atoms) {
+        potentialEnergy += atom.potential_energy;
+    }
+
+    return potentialEnergy / static_cast<double>(atoms.size());
+}
+
+double Simulation::fullAverageEnergy() const {
+    /* расчет полной средней энергии */
+    return averageKineticEnegry() + averagePotentialEnergy();
 }
 
 void Simulation::logAtomPos() const {
