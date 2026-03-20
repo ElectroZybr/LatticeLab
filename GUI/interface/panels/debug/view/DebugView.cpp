@@ -63,7 +63,7 @@ void DebugView::draw(float uiScale) {
                 ImGui::TextDisabled("%s", std::format("{:f}", maxVal).data());
 
                 std::vector<float> buf(deque.begin(), deque.end());
-                ImGui::PlotLines("##", buf.data(), buf.size(), 0, nullptr,
+                ImGui::PlotLines(label.data(), buf.data(), buf.size(), 0, nullptr,
                     minVal - range * 0.1f, maxVal + range * 0.1f,
                     ImVec2(-1, 60 * uiScale));
 

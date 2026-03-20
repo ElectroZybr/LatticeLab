@@ -478,12 +478,7 @@ Atom* Tools::pickAtom(sf::Vector2i mouse_pos) {
 
     for (int dy = -1; dy <= 1; ++dy) {
         for (int dx = -1; dx <= 1; ++dx) {
-            auto* cell = grid->at(cellX + dx, cellY + dy);
-            if (!cell) {
-                continue;
-            }
-
-            for (Atom* atom : *cell) {
+            grid->forEachAtXY(cellX + dx, cellY + dy, [&](Atom* atom) {
                 const Vec2D center(
                     atom->coords.x + atom->getProps().radius,
                     atom->coords.y + atom->getProps().radius
@@ -495,7 +490,7 @@ Atom* Tools::pickAtom(sf::Vector2i mouse_pos) {
                     bestDistSqr = distSqr;
                     best = atom;
                 }
-            }
+            });
         }
     }
 

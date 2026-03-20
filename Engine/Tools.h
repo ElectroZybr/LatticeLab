@@ -3,6 +3,7 @@
 #include <SFML/Graphics.hpp>
 #include <functional>
 #include <vector>
+#include <unordered_set>
 
 #include "physics/SpatialGrid.h"
 #include "math/Vec2D.h"

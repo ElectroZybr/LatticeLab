@@ -35,7 +35,7 @@ constexpr double Dt = 0.01;
 /* тестовые сцены, можно запускать в main и экспериментировать*/
 void square15x15H(Simulation& simulation);
 void crystal25x25H(Simulation& simulation);
-void crystal15x15x15H(Simulation& simulation);
+void crystal3dH(Simulation& simulation, int n = 15);
 void diffusionTest(Simulation& simulation);
 
 int main() {
@@ -66,6 +66,7 @@ int main() {
     // simulation.speedGradient();
 
     crystal25x25H(simulation);
+    // crystal3dH(simulation, 30);
 
     // simulation.render.speedGradientTurbo = true;
     Interface::pause = true;
@@ -75,9 +76,9 @@ int main() {
         DebugSeries("Полная энергия"),
         DebugValue ("Количество атомов"),
         DebugValue ("Шаги симуляции"),
-        DebugValue ("Физика (мс)"),
+        DebugSeries ("Физика (мс)"),
         DebugValue ("Рендер (мс)"),
-        DebugValue ("Память (МБ)"),
+        DebugSeries ("Память (МБ)"),
     }));
 
     DebugView* debugAtom = Interface::debugPanel.addView(DebugView("Атом",
@@ -264,16 +265,19 @@ void crystal25x25H(Simulation& simulation) {
     }
 }
 
-void crystal15x15x15H(Simulation& simulation) {
+void crystal3dH(Simulation& simulation, int n) {
+    constexpr int padding = 3;
+    const int sib_box_size = n * padding + padding;
     simulation.render->speedGradient = true;
-    Vec3D start=Vec3D(-30, -30, -30);
+
+    Vec3D start = Vec3D(-sib_box_size/2.f, -sib_box_size/2.f, -sib_box_size/2.f);
     simulation.setSizeBox(start, -start);
 
-    for (int x = 0; x < 15; x++) {
-        for (int y = 0; y < 15; y++) {
-            for (int z = 0; z < 15; z++) {
+    for (int x = 1; x <= n; x++) {
+        for (int y = 1; y <= n; y++) {
+            for (int z = 1; z <= n; z++) {
                 Vec3D pos(x, y, z);
-                Atom* atom = simulation.createAtom(Vec3D(15, 15, 15) + pos * 3, randomUnitVector3D(0.5), 1);
+                Atom* atom = simulation.createAtom(pos * padding, randomUnitVector3D(0.5), 1);
             }
         }
     }

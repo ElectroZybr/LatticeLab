@@ -1,13 +1,11 @@
 #pragma once
-#include <unordered_set>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 
 class Atom;
 
 class SpatialGrid {
-private:
-    std::vector<std::unordered_set<Atom*>> grid;
 public:
     int sizeX;
     int sizeY;
@@ -17,54 +15,30 @@ public:
     SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize = 3);
     void resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSize = -1);
 
-    void insert(int x, int y, int z, Atom* val) {
-        if (auto cell = at(x, y, z)) {
-            cell->insert(val);
-        }
-    }
+    void insert(int x, int y, int z, Atom* atom);
+    void erase(int x, int y, int z, Atom* atom);
 
-    void erase(int x, int y,int z, Atom* val) {
-        if (auto cell = at(x, y, z)) {
-            cell->erase(val);
-        }
-    }
-
-    std::unordered_set<Atom*>* at(int x, int y) {
-        static std::unordered_set<Atom*> result;
-        result.clear();
+    template<typename F>
+    void forEachAtXY(int x, int y, F&& callback) const {
+        if (x < 0 || x >= sizeX || y < 0 || y >= sizeY) return;
         for (int z = 0; z < sizeZ; z++) {
-            if (x >= 0 && x < sizeX && y >= 0 && y < sizeY) {
-                auto& cell = grid[z * sizeY * sizeX + y * sizeX + x];
-                result.insert(cell.begin(), cell.end());
+            for (Atom* atom : grid[index(x, y, z)]) {
+                callback(atom);
             }
         }
-        return result.empty() ? nullptr : &result;
-    }
-    const std::unordered_set<Atom*>* at(int x, int y) const {
-        return this->at(x, y);
     }
 
-    std::unordered_set<Atom*>* at(int x, int y, int z) {
-        if (x >= 0 && x < sizeX && y >= 0 && y < sizeY && z >= 0 && z < sizeZ)
-            return &grid[z * sizeY * sizeX + y * sizeX + x];
-        return nullptr;
-    }
-    const std::unordered_set<Atom*>* at(int x, int y, int z) const {
-        return this->at(x, y, z);
-    }
+    const std::vector<Atom*>* at(int x, int y, int z) const;
+    std::vector<Atom*>* at(int x, int y, int z);
 
-    int worldToCellX(double x) const {
-        if (x < 0.0) return -1;
-        return x / cellSize;
-    }
+    int worldToCellX(double x) const;
+    int worldToCellY(double y) const;
+    int worldToCellZ(double z) const;
 
-    int worldToCellY(double y) const {
-        if (y < 0.0) return -1;
-        return y / cellSize;
-    }
+private:
+    std::vector<std::vector<Atom*>> grid;
 
-    int worldToCellZ(double z) const {
-        if (z < 0.0) return -1;
-        return z / cellSize;
-    }
+    int index(int x, int y, int z) const;
+    bool inBounds(int x, int y, int z) const;
+    int toCell(double coord, int size) const;
 };
