@@ -8,15 +8,17 @@ class SpatialGrid;
 class Integrator {
 public:
     enum class Scheme {
-        Verlet,      // классический verlet
-        KDK,         // 
-        RK4,
-        Langevin,
+        Verlet,      // классический Velocity Verlet: устойчивый и быстрый базовый выбор
+        KDK,         // Kick-Drift-Kick: симплектическая схема, удобна для поэтапного обновления сил
+        RK4,         // Runge-Kutta 4-го порядка: высокая точность на шаг, но дороже по вычислениям
+        Langevin,    // стохастический интегратор с термостатом (трение + случайный шум)
     };
 
     using StepFn = void (Integrator::*)(Atom& atom, double dt) const;
 
-    void setScheme(Scheme scheme) { integrator_type = scheme; }
+    Integrator();
+
+    void setScheme(Scheme scheme);
     Scheme getScheme() const { return integrator_type; }
     void setGrid(SpatialGrid* grid_ptr) { grid = grid_ptr; }
 
@@ -26,6 +28,8 @@ public:
 private:
     Scheme integrator_type = Scheme::Verlet;
     SpatialGrid* grid = nullptr;
+    StepFn predict_step = nullptr;
+    StepFn correct_step = nullptr;
 
     StepFn selectPredictStep(Scheme scheme) const;
     StepFn selectCorrectStep(Scheme scheme) const;

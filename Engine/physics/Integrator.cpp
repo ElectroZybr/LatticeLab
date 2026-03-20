@@ -1,17 +1,27 @@
 #include "Integrator.h"
 
+#include <cassert>
+
 #include "Atom.h"
 
-void Integrator::predict(std::vector<Atom>& atoms, double dt) const {
-    const StepFn integrator_func = selectPredictStep(integrator_type);
+Integrator::Integrator() {
+    setScheme(Scheme::Verlet);
+}
 
+void Integrator::setScheme(Scheme scheme) {
+    integrator_type = scheme;
+    predict_step = selectPredictStep(scheme);
+    correct_step = selectCorrectStep(scheme);
+}
+
+void Integrator::predict(std::vector<Atom>& atoms, double dt) const {
     for (Atom& atom : atoms) {
         int prev_x = grid->worldToCellX(atom.coords.x);
         int prev_y = grid->worldToCellY(atom.coords.y);
         int prev_z = grid->worldToCellZ(atom.coords.z);
 
         if (atom.isFixed == false)
-            (this->*integrator_func)(atom, dt);
+            (this->*predict_step)(atom, dt);
 
         int curr_x = grid->worldToCellX(atom.coords.x);
         int curr_y = grid->worldToCellY(atom.coords.y);
@@ -28,9 +38,8 @@ void Integrator::predict(std::vector<Atom>& atoms, double dt) const {
 }
 
 void Integrator::correct(std::vector<Atom>& atoms, double dt) const {
-    const StepFn integrator_func = selectCorrectStep(integrator_type);
     for (Atom& atom : atoms) {
-        (this->*integrator_func)(atom, dt);
+        (this->*correct_step)(atom, dt);
     }
 }
 
@@ -78,26 +87,31 @@ void Integrator::verletCorrect(Atom& atom, double dt) const {
     atom.speed += (pr_a + a) * 0.5f * dt;
 }
 
-void Integrator::kdkPredict(Atom& atoms, double dt) const {
+void Integrator::kdkPredict(Atom& atom, double dt) const {
     // TODO: add dedicated KDK stage logic.
+    verletPredict(atom, dt);
 }
 
-void Integrator::kdkCorrect(Atom& atoms, double dt) const {
+void Integrator::kdkCorrect(Atom& atom, double dt) const {
     // TODO: add dedicated KDK stage logic.
+    verletCorrect(atom, dt);
 }
 
 void Integrator::rk4Predict(Atom& atom, double dt) const {
     // TODO: add dedicated RK4 stage logic.
 }
 
-void Integrator::rk4Correct(Atom& atoms, double dt) const {
+void Integrator::rk4Correct(Atom& atom, double dt) const {
     // TODO: add dedicated RK4 stage logic.
+    verletCorrect(atom, dt);
 }
 
-void Integrator::langevinPredict(Atom& atoms, double dt) const {
+void Integrator::langevinPredict(Atom& atom, double dt) const {
     // TODO: add dedicated Langevin stage logic.
+    verletPredict(atom, dt);
 }
 
-void Integrator::langevinCorrect(Atom& atoms, double dt) const {
+void Integrator::langevinCorrect(Atom& atom, double dt) const {
     // TODO: add dedicated Langevin stage logic.
+    verletCorrect(atom, dt);
 }

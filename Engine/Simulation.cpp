@@ -29,18 +29,7 @@ void Simulation::setRenderer(IRenderer* r) {
 
 void Simulation::update(float dt) {
     step.predict(atoms, dt);
-    for (Atom& atom : atoms)
-        atom.ComputeForces(sim_box, dt);
-    for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end(); ) {
-        if (it->shouldBreak()) {
-            it->detach();
-            it = Bond::bonds_list.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    for (Bond& bond : Bond::bonds_list)
-        bond.forceBond(dt);
+    forceField.compute(atoms, sim_box, dt);
     step.correct(atoms, dt);
     sim_step++;
 }

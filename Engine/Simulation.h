@@ -7,6 +7,7 @@
 #include "SimBox.h"
 #include "Rendering/BaseRenderer.h"
 #include "physics/Integrator.h"
+#include "physics/ForceField.h"
 
 class Simulation {
 public:
@@ -48,6 +49,7 @@ private:
     sf::View gameView;
     sf::View uiView;
     Integrator step;
+    ForceField forceField;
 
     int sim_step = 0;
 
