@@ -23,6 +23,8 @@
 #include "Rendering/2d/Renderer2D.h"
 #include "Rendering/3d/Renderer3D.h"
 
+#include "memory_monitor.h"
+
 constexpr int WIDTH = 800;
 constexpr int HEIGHT = 600;
 
@@ -75,6 +77,7 @@ int main() {
         DebugValue ("Шаги симуляции"),
         DebugValue ("Физика (мс)"),
         DebugValue ("Рендер (мс)"),
+        DebugValue ("Память (МБ)"),
     }));
 
     DebugView* debugAtom = Interface::debugPanel.addView(DebugView("Атом",
@@ -200,6 +203,7 @@ int main() {
             // debugSim->add_data("Кинетическая энергия", simulation.averageKineticEnegry());
             // debugSim->add_data("Потенциальная энергия", simulation.averagePotentialEnergy());
             debugSim->add_data("Полная энергия", simulation.fullAverageEnergy());
+            debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
             debugSim->add_data("Рендер (мс)", renderTimer.elapsedMilliseconds());
             debugSim->add_data("Физика (мс)", physicsTimer.elapsedMilliseconds());
             debugSim->add_data("Количество атомов", static_cast<float>(simulation.atoms.size()));
