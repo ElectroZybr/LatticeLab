@@ -185,6 +185,42 @@ void syncLassoContour(IRenderer* render, const SimBox* box, const std::vector<Ve
 
     render->setLassoContour(worldPoints, render->camera.getZoom());
 }
+
+Atom* pickSelectedAtomWithPadding(sf::Vector2i mouse_pos, float zoom, const SimBox* box) {
+    if (!box || Tools::selected_atom_batch.empty()) {
+        return nullptr;
+    }
+
+    const Vec2D world = Tools::screenToWorld(mouse_pos, zoom);
+    const Vec2D local(world.x - box->start.x, world.y - box->start.y);
+
+    Atom* best = nullptr;
+    double bestDistSqr = std::numeric_limits<double>::max();
+
+    const float selectedCount = static_cast<float>(Tools::selected_atom_batch.size());
+    const float extraPixels = 10.0f + std::min(20.0f, std::log2(selectedCount + 1.0f) * 6.0f);
+    const double extraWorld = static_cast<double>(extraPixels / std::max(zoom, 1.0f));
+
+    for (Atom* atom : Tools::selected_atom_batch) {
+        if (!atom) {
+            continue;
+        }
+
+        const Vec2D center(
+            atom->coords.x + atom->getProps().radius,
+            atom->coords.y + atom->getProps().radius
+        );
+        const Vec2D delta = center - local;
+        const double distSqr = delta.sqrAbs();
+        const double pickRadius = std::max(0.5, atom->getProps().radius) + extraWorld;
+        if (distSqr <= pickRadius * pickRadius && distSqr < bestDistSqr) {
+            bestDistSqr = distSqr;
+            best = atom;
+        }
+    }
+
+    return best;
+}
 }
 
 sf::RenderWindow* Tools::window = nullptr;
@@ -251,7 +287,12 @@ void Tools::onLeftPressed(sf::Vector2i mouse_pos, std::vector<Atom>& atoms) {
     }
     case Mode::Cursor:
     default:
-        if (Atom* pickedAtom = pickAtom(mouse_pos)) {
+        Atom* pickedAtom = pickAtom(mouse_pos);
+        if (!pickedAtom && selected_atom_batch.size() > 1) {
+            pickedAtom = pickSelectedAtomWithPadding(mouse_pos, render->camera.getZoom(), box);
+        }
+
+        if (pickedAtom) {
             selectedMoveAtom = pickedAtom;
             atomMoveFlag = true;
 
