@@ -10,11 +10,12 @@
 #include "Tools.h"
 
 Simulation::Simulation(sf::RenderWindow& w, SimBox& box)
-    : window(w), gameView(window.getDefaultView()), uiView(window.getDefaultView()), sim_box(box)
+    : window(w), gameView(window.getDefaultView()), uiView(window.getDefaultView()), sim_box(box), step()
 {
     Interface::init(window);
     Tools::init(&window, &gameView, render, &sim_box.grid, &sim_box);
     Atom::setGrid(&sim_box.grid);
+    step.setGrid(&sim_box.grid);
 
     // резервируем место под создание атомов
     atoms.reserve(50000);
@@ -27,8 +28,7 @@ void Simulation::setRenderer(IRenderer* r) {
 }
 
 void Simulation::update(float dt) {
-    for (Atom& atom : atoms)
-        atom.PredictPosition(dt);
+    step.predict(atoms, dt);
     for (Atom& atom : atoms)
         atom.ComputeForces(sim_box, dt);
     for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end(); ) {
@@ -41,8 +41,7 @@ void Simulation::update(float dt) {
     }
     for (Bond& bond : Bond::bonds_list)
         bond.forceBond(dt);
-    for (Atom& atom : atoms)
-        atom.CorrectVelosity(dt);
+    step.correct(atoms, dt);
     sim_step++;
 }
 
@@ -53,6 +52,7 @@ void Simulation::renderShot(float deltaTime) {
 void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
     if (sim_box.setSizeBox(newStart, newEnd, cellSize)) {
         Atom::setGrid(&sim_box.grid);
+        step.setGrid(&sim_box.grid);
 
         for (Atom& atom : atoms) {
             const int cellX = sim_box.grid.worldToCellX(atom.coords.x);

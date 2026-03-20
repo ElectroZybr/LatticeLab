@@ -50,7 +50,7 @@ public:
     void ComputeForces(SimBox& box, double deltaTime);
 
     void pairNonBondedInteraction(Atom *a1, Atom *a2);
-    void CorrectVelosity(double dt);
+    void CorrectVeloсity(double dt);
     void Verlet(double dt);
 
     float kineticEnergy() const;

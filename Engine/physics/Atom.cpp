@@ -41,27 +41,6 @@ Atom::Atom(Vec3D start_coords, Vec3D start_speed, int type, bool fixed) : coords
     grid->insert(curr_x, curr_y, curr_z, this);
 }
 
-void Atom::PredictPosition(double dt) {
-    int prev_x = grid->worldToCellX(coords.x);
-    int prev_y = grid->worldToCellY(coords.y);
-    int prev_z = grid->worldToCellZ(coords.z);
-
-    if (isFixed == false)
-        Verlet(dt); 
-    
-    int curr_x = grid->worldToCellX(coords.x);
-    int curr_y = grid->worldToCellY(coords.y);
-    int curr_z = grid->worldToCellZ(coords.z);
-    if (prev_x != curr_x || prev_y != curr_y || prev_z != curr_z) {
-        grid->erase(prev_x, prev_y, prev_z, this);
-        grid->insert(curr_x, curr_y, curr_z, this);
-    }
-
-    prev_force = force;
-    force = Vec3D(0, 0, 0);
-    potential_energy = 0.0;
-}
-
 void Atom::SoftWalls(SimBox& box, double dt) {
     const Vec3D max = box.end - box.start - Vec3D(1.0, 1.0, 1.0);
     applyWall(coords.x, speed.x, force.x, 0.0, max.x);
@@ -161,20 +140,6 @@ void Atom::pairNonBondedInteraction(Atom *a, Atom *b) {
     float potential = 4.0f * eps * (ratio12 - ratio6);
     a->potential_energy += 0.5f * potential;
     b->potential_energy += 0.5f * potential;
-}
-
-void Atom::Verlet(double dt) {
-    /* Предсказание новой позиции на основе предыдущей и ускорения */
-    constexpr float dempfer = 1.f; // демпфирование для устойчивости
-    Vec3D a = force / getProps().mass;
-    coords += (speed * dempfer + a * 0.5f * dt) * dt;
-}
-
-void Atom::CorrectVelosity(double dt) {
-    /* Обновление скорости с использованием среднего ускорения */
-    Vec3D a = force / getProps().mass;
-    Vec3D pr_a = prev_force / getProps().mass;
-    speed += (pr_a + a) * 0.5f * dt;
 }
 
 float Atom::kineticEnergy() const {

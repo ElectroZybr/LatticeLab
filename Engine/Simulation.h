@@ -6,6 +6,7 @@
 #include "physics/SpatialGrid.h"
 #include "SimBox.h"
 #include "Rendering/BaseRenderer.h"
+#include "physics/Integrator.h"
 
 class Simulation {
 public:
@@ -46,6 +47,7 @@ private:
     sf::RenderWindow& window;
     sf::View gameView;
     sf::View uiView;
+    Integrator step;
 
     int sim_step = 0;
 
