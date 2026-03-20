@@ -35,7 +35,7 @@ public:
     float potential_energy = 0.0;
     float r0 = 2.5;
     float De = 0.2;
-    float a = 3.0;
+    float a0 = 3.0;
     float eps = 0.1;
 
     bool isFixed = false;
@@ -49,8 +49,6 @@ public:
     inline void applyWall(double& coord, double& speed, double& force, double min, double max);
     void ComputeForces(SimBox& box, double deltaTime);
 
-    float LennardJonesPotential(float d);
-    float LennardJonesForce(float d);
     void pairNonBondedInteraction(Atom *a1, Atom *a2);
     void CorrectVelosity(double dt);
     void Verlet(double dt);

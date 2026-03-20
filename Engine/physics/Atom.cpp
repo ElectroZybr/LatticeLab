@@ -37,21 +37,21 @@ Atom::Atom(Vec3D start_coords, Vec3D start_speed, int type, bool fixed) : coords
     Bond::bond_default_props.init();
     int curr_x = grid->worldToCellX(coords.x);
     int curr_y = grid->worldToCellY(coords.y);
-    int curr_z = grid->worldToCellY(coords.z);
+    int curr_z = grid->worldToCellZ(coords.z);
     grid->insert(curr_x, curr_y, curr_z, this);
 }
 
 void Atom::PredictPosition(double dt) {
     int prev_x = grid->worldToCellX(coords.x);
     int prev_y = grid->worldToCellY(coords.y);
-    int prev_z = grid->worldToCellY(coords.z);
+    int prev_z = grid->worldToCellZ(coords.z);
 
     if (isFixed == false)
         Verlet(dt); 
     
     int curr_x = grid->worldToCellX(coords.x);
     int curr_y = grid->worldToCellY(coords.y);
-    int curr_z = grid->worldToCellY(coords.z);
+    int curr_z = grid->worldToCellZ(coords.z);
     if (prev_x != curr_x || prev_y != curr_y || prev_z != curr_z) {
         grid->erase(prev_x, prev_y, prev_z, this);
         grid->insert(curr_x, curr_y, curr_z, this);
@@ -105,7 +105,7 @@ void Atom::ComputeForces(SimBox& box, double deltaTime) {
     SoftWalls(box, deltaTime);
     int curr_x = grid->worldToCellX(coords.x);
     int curr_y = grid->worldToCellY(coords.y);
-    int curr_z = grid->worldToCellY(coords.z);
+    int curr_z = grid->worldToCellZ(coords.z);
     static int range = 1;
     // проверка взаимодействий с соседними атомами
     for (int i = -range; i <= range; ++i) {
@@ -141,16 +141,24 @@ void Atom::ComputeForces(SimBox& box, double deltaTime) {
 void Atom::pairNonBondedInteraction(Atom *a, Atom *b) {
     /* расчет парных взаимодействий */
     Vec3D delta = b->coords - a->coords;
-    float len = delta.length(); // расстояние между атомами
-    Vec3D hat = delta / len;    // единичный вектор от a к b
+    float d = delta.length(); // расстояние между атомами
+    Vec3D hat = delta / d;    // единичный вектор от a к b
+
+    const float inv_d2  = 1.f / (d * d);            // 1/d^2
+    const float inv_d6  = inv_d2 * inv_d2 * inv_d2; // 1/d^6
+    const float a2      = a0 * a0;                  // a^2
+    const float a6      = a2 * a2 * a2;             // a^6
+    const float ratio6  = a6 * inv_d6;              // (a/d)^6
+    const float ratio12 = ratio6 * ratio6;          // (a/d)^12
 
     /* силы леннард джонса */
-    Vec3D force = hat * LennardJonesForce(len);
+    Vec3D force = hat * 24.0f * eps * (2.0f * ratio12 - ratio6) / d;
     a->force -= force;
     b->force += force;
 
     /* потенциал леннард джонса */
-    float potential = LennardJonesPotential(len);
+    // TODO: убрать расчет на каждой итерации
+    float potential = 4.0f * eps * (ratio12 - ratio6);
     a->potential_energy += 0.5f * potential;
     b->potential_energy += 0.5f * potential;
 }
@@ -159,36 +167,14 @@ void Atom::Verlet(double dt) {
     /* Предсказание новой позиции на основе предыдущей и ускорения */
     constexpr float dempfer = 1.f; // демпфирование для устойчивости
     Vec3D a = force / getProps().mass;
-    coords += (speed * dempfer + a * 0.5 * dt) * dt;
+    coords += (speed * dempfer + a * 0.5f * dt) * dt;
 }
 
 void Atom::CorrectVelosity(double dt) {
     /* Обновление скорости с использованием среднего ускорения */
     Vec3D a = force / getProps().mass;
     Vec3D pr_a = prev_force / getProps().mass;
-    speed += (pr_a + a) * 0.5 * dt;
-}
-
-float Atom::LennardJonesPotential(float d) {
-    /* потенциал Леннард-Джонса */
-    const float inv_d2  = 1.f / (d * d);            // 1/d^2
-    const float inv_d6  = inv_d2 * inv_d2 * inv_d2; // 1/d^6
-    const float a2      = a * a;                    // a^2
-    const float a6      = a2 * a2 * a2;             // a^6
-    const float ratio6  = a6 * inv_d6;              // (a/d)^6
-    const float ratio12 = ratio6 * ratio6;          // (a/d)^12
-    return 4.f * eps * (ratio12 - ratio6);
-}
-
-float Atom::LennardJonesForce(float d) {
-    /* производная потенциала Леннард-Джонса по расстоянию */
-    const float inv_d2  = 1.f / (d * d);            // 1/d^2
-    const float inv_d6  = inv_d2 * inv_d2 * inv_d2; // 1/d^6
-    const float a2      = a * a;                    // a^2
-    const float a6      = a2 * a2 * a2;             // a^6
-    const float ratio6  = a6 * inv_d6;              // (a/d)^6
-    const float ratio12 = ratio6 * ratio6;          // (a/d)^12
-    return 24.f * eps * (2.f * ratio12 - ratio6) / d;
+    speed += (pr_a + a) * 0.5f * dt;
 }
 
 float Atom::kineticEnergy() const {
