@@ -256,7 +256,7 @@ void crystal25x25H(Simulation& simulation) {
     for (int i = 0; i < 15; i++) {
         for (int j = 0; j < 15; j++) {
             Atom* atom = simulation.createAtom(Vec3D(15+i*2.5, 15+j*2.5, 2), randomUnitVector3D(0.5), 1);
-            atom->a = 2.0;
+            atom->a0 = 2.0;
             atom->eps = 15;
         }
     }
@@ -272,7 +272,7 @@ void crystal15x15x15H(Simulation& simulation) {
             for (int z = 0; z < 15; z++) {
                 Vec3D pos(x, y, z);
                 Atom* atom = simulation.createAtom(Vec3D(15, 15, 15) + pos * 3, randomUnitVector3D(0.5), 1);
-                atom->a = 2.0;
+                atom->a0 = 2.0;
                 atom->eps = 15;
             }
         }

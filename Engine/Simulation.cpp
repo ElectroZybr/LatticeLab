@@ -220,7 +220,7 @@ void Simulation::save(std::string_view path) const
              << atom.coords.x << " " << atom.coords.y << " " << atom.coords.z << " "
              << atom.speed.x  << " " << atom.speed.y  << " " << atom.speed.z  << " "
              << atom.type     << " "
-             << atom.a        << " "
+             << atom.a0       << " "
              << atom.eps      << " "
              << atom.isFixed  << "\n";
     }
@@ -236,7 +236,7 @@ void Simulation::load(std::string_view path) {
     struct AtomData {
         Vec3D coords, speed;
         int type;
-        float a, eps;
+        float a0, eps;
         bool fixed;
     };
     std::vector<AtomData> buffer;
@@ -263,7 +263,7 @@ void Simulation::load(std::string_view path) {
             AtomData d;
             file >> d.coords.x >> d.coords.y >> d.coords.z
                  >> d.speed.x  >> d.speed.y  >> d.speed.z
-                 >> d.type >> d.a >> d.eps >> d.fixed;
+                 >> d.type >> d.a0 >> d.eps >> d.fixed;
             buffer.emplace_back(d);
         }
     }
@@ -273,7 +273,7 @@ void Simulation::load(std::string_view path) {
     atoms.reserve(buffer.size());
     for (const AtomData& d : buffer) {
         Atom* atom = createAtom(d.coords, d.speed, d.type, d.fixed);
-        atom->a   = d.a;
+        atom->a0  = d.a0;
         atom->eps = d.eps;
     }
 }
