@@ -34,7 +34,9 @@ public:
     void setOrbitMode(bool enabled) { orbitMode = enabled; }
     
     sf::Vector2f getPosition() const;
-    
+
+    void orbitDrag(sf::Vector2i delta);
+
     void zoomAt(float factor, sf::Vector2f mousePos, sf::RenderWindow& window);
     
     float getZoom() const;

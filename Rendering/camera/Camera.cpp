@@ -35,12 +35,19 @@ void Camera::zoomAt(float factor, sf::Vector2f mousePos, sf::RenderWindow& windo
     zoom = std::clamp(zoom, 1.f, 500.f);
 
     speed = moveSpeed / zoom;
-    
+
     // Плавное следование за указателем мыши при зуме
     if (zoom > 1.f && zoom < 500.f) {
         sf::Vector2i deltaPos = sf::Mouse::getPosition(window) - sf::Vector2i(window.getSize()) / 2;
         position += sf::Vector2f(deltaPos) * 0.1f / zoom * factor;
     }
+}
+
+void Camera::orbitDrag(sf::Vector2i delta) {
+    constexpr float sensitivity = 0.005f;
+    azimuth   -= delta.x * sensitivity;
+    elevation += delta.y * sensitivity;
+    elevation = std::clamp(elevation, -1.5f, 1.5f);
 }
 
 float Camera::getZoom() const {
@@ -53,10 +60,11 @@ void Camera::setZoom(float new_zoom) {
 }
 
 glm::vec3 Camera::getEyePosition() const {
+    const float r = moveSpeed / zoom;
     return glm::vec3(
-        zoom * std::cos(elevation) * std::sin(azimuth),
-        zoom * std::sin(elevation),
-        zoom * std::cos(elevation) * std::cos(azimuth)
+        r * std::cos(elevation) * std::sin(azimuth),
+        r * std::sin(elevation),
+        r * std::cos(elevation) * std::cos(azimuth)
     );
 }
 

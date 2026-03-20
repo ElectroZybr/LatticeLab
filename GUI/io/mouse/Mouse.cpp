@@ -42,10 +42,17 @@ void Mouse::onEvent(const sf::Event& event) {
 
     if (event.getIf<sf::Event::MouseMoved>() && render->camera.isDragging) {
         const sf::Vector2i currentPixelPos = sf::Mouse::getPosition(*window);
-        const sf::Vector2i deltaPixel = render->camera.dragStartPixelPos - currentPixelPos;
-        const sf::Vector2f deltaWorld = window->mapPixelToCoords(deltaPixel, *render->camera.view)
-            - window->mapPixelToCoords(sf::Vector2i(0, 0), *render->camera.view);
-        render->camera.position = render->camera.dragStartCameraPos + deltaWorld;
+        const sf::Vector2i deltaPixel = currentPixelPos - render->camera.dragStartPixelPos;
+
+        if (render->camera.orbitMode) {
+            render->camera.orbitDrag(deltaPixel);
+            render->camera.dragStartPixelPos = currentPixelPos;
+        }
+        else {
+            const sf::Vector2f deltaWorld = window->mapPixelToCoords(render->camera.dragStartPixelPos, *render->camera.view)
+                - window->mapPixelToCoords(currentPixelPos, *render->camera.view);
+            render->camera.position = render->camera.dragStartCameraPos + deltaWorld;
+        }
     }
 
     if (const auto* e = event.getIf<sf::Event::MouseWheelScrolled>()) {

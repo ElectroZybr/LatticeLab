@@ -39,7 +39,6 @@ private:
     GLuint boxVbo = 0;
     GLuint boxShader = 0;
 
-
     // инстансинг буфер
     struct AtomInstance {
         glm::vec3 pos;
