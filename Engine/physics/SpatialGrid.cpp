@@ -1,4 +1,6 @@
 #include "SpatialGrid.h"
+
+#include <algorithm>
 #include <stdexcept>
 
 SpatialGrid::SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize)

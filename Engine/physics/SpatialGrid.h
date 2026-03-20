@@ -1,7 +1,8 @@
 #pragma once
 #include <vector>
 #include <cmath>
-#include <algorithm>
+
+#include <Engine/math/Vec3D.h>
 
 class Atom;
 
@@ -18,6 +19,13 @@ public:
     void insert(int x, int y, int z, Atom* atom);
     void erase(int x, int y, int z, Atom* atom);
 
+    const std::vector<Atom*>* at(int x, int y, int z) const;
+    std::vector<Atom*>* at(int x, int y, int z);
+
+    int worldToCellX(double x) const;
+    int worldToCellY(double y) const;
+    int worldToCellZ(double z) const;
+
     template<typename F>
     void forEachAtXY(int x, int y, F&& callback) const {
         if (x < 0 || x >= sizeX || y < 0 || y >= sizeY) return;
@@ -28,13 +36,23 @@ public:
         }
     }
 
-    const std::vector<Atom*>* at(int x, int y, int z) const;
-    std::vector<Atom*>* at(int x, int y, int z);
-
-    int worldToCellX(double x) const;
-    int worldToCellY(double y) const;
-    int worldToCellZ(double z) const;
-
+    template<typename F>
+    void forEachNeighbor(const Vec3D& coords, F&& callback) const {
+        const int cx = worldToCellX(coords.x);
+        const int cy = worldToCellY(coords.y);
+        const int cz = worldToCellZ(coords.z);
+        for (int i = -1; i <= 1; ++i) {
+            for (int j = -1; j <= 1; ++j) {
+                for (int k = -1; k <= 1; ++k) {
+                    if (const auto* cell = at(cx + i, cy + j, cz + k)) {
+                        for (Atom* atom : *cell) {
+                            callback(atom);
+                        }
+                    }
+                }
+            }
+        }
+    }
 private:
     std::vector<std::vector<Atom*>> grid;
 

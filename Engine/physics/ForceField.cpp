@@ -94,40 +94,25 @@ void ForceField::applyWall(double& coord, double& speed, double& force, double m
 void ForceField::ComputeForces(Atom& atom, SimBox& box, double dt) const {
     softWalls(atom, box, dt);
 
-    SpatialGrid& grid = box.grid;
-    const int curr_x = grid.worldToCellX(atom.coords.x);
-    const int curr_y = grid.worldToCellY(atom.coords.y);
-    const int curr_z = grid.worldToCellZ(atom.coords.z);
-    constexpr int range = 1;
-    // проверка взаимодействий с соседними атомами
-    for (int i = -range; i <= range; ++i) {
-        for (int j = -range; j <= range; ++j) {
-            for (int k = -range; k <= range; ++k) {
-                if (auto* cell = grid.at(curr_x - i, curr_y - j, curr_z - k)) {
-                    for (Atom* other : *cell) {
-                        // хитрожопая проверка
-                        if (other <= &atom) continue;
+    box.grid.forEachNeighbor(atom.coords, [&](Atom* other) {
+        if (other <= &atom) return;
 
-                        // Vec3D delta = coords - other->coords;
-                        // float distance = sqrt(delta.dot(delta));
-                        
-                        const bool bonded = std::find(atom.bonds.begin(), atom.bonds.end(), other) != atom.bonds.end();
+        // Vec3D delta = coords - other->coords;
+        // float distance = sqrt(delta.dot(delta));
+        
+        const bool bonded = std::find(atom.bonds.begin(), atom.bonds.end(), other) != atom.bonds.end();
 
-                        if (atom.getProps().maxValence - atom.valence >= 2) {
-                            Bond::angleForce(&atom, atom.bonds[0], atom.bonds[1]);
-                        }
-
-                        if (!bonded) {
-                            // if (distance < 1.3 * r0 && valence > 0 && other->valence > 0) {
-                            //     Bond::CreateBond(this, other);
-                            // }
-                            this->pairNonBondedInteraction(atom, *other);
-                        }
-                    }
-                }
-            }
+        if (atom.getProps().maxValence - atom.valence >= 2) {
+            Bond::angleForce(&atom, atom.bonds[0], atom.bonds[1]);
         }
-    }
+
+        if (!bonded) {
+            // if (distance < 1.3 * r0 && valence > 0 && other->valence > 0) {
+            //     Bond::CreateBond(this, other);
+            // }
+            this->pairNonBondedInteraction(atom, *other);
+        }
+    });
 }
 
 void ForceField::pairNonBondedInteraction(Atom& a, Atom& b) const {
