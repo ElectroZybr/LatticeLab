@@ -76,9 +76,9 @@ int main() {
         DebugSeries("Полная энергия"),
         DebugValue ("Количество атомов"),
         DebugValue ("Шаги симуляции"),
-        DebugSeries ("Физика (мс)"),
+        DebugValue ("Физика (мс)"),
         DebugValue ("Рендер (мс)"),
-        DebugSeries ("Память (МБ)"),
+        DebugValue ("Память (МБ)"),
     }));
 
     DebugView* debugAtom = Interface::debugPanel.addView(DebugView("Атом",

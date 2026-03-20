@@ -41,13 +41,16 @@ public:
         const int cx = worldToCellX(coords.x);
         const int cy = worldToCellY(coords.y);
         const int cz = worldToCellZ(coords.z);
-        for (int i = -1; i <= 1; ++i) {
-            for (int j = -1; j <= 1; ++j) {
-                for (int k = -1; k <= 1; ++k) {
-                    if (const auto* cell = at(cx + i, cy + j, cz + k)) {
-                        for (Atom* atom : *cell) {
-                            callback(atom);
-                        }
+
+        const int x0 = std::max(cx - 1, 0),  x1 = std::min(cx + 1, sizeX - 1);
+        const int y0 = std::max(cy - 1, 0),  y1 = std::min(cy + 1, sizeY - 1);
+        const int z0 = std::max(cz - 1, 0),  z1 = std::min(cz + 1, sizeZ - 1);
+
+        for (int ix = x0; ix <= x1; ++ix) {
+            for (int iy = y0; iy <= y1; ++iy) {
+                for (int iz = z0; iz <= z1; ++iz) {
+                    for (Atom* atom : grid[index(ix, iy, iz)]) {
+                        callback(atom);
                     }
                 }
             }

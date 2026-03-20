@@ -23,7 +23,6 @@ void WindowEvents::onEvent(const sf::Event& event) {
             if (!ImGui::SFML::UpdateFontTexture()) {
                 // Keep current font pointers if texture update failed.
             }
-
         }
     }
 }

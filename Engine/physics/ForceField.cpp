@@ -117,13 +117,12 @@ void ForceField::ComputeForces(Atom& atom, SimBox& box, double dt) const {
 
 void ForceField::pairNonBondedInteraction(Atom& a, Atom& b) const {
     Vec3D delta = b.coords - a.coords;
-    const float d = delta.length();
-    if (d <= 1e-9f) return;
-    const Vec3D hat = delta / d;
+    const float d2 = delta.sqrAbs();
+    if (d2 <= 1e-18f) return;
 
     LJParams params = ljPairTable[static_cast<std::size_t>(a.type)][static_cast<std::size_t>(b.type)];
 
-    const float inv_d2 = 1.f / (d * d);
+    const float inv_d2 = 1.f / d2;
     const float inv_d6 = inv_d2 * inv_d2 * inv_d2;
     const float a2 = params.a0 * params.a0;
     const float a6 = a2 * a2 * a2;
@@ -131,7 +130,7 @@ void ForceField::pairNonBondedInteraction(Atom& a, Atom& b) const {
     const float ratio12 = ratio6 * ratio6;
 
     /* силы леннард джонса */
-    const Vec3D force = hat * 24.0f * params.eps * (2.0f * ratio12 - ratio6) / d;
+    const Vec3D force = delta * 24.0f * params.eps * (2.0f * ratio12 - ratio6) * inv_d2;
     a.force -= force;
     b.force += force;
 
