@@ -14,6 +14,7 @@ public:
     static void onEvent(const sf::Event& event);
     static void onFrame();
 
+    static void logMousePos();
 private:
     static sf::RenderWindow* window;
     static IRenderer*        render;

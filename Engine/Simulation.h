@@ -29,7 +29,6 @@ public:
 
     void logEnergies() const;
     void logAtomPos() const;
-    void logMousePos() const;
     void logBondList() const;
 
     int getSimStep() const { return sim_step; }

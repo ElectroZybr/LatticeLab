@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "GUI/io/mouse/Mouse.h"
 
 #include "Engine/Tools.h"
@@ -64,4 +66,21 @@ void Mouse::onEvent(const sf::Event& event) {
 
 void Mouse::onFrame() {
     Tools::onFrame(*atoms);
+}
+
+void Mouse::logMousePos() {
+    sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
+    Vec2D world_pos = Tools::screenToWorld(mouse_pos, render->camera.getZoom());
+    Vec2D local_pos(world_pos.x - box->start.x, world_pos.y - box->start.y);
+    std::cout << "<Mouse pos>"
+              << " Screen: "
+              << "X " << mouse_pos.x
+              << " Y " << mouse_pos.y
+              << " | World: "
+              << "X " << world_pos.x
+              << " Y " << world_pos.y
+              << " | Local: "
+              << "X " << local_pos.x
+              << " Y " << local_pos.y
+            << std::endl;
 }
