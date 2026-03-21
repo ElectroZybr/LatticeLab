@@ -36,6 +36,7 @@ constexpr double Dt = 0.01;
 /* тестовые сцены, можно запускать в main и экспериментировать*/
 void square15x15H(Simulation& simulation);
 void crystal25x25H(Simulation& simulation);
+void crystal2dH(Simulation& simulation, int n = 15);
 void crystal3dH(Simulation& simulation, int n = 15);
 void diffusionTest(Simulation& simulation);
 
@@ -56,7 +57,7 @@ int main() {
 
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(window, box);
-    simulation.setIntegrator(Integrator::Scheme::RK4);
+    simulation.setIntegrator(Integrator::Scheme::Verlet);
 
     IRenderer* renderer = new Renderer2D(window, simulation.getGameView(), simulation.getUiView());
     simulation.setRenderer(renderer);
@@ -70,6 +71,7 @@ int main() {
     // simulation.speedGradient();
 
     crystal25x25H(simulation);
+    // crystal2dH(simulation, 150);
     // crystal3dH(simulation, 30);
 
     // simulation.render.speedGradientTurbo = true;
@@ -77,13 +79,14 @@ int main() {
 
     DebugView* debugSim = Interface::debugPanel.addView(DebugView("Симуляция", 
     {
-        DebugSeries("Полная энергия"),
-        DebugValue ("Тип интегратора"),
-        DebugValue ("Количество атомов"),
-        DebugValue ("Шаги симуляции"),
-        DebugValue ("Физика (мс)"),
-        DebugValue ("Рендер (мс)"),
         DebugValue ("Память (МБ)"),
+        DebugValue ("Рендер (мс)"),
+        DebugValue ("Физика (мс)"),
+        DebugValue ("Тип интегратора"),
+        DebugValue ("Шаги симуляции"),
+        DebugValue ("Шагов/с"),
+        DebugValue ("Количество атомов"),
+        DebugSeries("Полная энергия"),
     }));
 
     DebugView* debugAtom = Interface::debugPanel.addView(DebugView("Атом",
@@ -121,6 +124,7 @@ int main() {
     double render_time_ms_accum = 0.0;
     int physics_steps_per_second = 0;
     int render_frames_per_second = 0;
+    float physics_steps_rate = 0.0f;
     
     while (window.isOpen()) {
         float deltaTime = clock.restart().asSeconds();
@@ -214,6 +218,7 @@ int main() {
             debugSim->add_data("Физика (мс)", physicsTimer.elapsedMilliseconds());
             debugSim->add_data("Количество атомов", static_cast<float>(simulation.atoms.size()));
             debugSim->add_data("Шаги симуляции", simulation.getSimStep());
+            debugSim->add_data("Шагов/с", physics_steps_rate);
             debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
         }
 
@@ -229,6 +234,7 @@ int main() {
                       << " | render avg ms: " << avg_render_ms
                       << " | render total ms: " << render_time_ms_accum
                       << std::endl;
+            physics_steps_rate = static_cast<float>(physics_steps_per_second * LPS);
             while_cycle_per_second=0;
             physics_time_ms_accum = 0.0;
             render_time_ms_accum = 0.0;
@@ -285,6 +291,22 @@ void crystal3dH(Simulation& simulation, int n) {
                 Vec3D pos(x, y, z);
                 Atom* atom = simulation.createAtom(pos * padding, randomUnitVector3D(0.5), 1);
             }
+        }
+    }
+}
+
+void crystal2dH(Simulation& simulation, int n) {
+    constexpr int padding = 3;
+    const int sib_box_size = n * padding + padding;
+    simulation.render->speedGradient = true;
+
+    Vec2D start = Vec2D(-sib_box_size/2.f, -sib_box_size/2.f);
+    simulation.setSizeBox(Vec3D(start.x, start.y, simulation.sim_box.start.z), Vec3D(-start.x, -start.y, simulation.sim_box.end.z));
+
+    for (int x = 1; x <= n; x++) {
+        for (int y = 1; y <= n; y++) {
+            Vec2D pos(x, y);
+            Atom* atom = simulation.createAtom(Vec3D(pos.x, pos.y, 1) * padding, randomUnitVector3D(0.5), 0);
         }
     }
 }

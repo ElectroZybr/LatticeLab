@@ -2,6 +2,7 @@
 #include <string>
 #include <string_view>
 #include <deque>
+#include <vector>
 #include <unordered_map>
 #include <variant>
 #include <initializer_list>
@@ -17,7 +18,8 @@ class DebugView {
     };
 
     std::string title;
-    std::unordered_map<std::string, DebugData> data;
+    std::vector<DebugData> data;
+    std::unordered_map<std::string, std::size_t> indicesByLabel;
 public:
     DebugView(std::string_view title, std::initializer_list<DebugEntry> entries);
     const char* getTitle() const { return title.data(); }
