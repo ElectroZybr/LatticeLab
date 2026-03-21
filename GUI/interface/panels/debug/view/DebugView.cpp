@@ -8,20 +8,25 @@
 #include "imgui.h"
 
 DebugView::DebugView(std::string_view title, std::initializer_list<DebugEntry> entries) : title(title) {
+    data.reserve(entries.size());
+    indicesByLabel.reserve(entries.size());
+
     for (const auto& e : entries) {
-        if (e.type == DebugDisplayType::Series) {
-            data.emplace(e.label, DebugData{e, std::deque<float>{}});
-        } else {
-            data.emplace(e.label, DebugData{e, 0.f});
-        }
+        const std::size_t index = data.size();
+        if (e.type == DebugDisplayType::Series)
+            data.push_back(DebugData{e, std::deque<float>{}});
+        else
+            data.push_back(DebugData{e, 0.f});
+
+        indicesByLabel.emplace(e.label, index);
     }
 }
 
 void DebugView::add_data(std::string_view label, float value) {
-    auto it = data.find(label.data());
-    if (it == data.end()) return;
+    auto it = indicesByLabel.find(std::string(label));
+    if (it == indicesByLabel.end()) return;
 
-    auto& d = it->second;
+    auto& d = data[it->second];
     if (d.entry.type == DebugDisplayType::Series) {
         auto& deque = std::get<std::deque<float>>(d.history);
         if (deque.size() >= HISTORY_SIZE) deque.pop_front();
@@ -32,16 +37,18 @@ void DebugView::add_data(std::string_view label, float value) {
 }
 
 void DebugView::add_data(std::string_view label, std::string_view value) {
-    auto it = data.find(label.data());
-    if (it == data.end()) return;
+    auto it = indicesByLabel.find(std::string(label));
+    if (it == indicesByLabel.end()) return;
 
-    auto& d = it->second;
+    auto& d = data[it->second];
     if (d.entry.type == DebugDisplayType::Series) return;
     d.history = std::string(value);
 }
 
 void DebugView::draw(float uiScale) {
-    for (auto& [label, d] : data) {
+    for (auto& d : data) {
+        const std::string& label = d.entry.label;
+
         if (d.entry.type == DebugDisplayType::Value) {
             ImGui::TextDisabled("%s", label.data());
             ImGui::SameLine();
