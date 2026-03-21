@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "Simulation.h"
+#include "physics/Bond.h"
 
 Simulation::Simulation(SimBox& box)
     :  sim_box(box), integrator()
@@ -27,7 +28,7 @@ void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
     }
 }
 
-void Simulation::createRandomAtoms(int type, int quantity) {
+void Simulation::createRandomAtoms(Atom::Type type, int quantity) {
     const double z_mid = (sim_box.end.z - sim_box.start.z) * 0.5;
     for (int i = 0; i < quantity; ++i) {
         for (int j = 0; j < 10; ++j) {
@@ -60,7 +61,7 @@ bool Simulation::checkNeighbor(Vec3D coords, float delta) {
     return false;
 }
 
-Atom* Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, int type, bool fixed) {
+Atom* Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type type, bool fixed) {
     atoms.emplace_back(start_coords, start_speed, type, fixed);
     Atom* atom = &atoms.back();
     const int cellX = sim_box.grid.worldToCellX(atom->coords.x);
@@ -143,7 +144,7 @@ void Simulation::save(std::string_view path) const
         file << "atom "
              << atom.coords.x << " " << atom.coords.y << " " << atom.coords.z << " "
              << atom.speed.x  << " " << atom.speed.y  << " " << atom.speed.z  << " "
-             << atom.type     << " "
+             << static_cast<int>(atom.type)     << " "
              << atom.isFixed  << "\n";
     }
 }
@@ -188,7 +189,7 @@ void Simulation::load(std::string_view path) {
 
     atoms.reserve(buffer.size());
     for (const AtomData& d : buffer) {
-        Atom* atom = createAtom(d.coords, d.speed, d.type, d.fixed);
+        Atom* atom = createAtom(d.coords, d.speed, static_cast<Atom::Type>(d.type), d.fixed);
     }
 }
 

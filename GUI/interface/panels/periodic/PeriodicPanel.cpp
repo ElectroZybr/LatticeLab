@@ -1,5 +1,4 @@
 #include "PeriodicPanel.h"
-#include <string>
 
 static const char* KEYS[] = {
     "H",  "##1",  "##2",  "##3",  "##4",  "##5",  "##6",  "He",

@@ -4,7 +4,6 @@
 #include <array>
 #include "../math/Vec2D.h"
 #include "../math/Vec3D.h"
-#include "Bond.h"
 #include <vector>
 
 class SimBox;
@@ -24,12 +23,54 @@ class Atom {
 private:
     static const std::array<StaticAtomicData, 118> properties;
 public:
+    enum class Type {
+        _,
+        H,
+        He,
+        Li,
+        Be,
+        B,
+        C,
+        N,
+        O,
+        F,
+        Ne,
+        Na,
+        Mg,
+        Al,
+        Si,
+        P,
+        S,
+        Cl,
+        Ar,
+        K,
+        Ca,
+        Sc,
+        Ti,
+        V,
+        Cr,
+        Mn,
+        Fe,
+        Co,
+        Ni,
+        Cu,
+        Zn,
+        Ga,
+        Ge,
+        As,
+        Se,
+        Br,
+        Kr,
+        COUNT
+    };
+
+
     Vec3D coords;
     Vec3D speed;
     Vec3D force;
     Vec3D prev_force;
 
-    int type;
+    Type type;
     int valence;
     float potential_energy = 0.0;
 
@@ -37,15 +78,15 @@ public:
     bool isSelect = false;
     std::vector<Atom*> bonds;
 
-    Atom (Vec3D start_coords, Vec3D start_speed, int type, bool fixed = false);
+    Atom (Vec3D start_coords, Vec3D start_speed, Type type, bool fixed = false);
 
     float kineticEnergy() const;
 
     const StaticAtomicData& getProps() const {
-        return properties.at(type);
+        return properties.at(static_cast<int>(type));
     }
 
-    static const StaticAtomicData& getProps(int type) {
-        return properties.at(type);
+    static const StaticAtomicData& getProps(Atom::Type type) {
+        return properties.at(static_cast<int>(type));
     }
 };

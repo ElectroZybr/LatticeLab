@@ -267,7 +267,7 @@ void Tools::onLeftPressed(sf::Vector2i mouse_pos, std::vector<Atom>& atoms) {
 
     switch (currentMode()) {
     case Mode::AddAtom:
-        tryAddAtom(mouse_pos, atoms, Interface::getSelectedAtom());
+        tryAddAtom(mouse_pos, atoms, static_cast<Atom::Type>(Interface::getSelectedAtom()));
         break;
     case Mode::RemoveAtom:
         tryRemoveAtom(mouse_pos, atoms, selectedMoveAtom);
@@ -496,8 +496,8 @@ Atom* Tools::pickAtom(sf::Vector2i mouse_pos) {
     return best;
 }
 
-bool Tools::tryAddAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, int atomType) {
-    if (!render || !box || atomType < 0 || !atomCreator) {
+bool Tools::tryAddAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, Atom::Type atomType) {
+    if (!render || !box || !atomCreator) {
         return false;
     }
 

@@ -15,7 +15,7 @@ class Atom;
 
 class Tools {
 public:
-    using AtomCreator = std::function<Atom*(Vec3D, Vec3D, int, bool)>;
+    using AtomCreator = std::function<Atom*(Vec3D, Vec3D, Atom::Type, bool)>;
 
     enum class Mode {
         Cursor = 0,
@@ -38,7 +38,7 @@ public:
     static Mode currentMode();
     static bool isSelectionMode(Mode mode);
     static Atom* pickAtom(sf::Vector2i mouse_pos);
-    static bool tryAddAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, int atomType);
+    static bool tryAddAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, Atom::Type atomType);
     static bool tryRemoveAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, Atom*& selectedMoveAtom);
 
     static std::unordered_set<Atom*> selected_atom_batch;

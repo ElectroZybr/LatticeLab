@@ -1,9 +1,8 @@
-#include "Atom.h"
-
-#include <algorithm>
 #include <cmath>
 
-#include "../SimBox.h"
+
+#include "Atom.h"
+#include "Bond.h"
 
 const std::array<StaticAtomicData, 118> Atom::properties = {{
     {1.0000, 0.5, 1, 0.0, sf::Color(255, 255, 255, 255),  2.00, 15.0}, // Abstract atom for testing
@@ -45,7 +44,7 @@ const std::array<StaticAtomicData, 118> Atom::properties = {{
     {83.798, 0.5, 0, 0.0, sf::Color( 92, 184, 209, 255),  2.90, 0.08}, // Kr
 }};
 
-Atom::Atom(Vec3D start_coords, Vec3D start_speed, int type, bool fixed)
+Atom::Atom(Vec3D start_coords, Vec3D start_speed, Type type, bool fixed)
     : coords(start_coords),
       speed(start_speed),
       type(type),

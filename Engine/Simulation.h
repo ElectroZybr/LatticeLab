@@ -16,8 +16,8 @@ public:
 
     void setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize = -1);
 
-    void createRandomAtoms(int type, int quantity);
-    Atom* createAtom(Vec3D start_coords, Vec3D start_speed, int type, bool fixed = false);
+    void createRandomAtoms(Atom::Type type, int quantity);
+    Atom* createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type type, bool fixed = false);
     void addBond(Atom* a1, Atom* a2);
 
     double averageKineticEnegry() const;

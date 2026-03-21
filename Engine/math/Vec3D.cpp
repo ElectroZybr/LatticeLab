@@ -21,6 +21,7 @@ Vec3D::operator sf::Vector3f() const {
     return sf::Vector3f(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z));
 }
 
+
 Vec3D Vec3D::operator-() const {
     return Vec3D(-x, -y, -z);
 }
@@ -37,7 +38,6 @@ bool Vec3D::operator!=(const Vec3D &vec) const {
 Vec3D Vec3D::operator+(const Vec3D &vec) const {
     return Vec3D(x + vec.x, y + vec.y, z + vec.z);
 }
-
 Vec3D Vec3D::operator-(const Vec3D &vec) const {
     return Vec3D(x - vec.x, y - vec.y, z - vec.z);
 }
@@ -52,6 +52,10 @@ void Vec3D::operator-=(const Vec3D &vec) {
     x = x - vec.x;
     y = y - vec.y;
     z = z - vec.z;
+}
+
+Vec3D Vec3D::operator+(double num) const {
+    return Vec3D(x + num, y + num, z + num);
 }
 
 Vec3D Vec3D::operator-(double num) const {
