@@ -1,28 +1,6 @@
 #pragma once
 
-enum class AtomType {
-    _,
-    H,
-    He,
-    Li,
-    Be,
-    B,
-    C,
-    N,
-    O,
-    F,
-    Ne,
-    Na,
-    Mg,
-    Al,
-    Si,
-    P,
-    S,
-    Cl,
-    Ar,
-    // ...
-    COUNT
-};
+#include "Atom.h"
 
 struct BondParams {
     float r0=0;
@@ -32,34 +10,34 @@ struct BondParams {
 
 struct BondTable {
     // Матрица параметров "тип1 -> тип2"
-    BondParams table[(int)AtomType::COUNT][(int)AtomType::COUNT];
+    BondParams table[(int)Atom::Type::COUNT][(int)Atom::Type::COUNT];
 
     void init();
     // инициализация параметров для пары
-    void set(AtomType a, AtomType b, const BondParams& p) {
+    void set(Atom::Type a, Atom::Type b, const BondParams& p) {
         table[(int)a][(int)b] = p;
         table[(int)b][(int)a] = p; // симметрия
     }
 
     // получить параметры
-    const BondParams& get(AtomType a, AtomType b) const {
+    const BondParams& get(Atom::Type a, Atom::Type b) const {
         return table[(int)a][(int)b];
     }
 };
 
 struct AngleTable {
     // Матрица параметров "тип1 -> тип2"
-    BondParams table[(int)AtomType::COUNT][(int)AtomType::COUNT];
+    BondParams table[(int)Atom::Type::COUNT][(int)Atom::Type::COUNT];
 
     void init();
     // инициализация параметров для пары
-    void set(AtomType a, AtomType b, const BondParams& p) {
+    void set(Atom::Type a, Atom::Type b, const BondParams& p) {
         table[(int)a][(int)b] = p;
         table[(int)b][(int)a] = p; // симметрия
     }
 
     // получить параметры
-    const BondParams& get(AtomType a, AtomType b) const {
+    const BondParams& get(Atom::Type a, Atom::Type b) const {
         return table[(int)a][(int)b];
     }
 };

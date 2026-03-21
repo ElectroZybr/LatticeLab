@@ -1,14 +1,11 @@
-﻿#include <SFML/Graphics.hpp>
-#include <SFML/Window/WindowHandle.hpp>
-#include <cmath>
-
+﻿#include <cmath>
 #include <iostream>
 #include <string_view>
 
-#include "imgui-SFML.h"
+#include <SFML/Graphics.hpp>
+#include <SFML/Window/WindowHandle.hpp>
 
-#include "Engine/physics/Atom.h"
-#include "Engine/physics/SpatialGrid.h"
+#include "imgui-SFML.h"
 
 #include "GUI/io/manager/EventManager.h"
 #include "GUI/io/keyboard/Keyboard.h"
@@ -17,7 +14,6 @@
 
 #include "GUI/interface/interface.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
-#include "Engine/physics/Bond.h"
 #include "Engine/utils/Timer.h"
 
 #include "Rendering/2d/Renderer2D.h"
@@ -32,13 +28,72 @@ constexpr int LPS = 1;
 constexpr double Dt = 0.01;
 
 /* тестовые сцены, можно запускать в main и экспериментировать*/
-void square15x15H(Simulation& simulation);
-void crystal25x25H(Simulation& simulation);
-void crystal2dH(Simulation& simulation, int n = 15);
-void crystal3dH(Simulation& simulation, int n = 15);
-void diffusionTest(Simulation& simulation);
+void crystal(Simulation& simulation, int n, Atom::Type type, bool is3d, double padding = 3, double margin = 15) {
+    const int sib_box_size = n * padding + padding + 2.0*margin;
+    const double half = sib_box_size / 2.0;
 
-std::string_view schemeName(Integrator::Scheme s);
+    simulation.setSizeBox(
+        Vec3D(-half, -half, is3d ? -half : simulation.sim_box.start.z),
+        Vec3D( half,  half, is3d ?  half : simulation.sim_box.end.z)
+    );
+
+    const int zMax = is3d ? n : 1;
+    const Vec3D vecMargin(margin, margin, is3d? margin : 0);
+    for (int x = 1; x <= n; x++)
+        for (int y = 1; y <= n; y++)
+            for (int z = 1; z <= zMax; z++)
+                simulation.createAtom( Vec3D(x, y, z) * padding + vecMargin, Vec3D::Random() * 0.5, type);
+}
+
+void diffusionTest(Simulation& simulation) {
+    simulation.setSizeBox(
+        Vec3D(-25, -25, simulation.sim_box.start.z),
+        Vec3D(25, 25, simulation.sim_box.end.z),
+        5
+    );
+    for (int i = 0; i < 15; i++) {
+        for (int j = 0; j < 8; j++) {
+            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), Vec3D::Random() * 0.5, Atom::Type::H);
+        }
+    }
+    for (int i = 0; i < 15; i++) {
+        for (int j = 8; j < 15; j++) {
+            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), Vec3D::Random() * 0.5, Atom::Type::O);
+        }
+    }
+}
+
+std::string_view schemeName(Integrator::Scheme s) {
+    switch (s) {
+        case Integrator::Scheme::Verlet:   return "Velocity Verlet";
+        case Integrator::Scheme::KDK:      return "KDK (Kick-Drift-Kick)";
+        case Integrator::Scheme::RK4:      return "Runge-Kutta 4";
+        case Integrator::Scheme::Langevin: return "Langevin";
+    }
+    return "Unknown";
+}
+
+struct PerSecondCounter {
+    Timer timer;
+    double time_ms_accum = 0.0;
+    int steps_per_second = 0;
+    float rate = 0.0f;
+
+    void tick(double elapsed_ms) {
+        time_ms_accum += elapsed_ms;
+        steps_per_second++;
+    }
+
+    double avgMs() const {
+        return steps_per_second > 0 ? time_ms_accum / steps_per_second : 0.0;
+    }
+
+    void reset() {
+        time_ms_accum = 0.0;
+        rate = steps_per_second * LPS;
+        steps_per_second = 0;
+    }
+};
 
 int main() {
     sf::ContextSettings settings;
@@ -59,13 +114,11 @@ int main() {
 
     Interface::init(window);
     Tools::init(&window, &gameView, &box.grid, &box,
-    [&](Vec3D coords, Vec3D speed, int type, bool fixed) {
+    [&](Vec3D coords, Vec3D speed, Atom::Type type, bool fixed) {
         return simulation.createAtom(coords, speed, type, fixed);
     });
 
-    crystal25x25H(simulation);
-    // crystal2dH(simulation, 150);
-    // crystal3dH(simulation, 30);
+    crystal(simulation, 20, Atom::Type::_, false);
 
     IRenderer* renderer = new Renderer2D(window, gameView, uiView);
     renderer->camera.setPosition(0, 0);
@@ -105,16 +158,10 @@ int main() {
     double shotTmr = 0.0;
     double simTmr = 0.0;
     double logTmr = 0.0;
-
     int while_cycle_per_second = 0;
-    double physics_time_ms_accum = 0.0;
-    double render_time_ms_accum = 0.0;
-    int physics_steps_per_second = 0;
-    int render_frames_per_second = 0;
-    float physics_steps_rate = 0.0f;
 
-    Timer physicsTimer;
-    Timer renderTimer;
+    PerSecondCounter physicsCounter;
+    PerSecondCounter renderCounter;
 
     while (window.isOpen()) {
         float deltaTime = clock.restart().asSeconds();
@@ -122,11 +169,10 @@ int main() {
         simTmr += deltaTime;
         if (simTmr >= Dt/Interface::getSimulationSpeed()) { 
             if (!Interface::getPause()) {
-                physicsTimer.start();
+                physicsCounter.timer.start();
                 simulation.update(Dt);
-                physicsTimer.stop();
-                physics_time_ms_accum += physicsTimer.elapsedMilliseconds();
-                physics_steps_per_second++;
+                physicsCounter.timer.stop();
+                physicsCounter.tick(physicsCounter.timer.elapsedMilliseconds());
             }
             simTmr = 0;
         }
@@ -142,11 +188,10 @@ int main() {
                 switch (result.value()) {
                     case KeyboardCommand::StepPhysics:
                     {
-                        physicsTimer.start();
+                        physicsCounter.timer.start();
                         simulation.update(Dt);
-                        physicsTimer.stop();
-                        physics_time_ms_accum += physicsTimer.elapsedMilliseconds();
-                        physics_steps_per_second++;
+                        physicsCounter.timer.stop();
+                        physicsCounter.tick(physicsCounter.timer.elapsedMilliseconds());
                         break;
                     }
                 }
@@ -178,45 +223,35 @@ int main() {
                 delete oldRenderer;
             }
 
-            renderTimer.start();
+            renderCounter.timer.start();
             renderer->drawShot(simulation.atoms, simulation.sim_box, shotTmr);
-            renderTimer.stop();
-            render_time_ms_accum += renderTimer.elapsedMilliseconds();
-            render_frames_per_second++;
+            renderCounter.timer.stop();
+            renderCounter.tick(renderCounter.timer.elapsedMilliseconds());
             shotTmr = 0;
 
             debugSim->add_data("Полная энергия", simulation.fullAverageEnergy());
             debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
-            debugSim->add_data("Рендер (мс)", renderTimer.elapsedMilliseconds());
-            debugSim->add_data("Физика (мс)", physicsTimer.elapsedMilliseconds());
+            debugSim->add_data("Рендер (мс)", renderCounter.timer.elapsedMilliseconds());
+            debugSim->add_data("Физика (мс)", physicsCounter.timer.elapsedMilliseconds());
             debugSim->add_data("Количество атомов", static_cast<float>(simulation.atoms.size()));
             debugSim->add_data("Шаги симуляции", simulation.getSimStep());
-            debugSim->add_data("Шагов/с", physics_steps_rate);
+            debugSim->add_data("Шагов/с", physicsCounter.rate);
             debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
         }
 
         logTmr += deltaTime;
-        if (logTmr >= 1./LPS) {
-            const double avg_physics_ms = (physics_steps_per_second > 0) ? (physics_time_ms_accum / physics_steps_per_second) : 0.0;
-            const double avg_render_ms  = (render_frames_per_second > 0) ? (render_time_ms_accum / render_frames_per_second) : 0.0;
-            std::cout << "[perf] loop/s: " << while_cycle_per_second
-                      << " | phys/s: " << physics_steps_per_second
-                      << " | phys avg ms: " << avg_physics_ms
-                      << " | phys total ms: " << physics_time_ms_accum
-                      << " | render/s: " << render_frames_per_second
-                      << " | render avg ms: " << avg_render_ms
-                      << " | render total ms: " << render_time_ms_accum
-                      << std::endl;
-            physics_steps_rate = static_cast<float>(physics_steps_per_second * LPS);
-            while_cycle_per_second=0;
-            physics_time_ms_accum = 0.0;
-            render_time_ms_accum = 0.0;
-            physics_steps_per_second = 0;
-            render_frames_per_second = 0;
-            // simulation.logEnergies();
-            // simulation.logAtomPos();
-            // simulation.logMousePos();
-            // simulation.logBondList();
+        if (logTmr >= 1. / LPS) {
+            std::cout << "[perf] loop/s: "         << while_cycle_per_second
+                      << " | phys/s: "             << physicsCounter.steps_per_second
+                      << " | phys avg ms: "        << physicsCounter.avgMs()
+                      << " | phys total ms: "      << physicsCounter.time_ms_accum
+                      << " | render/s: "           << renderCounter.steps_per_second
+                      << " | render avg ms: "      << renderCounter.avgMs()
+                      << " | render total ms: "    << renderCounter.time_ms_accum
+                      << "\n";
+            while_cycle_per_second = 0;
+            physicsCounter.reset();
+            renderCounter.reset();
             logTmr = 0;
         }
         while_cycle_per_second++;
@@ -225,86 +260,4 @@ int main() {
     delete renderer;
 
     return 0;
-}
-
-void square15x15H(Simulation& simulation) {
-    simulation.setSizeBox(
-        Vec3D(-25, -25, simulation.sim_box.start.z),
-        Vec3D(25, 25, simulation.sim_box.end.z),
-        5
-    );
-    for (int i = 0; i < 15; i++) {
-        for (int j = 0; j < 15; j++) {
-            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), Vec3D::Random() * 0.5, 1);
-        }
-    }
-}
-
-void crystal25x25H(Simulation& simulation) {
-    simulation.setSizeBox(Vec3D(-50, -50, simulation.sim_box.start.z), Vec3D(50, 50, simulation.sim_box.end.z));
-    for (int i = 0; i < 15; i++) {
-        for (int j = 0; j < 15; j++) {
-            Atom* atom = simulation.createAtom(Vec3D(15+i*2.5, 15+j*2.5, 2), Vec3D::Random() * 0.5, 0);
-        }
-    }
-}
-
-void crystal3dH(Simulation& simulation, int n) {
-    constexpr int padding = 3;
-    const int sib_box_size = n * padding + padding;
-
-    Vec3D start = Vec3D(-sib_box_size/2.f, -sib_box_size/2.f, -sib_box_size/2.f);
-    simulation.setSizeBox(start, -start);
-
-    for (int x = 1; x <= n; x++) {
-        for (int y = 1; y <= n; y++) {
-            for (int z = 1; z <= n; z++) {
-                Vec3D pos(x, y, z);
-                Atom* atom = simulation.createAtom(pos * padding, Vec3D::Random() * 0.5, 1);
-            }
-        }
-    }
-}
-
-void crystal2dH(Simulation& simulation, int n) {
-    constexpr int padding = 3;
-    const int sib_box_size = n * padding + padding;
-
-    Vec2D start = Vec2D(-sib_box_size/2.f, -sib_box_size/2.f);
-    simulation.setSizeBox(Vec3D(start.x, start.y, simulation.sim_box.start.z), Vec3D(-start.x, -start.y, simulation.sim_box.end.z));
-
-    for (int x = 1; x <= n; x++) {
-        for (int y = 1; y <= n; y++) {
-            Vec2D pos(x, y);
-            Atom* atom = simulation.createAtom(Vec3D(pos.x, pos.y, 1) * padding, Vec3D::Random() * 0.5, 0);
-        }
-    }
-}
-
-void diffusionTest(Simulation& simulation) {
-    simulation.setSizeBox(
-        Vec3D(-25, -25, simulation.sim_box.start.z),
-        Vec3D(25, 25, simulation.sim_box.end.z),
-        5
-    );
-    for (int i = 0; i < 15; i++) {
-        for (int j = 0; j < 8; j++) {
-            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), Vec3D::Random() * 0.5, 1);
-        }
-    }
-    for (int i = 0; i < 15; i++) {
-        for (int j = 8; j < 15; j++) {
-            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), Vec3D::Random() * 0.5, 8);
-        }
-    }
-}
-
-std::string_view schemeName(Integrator::Scheme s) {
-    switch (s) {
-        case Integrator::Scheme::Verlet:   return "Velocity Verlet";
-        case Integrator::Scheme::KDK:      return "KDK (Kick-Drift-Kick)";
-        case Integrator::Scheme::RK4:      return "Runge-Kutta 4";
-        case Integrator::Scheme::Langevin: return "Langevin";
-    }
-    return "Unknown";
 }

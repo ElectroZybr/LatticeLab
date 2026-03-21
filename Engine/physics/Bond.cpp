@@ -9,7 +9,7 @@ std::list<Bond> Bond::bonds_list;
 
 
 Bond::Bond (Atom* _a, Atom* _b) : a(_a), b(_b) {//, float _r0, float _k, float _D_e, float _alpha
-    BondParams bond_params = bond_default_props.get(AtomType(_a->type), AtomType(_b->type));
+    BondParams bond_params = bond_default_props.get(_a->type, _b->type);
     // std::cout << "<Bond params> a:" << _a->type << " b: "<< _b->type << " r0: "<< bond_params.r0 << " a: "<< bond_params.a << " De: "<< bond_params.De << std::endl;
     params.r0 = bond_params.r0;
     params.a = bond_params.a;

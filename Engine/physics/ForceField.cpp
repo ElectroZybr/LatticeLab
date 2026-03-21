@@ -15,12 +15,12 @@ ForceField::LJPairTable ForceField::buildLJPairTable() {
     constexpr int typeCount = static_cast<int>(table.size());
 
     for (int i = 0; i < typeCount; ++i) {
-        const auto& pi = Atom::getProps(i);
+        const auto& pi = Atom::getProps(static_cast<Atom::Type>(i));
         const float a0i = static_cast<float>(pi.ljA0);
         const float epsi = static_cast<float>(pi.ljEps);
 
         for (int j = i; j < typeCount; ++j) {
-            const auto& pj = Atom::getProps(j);
+            const auto& pj = Atom::getProps(static_cast<Atom::Type>(j));
             const float a0j = static_cast<float>(pj.ljA0);
             const float epsj = static_cast<float>(pj.ljEps);
 
