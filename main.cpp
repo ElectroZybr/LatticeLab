@@ -3,7 +3,6 @@
 #include <cmath>
 
 #include <iostream>
-#include <chrono>
 #include <string_view>
 
 #include "imgui-SFML.h"
@@ -28,9 +27,6 @@
 
 #include "memory_monitor.h"
 
-constexpr int WIDTH = 800;
-constexpr int HEIGHT = 600;
-
 constexpr int FPS = 60;
 constexpr int LPS = 1;
 constexpr double Dt = 0.01;
@@ -54,26 +50,33 @@ int main() {
         window.setIcon(icon.getSize(), icon.getPixelsPtr());
     }
 
-    Timer physicsTimer;
-    Timer renderTimer;
-
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
-    Simulation simulation(window, box);
+    Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
+
+    sf::View gameView = window.getDefaultView();
+    sf::View uiView = window.getDefaultView();
+
+    Interface::init(window);
+    Tools::init(&window, &gameView, &box.grid, &box,
+    [&](Vec3D coords, Vec3D speed, int type, bool fixed) {
+        return simulation.createAtom(coords, speed, type, fixed);
+    });
 
     crystal25x25H(simulation);
     // crystal2dH(simulation, 150);
     // crystal3dH(simulation, 30);
 
-    IRenderer* renderer = new Renderer2D(window, simulation.getGameView(), simulation.getUiView());
+    IRenderer* renderer = new Renderer2D(window, gameView, uiView);
     renderer->camera.setPosition(0, 0);
-    renderer->camera.setZoom(20);
+    renderer->camera.setZoom(15);
     renderer->drawBonds = true;
     renderer->speedGradient = true;
     renderer->wallImage(box.start, box.end);
     // renderer->drawGrid = true;
     // renderer->speedGradientTurbo = true;
-    EventManager::init(&window, &simulation.getUiView(), renderer, &simulation.sim_box, &simulation.atoms);
+
+    EventManager::init(&window, &uiView, renderer, &simulation.sim_box, &simulation.atoms);
     Tools::setRenderer(renderer);
 
     Interface::pause = true;
@@ -98,35 +101,21 @@ int main() {
     debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
     debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
 
-
-    // debugSim->add_data("Количество атомов", simulation.atoms.size());
-    // debugSim->add_data("Шаги симуляции", simulation.getSimStep());
-
-    // Atom* hydrogen_1 = simulation.createAtom(Vec3D(25.5, 25.86, 1), Vec3D(2, 0, 0), 1);
-    // Atom* oxygen_1 = simulation.createAtom(Vec3D(25, 25, 1), Vec3D(0, 0, 0), 8);
-    // Atom* hydrogen_2 = simulation.createAtom(Vec3D(26, 25, 1), Vec3D(0, 0, 0), 1);
-
-    // simulation.addBond(hydrogen_1, oxygen_1);
-    // simulation.addBond(hydrogen_2, oxygen_1);
-
-    // simulation.createRandomAtoms(1, 50);
-    // simulation.createRandomAtoms(8, 100);
-    
     sf::Clock clock;
     double shotTmr = 0.0;
     double simTmr = 0.0;
     double logTmr = 0.0;
 
-    auto duration = std::chrono::microseconds::zero();
-    int i = 0;
-    int sim_step = 0;
     int while_cycle_per_second = 0;
     double physics_time_ms_accum = 0.0;
     double render_time_ms_accum = 0.0;
     int physics_steps_per_second = 0;
     int render_frames_per_second = 0;
     float physics_steps_rate = 0.0f;
-    
+
+    Timer physicsTimer;
+    Timer renderTimer;
+
     while (window.isOpen()) {
         float deltaTime = clock.restart().asSeconds();
 
@@ -138,22 +127,6 @@ int main() {
                 physicsTimer.stop();
                 physics_time_ms_accum += physicsTimer.elapsedMilliseconds();
                 physics_steps_per_second++;
-                // if (simulation.getSimStep() < 12000) {
-                //     simulation.setSizeBox(
-                //         Vec3D(simulation.sim_box.start.x+0.001, simulation.sim_box.start.y+0.001, simulation.sim_box.start.z),
-                //         Vec3D(simulation.sim_box.end.x-0.001, simulation.sim_box.end.y-0.001, simulation.sim_box.end.z));
-                // }
-                
-                // if (simulation.getSimStep() > 8000 && simulation.getSimStep() < 8050) {
-                //     simulation.setSizeBox(
-                //         Vec3D(simulation.sim_box.start.x, simulation.sim_box.start.y, simulation.sim_box.start.z),
-                //         Vec3D(simulation.sim_box.end.x-0.075, simulation.sim_box.end.y, simulation.sim_box.end.z));
-                // }
-
-                // if (simulation.getSimStep() > 4000 && simulation.getSimStep() < 100000)
-                //     simulation.setSizeBox(
-                //         Vec3D(simulation.sim_box.start.x-0.001, simulation.sim_box.start.y-0.001, simulation.sim_box.start.z),
-                //         Vec3D(simulation.sim_box.end.x+0.001, simulation.sim_box.end.y+0.001, simulation.sim_box.end.z));
             }
             simTmr = 0;
         }
@@ -190,17 +163,16 @@ int main() {
                 IRenderer* oldRenderer = renderer;
                 switch (result.value()) {
                     case ToolsCommand::ToggleRenderer2D:
-                        renderer = new Renderer2D(window,
-                            simulation.getGameView(),
-                            simulation.getUiView());
+                        renderer = new Renderer2D(window, gameView, uiView);
                         break;
                     case ToolsCommand::ToggleRenderer3D:
-                        renderer = new Renderer3D(window,
-                            simulation.getGameView(),
-                            simulation.getUiView()
-                        );
+                        renderer = new Renderer3D(window, gameView, uiView);
                         break;
                 }
+                renderer->drawBonds = oldRenderer->drawBonds;
+                renderer->speedGradient = oldRenderer->speedGradient;
+                renderer->speedGradientTurbo = oldRenderer->speedGradientTurbo;
+                renderer->wallImage(box.start, box.end);
                 Tools::setRenderer(renderer);
                 EventManager::updateRenderer(renderer);
                 delete oldRenderer;

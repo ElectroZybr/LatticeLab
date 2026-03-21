@@ -1,31 +1,19 @@
 #include <fstream>
 #include <cmath>
 #include <iostream>
-#include <numbers>
-
-#include "imgui-SFML.h"
 
 #include "Simulation.h"
-#include "GUI/interface/interface.h"
-#include "Tools.h"
 
-Simulation::Simulation(sf::RenderWindow& w, SimBox& box)
-    : window(w), gameView(window.getDefaultView()), uiView(window.getDefaultView()), sim_box(box), integrator()
+Simulation::Simulation(SimBox& box)
+    :  sim_box(box), integrator()
 {
-    Interface::init(window);
-    Tools::init(&window, &gameView, &sim_box.grid, &sim_box,
-    [this](Vec3D coords, Vec3D speed, int type, bool fixed) {
-        return createAtom(coords, speed, type, fixed);
-    });
-
-
     // резервируем место под создание атомов
     atoms.reserve(50000);
 }
 
 void Simulation::update(float dt) {
     integrator.step(atoms, sim_box, forceField, dt);
-    sim_step++;
+    ++sim_step;
 }
 
 void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {

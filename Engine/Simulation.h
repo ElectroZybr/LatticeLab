@@ -10,7 +10,7 @@
 
 class Simulation {
 public:
-    Simulation(sf::RenderWindow& window, SimBox& sim_box);
+    Simulation(SimBox& sim_box);
 
     void update(float dt);
 
@@ -32,8 +32,6 @@ public:
 
     void setIntegrator(Integrator::Scheme scheme) { integrator.setScheme(scheme); }
     Integrator::Scheme getIntegrator() const { return integrator.getScheme(); }
-    sf::View& getGameView() { return gameView; }
-    sf::View& getUiView()   { return uiView;   }
 
     void save(const std::string_view path) const;
     void load(const std::string_view path);
@@ -42,9 +40,6 @@ public:
     SimBox& sim_box;
     std::vector<Atom> atoms;
 private:
-    sf::RenderWindow& window;
-    sf::View gameView;
-    sf::View uiView;
     Integrator integrator;
     ForceField forceField;
 
