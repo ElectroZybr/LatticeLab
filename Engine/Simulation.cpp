@@ -152,23 +152,6 @@ void Simulation::logBondList() const {
     }
 }
 
-void Simulation::logMousePos() const {
-    sf::Vector2i mouse_pos = sf::Mouse::getPosition(window);
-    Vec2D world_pos = Tools::screenToWorld(mouse_pos, render->camera.getZoom());
-    Vec2D local_pos(world_pos.x - sim_box.start.x, world_pos.y - sim_box.start.y);
-    std::cout << "<Mouse pos>"
-              << " Screen: "
-              << "X " << mouse_pos.x
-              << " Y " << mouse_pos.y
-              << " | World: "
-              << "X " << world_pos.x
-              << " Y " << world_pos.y
-              << " | Local: "
-              << "X " << local_pos.x
-              << " Y " << local_pos.y
-              << std::endl;
-}
-
 Vec2D randomUnitVector2D() {
     double angle = (double)std::rand() / RAND_MAX * 2.0 * std::numbers::pi;
     return Vec2D(std::cos(angle), std::sin(angle));  // x = cos(θ), y = sin(θ)
