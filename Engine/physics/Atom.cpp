@@ -6,7 +6,7 @@
 #include "../SimBox.h"
 
 const std::array<StaticAtomicData, 118> Atom::properties = {{
-    {1.0080, 0.5, 1, 0.0, sf::Color(255, 255, 255, 255),  2.00, 15.0}, // Abstract atom for testing
+    {1.0000, 0.5, 1, 0.0, sf::Color(255, 255, 255, 255),  2.00, 15.0}, // Abstract atom for testing
     {1.0080, 0.5, 1, 0.0, sf::Color(255, 255, 255, 255),  2.40, 0.03}, // H
     {4.0026, 0.5, 0, 0.0, sf::Color(217, 255, 255, 255),  2.60, 0.02}, // He
     {6.9400, 0.5, 1, 0.0, sf::Color(204, 128, 255, 255),  3.60, 0.09}, // Li

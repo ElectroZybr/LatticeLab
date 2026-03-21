@@ -86,8 +86,8 @@ int main() {
         DebugValue ("В разработке"),
     }));
 
-    debugSim->add_data("Количество атомов", simulation.atoms.size());
-    debugSim->add_data("Шаги симуляции", simulation.getSimStep());
+    // debugSim->add_data("Количество атомов", simulation.atoms.size());
+    // debugSim->add_data("Шаги симуляции", simulation.getSimStep());
 
     // Atom* hydrogen_1 = simulation.createAtom(Vec3D(25.5, 25.86, 1), Vec3D(2, 0, 0), 1);
     // Atom* oxygen_1 = simulation.createAtom(Vec3D(25, 25, 1), Vec3D(0, 0, 0), 8);
@@ -149,8 +149,6 @@ int main() {
         if (shotTmr >= 1./FPS) {
             EventManager::frame(shotTmr);
 
-            // Interface::setAverageEnergy(simulation.AverageEnegry());
-            // Interface::setSimStep(simulation.getSimStep());
             Interface::Update();
 
             if (auto result = Keyboard::popResult()) {
@@ -201,8 +199,6 @@ int main() {
             render_frames_per_second++;
             shotTmr = 0;
 
-            // debugSim->add_data("Кинетическая энергия", simulation.averageKineticEnegry());
-            // debugSim->add_data("Потенциальная энергия", simulation.averagePotentialEnergy());
             debugSim->add_data("Полная энергия", simulation.fullAverageEnergy());
             debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
             debugSim->add_data("Рендер (мс)", renderTimer.elapsedMilliseconds());

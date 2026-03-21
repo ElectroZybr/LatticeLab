@@ -38,7 +38,7 @@ ForceField::LJPairTable ForceField::buildLJPairTable() {
 
 void ForceField::compute(std::vector<Atom>& atoms, SimBox& box, double dt) const {
     for (Atom& atom : atoms) {
-        ComputeForces(atom, box, dt);
+        ComputeForces(atom, box);
     }
 
     for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end();) {
@@ -55,7 +55,7 @@ void ForceField::compute(std::vector<Atom>& atoms, SimBox& box, double dt) const
     }
 }
 
-void ForceField::softWalls(Atom& atom, SimBox& box, double /*dt*/) const {
+void ForceField::softWalls(Atom& atom, SimBox& box) const {
     const Vec3D max = box.end - box.start - Vec3D(1.0, 1.0, 1.0);
     applyWall(atom.coords.x, atom.speed.x, atom.force.x, 0.0, max.x);
     applyWall(atom.coords.y, atom.speed.y, atom.force.y, 0.0, max.y);
@@ -91,26 +91,27 @@ void ForceField::applyWall(double& coord, double& speed, double& force, double m
     }
 }
 
-void ForceField::ComputeForces(Atom& atom, SimBox& box, double dt) const {
-    softWalls(atom, box, dt);
+void ForceField::ComputeForces(Atom& atom, SimBox& box) const {
+    softWalls(atom, box);
 
-    box.grid.forEachNeighbor(atom.coords, [&](Atom* other) {
-        if (other <= &atom) return;
+    /* перебор соседей атома */
+    box.grid.forEachNeighbor(atom.coords, [&](Atom* neighbour) {
+        if (neighbour <= &atom) return;
 
-        // Vec3D delta = coords - other->coords;
+        // Vec3D delta = coords - neighbour->coords;
         // float distance = sqrt(delta.dot(delta));
         
-        const bool bonded = std::find(atom.bonds.begin(), atom.bonds.end(), other) != atom.bonds.end();
+        const bool bonded = std::find(atom.bonds.begin(), atom.bonds.end(), neighbour) != atom.bonds.end();
 
         if (atom.getProps().maxValence - atom.valence >= 2) {
             Bond::angleForce(&atom, atom.bonds[0], atom.bonds[1]);
         }
 
         if (!bonded) {
-            // if (distance < 1.3 * r0 && valence > 0 && other->valence > 0) {
-            //     Bond::CreateBond(this, other);
+            // if (distance < 1.3 * r0 && valence > 0 && neighbour->valence > 0) {
+            //     Bond::CreateBond(this, neighbour);
             // }
-            this->pairNonBondedInteraction(atom, *other);
+            pairNonBondedInteraction(atom, *neighbour);
         }
     });
 }

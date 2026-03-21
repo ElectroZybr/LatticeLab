@@ -1,7 +1,4 @@
 #include "Integrator.h"
-
-#include <cassert>
-
 #include "Atom.h"
 #include "SpatialGrid.h"
 
@@ -90,12 +87,10 @@ void Integrator::verletCorrect(Atom& atom, double dt) const {
 
 void Integrator::kdkPredict(Atom& atom, double dt) const {
     // TODO: add dedicated KDK stage logic.
-    verletPredict(atom, dt);
 }
 
 void Integrator::kdkCorrect(Atom& atom, double dt) const {
     // TODO: add dedicated KDK stage logic.
-    verletCorrect(atom, dt);
 }
 
 void Integrator::rk4Predict(Atom& atom, double dt) const {
@@ -104,15 +99,12 @@ void Integrator::rk4Predict(Atom& atom, double dt) const {
 
 void Integrator::rk4Correct(Atom& atom, double dt) const {
     // TODO: add dedicated RK4 stage logic.
-    verletCorrect(atom, dt);
 }
 
 void Integrator::langevinPredict(Atom& atom, double dt) const {
     // TODO: add dedicated Langevin stage logic.
-    verletPredict(atom, dt);
 }
 
 void Integrator::langevinCorrect(Atom& atom, double dt) const {
     // TODO: add dedicated Langevin stage logic.
-    verletCorrect(atom, dt);
 }

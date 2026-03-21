@@ -22,8 +22,8 @@ private:
     static LJPairTable buildLJPairTable();
 
     static void applyWall(double& coord, double& speed, double& force, double min, double max);
-    void softWalls(Atom& atom, SimBox& box, double dt) const;
-    void ComputeForces(Atom& atom, SimBox& box, double dt) const;
+    void softWalls(Atom& atom, SimBox& box) const;
+    void ComputeForces(Atom& atom, SimBox& box) const;
     void pairNonBondedInteraction(Atom& a, Atom& b) const;
 
     LJPairTable ljPairTable;

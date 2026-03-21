@@ -2,7 +2,10 @@
 #include <stdexcept>
 
 #include "Vec3D.h"
-#include "../Consts.h"
+
+namespace {
+constexpr double kEps = 1e-6;
+}
 
 Vec3D::Vec3D(const Vec3D &vec) : x(vec.x), y(vec.y), z(vec.z){}
 
@@ -23,7 +26,7 @@ Vec3D Vec3D::operator-() const {
 }
 
 bool Vec3D::operator==(const Vec3D &vec) const {
-    return (*this - vec).sqrAbs() <= Consts::EPS;
+    return (*this - vec).sqrAbs() <= kEps;
 }
 
 bool Vec3D::operator!=(const Vec3D &vec) const {
@@ -64,7 +67,7 @@ Vec3D Vec3D::operator*(const Vec3D &vec) const {
 }
 
 Vec3D Vec3D::operator/(double number) const {
-    if (std::abs(number) > Consts::EPS) {
+    if (std::abs(number) > kEps) {
         return Vec3D(x / number, y / number, z / number);;
     }
     throw std::domain_error("Vec3D::operator/(double number): division by zero");
@@ -81,7 +84,7 @@ double Vec3D::abs() const {
 
 Vec3D Vec3D::normalized() const {
     double vecAbs = abs();
-    if (vecAbs > Consts::EPS){
+    if (vecAbs > kEps){
         return Vec3D(*this) / vecAbs;
     }
     return Vec3D(0);
@@ -102,7 +105,7 @@ Vec3D Vec3D::Random() {
 }
 
 bool Vec3D::isNear(double a, double b) {
-    return std::abs(a - b) < Consts::EPS;
+    return std::abs(a - b) < kEps;
 }
 
 double Vec3D::length() const {
