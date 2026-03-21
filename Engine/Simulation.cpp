@@ -13,31 +13,19 @@ Simulation::Simulation(sf::RenderWindow& w, SimBox& box)
     : window(w), gameView(window.getDefaultView()), uiView(window.getDefaultView()), sim_box(box), integrator()
 {
     Interface::init(window);
-    Tools::init(&window, &gameView, render, &sim_box.grid, &sim_box,
-        [this](Vec3D coords, Vec3D speed, int type, bool fixed) {
-            return createAtom(coords, speed, type, fixed);
-        });
+    Tools::init(&window, &gameView, &sim_box.grid, &sim_box,
+    [this](Vec3D coords, Vec3D speed, int type, bool fixed) {
+        return createAtom(coords, speed, type, fixed);
+    });
+
 
     // резервируем место под создание атомов
     atoms.reserve(50000);
 }
 
-void Simulation::setRenderer(IRenderer* r) {
-    render = r;
-    sim_box.setRenderer(render);
-    Tools::init(&window, &gameView, render, &sim_box.grid, &sim_box,
-        [this](Vec3D coords, Vec3D speed, int type, bool fixed) {
-            return createAtom(coords, speed, type, fixed);
-        });
-}
-
 void Simulation::update(float dt) {
     integrator.step(atoms, sim_box, forceField, dt);
     sim_step++;
-}
-
-void Simulation::renderShot(float deltaTime) {
-    render->drawShot(atoms, sim_box, deltaTime);
 }
 
 void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
@@ -163,11 +151,6 @@ void Simulation::save(std::string_view path) const
 
     file << "step " << sim_step << "\n";
 
-    file << "camera "
-         << render->camera.getPosition().x << " "
-         << render->camera.getPosition().y << " "
-         << render->camera.getZoom()       << "\n";
-
     for (const Atom& atom : atoms) {
         file << "atom "
              << atom.coords.x << " " << atom.coords.y << " " << atom.coords.z << " "
@@ -203,12 +186,6 @@ void Simulation::load(std::string_view path) {
         }
         else if (tag == "step") {
             file >> sim_step;
-        }
-        else if (tag == "camera") {
-            double cx, cy, zoom;
-            file >> cx >> cy >> zoom;
-            render->camera.setPosition(cx, cy);
-            render->camera.setZoom(zoom);
         }
         else if (tag == "atom") {
             AtomData d;

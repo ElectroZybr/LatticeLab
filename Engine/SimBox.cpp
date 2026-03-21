@@ -1,7 +1,6 @@
 #include <algorithm>
 
 #include "SimBox.h"
-#include "Rendering/BaseRenderer.h"
 
 SimBox::SimBox(Vec3D s, Vec3D e)
     : start(s),
@@ -10,13 +9,6 @@ SimBox::SimBox(Vec3D s, Vec3D e)
            std::max(1, static_cast<int>(e.y - s.y)),
            std::max(1, static_cast<int>(e.z - s.z))
         ) {}
-
-void SimBox::setRenderer(IRenderer* r) {
-    render = r;
-    if (render) {
-        render->wallImage(start, end);
-    }
-}
 
 bool SimBox::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
     bool resized = false;
@@ -37,10 +29,6 @@ bool SimBox::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
 
     start = newStart;
     end = newEnd;
-
-    if (render && sizeChanged) {
-        render->wallImage(start, end);
-    }
 
     return resized;
 }

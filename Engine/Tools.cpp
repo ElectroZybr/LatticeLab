@@ -237,10 +237,9 @@ Atom* Tools::selectedMoveAtom = nullptr;
 sf::Vector2i Tools::start_mouse_pos = {};
 std::vector<Vec2D> Tools::lassoPoints{};
 
-void Tools::init(sf::RenderWindow* w, sf::View* gv, IRenderer* r, SpatialGrid* gr, SimBox* b, AtomCreator createAtomFn) {
+void Tools::init(sf::RenderWindow* w, sf::View* gv, SpatialGrid* gr, SimBox* b, AtomCreator createAtomFn) {
     window = w;
     gameView = gv;
-    render = r;
     grid = gr;
     box = b;
     atomCreator = std::move(createAtomFn);

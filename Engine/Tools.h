@@ -25,7 +25,9 @@ public:
         RemoveAtom = 4,
     };
 
-    static void init(sf::RenderWindow* window, sf::View* gameView, IRenderer* render, SpatialGrid* grid, SimBox* box, AtomCreator atomCreator = {});
+    static void init(sf::RenderWindow* window, sf::View* gameView, SpatialGrid* grid, SimBox* box, AtomCreator atomCreator = {});
+    static void setRenderer(IRenderer* r) { render = r; }
+
     static void selectionFrame(sf::Vector2i start_mouse_pos, sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
     static Vec2D screenToWorld(sf::Vector2i mouse_pos, float zoom);
     static Vec2D screenToBox(sf::Vector2i mouse_pos, float zoom);

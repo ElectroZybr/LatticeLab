@@ -24,6 +24,8 @@
 #include "Rendering/2d/Renderer2D.h"
 #include "Rendering/3d/Renderer3D.h"
 
+#include "Engine/Tools.h"
+
 #include "memory_monitor.h"
 
 constexpr int WIDTH = 800;
@@ -59,22 +61,21 @@ int main() {
     Simulation simulation(window, box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
 
-    IRenderer* renderer = new Renderer2D(window, simulation.getGameView(), simulation.getUiView());
-    simulation.setRenderer(renderer);
-
-    EventManager::init(&window, &simulation.getUiView(), renderer, &simulation.sim_box, &simulation.atoms);
-
-    renderer->camera.setPosition(0, 0);
-    renderer->camera.setZoom(20);
-    renderer->drawBonds = true;
-    // simulation.drawGrid(true);
-    // simulation.speedGradient();
-
     crystal25x25H(simulation);
     // crystal2dH(simulation, 150);
     // crystal3dH(simulation, 30);
 
-    // simulation.render.speedGradientTurbo = true;
+    IRenderer* renderer = new Renderer2D(window, simulation.getGameView(), simulation.getUiView());
+    renderer->camera.setPosition(0, 0);
+    renderer->camera.setZoom(20);
+    renderer->drawBonds = true;
+    renderer->speedGradient = true;
+    renderer->wallImage(box.start, box.end);
+    // renderer->drawGrid = true;
+    // renderer->speedGradientTurbo = true;
+    EventManager::init(&window, &simulation.getUiView(), renderer, &simulation.sim_box, &simulation.atoms);
+    Tools::setRenderer(renderer);
+
     Interface::pause = true;
 
     DebugView* debugSim = Interface::debugPanel.addView(DebugView("Симуляция", 
@@ -200,13 +201,13 @@ int main() {
                         );
                         break;
                 }
+                Tools::setRenderer(renderer);
                 EventManager::updateRenderer(renderer);
-                simulation.setRenderer(renderer);
                 delete oldRenderer;
             }
 
             renderTimer.start();
-            simulation.renderShot(shotTmr);
+            renderer->drawShot(simulation.atoms, simulation.sim_box, shotTmr);
             renderTimer.stop();
             render_time_ms_accum += renderTimer.elapsedMilliseconds();
             render_frames_per_second++;
@@ -268,7 +269,6 @@ void square15x15H(Simulation& simulation) {
 }
 
 void crystal25x25H(Simulation& simulation) {
-    simulation.render->speedGradient = true;
     simulation.setSizeBox(Vec3D(-50, -50, simulation.sim_box.start.z), Vec3D(50, 50, simulation.sim_box.end.z));
     for (int i = 0; i < 15; i++) {
         for (int j = 0; j < 15; j++) {
@@ -280,7 +280,6 @@ void crystal25x25H(Simulation& simulation) {
 void crystal3dH(Simulation& simulation, int n) {
     constexpr int padding = 3;
     const int sib_box_size = n * padding + padding;
-    simulation.render->speedGradient = true;
 
     Vec3D start = Vec3D(-sib_box_size/2.f, -sib_box_size/2.f, -sib_box_size/2.f);
     simulation.setSizeBox(start, -start);
@@ -298,7 +297,6 @@ void crystal3dH(Simulation& simulation, int n) {
 void crystal2dH(Simulation& simulation, int n) {
     constexpr int padding = 3;
     const int sib_box_size = n * padding + padding;
-    simulation.render->speedGradient = true;
 
     Vec2D start = Vec2D(-sib_box_size/2.f, -sib_box_size/2.f);
     simulation.setSizeBox(Vec3D(start.x, start.y, simulation.sim_box.start.z), Vec3D(-start.x, -start.y, simulation.sim_box.end.z));

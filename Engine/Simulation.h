@@ -5,18 +5,15 @@
 #include "physics/Atom.h"
 #include "physics/SpatialGrid.h"
 #include "SimBox.h"
-#include "Rendering/BaseRenderer.h"
 #include "physics/Integrator.h"
 #include "physics/ForceField.h"
 
 class Simulation {
 public:
     Simulation(sf::RenderWindow& window, SimBox& sim_box);
-    void setRenderer(IRenderer* r);
 
     void update(float dt);
 
-    void renderShot(float dt);
     void setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize = -1);
 
     void createRandomAtoms(int type, int quantity);
@@ -43,7 +40,6 @@ public:
     void clear();
 
     SimBox& sim_box;
-    IRenderer* render = nullptr;
     std::vector<Atom> atoms;
 private:
     sf::RenderWindow& window;
