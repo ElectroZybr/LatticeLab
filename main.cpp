@@ -262,7 +262,7 @@ void square15x15H(Simulation& simulation) {
     );
     for (int i = 0; i < 15; i++) {
         for (int j = 0; j < 15; j++) {
-            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), randomUnitVector3D(0.5), 1);
+            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), Vec3D::Random() * 0.5, 1);
         }
     }
 }
@@ -272,7 +272,7 @@ void crystal25x25H(Simulation& simulation) {
     simulation.setSizeBox(Vec3D(-50, -50, simulation.sim_box.start.z), Vec3D(50, 50, simulation.sim_box.end.z));
     for (int i = 0; i < 15; i++) {
         for (int j = 0; j < 15; j++) {
-            Atom* atom = simulation.createAtom(Vec3D(15+i*2.5, 15+j*2.5, 2), randomUnitVector3D(0.5), 0);
+            Atom* atom = simulation.createAtom(Vec3D(15+i*2.5, 15+j*2.5, 2), Vec3D::Random() * 0.5, 0);
         }
     }
 }
@@ -289,7 +289,7 @@ void crystal3dH(Simulation& simulation, int n) {
         for (int y = 1; y <= n; y++) {
             for (int z = 1; z <= n; z++) {
                 Vec3D pos(x, y, z);
-                Atom* atom = simulation.createAtom(pos * padding, randomUnitVector3D(0.5), 1);
+                Atom* atom = simulation.createAtom(pos * padding, Vec3D::Random() * 0.5, 1);
             }
         }
     }
@@ -306,7 +306,7 @@ void crystal2dH(Simulation& simulation, int n) {
     for (int x = 1; x <= n; x++) {
         for (int y = 1; y <= n; y++) {
             Vec2D pos(x, y);
-            Atom* atom = simulation.createAtom(Vec3D(pos.x, pos.y, 1) * padding, randomUnitVector3D(0.5), 0);
+            Atom* atom = simulation.createAtom(Vec3D(pos.x, pos.y, 1) * padding, Vec3D::Random() * 0.5, 0);
         }
     }
 }
@@ -319,12 +319,12 @@ void diffusionTest(Simulation& simulation) {
     );
     for (int i = 0; i < 15; i++) {
         for (int j = 0; j < 8; j++) {
-            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), randomUnitVector3D(0.5), 1);
+            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), Vec3D::Random() * 0.5, 1);
         }
     }
     for (int i = 0; i < 15; i++) {
         for (int j = 8; j < 15; j++) {
-            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), randomUnitVector3D(0.5), 8);
+            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), Vec3D::Random() * 0.5, 8);
         }
     }
 }

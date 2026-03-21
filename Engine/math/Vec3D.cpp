@@ -101,7 +101,18 @@ Vec3D Vec3D::cross(const Vec3D &vec) const {
 }
 
 Vec3D Vec3D::Random() {
-    return Vec3D((double) rand() / RAND_MAX, (double) rand() / RAND_MAX, (double) rand() / RAND_MAX);
+    const double u = static_cast<double>(std::rand()) / RAND_MAX;
+    const double v = static_cast<double>(std::rand()) / RAND_MAX;
+
+    const double phi = 2.0 * std::numbers::pi * u;
+    const double cos_theta = 2.0 * v - 1.0;
+    const double sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
+
+    return Vec3D(
+        sin_theta * std::cos(phi),
+        sin_theta * std::sin(phi),
+        cos_theta
+    );
 }
 
 bool Vec3D::isNear(double a, double b) {

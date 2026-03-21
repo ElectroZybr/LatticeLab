@@ -59,7 +59,7 @@ void Simulation::createRandomAtoms(int type, int quantity) {
             double r_y = std::rand() % int(sim_box.end.y-sim_box.start.y-4);
             Vec3D coords(r_x+2, r_y+2, z_mid);
             if (!checkNeighbor(coords, 4)) {
-                createAtom(coords, randomUnitVector3D(5), type);
+                createAtom(coords, Vec3D::Random() * 5.0, type);
                 break;
             }
         }
@@ -150,29 +150,6 @@ void Simulation::logBondList() const {
             std::cout << atom.bonds.size() << std::endl;
         }
     }
-}
-
-Vec2D randomUnitVector2D() {
-    double angle = (double)std::rand() / RAND_MAX * 2.0 * std::numbers::pi;
-    return Vec2D(std::cos(angle), std::sin(angle));  // x = cos(θ), y = sin(θ)
-}
-
-Vec3D randomUnitVector3D(double amplitude) {
-    double u = (double)std::rand() / RAND_MAX;       // in [0,1]
-    double v = (double)std::rand() / RAND_MAX;       // in [0,1]
-
-    double theta = 2.0 * std::numbers::pi * u;       // азимут (0..2π)
-    double z = 2.0 * v - 1.0;                        // равномерно по [-1,1]
-    double r = std::sqrt(1.0 - z * z);             // радиус проекции на xy
-
-    double x = r * std::cos(theta);
-    double y = r * std::sin(theta);
-
-    return Vec3D(x, y, z) * amplitude;  // масштабируем вектор до нужной амплитуды
-}
-
-double randomInRange(int range) {
-    return std::rand() % range + 1;
 }
 
 void Simulation::save(std::string_view path) const

@@ -93,3 +93,14 @@ bool Vec2D::isNear(double a, double b) {
 double Vec2D::length() const {
     return sqrt(x*x + y*y);
 }
+
+
+Vec2D Vec2D::Random() {
+    const double u = static_cast<double>(std::rand()) / RAND_MAX;
+    const double phi = 2.0 * std::numbers::pi * u;
+
+    return Vec2D(
+        std::cos(phi),
+        std::sin(phi)
+    );
+}

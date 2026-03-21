@@ -56,8 +56,3 @@ private:
 
     bool checkNeighbor(Vec3D coords, float delta);
 };
-
-Vec2D randomUnitVector2D();
-Vec3D randomUnitVector3D(double amplitude = 1.0);
-double randomInRange(int range);
-
