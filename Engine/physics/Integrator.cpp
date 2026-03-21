@@ -1,110 +1,74 @@
 #include "Integrator.h"
-#include "Atom.h"
-#include "SpatialGrid.h"
 
-Integrator::Integrator() {
-    setScheme(Scheme::Verlet);
-}
+#include "Atom.h"
+#include "ForceField.h"
+#include "../SimBox.h"
+
+Integrator::Integrator()
+    : integrator_type(Scheme::Verlet),
+      scheme_impl(makeSchemeImpl(Scheme::Verlet)) {}
 
 void Integrator::setScheme(Scheme scheme) {
     integrator_type = scheme;
-    predict_step = selectPredictStep(scheme);
-    correct_step = selectCorrectStep(scheme);
+    scheme_impl = makeSchemeImpl(scheme);
 }
 
-void Integrator::predict(std::vector<Atom>& atoms, double dt) const {
-    for (Atom& atom : atoms) {
-        int prev_x = grid->worldToCellX(atom.coords.x);
-        int prev_y = grid->worldToCellY(atom.coords.y);
-        int prev_z = grid->worldToCellZ(atom.coords.z);
+void Integrator::step(std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const {
+    StepContext ctx{
+        .atoms = atoms,
+        .box = box,
+        .forceField = forceField,
+        .dt = dt,
+        .integrator = *this,
+    };
 
-        if (atom.isFixed == false)
-            (this->*predict_step)(atom, dt);
+    std::visit([&](const auto& scheme) {
+        scheme.pipeline(ctx);
+    }, scheme_impl);
+}
 
-        int curr_x = grid->worldToCellX(atom.coords.x);
-        int curr_y = grid->worldToCellY(atom.coords.y);
-        int curr_z = grid->worldToCellZ(atom.coords.z);
-        if (prev_x != curr_x || prev_y != curr_y || prev_z != curr_z) {
-            grid->erase(prev_x, prev_y, prev_z, &atom);
-            grid->insert(curr_x, curr_y, curr_z, &atom);
+Integrator::SchemeVariant Integrator::makeSchemeImpl(Scheme scheme) {
+    switch (scheme) {
+    case Scheme::Verlet:
+        return VerletScheme{};
+    case Scheme::KDK:
+        return KDKScheme{};
+    case Scheme::RK4:
+        return RK4Scheme{};
+    case Scheme::Langevin:
+        return LangevinScheme{};
+    default:
+        return VerletScheme{};
+    }
+}
+
+void Integrator::predictAndSync(StepContext& ctx, AtomStepFn predictFn) const {
+    auto& grid = ctx.box.grid;
+
+    for (Atom& atom : ctx.atoms) {
+        const int prevX = grid.worldToCellX(atom.coords.x);
+        const int prevY = grid.worldToCellY(atom.coords.y);
+        const int prevZ = grid.worldToCellZ(atom.coords.z);
+
+        if (!atom.isFixed) {
+            predictFn(atom, ctx.dt);
+        }
+
+        const int currX = grid.worldToCellX(atom.coords.x);
+        const int currY = grid.worldToCellY(atom.coords.y);
+        const int currZ = grid.worldToCellZ(atom.coords.z);
+
+        if (prevX != currX || prevY != currY || prevZ != currZ) {
+            grid.erase(prevX, prevY, prevZ, &atom);
+            grid.insert(currX, currY, currZ, &atom);
         }
 
         atom.prev_force = atom.force;
         atom.force = Vec3D(0, 0, 0);
-        atom.potential_energy = 0.0;
+        atom.potential_energy = 0.0f;
     }
 }
 
-void Integrator::correct(std::vector<Atom>& atoms, double dt) const {
-    for (Atom& atom : atoms) {
-        (this->*correct_step)(atom, dt);
-    }
-}
-
-Integrator::StepFn Integrator::selectPredictStep(Scheme scheme) const {
-    switch (scheme) {
-    case Scheme::Verlet:
-        return &Integrator::verletPredict;
-    case Scheme::KDK:
-        return &Integrator::kdkPredict;
-    case Scheme::RK4:
-        return &Integrator::rk4Predict;
-    case Scheme::Langevin:
-        return &Integrator::langevinPredict;
-    default:
-        return &Integrator::verletPredict;
-    }
-}
-
-Integrator::StepFn Integrator::selectCorrectStep(Scheme scheme) const {
-    switch (scheme) {
-    case Scheme::Verlet:
-        return &Integrator::verletCorrect;
-    case Scheme::KDK:
-        return &Integrator::kdkCorrect;
-    case Scheme::RK4:
-        return &Integrator::rk4Correct;
-    case Scheme::Langevin:
-        return &Integrator::langevinCorrect;
-    default:
-        return &Integrator::verletCorrect;
-    }
-}
-
-void Integrator::verletPredict(Atom& atom, double dt) const {
-    /* Предсказание новой позиции на основе предыдущей и ускорения */
-    constexpr float dempfer = 0.6f; // демпфирование для устойчивости
-    Vec3D a = atom.force / atom.getProps().mass;
-    atom.coords += (atom.speed * dempfer + a * 0.5f * dt) * dt;
-}
-
-void Integrator::verletCorrect(Atom& atom, double dt) const {
-    /* Обновление скорости с использованием среднего ускорения */
-    Vec3D a = atom.force / atom.getProps().mass;
-    Vec3D pr_a = atom.prev_force / atom.getProps().mass;
-    atom.speed += (pr_a + a) * 0.5f * dt;
-}
-
-void Integrator::kdkPredict(Atom& atom, double dt) const {
-    // TODO: add dedicated KDK stage logic.
-}
-
-void Integrator::kdkCorrect(Atom& atom, double dt) const {
-    // TODO: add dedicated KDK stage logic.
-}
-
-void Integrator::rk4Predict(Atom& atom, double dt) const {
-    // TODO: add dedicated RK4 stage logic.
-}
-
-void Integrator::rk4Correct(Atom& atom, double dt) const {
-    // TODO: add dedicated RK4 stage logic.
-}
-
-void Integrator::langevinPredict(Atom& atom, double dt) const {
-    // TODO: add dedicated Langevin stage logic.
-}
-
-void Integrator::langevinCorrect(Atom& atom, double dt) const {
-    // TODO: add dedicated Langevin stage logic.
+void Integrator::computeForces(StepContext& ctx) const {
+    ctx.forceField.compute(ctx.atoms, ctx.box, ctx.dt);
 }

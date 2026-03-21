@@ -10,14 +10,13 @@
 #include "Tools.h"
 
 Simulation::Simulation(sf::RenderWindow& w, SimBox& box)
-    : window(w), gameView(window.getDefaultView()), uiView(window.getDefaultView()), sim_box(box), step()
+    : window(w), gameView(window.getDefaultView()), uiView(window.getDefaultView()), sim_box(box), integrator()
 {
     Interface::init(window);
     Tools::init(&window, &gameView, render, &sim_box.grid, &sim_box,
         [this](Vec3D coords, Vec3D speed, int type, bool fixed) {
             return createAtom(coords, speed, type, fixed);
         });
-    step.setGrid(&sim_box.grid);
 
     // резервируем место под создание атомов
     atoms.reserve(50000);
@@ -33,9 +32,7 @@ void Simulation::setRenderer(IRenderer* r) {
 }
 
 void Simulation::update(float dt) {
-    step.predict(atoms, dt);
-    forceField.compute(atoms, sim_box, dt);
-    step.correct(atoms, dt);
+    integrator.step(atoms, sim_box, forceField, dt);
     sim_step++;
 }
 
@@ -45,8 +42,6 @@ void Simulation::renderShot(float deltaTime) {
 
 void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
     if (sim_box.setSizeBox(newStart, newEnd, cellSize)) {
-        step.setGrid(&sim_box.grid);
-
         for (Atom& atom : atoms) {
             const int cellX = sim_box.grid.worldToCellX(atom.coords.x);
             const int cellY = sim_box.grid.worldToCellY(atom.coords.y);

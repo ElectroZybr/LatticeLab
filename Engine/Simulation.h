@@ -34,6 +34,8 @@ public:
 
     int getSimStep() const { return sim_step; }
 
+    void setIntegrator(Integrator::Scheme scheme) { integrator.setScheme(scheme); }
+    Integrator::Scheme getIntegrator() const { return integrator.getScheme(); }
     sf::View& getGameView() { return gameView; }
     sf::View& getUiView()   { return uiView;   }
 
@@ -48,7 +50,7 @@ private:
     sf::RenderWindow& window;
     sf::View gameView;
     sf::View uiView;
-    Integrator step;
+    Integrator integrator;
     ForceField forceField;
 
     int sim_step = 0;

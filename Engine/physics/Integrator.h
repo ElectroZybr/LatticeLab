@@ -1,9 +1,25 @@
 #pragma once
 
+#include <variant>
 #include <vector>
 
+class Integrator;
 class Atom;
-class SpatialGrid;
+class ForceField;
+class SimBox;
+
+struct StepContext {
+    std::vector<Atom>& atoms;
+    SimBox& box;
+    ForceField& forceField;
+    double dt;
+    const Integrator& integrator;
+};
+
+#include "integrators/KDKScheme.h"
+#include "integrators/LangevinScheme.h"
+#include "integrators/RK4Scheme.h"
+#include "integrators/VerletScheme.h"
 
 class Integrator {
 public:
@@ -14,35 +30,26 @@ public:
         Langevin,    // стохастический интегратор с термостатом (трение + случайный шум)
     };
 
-    using StepFn = void (Integrator::*)(Atom& atom, double dt) const;
-
     Integrator();
 
     void setScheme(Scheme scheme);
     Scheme getScheme() const { return integrator_type; }
-    void setGrid(SpatialGrid* grid_ptr) { grid = grid_ptr; }
 
-    void predict(std::vector<Atom>& atoms, double dt) const;
-    void correct(std::vector<Atom>& atoms, double dt) const;
+    void step(std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const;
 
 private:
+    friend class VerletScheme;
+    friend class KDKScheme;
+    friend class RK4Scheme;
+    friend class LangevinScheme;
+
+    using AtomStepFn = void (*)(Atom& atom, double dt);
+    using SchemeVariant = std::variant<VerletScheme, KDKScheme, RK4Scheme, LangevinScheme>;
+
+    static SchemeVariant makeSchemeImpl(Scheme scheme);
+    void predictAndSync(StepContext& ctx, AtomStepFn predictFn) const;
+    void computeForces(StepContext& ctx) const;
+
     Scheme integrator_type = Scheme::Verlet;
-    SpatialGrid* grid = nullptr;
-    StepFn predict_step = nullptr;
-    StepFn correct_step = nullptr;
-
-    StepFn selectPredictStep(Scheme scheme) const;
-    StepFn selectCorrectStep(Scheme scheme) const;
-
-    void verletPredict(Atom& atom, double dt) const;
-    void verletCorrect(Atom& atom, double dt) const;
-
-    void kdkPredict(Atom& atom, double dt) const;
-    void kdkCorrect(Atom& atom, double dt) const;
-
-    void rk4Predict(Atom& atom, double dt) const;
-    void rk4Correct(Atom& atom, double dt) const;
-
-    void langevinPredict(Atom& atom, double dt) const;
-    void langevinCorrect(Atom& atom, double dt) const;
+    SchemeVariant scheme_impl;
 };

@@ -53,6 +53,7 @@ int main() {
 
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(window, box);
+    simulation.setIntegrator(Integrator::Scheme::KDK);
 
     IRenderer* renderer = new Renderer2D(window, simulation.getGameView(), simulation.getUiView());
     simulation.setRenderer(renderer);
@@ -74,6 +75,7 @@ int main() {
     DebugView* debugSim = Interface::debugPanel.addView(DebugView("Симуляция", 
     {
         DebugSeries("Полная энергия"),
+        DebugValue ("Тип интегратора"),
         DebugValue ("Количество атомов"),
         DebugValue ("Шаги симуляции"),
         DebugValue ("Физика (мс)"),
@@ -85,6 +87,10 @@ int main() {
     {
         DebugValue ("В разработке"),
     }));
+
+    debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
+    // debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
+
 
     // debugSim->add_data("Количество атомов", simulation.atoms.size());
     // debugSim->add_data("Шаги симуляции", simulation.getSimStep());
@@ -295,4 +301,14 @@ void diffusionTest(Simulation& simulation) {
             simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), randomUnitVector3D(0.5), 8);
         }
     }
+}
+
+std::string_view schemeName(Integrator::Scheme s) {
+    switch (s) {
+        case Integrator::Scheme::Verlet:   return "Velocity Verlet";
+        case Integrator::Scheme::KDK:      return "KDK (Kick-Drift-Kick)";
+        case Integrator::Scheme::RK4:      return "Runge-Kutta 4";
+        case Integrator::Scheme::Langevin: return "Langevin";
+    }
+    return "Unknown";
 }
