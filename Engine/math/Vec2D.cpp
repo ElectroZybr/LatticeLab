@@ -1,4 +1,5 @@
 #include <cmath>
+#include <numbers>
 #include <stdexcept>
 
 #include "Vec2D.h"
