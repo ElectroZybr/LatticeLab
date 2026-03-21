@@ -91,10 +91,6 @@ bool Vec2D::isNear(double a, double b) {
     return std::abs(a - b) < kEps;
 }
 
-double Vec2D::length() const {
-    return sqrt(x*x + y*y);
-}
-
 
 Vec2D Vec2D::Random() {
     const double u = static_cast<double>(std::rand()) / RAND_MAX;

@@ -163,7 +163,7 @@ void Renderer2D::drawShot(const std::vector<Atom>& atoms, const SimBox& box, flo
     // if (speedGradient) {
     //     maxSpeedForColor = 0.0f;
     //     for (const Atom* atom : sortedAtoms) {
-    //         maxSpeedForColor = std::max(maxSpeedForColor, static_cast<float>(atom->speed.length()));
+    //         maxSpeedForColor = std::max(maxSpeedForColor, static_cast<float>(atom->speed.abs()));
     //     }
     //     if (maxSpeedForColor < 1e-6f) {
     //         maxSpeedForColor = 1.0f;
@@ -200,7 +200,7 @@ void Renderer2D::drawShot(const std::vector<Atom>& atoms, const SimBox& box, flo
             atomBatch.append(sf::Vertex(sf::Vector2f(outerX, outerY + outerSize),             color, uv01));
         }
         if (speedGradient){
-            const float t = std::clamp(static_cast<float>(atom->speed.length()) / 5, 0.0f, 1.0f); // 0..1
+            const float t = std::clamp(static_cast<float>(atom->speed.abs()) / 5, 0.0f, 1.0f); // 0..1
             if (speedGradientTurbo) {
                 color = turboColor(t);
             } else {

@@ -40,7 +40,6 @@ public:
     [[nodiscard]] double sqrAbs() const; // Returns squared vector length
     [[nodiscard]] double abs() const; // Returns vector length
     [[nodiscard]] Vec2D normalized() const; // Returns normalized vector without changing
-    [[nodiscard]] double length() const;
 
     static Vec2D Random();
 };

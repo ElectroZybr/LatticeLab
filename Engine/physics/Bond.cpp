@@ -18,7 +18,7 @@ Bond::Bond (Atom* _a, Atom* _b) : a(_a), b(_b) {//, float _r0, float _k, float _
 
 void Bond::forceBond(double dt) {
     Vec3D delta = a->coords - b->coords;
-    float len = delta.length();
+    float len = delta.abs();
     Vec3D hat = delta / len;
     Vec3D force = hat * MorseForce(len);
 
@@ -43,8 +43,8 @@ void Bond::angleForce(Atom* o, Atom* b, Atom* c) {
     Vec3D delta_ob = b->coords - o->coords; // Вектор направления ob
     Vec3D delta_oc = c->coords - o->coords; // Вектор направления oc
 
-    double len_ob = delta_ob.length(); // Скаляр вектора ob
-    double len_oc = delta_oc.length(); // Скаляр вектора oc
+    double len_ob = delta_ob.abs(); // Скаляр вектора ob
+    double len_oc = delta_oc.abs(); // Скаляр вектора oc
 
     Vec3D ob_hat = delta_ob / len_ob; // нормализованный вектор направления ob
     Vec3D oc_hat = delta_oc / len_oc; // нормализованный вектор направления oc
