@@ -110,6 +110,11 @@ list(FILTER SOURCES EXCLUDE REGEX "build/.*")
 
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCES})
 
+target_compile_options(Chemical-simulator PRIVATE
+    -O3
+    -march=native
+)
+
 if (WIN32)
     set(APP_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/app_icon.rc")
     if(EXISTS ${APP_ICON_RESOURCE})
