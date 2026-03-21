@@ -1,8 +1,12 @@
 #pragma once
 
-struct StepContext;
+#include <vector>
+
+class Atom;
+class ForceField;
+class SimBox;
 
 class RK4Scheme {
 public:
-    void pipeline(StepContext& ctx) const;
+    void pipeline(std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const;
 };

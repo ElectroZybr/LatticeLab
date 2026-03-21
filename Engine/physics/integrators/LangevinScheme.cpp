@@ -2,7 +2,7 @@
 
 #include "VerletScheme.h"
 
-void LangevinScheme::pipeline(StepContext& ctx) const {
+void LangevinScheme::pipeline(std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const {
     // TODO: dedicated Langevin implementation (friction + stochastic term).
-    VerletScheme{}.pipeline(ctx);
+    VerletScheme{}.pipeline(atoms, box, forceField, dt);
 }

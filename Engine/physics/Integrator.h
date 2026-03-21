@@ -3,18 +3,9 @@
 #include <variant>
 #include <vector>
 
-class Integrator;
 class Atom;
 class ForceField;
 class SimBox;
-
-struct StepContext {
-    std::vector<Atom>& atoms;
-    SimBox& box;
-    ForceField& forceField;
-    double dt;
-    const Integrator& integrator;
-};
 
 #include "integrators/KDKScheme.h"
 #include "integrators/LangevinScheme.h"
@@ -38,17 +29,9 @@ public:
     void step(std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const;
 
 private:
-    friend class VerletScheme;
-    friend class KDKScheme;
-    friend class RK4Scheme;
-    friend class LangevinScheme;
-
-    using AtomStepFn = void (*)(Atom& atom, double dt);
     using SchemeVariant = std::variant<VerletScheme, KDKScheme, RK4Scheme, LangevinScheme>;
 
     static SchemeVariant makeSchemeImpl(Scheme scheme);
-    void predictAndSync(StepContext& ctx, AtomStepFn predictFn) const;
-    void computeForces(StepContext& ctx) const;
 
     Scheme integrator_type = Scheme::Verlet;
     SchemeVariant scheme_impl;

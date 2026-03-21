@@ -1,24 +1,23 @@
 #include "KDKScheme.h"
 
-#include "../Integrator.h"
+#include "StepOps.h"
 #include "../Atom.h"
-#include "../SpatialGrid.h"
 
-void KDKScheme::pipeline(StepContext& ctx) const {
+void KDKScheme::pipeline(std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const {
     // Kick: половина шага
-    for (Atom& atom : ctx.atoms) {
+    for (Atom& atom : atoms) {
         if (!atom.isFixed) {
-            halfKick(atom, ctx.dt);
+            halfKick(atom, dt);
         }
     }
-    // расчет новых позиций + проверка Grid
-    ctx.integrator.predictAndSync(ctx, &drift);
-    // расчет сил
-    ctx.integrator.computeForces(ctx);
+    // Расчет новых позиций
+    StepOps::predictAndSync(atoms, box, dt, &drift);
+    // Расчет сил
+    StepOps::computeForces(atoms, box, forceField, dt);
     // Kick: вторая половина шага
-    for (Atom& atom : ctx.atoms) {
+    for (Atom& atom : atoms) {
         if (!atom.isFixed) {
-            halfKick(atom, ctx.dt);
+            halfKick(atom, dt);
         }
     }
 }

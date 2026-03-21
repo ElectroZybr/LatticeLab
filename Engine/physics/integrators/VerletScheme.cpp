@@ -1,17 +1,17 @@
 #include "VerletScheme.h"
 
-#include "../Integrator.h"
+#include "StepOps.h"
 #include "../Atom.h"
 
-void VerletScheme::pipeline(StepContext& ctx) const {
-    // расчет новых позиций + проверка Grid
-    ctx.integrator.predictAndSync(ctx, &predict);
-    // расчет сил
-    ctx.integrator.computeForces(ctx);
-    // корректировка скоростей
-    for (Atom& atom : ctx.atoms) {
+void VerletScheme::pipeline(std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const {
+    // Расчет новых позиций
+    StepOps::predictAndSync(atoms, box, dt, &predict);
+    // Расчет сил
+    StepOps::computeForces(atoms, box, forceField, dt);
+    // Корректировка скоростей
+    for (Atom& atom : atoms) {
         if (!atom.isFixed) {
-            correct(atom, ctx.dt);
+            correct(atom, dt);
         }
     }
 }

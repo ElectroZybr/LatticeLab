@@ -1,12 +1,14 @@
 #pragma once
 
-class Atom;
+#include <vector>
 
-struct StepContext;
+class Atom;
+class ForceField;
+class SimBox;
 
 class VerletScheme {
 public:
-    void pipeline(StepContext& ctx) const;
+    void pipeline(std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const;
 
     static void predict(Atom& atom, double dt);
     static void correct(Atom& atom, double dt);

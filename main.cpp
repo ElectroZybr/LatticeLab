@@ -56,7 +56,7 @@ int main() {
 
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(window, box);
-    simulation.setIntegrator(Integrator::Scheme::KDK);
+    simulation.setIntegrator(Integrator::Scheme::RK4);
 
     IRenderer* renderer = new Renderer2D(window, simulation.getGameView(), simulation.getUiView());
     simulation.setRenderer(renderer);
