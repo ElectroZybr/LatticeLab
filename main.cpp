@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <chrono>
+#include <string_view>
 
 #include "imgui-SFML.h"
 
@@ -37,6 +38,8 @@ void square15x15H(Simulation& simulation);
 void crystal25x25H(Simulation& simulation);
 void crystal3dH(Simulation& simulation, int n = 15);
 void diffusionTest(Simulation& simulation);
+
+std::string_view schemeName(Integrator::Scheme s);
 
 int main() {
     sf::ContextSettings settings;
@@ -89,7 +92,7 @@ int main() {
     }));
 
     debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
-    // debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
+    debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
 
 
     // debugSim->add_data("Количество атомов", simulation.atoms.size());
@@ -211,6 +214,7 @@ int main() {
             debugSim->add_data("Физика (мс)", physicsTimer.elapsedMilliseconds());
             debugSim->add_data("Количество атомов", static_cast<float>(simulation.atoms.size()));
             debugSim->add_data("Шаги симуляции", simulation.getSimStep());
+            debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
         }
 
         logTmr += deltaTime;

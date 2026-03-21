@@ -13,7 +13,7 @@ class DebugView {
 
     struct DebugData {
         DebugEntry entry;
-        std::variant<float, std::deque<float>> history;
+        std::variant<float, std::string, std::deque<float>> history;
     };
 
     std::string title;
@@ -22,5 +22,6 @@ public:
     DebugView(std::string_view title, std::initializer_list<DebugEntry> entries);
     const char* getTitle() const { return title.data(); }
     void add_data(std::string_view label, float value);
+    void add_data(std::string_view label, std::string_view value);
     void draw(float uiScale);
 };
