@@ -1,6 +1,6 @@
-file(GLOB_RECURSE BENCH_SOURCES "*.cpp")
-
-add_executable(benchmarks ${BENCH_SOURCES})
+add_executable(benchmarks
+    bench_main.cpp
+)
 
 target_compile_options(benchmarks PRIVATE -O3 -march=native)
 

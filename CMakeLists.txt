@@ -102,7 +102,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glm)
 
 file(GLOB_RECURSE CORE_SOURCES 
-    "main.cpp"
     "Engine/*.cpp"
     "GUI/*.cpp"
     "Rendering/*.cpp"
