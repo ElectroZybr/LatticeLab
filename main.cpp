@@ -67,7 +67,7 @@ int main() {
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    simulation.forceField.setGravity();
+    // simulation.forceField.setGravity();
 
     sf::View gameView = window.getDefaultView();
     sf::View uiView = window.getDefaultView();
