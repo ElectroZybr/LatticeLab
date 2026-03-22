@@ -42,7 +42,6 @@ public:
     Integrator integrator;
     ForceField forceField;
 private:
-
     int sim_step = 0;
 
     bool checkNeighbor(Vec3D coords, float delta);
