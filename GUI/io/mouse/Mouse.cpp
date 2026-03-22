@@ -6,19 +6,20 @@
 #include "GUI/interface/interface.h"
 
 sf::RenderWindow*  Mouse::window = nullptr;
-IRenderer*         Mouse::render = nullptr;
-SimBox*            Mouse::box = nullptr;
+std::unique_ptr<IRenderer>* Mouse::renderer = nullptr;
+SimBox* Mouse::box = nullptr;
 std::vector<Atom>* Mouse::atoms = nullptr;
 
-void Mouse::init(sf::RenderWindow* w, IRenderer* r, SimBox* b, std::vector<Atom>* a) {
+void Mouse::init(sf::RenderWindow* w, std::unique_ptr<IRenderer>& r, SimBox* b, std::vector<Atom>* a) {
     window = w;
-    render = r;
+    renderer = &r;
     box = b;
     atoms = a;
 }
 
 void Mouse::onEvent(const sf::Event& event) {
     const sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
+    std::unique_ptr<IRenderer>& rend = *renderer;
 
     if (const auto* e = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (e->button == sf::Mouse::Button::Left) {
@@ -26,9 +27,9 @@ void Mouse::onEvent(const sf::Event& event) {
         }
 
         if (e->button == sf::Mouse::Button::Right && !Interface::cursorHovered) {
-            render->camera.isDragging = true;
-            render->camera.dragStartPixelPos = mouse_pos;
-            render->camera.dragStartCameraPos = render->camera.position;
+            rend->camera.isDragging = true;
+            rend->camera.dragStartPixelPos = mouse_pos;
+            rend->camera.dragStartCameraPos = rend->camera.position;
         }
     }
 
@@ -38,28 +39,28 @@ void Mouse::onEvent(const sf::Event& event) {
         }
 
         if (e->button == sf::Mouse::Button::Right) {
-            render->camera.isDragging = false;
+            rend->camera.isDragging = false;
         }
     }
 
-    if (event.getIf<sf::Event::MouseMoved>() && render->camera.isDragging) {
+    if (event.getIf<sf::Event::MouseMoved>() && rend->camera.isDragging) {
         const sf::Vector2i currentPixelPos = sf::Mouse::getPosition(*window);
-        const sf::Vector2i deltaPixel = currentPixelPos - render->camera.dragStartPixelPos;
+        const sf::Vector2i deltaPixel = currentPixelPos - rend->camera.dragStartPixelPos;
 
-        if (render->camera.orbitMode) {
-            render->camera.orbitDrag(deltaPixel);
-            render->camera.dragStartPixelPos = currentPixelPos;
+        if (rend->camera.orbitMode) {
+            rend->camera.orbitDrag(deltaPixel);
+            rend->camera.dragStartPixelPos = currentPixelPos;
         }
         else {
-            const sf::Vector2f deltaWorld = window->mapPixelToCoords(render->camera.dragStartPixelPos, *render->camera.view)
-                - window->mapPixelToCoords(currentPixelPos, *render->camera.view);
-            render->camera.position = render->camera.dragStartCameraPos + deltaWorld;
+            const sf::Vector2f deltaWorld = window->mapPixelToCoords(rend->camera.dragStartPixelPos, *rend->camera.view)
+                - window->mapPixelToCoords(currentPixelPos, *rend->camera.view);
+            rend->camera.position = rend->camera.dragStartCameraPos + deltaWorld;
         }
     }
 
     if (const auto* e = event.getIf<sf::Event::MouseWheelScrolled>()) {
         if (e->wheel == sf::Mouse::Wheel::Vertical) {
-            render->camera.zoomAt(e->delta, sf::Vector2f(e->position), *window);
+            rend->camera.zoomAt(e->delta, sf::Vector2f(e->position), *window);
         }
     }
 }
@@ -70,7 +71,7 @@ void Mouse::onFrame() {
 
 void Mouse::logMousePos() {
     sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
-    Vec2D world_pos = Tools::screenToWorld(mouse_pos, render->camera.getZoom());
+    Vec2D world_pos = Tools::screenToWorld(mouse_pos, (*renderer)->camera.getZoom());
     Vec2D local_pos(world_pos.x - box->start.x, world_pos.y - box->start.y);
     std::cout << "<Mouse pos>"
               << " Screen: "

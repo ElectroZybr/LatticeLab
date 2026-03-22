@@ -4,6 +4,7 @@
 #include <functional>
 #include <vector>
 #include <unordered_set>
+#include <memory>
 
 #include "physics/SpatialGrid.h"
 #include "math/Vec2D.h"
@@ -25,8 +26,7 @@ public:
         RemoveAtom = 4,
     };
 
-    static void init(sf::RenderWindow* window, sf::View* gameView, SpatialGrid* grid, SimBox* box, AtomCreator atomCreator = {});
-    static void setRenderer(IRenderer* r) { render = r; }
+    static void init(sf::RenderWindow* window, sf::View* gameView, SpatialGrid* grid, SimBox* box, std::unique_ptr<IRenderer>& r, AtomCreator atomCreator = {});
 
     static void selectionFrame(sf::Vector2i start_mouse_pos, sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
     static Vec2D screenToWorld(sf::Vector2i mouse_pos, float zoom);
@@ -46,7 +46,7 @@ private:
     static sf::RenderWindow* window;
     static sf::View* gameView;
     static SpatialGrid* grid;
-    static IRenderer* render;
+    static std::unique_ptr<IRenderer>* renderer;
     static SimBox* box;
     static AtomCreator atomCreator;
 

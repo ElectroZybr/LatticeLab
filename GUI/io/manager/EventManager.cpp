@@ -6,21 +6,15 @@
 #include "GUI/io/window_events/WindowEvents.h"
 
 sf::RenderWindow* EventManager::window = nullptr;
-IRenderer*        EventManager::render = nullptr;
+std::unique_ptr<IRenderer>* EventManager::renderer = nullptr;
 
-void EventManager::init(sf::RenderWindow* w, sf::View* ui, IRenderer* r, SimBox* b, std::vector<Atom>* a) {
+void EventManager::init(sf::RenderWindow* w, sf::View* ui, std::unique_ptr<IRenderer>& r, SimBox* b, std::vector<Atom>* a) {
     window = w;
-    render = r;
+    renderer = &r;
 
     WindowEvents::init(w, ui);
     Keyboard::init(r);
     Mouse::init(w, r, b, a);
-}
-
-void EventManager::updateRenderer(IRenderer* r) {
-    render = r;
-    Keyboard::init(r);
-    Mouse::init(window, r, Mouse::box, Mouse::atoms);
 }
 
 void EventManager::poll() {

@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 
 #include <SFML/Graphics.hpp>
 
@@ -9,7 +10,7 @@
 class Mouse {
     friend class EventManager;
 public:
-    static void init(sf::RenderWindow* w, IRenderer* r, SimBox* b, std::vector<Atom>* a);
+    static void init(sf::RenderWindow* w, std::unique_ptr<IRenderer>&, SimBox* b, std::vector<Atom>* a);
 
     static void onEvent(const sf::Event& event);
     static void onFrame();
@@ -17,7 +18,7 @@ public:
     static void logMousePos();
 private:
     static sf::RenderWindow* window;
-    static IRenderer*        render;
+    static std::unique_ptr<IRenderer>* renderer;
     static SimBox*           box;
     static std::vector<Atom>* atoms;
 };

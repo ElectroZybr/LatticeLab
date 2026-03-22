@@ -67,15 +67,10 @@ int main() {
     simulation.setIntegrator(Integrator::Scheme::Verlet);
     // simulation.forceField.setGravity();
 
+    crystal(simulation, 20, Atom::Type::Z, false);
+
     sf::View gameView = window.getDefaultView();
     sf::View uiView = window.getDefaultView();
-
-    Tools::init(&window, &gameView, &box.grid, &box,
-    [&](Vec3D coords, Vec3D speed, Atom::Type type, bool fixed) {
-        return simulation.createAtom(coords, speed, type, fixed);
-    });
-
-    crystal(simulation, 20, Atom::Type::Z, false);
 
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView, uiView);
     renderer->camera.setPosition(0, 0);
@@ -85,8 +80,12 @@ int main() {
     renderer->wallImage(box.start, box.end);
 
     Interface::init(window, simulation, renderer);
-    EventManager::init(&window, &uiView, renderer.get(), &simulation.sim_box, &simulation.atoms);
-    Tools::setRenderer(renderer.get());
+    EventManager::init(&window, &uiView, renderer, &simulation.sim_box, &simulation.atoms);
+    Tools::init(&window, &gameView, &box.grid, &box, renderer,
+        [&](Vec3D coords, Vec3D speed, Atom::Type type, bool fixed) {
+            return simulation.createAtom(coords, speed, type, fixed);
+        }
+    );
 
     Interface::pause = true;
 
@@ -176,10 +175,6 @@ int main() {
                 newRenderer->wallImage(box.start, box.end);
 
                 renderer = std::move(newRenderer);
-                
-                Tools::setRenderer(renderer.get());
-                EventManager::updateRenderer(renderer.get());
-
             }
 
             renderCounter.timer.start();
