@@ -1,45 +1,57 @@
 #pragma once
+#include <cmath>
+#include <numbers>
+#include <stdexcept>
+
 #include <SFML/System/Vector2.hpp>
 
-class Vec3D;
+#include "Engine/math/Consts.h"
+
+namespace {
+}
 
 class Vec2D {
-private:
-    static bool isNear(double a, double b);
-    
 public:
     double x, y;
 
-    Vec2D(const Vec2D &vec);
+    Vec2D(const Vec2D &vec) : x(vec.x), y(vec.y) {}
+    explicit Vec2D(double x = 0.0, double y = 0.0) : x(x), y(y) {}
 
-    explicit Vec2D(double x = 0.0, double y = 0.0);
-    explicit Vec2D(const Vec3D& vec3d);
+    operator sf::Vector2f() const { return sf::Vector2f(static_cast<float>(x), static_cast<float>(y)); }
 
-    // Операторы приведения типа
-    operator sf::Vector2f() const;
+    [[nodiscard]] Vec2D operator-() const { return Vec2D(-x, -y); }
 
-    [[nodiscard]] Vec2D operator-() const;
+    bool operator==(const Vec2D &vec) const { return (*this - vec).sqrAbs() < Consts::Epsilon; }
+    bool operator!=(const Vec2D &vec) const { return !(*this == vec); }
 
-    // Boolean operations
-    bool operator==(const Vec2D &vec) const;
-    bool operator!=(const Vec2D &vec) const;
+    [[nodiscard]] Vec2D operator+(const Vec2D &vec) const { return Vec2D(x + vec.x, y + vec.y); }
+    [[nodiscard]] Vec2D operator-(const Vec2D &vec) const { return Vec2D(x - vec.x, y - vec.y); }
+    [[nodiscard]] Vec2D operator-(double num)        const { return Vec2D(x - num,   y - num); }
 
-    [[nodiscard]] Vec2D operator+(const Vec2D &vec) const;
-    [[nodiscard]] Vec2D operator-(const Vec2D &vec) const;
-    [[nodiscard]] Vec2D operator-(double num) const;
-    void operator+=(const Vec2D &vec);
-    void operator-=(const Vec2D &vec);
+    void operator+=(const Vec2D &vec) { x += vec.x; y += vec.y; }
+    void operator-=(const Vec2D &vec) { x -= vec.x; y -= vec.y; }
 
-    [[nodiscard]] double dot(const Vec2D &vec) const; // Returns dot product
+    [[nodiscard]] Vec2D operator*(double number) const { return Vec2D(x * number, y * number); }
+    [[nodiscard]] Vec2D operator/(double number) const {
+        if (std::abs(number) > Consts::Epsilon)
+            return Vec2D(x / number, y / number);
+        throw std::domain_error("Vec2D::operator/: division by zero");
+    }
 
-    // Operations with numbers
-    [[nodiscard]] Vec2D operator*(double number) const;
-    [[nodiscard]] Vec2D operator/(double number) const;
+    [[nodiscard]] double sqrAbs()                const { return x * x + y * y; }
+    [[nodiscard]] double abs()                   const { return std::sqrt(sqrAbs()); }
+    [[nodiscard]] double dot(const Vec2D &vec)   const { return x * vec.x + y * vec.y; }
 
-    // Other useful methods
-    [[nodiscard]] double sqrAbs() const; // Returns squared vector length
-    [[nodiscard]] double abs() const; // Returns vector length
-    [[nodiscard]] Vec2D normalized() const; // Returns normalized vector without changing
+    [[nodiscard]] Vec2D normalized() const {
+        double vecAbs = abs();
+        return vecAbs > Consts::Epsilon ? Vec2D(*this) / vecAbs : Vec2D(0);
+    }
 
-    static Vec2D Random();
+    static Vec2D Random() {
+        const double phi = 2.0 * std::numbers::pi * (static_cast<double>(std::rand()) / RAND_MAX);
+        return Vec2D(std::cos(phi), std::sin(phi));
+    }
+
+private:
+    static bool isNear(double a, double b) { return std::abs(a - b) < Consts::Epsilon; }
 };

@@ -1,51 +1,67 @@
 #pragma once
 
-#include "Vec2D.h"
+#include <cmath>
+#include <numbers>
+#include <stdexcept>
+
 #include <SFML/System/Vector3.hpp>
 
-class Vec3D final {
-private:
-    static bool isNear(double a, double b);
+#include "Engine/math/Consts.h"
+#include "Vec2D.h"
 
+class alignas(32) Vec3D final {
 public:
     double x, y, z;
 
-    Vec3D(const Vec3D &vec);
+    Vec3D(const Vec3D &vec) : x(vec.x), y(vec.y), z(vec.z) {}
+    explicit Vec3D(double x = 0.0, double y = 0.0, double z = 0.0) : x(x), y(y), z(z) {}
+    Vec3D(const Vec2D &vec, double z = 0.0) : x(vec.x), y(vec.y), z(z) {}
 
-    explicit Vec3D(double x = 0.0, double y = 0.0, double z = 0.0);
+    operator sf::Vector2f() const { return sf::Vector2f(static_cast<float>(x), static_cast<float>(y)); }
+    operator sf::Vector3f() const { return sf::Vector3f(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)); }
 
-    Vec3D(const Vec2D &vec, double z = 0.0);
+    [[nodiscard]] Vec3D operator-() const { return Vec3D(-x, -y, -z); }
 
-    // Операторы приведения типа
-    operator sf::Vector2f() const;
-    operator sf::Vector3f() const;
+    bool operator==(const Vec3D &vec) const { return (*this - vec).sqrAbs() <= Consts::Epsilon; }
+    bool operator!=(const Vec3D &vec) const { return !(*this == vec); }
 
-    [[nodiscard]] Vec3D operator-() const;
+    [[nodiscard]] Vec3D operator+(const Vec3D &vec) const { return Vec3D(x + vec.x, y + vec.y, z + vec.z); }
+    [[nodiscard]] Vec3D operator-(const Vec3D &vec) const { return Vec3D(x - vec.x, y - vec.y, z - vec.z); }
+    [[nodiscard]] Vec3D operator+(double num)        const { return Vec3D(x + num,   y + num,   z + num); }
+    [[nodiscard]] Vec3D operator-(double num)        const { return Vec3D(x - num,   y - num,   z - num); }
 
-    // Boolean operations
-    bool operator==(const Vec3D &vec) const;
-    bool operator!=(const Vec3D &vec) const;
+    void operator+=(const Vec3D &vec) { x += vec.x; y += vec.y; z += vec.z; }
+    void operator-=(const Vec3D &vec) { x -= vec.x; y -= vec.y; z -= vec.z; }
 
-    [[nodiscard]] Vec3D operator+(const Vec3D &vec) const;
-    [[nodiscard]] Vec3D operator-(const Vec3D &vec) const;
-    void operator+=(const Vec3D &vec);
-    void operator-=(const Vec3D &vec);
+    [[nodiscard]] Vec3D operator*(double number)     const { return Vec3D(x * number,  y * number,  z * number); }
+    [[nodiscard]] Vec3D operator*(const Vec3D &vec)  const { return Vec3D(x * vec.x,   y * vec.y,   z * vec.z); }
+    [[nodiscard]] Vec3D operator/(double number)     const {
+        if (std::abs(number) > Consts::Epsilon)
+            return Vec3D(x / number, y / number, z / number);
+        throw std::domain_error("Vec3D::operator/: division by zero");
+    }
 
-    [[nodiscard]] Vec3D operator+(double num) const;
-    [[nodiscard]] Vec3D operator-(double num) const;
+    [[nodiscard]] double sqrAbs()                   const { return x*x + y*y + z*z; }
+    [[nodiscard]] double abs()                      const { return std::sqrt(sqrAbs()); }
+    [[nodiscard]] double dot(const Vec3D &vec)      const { return x*vec.x + y*vec.y + z*vec.z; }
 
-    [[nodiscard]] double dot(const Vec3D &vec) const; // Returns dot product
-    [[nodiscard]] Vec3D cross(const Vec3D &vec) const; // Returns cross product
+    [[nodiscard]] Vec3D cross(const Vec3D &vec) const {
+        return Vec3D(
+            y*vec.z - vec.y*z,
+            z*vec.x - vec.z*x,
+            x*vec.y - vec.x*y
+        );
+    }
 
-    // Operations with numbers
-    [[nodiscard]] Vec3D operator*(double number) const;
-    [[nodiscard]] Vec3D operator*(const Vec3D &vec) const;
-    [[nodiscard]] Vec3D operator/(double number) const;
+    [[nodiscard]] Vec3D normalized() const {
+        double vecAbs = abs();
+        return vecAbs > Consts::Epsilon ? Vec3D(*this) / vecAbs : Vec3D(0);
+    }
 
-    // Other useful methods
-    [[nodiscard]] double sqrAbs() const; // Returns squared vector length
-    [[nodiscard]] double abs() const; // Returns vector length
-    [[nodiscard]] Vec3D normalized() const; // Returns normalized vector without changing
-
-    static Vec3D Random();
+    static Vec3D Random() {
+        const double phi       = 2.0 * std::numbers::pi * (static_cast<double>(std::rand()) / RAND_MAX);
+        const double cos_theta = 2.0 * (static_cast<double>(std::rand()) / RAND_MAX) - 1.0;
+        const double sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
+        return Vec3D(sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta);
+    }
 };

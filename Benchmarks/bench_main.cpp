@@ -84,7 +84,7 @@ static void BM_Correct(benchmark::State& state) {
 }
 
 
-BENCHMARK(BM_Simulation)->Args({10*10*10})->Args({20*20*20})->Args({30*30*30});
-BENCHMARK(BM_Predict)->Args({10*10*10})->Args({20*20*20})->Args({30*30*30});
-// BENCHMARK(BM_ComputeForces)->Args({10*10*10})->Args({20*20*20})->Args({30*30*30});
-BENCHMARK(BM_Correct)->Args({10*10*10})->Args({20*20*20})->Args({30*30*30});
+BENCHMARK(BM_Simulation)->Args({5*5*5})->Args({20*20*20});
+BENCHMARK(BM_Predict)->Args({5*5*5})->Args({20*20*20});
+// BENCHMARK(BM_ComputeForces)->Args({10*10*10})->Args({20*20*20});
+BENCHMARK(BM_Correct)->Args({5*5*5})->Args({20*20*20});

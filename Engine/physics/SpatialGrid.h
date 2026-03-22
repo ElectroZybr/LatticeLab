@@ -19,12 +19,16 @@ public:
     void insert(int x, int y, int z, Atom* atom);
     void erase(int x, int y, int z, Atom* atom);
 
-    const std::vector<Atom*>* at(int x, int y, int z) const;
-    std::vector<Atom*>* at(int x, int y, int z);
+    [[nodiscard]] const std::vector<Atom*>* at(int x, int y, int z) const {
+        return inBounds(x, y, z) ? &grid[index(x, y, z)] : nullptr;
+    }
+    [[nodiscard]] std::vector<Atom*>* at(int x, int y, int z) {
+        return inBounds(x, y, z) ? &grid[index(x, y, z)] : nullptr;
+    }
 
-    int worldToCellX(double x) const;
-    int worldToCellY(double y) const;
-    int worldToCellZ(double z) const;
+    int worldToCellX(double x) const  { return toCell(x, sizeX); };
+    int worldToCellY(double y) const  { return toCell(y, sizeY); };
+    int worldToCellZ(double z) const  { return toCell(z, sizeZ); };
 
     template<typename F>
     void forEachAtXY(int x, int y, F&& callback) const {
@@ -59,7 +63,17 @@ public:
 private:
     std::vector<std::vector<Atom*>> grid;
 
-    int index(int x, int y, int z) const;
-    bool inBounds(int x, int y, int z) const;
-    int toCell(double coord, int size) const;
+    [[nodiscard]] int index(int x, int y, int z) const noexcept {
+        return z * sizeY * sizeX + y * sizeX + x;
+    }
+    [[nodiscard]] bool inBounds(int x, int y, int z) const noexcept {
+        return x >= 0 && x < sizeX
+            && y >= 0 && y < sizeY
+            && z >= 0 && z < sizeZ;
+    }
+    [[nodiscard]] int toCell(double coord, int size) const {
+        if (coord < 0.0) return -1;
+        int c = static_cast<int>(coord / cellSize);
+        return c < size ? c : -1;
+    }
 };
