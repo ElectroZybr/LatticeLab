@@ -38,6 +38,11 @@ void prepareForCorrect(Simulation& simulation, int atomCount) {
 
 void setBenchmarkCounters(benchmark::State& state, int atomCount) {
     state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(atomCount));
+    state.counters["atoms"] = static_cast<double>(atomCount);
+    state.counters["ns_per_atom"] = benchmark::Counter(
+        static_cast<double>(atomCount),
+        benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert
+    );
 }
 
 }
