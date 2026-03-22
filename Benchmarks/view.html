@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benchmark Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #f5f5f0;
+            --surface: #ffffff;
+            --surface2: #f1efe8;
+            --border: rgba(0, 0, 0, 0.12);
+            --text: #1a1a18;
+            --text2: #5f5e5a;
+            --text3: #888780;
+            --accent: #185fa5;
+            --accent-bg: #e6f1fb;
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #1a1a18;
+                --surface: #2c2c2a;
+                --surface2: #222220;
+                --border: rgba(255, 255, 255, 0.12);
+                --text: #f1efe8;
+                --text2: #b4b2a9;
+                --text3: #888780;
+                --accent: #85b7eb;
+                --accent-bg: #042c53;
+            }
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        h2 {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 0.75rem;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--text2);
+            margin-bottom: 2rem;
+        }
+
+        .drop-zone {
+            border: 1.5px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.15s;
+            margin-bottom: 2rem;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.drag-over {
+            background: var(--surface2);
+        }
+
+        .drop-zone p {
+            color: var(--text2);
+            font-size: 15px;
+            margin-top: 0.5rem;
+        }
+
+        .drop-zone code {
+            font-size: 13px;
+            background: var(--surface2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: var(--text3);
+        }
+
+        .upload-btn {
+            display: inline-block;
+            padding: 8px 20px;
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            cursor: pointer;
+            background: var(--surface);
+            color: var(--text);
+            margin-top: 1rem;
+        }
+
+        .upload-btn:hover {
+            background: var(--surface2);
+        }
+
+        #content {
+            display: none;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: var(--surface2);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+        }
+
+        .metric-card .label {
+            font-size: 12px;
+            color: var(--text2);
+            margin-bottom: 4px;
+        }
+
+        .metric-card .value {
+            font-size: 22px;
+            font-weight: 500;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section {
+            background: var(--surface);
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+        }
+
+        .chart-wrap {
+            position: relative;
+            width: 100%;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: var(--text2);
+        }
+
+        .legend-swatch {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .table-section {
+            background: var(--surface);
+            border: 0.5px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            margin-top: 1.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            table-layout: fixed;
+        }
+
+        th {
+            text-align: left;
+            font-weight: 500;
+            font-size: 12px;
+            color: var(--text2);
+            padding: 6px 8px;
+            border-bottom: 0.5px solid var(--border);
+        }
+
+        td {
+            padding: 8px;
+            border-bottom: 0.5px solid var(--border);
+            color: var(--text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: var(--surface2);
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: var(--accent-bg);
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .col-name {
+            width: 35%;
+        }
+
+        .col-num {
+            width: 13%;
+            text-align: right;
+        }
+
+        td.right {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        #reset-btn {
+            font-size: 13px;
+            color: var(--text2);
+            cursor: pointer;
+            background: none;
+            border: 0.5px solid var(--border);
+            padding: 4px 12px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 1.5rem;
+        }
+
+        #reset-btn:hover {
+            background: var(--surface2);
+        }
+
+        .meta {
+            font-size: 12px;
+            color: var(--text3);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Benchmark viewer</h1>
+    <p class="subtitle">Visualize Google Benchmark JSON output</p>
+
+    <div class="drop-zone" id="drop-zone">
+        <div style="font-size:32px; color: var(--text3);">&#8659;</div>
+        <p>Drop your JSON file here</p>
+        <p style="margin-top:0.25rem"><code>./benchmarks --benchmark_format=json --benchmark_out=results.json</code></p>
+        <label class="upload-btn">
+            Choose file
+            <input type="file" accept=".json" style="display:none" id="file-input">
+        </label>
+    </div>
+
+    <div id="content">
+        <button id="reset-btn">&#8592; Load another file</button>
+        <div class="metrics" id="metrics"></div>
+        <p class="meta" id="meta-info"></p>
+        <div class="charts-grid" id="charts-grid"></div>
+        <div class="table-section">
+            <h2>All results</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-name">Name</th>
+                        <th class="col-num">Real time</th>
+                        <th class="col-num">CPU time</th>
+                        <th class="col-num">Iterations</th>
+                        <th class="col-num">Items/s</th>
+                        <th class="col-num">Bytes/s</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const content = document.getElementById('content');
+        const resetBtn = document.getElementById('reset-btn');
+        const charts = [];
+
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', () => { if (fileInput.files[0]) readFile(fileInput.files[0]); });
+        resetBtn.addEventListener('click', () => {
+            content.style.display = 'none';
+            dropZone.style.display = '';
+            charts.forEach(c => c.destroy());
+            charts.length = 0;
+            document.getElementById('charts-grid').innerHTML = '';
+        });
+
+        function readFile(file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                try { render(JSON.parse(e.target.result)); }
+                catch { alert('Could not parse JSON. Make sure you used --benchmark_format=json'); }
+            };
+            reader.readAsText(file);
+        }
+
+        function fmtTime(ns) {
+            if (ns === undefined || ns === null) return '—';
+            if (ns >= 1e9) return (ns / 1e9).toFixed(3) + ' s';
+            if (ns >= 1e6) return (ns / 1e6).toFixed(3) + ' ms';
+            if (ns >= 1e3) return (ns / 1e3).toFixed(2) + ' µs';
+            return ns.toFixed(1) + ' ns';
+        }
+
+        function fmtRate(n) {
+            if (n === undefined || n === null) return '—';
+            if (n >= 1e9) return (n / 1e9).toFixed(2) + 'G';
+            if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+            if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+            return Math.round(n).toLocaleString();
+        }
+
+        function bestUnit(nsValues) {
+            const max = Math.max(...nsValues);
+            if (max >= 1e9) return { label: 's', div: 1e9 };
+            if (max >= 1e6) return { label: 'ms', div: 1e6 };
+            if (max >= 1e3) return { label: 'µs', div: 1e3 };
+            return { label: 'ns', div: 1 };
+        }
+
+        function extractParam(fullName, groupName) {
+            const rest = fullName.slice(groupName.length);
+            return rest.replace(/^[/_]/, '') || fullName;
+        }
+
+        function hexToRgba(hex, alpha) {
+            const h = hex.replace('#', '');
+            const r = parseInt(h.slice(0, 2), 16);
+            const g = parseInt(h.slice(2, 4), 16);
+            const b = parseInt(h.slice(4, 6), 16);
+            return `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+        }
+
+        function render(data) {
+            const benches = (data.benchmarks || []).filter(b => b.run_type !== 'aggregate' || b.aggregate_name === 'mean');
+
+            dropZone.style.display = 'none';
+            content.style.display = 'block';
+
+            const ctx = data.context || {};
+            document.getElementById('meta-info').textContent =
+                [ctx.date, ctx.host_name,
+                ctx.cpu_scaling_enabled === false ? 'CPU scaling OFF' : '',
+                ctx.library_build_type ? 'build: ' + ctx.library_build_type : '']
+                    .filter(Boolean).join('  ·  ');
+
+            const metricsEl = document.getElementById('metrics');
+            metricsEl.innerHTML = '';
+            const addMetric = (label, value) => {
+                metricsEl.innerHTML += `<div class="metric-card"><div class="label">${label}</div><div class="value">${value}</div></div>`;
+            };
+
+            const allTimes = benches.map(b => b.real_time).filter(Boolean);
+            addMetric('Benchmarks', benches.length);
+            if (allTimes.length) {
+                addMetric('Fastest', fmtTime(Math.min(...allTimes)));
+                addMetric('Slowest', fmtTime(Math.max(...allTimes)));
+            }
+            addMetric('CPU cores', ctx.num_cpus || '—');
+
+            const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+            const palette = isDark
+                ? ['#85b7eb', '#9fe1cb', '#afa9ec', '#f09595', '#fac775', '#ed93b1', '#c0dd97', '#f5c4b3']
+                : ['#378add', '#1d9e75', '#534ab7', '#e24b4a', '#ba7517', '#d4537e', '#639922', '#d85a30'];
+
+            const groups = {};
+            for (const b of benches) {
+                const key = b.name.split('/')[0];
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(b);
+            }
+
+            const chartsGrid = document.getElementById('charts-grid');
+            chartsGrid.innerHTML = '';
+            charts.forEach(c => c.destroy());
+            charts.length = 0;
+
+            Object.entries(groups).forEach(([groupName, items], gi) => {
+                const color = palette[gi % palette.length];
+                const unit = bestUnit(items.map(b => b.real_time));
+                const params = items.map(b => extractParam(b.name, groupName));
+                const vals = items.map(b => parseFloat((b.real_time / unit.div).toFixed(4)));
+
+                const n = items.length;
+                const bgColors = items.map((_, i) =>
+                    hexToRgba(color, n === 1 ? 0.85 : 0.35 + 0.65 * (i / (n - 1)))
+                );
+
+                const section = document.createElement('div');
+                section.className = 'section';
+
+                const title = document.createElement('h2');
+                title.textContent = groupName;
+
+                const legend = document.createElement('div');
+                legend.className = 'legend';
+                items.forEach((_, i) => {
+                    legend.innerHTML += `<span class="legend-item">
+        <span class="legend-swatch" style="background:${bgColors[i]}; border: 1px solid ${color};"></span>
+        ${params[i]}
+      </span>`;
+                });
+
+                const wrap = document.createElement('div');
+                wrap.className = 'chart-wrap';
+                wrap.style.height = Math.max(200, n * 50 + 70) + 'px';
+
+                const canvas = document.createElement('canvas');
+                wrap.appendChild(canvas);
+
+                section.appendChild(title);
+                section.appendChild(legend);
+                section.appendChild(wrap);
+                chartsGrid.appendChild(section);
+
+                const chart = new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels: params,
+                        datasets: [{
+                            data: vals,
+                            backgroundColor: bgColors,
+                            borderColor: color,
+                            borderWidth: 1,
+                            borderRadius: 4,
+                            borderSkipped: false,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: c => `${c.parsed.y.toFixed(3)} ${unit.label}`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: {
+                                    color: isDark ? '#d3d1c7' : '#444441',
+                                    font: { size: 12 },
+                                    autoSkip: false,
+                                    maxRotation: 45
+                                }
+                            },
+                            y: {
+                                grid: { color: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' },
+                                ticks: {
+                                    color: isDark ? '#888780' : '#5f5e5a',
+                                    font: { size: 12 },
+                                    callback: v => v + ' ' + unit.label
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'real time (' + unit.label + ')',
+                                    color: isDark ? '#888780' : '#5f5e5a',
+                                    font: { size: 12 }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                charts.push(chart);
+            });
+
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            for (const [group, items] of Object.entries(groups)) {
+                if (Object.keys(groups).length > 1) {
+                    tbody.innerHTML += `<tr><td colspan="6" style="padding:12px 8px 4px; font-size:12px; font-weight:500; color:var(--text3); text-transform:uppercase; letter-spacing:0.05em; border-bottom:0.5px solid var(--border);">${group}</td></tr>`;
+                }
+                for (const b of items) {
+                    const tag = b.aggregate_name ? `<span class="badge">${b.aggregate_name}</span> ` : '';
+                    tbody.innerHTML += `<tr>
+        <td class="col-name" title="${b.name}">${tag}${b.name}</td>
+        <td class="right col-num">${fmtTime(b.real_time)}</td>
+        <td class="right col-num">${fmtTime(b.cpu_time)}</td>
+        <td class="right col-num">${fmtRate(b.iterations)}</td>
+        <td class="right col-num">${b.items_per_second ? fmtRate(b.items_per_second) : '—'}</td>
+        <td class="right col-num">${b.bytes_per_second ? fmtRate(b.bytes_per_second) : '—'}</td>
+      </tr>`;
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

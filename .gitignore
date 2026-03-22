@@ -13,6 +13,7 @@ Testing/
 
 # Binaries and libraries
 Chemical-simulator
+benchmarks
 *.exe
 *.dll
 *.so

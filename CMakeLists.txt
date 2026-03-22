@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.17)
 project(Chemical-simulator)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # CMake 4.x: allow legacy dependencies that declare very old minimum policies.
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
@@ -100,29 +101,25 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glm)
 
-file(GLOB_RECURSE SOURCES 
+file(GLOB_RECURSE CORE_SOURCES 
     "main.cpp"
     "Engine/*.cpp"
     "GUI/*.cpp"
     "Rendering/*.cpp"
 )
-list(FILTER SOURCES EXCLUDE REGEX "build/.*")
+list(FILTER CORE_SOURCES EXCLUDE REGEX "build/.*")
 
-add_executable(${CMAKE_PROJECT_NAME} ${SOURCES})
+add_library(chemical_simulator_lib STATIC ${CORE_SOURCES})
 
-target_compile_options(Chemical-simulator PRIVATE
-    -O3
-    -march=native
+target_compile_options(chemical_simulator_lib PRIVATE -O3 -march=native)
+
+target_include_directories(chemical_simulator_lib PUBLIC
+    ${CMAKE_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}
+    ${imguifiledialog_SOURCE_DIR}
 )
 
-if (WIN32)
-    set(APP_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/app_icon.rc")
-    if(EXISTS ${APP_ICON_RESOURCE})
-        target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${APP_ICON_RESOURCE})
-    endif()
-endif ()
-
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE 
+target_link_libraries(chemical_simulator_lib PUBLIC
     sfml-graphics 
     sfml-window 
     sfml-system 
@@ -135,8 +132,31 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     glm::glm
 )
 
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE 
-    ${CMAKE_SOURCE_DIR}
-    ${imgui_SOURCE_DIR}
-    ${imguifiledialog_SOURCE_DIR}
-)
+add_executable(${CMAKE_PROJECT_NAME} main.cpp)
+
+target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -O3 -march=native)
+
+if (WIN32)
+    set(APP_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/app_icon.rc")
+    if(EXISTS ${APP_ICON_RESOURCE})
+        target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${APP_ICON_RESOURCE})
+    endif()
+endif()
+
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE chemical_simulator_lib)
+
+option(BUILD_BENCHMARKS "Build benchmarks" OFF)
+if(BUILD_BENCHMARKS)
+    FetchContent_Declare(
+        googlebenchmark
+        GIT_REPOSITORY https://github.com/google/benchmark.git
+        GIT_TAG        v1.9.5
+    )
+    set(BENCHMARK_ENABLE_TESTING     OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_INSTALL     OFF CACHE BOOL "" FORCE)
+ 
+    FetchContent_MakeAvailable(googlebenchmark)
+ 
+    add_subdirectory(Benchmarks)
+endif()
