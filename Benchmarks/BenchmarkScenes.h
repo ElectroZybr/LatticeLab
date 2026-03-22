@@ -16,4 +16,4 @@ private:
     static void buildRandomGas2D(Simulation& simulation, const BenchmarkCase& benchmarkCase);
 };
 
-}  // namespace Benchmarks
+}
