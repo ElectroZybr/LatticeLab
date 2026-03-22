@@ -6,6 +6,7 @@
 #include <limits>
 #include <utility>
 
+#include "math/Consts.h"
 #include "SimBox.h"
 #include "GUI/interface/interface.h"
 #include "physics/Bond.h"
@@ -131,7 +132,7 @@ bool pointOnSegment(const Vec2D& p, const Vec2D& a, const Vec2D& b) {
     const Vec2D ab = b - a;
     const Vec2D ap = p - a;
     const double cross = ab.x * ap.y - ab.y * ap.x;
-    if (std::abs(cross) > 1e-6) {
+    if (std::abs(cross) > Consts::Epsilon) {
         return false;
     }
 
@@ -314,7 +315,7 @@ void Tools::onLeftReleased(std::vector<Atom>& atoms) {
         const sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
         const float zoom = render->camera.getZoom();
         const Vec2D local = screenToBox(mouse_pos, zoom);
-        if (lassoPoints.empty() || (lassoPoints.back() - local).sqrAbs() > 1e-6) {
+        if (lassoPoints.empty() || (lassoPoints.back() - local).sqrAbs() > Consts::Epsilon) {
             lassoPoints.push_back(local);
         }
 
@@ -375,7 +376,7 @@ void Tools::onFrame(std::vector<Atom>& atoms) {
         }
 
         std::vector<Vec2D> contourPoints = lassoPoints;
-        if (contourPoints.empty() || (contourPoints.back() - local).sqrAbs() > 1e-6) {
+        if (contourPoints.empty() || (contourPoints.back() - local).sqrAbs() > Consts::Epsilon) {
             contourPoints.push_back(local);
         }
         syncLassoContour(render, box, contourPoints);

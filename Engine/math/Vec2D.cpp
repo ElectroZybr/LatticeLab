@@ -2,12 +2,9 @@
 #include <numbers>
 #include <stdexcept>
 
+#include "Consts.h"
 #include "Vec2D.h"
 #include "Vec3D.h"
-
-namespace {
-constexpr double kEps = 1e-6;
-}
 
 Vec2D::Vec2D(const Vec2D &vec) : x(vec.x), y(vec.y){}
 
@@ -26,7 +23,7 @@ Vec2D Vec2D::operator-() const {
 
 bool Vec2D::operator==(const Vec2D &vec) const {
     Vec2D diff = *this - vec;
-    return diff.sqrAbs() < kEps;
+    return diff.sqrAbs() < Consts::Epsilon;
 }
 
 bool Vec2D::operator!=(const Vec2D &vec) const {
@@ -60,7 +57,7 @@ Vec2D Vec2D::operator*(double number) const {
 }
 
 Vec2D Vec2D::operator/(double number) const {
-    if (std::abs(number) > kEps){
+    if (std::abs(number) > Consts::Epsilon){
         return Vec2D(x / number, y / number);
     }
     throw std::domain_error("Vec2D::operator/(double number): division by zero");
@@ -77,7 +74,7 @@ double Vec2D::abs() const {
 
 Vec2D Vec2D::normalized() const {
     double vecAbs = abs();
-    if (vecAbs > kEps){
+    if (vecAbs > Consts::Epsilon){
         return Vec2D(*this) / vecAbs;
     }
     return Vec2D(0);
@@ -88,7 +85,7 @@ double Vec2D::dot(const Vec2D &vec) const {
 }
 
 bool Vec2D::isNear(double a, double b) {
-    return std::abs(a - b) < kEps;
+    return std::abs(a - b) < Consts::Epsilon;
 }
 
 
