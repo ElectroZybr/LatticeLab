@@ -4,7 +4,7 @@
 #include "Atom.h"
 #include "Bond.h"
 
-const std::array<StaticAtomicData, 118> Atom::properties = {{
+const std::array<StaticAtomicData, static_cast<std::size_t>(Atom::Type::COUNT)> Atom::properties = {{
     {1.0000, 0.5, 1, 0.0, sf::Color(255, 255, 255, 255),  2.00, 15.0}, // Abstract atom for testing
     {1.0080, 0.5, 1, 0.0, sf::Color(255, 255, 255, 255),  2.40, 0.03}, // H
     {4.0026, 0.5, 0, 0.0, sf::Color(217, 255, 255, 255),  2.60, 0.02}, // He
