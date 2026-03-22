@@ -13,7 +13,7 @@ Testing/
 
 # Binaries and libraries
 Chemical-simulator
-/benchmarks.exe
+/benchmarks
 Benchmarks/*.json
 Benchmarks/*.png
 *.exe
