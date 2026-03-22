@@ -3,6 +3,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "physics/Atom.h"
+#include "physics/AtomStorage.h"
 #include "physics/SpatialGrid.h"
 #include "SimBox.h"
 #include "physics/Integrator.h"
@@ -39,6 +40,7 @@ public:
 
     SimBox& sim_box;
     std::vector<Atom> atoms;
+    AtomStorage atomStorage;
     Integrator integrator;
     ForceField forceField;
 private:

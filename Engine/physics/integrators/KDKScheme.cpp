@@ -4,17 +4,17 @@
 #include "../Atom.h"
 
 void KDKScheme::pipeline(std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const {
-    // Kick: РїРѕР»РѕРІРёРЅР° С€Р°РіР°
+    // Kick: половина шага
     for (Atom& atom : atoms) {
         if (!atom.isFixed) {
             halfKick(atom, dt);
         }
     }
-    // Р Р°СЃС‡РµС‚ РЅРѕРІС‹С… РїРѕР·РёС†РёР№
+    // Расчет новых позиций
     StepOps::predictAndSync(atoms, box, dt, &drift);
-    // Р Р°СЃС‡РµС‚ СЃРёР»
+    // Расчет сил
     StepOps::computeForces(atoms, box, forceField, dt);
-    // Kick: РІС‚РѕСЂР°СЏ РїРѕР»РѕРІРёРЅР° С€Р°РіР°
+    // Kick: вторая половина шага
     for (Atom& atom : atoms) {
         if (!atom.isFixed) {
             halfKick(atom, dt);
@@ -22,9 +22,41 @@ void KDKScheme::pipeline(std::vector<Atom>& atoms, SimBox& box, ForceField& forc
     }
 }
 
+void KDKScheme::pipeline(AtomStorage& atomStorage, std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const {
+    // Kick: половина шага
+    for (Atom& atom : atoms) {
+        if (!atom.isFixed) {
+            halfKick(atom, dt);
+        }
+    }
+    // Расчет новых позиций
+    StepOps::predictAndSync(atoms, box, dt, &drift);
+    // Расчет сил через SoA-путь
+    StepOps::syncToAtomStorage(atoms, atomStorage);
+    StepOps::computeForces(atomStorage, atoms, box, forceField, dt);
+    // Kick: вторая половина шага в SoA
+    for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
+        if (!atomStorage.isAtomFixed(atomIndex)) {
+            halfKick(atomStorage, atomIndex, dt);
+        }
+    }
+    // Возвращаем обновленные данные обратно в AoS
+    StepOps::syncFromAtomStorage(atomStorage, atoms);
+}
+
 void KDKScheme::halfKick(Atom& atom, double dt) {
     const Vec3D acceleration = atom.force / atom.getProps().mass;
     atom.speed += acceleration * (0.5 * dt);
+}
+
+void KDKScheme::halfKick(AtomStorage& atomStorage, std::size_t atomIndex, double dt) {
+    const auto& props = Atom::getProps(atomStorage.type(atomIndex));
+    const float invMass = 1.0f / static_cast<float>(props.mass);
+    const float halfDt = static_cast<float>(0.5 * dt);
+
+    atomStorage.velX(atomIndex) += atomStorage.forceX(atomIndex) * invMass * halfDt;
+    atomStorage.velY(atomIndex) += atomStorage.forceY(atomIndex) * invMass * halfDt;
+    atomStorage.velZ(atomIndex) += atomStorage.forceZ(atomIndex) * invMass * halfDt;
 }
 
 void KDKScheme::drift(Atom& atom, double dt) {

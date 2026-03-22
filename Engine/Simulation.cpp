@@ -9,11 +9,12 @@ Simulation::Simulation(SimBox& box)
     :  sim_box(box), integrator()
 {
     // резервируем место под создание атомов
-    atoms.reserve(250000);
+    atoms.reserve(50000);
+    atomStorage.reserve(50000);
 }
 
 void Simulation::update(float dt) {
-    integrator.step(atoms, sim_box, forceField, dt);
+    integrator.step(atomStorage, atoms, sim_box, forceField, dt);
     ++sim_step;
 }
 
@@ -62,6 +63,7 @@ bool Simulation::checkNeighbor(Vec3D coords, float delta) {
 }
 
 Atom* Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type type, bool fixed) {
+    atomStorage.addAtom(start_coords, start_speed, type, fixed);
     atoms.emplace_back(start_coords, start_speed, type, fixed);
     Atom* atom = &atoms.back();
     const int cellX = sim_box.grid.worldToCellX(atom->coords.x);
@@ -195,6 +197,8 @@ void Simulation::load(std::string_view path) {
 
 void Simulation::clear() {
     atoms.clear();
+    atomStorage.clear();
     Bond::bonds_list.clear();
     sim_step = 0;
 }
+

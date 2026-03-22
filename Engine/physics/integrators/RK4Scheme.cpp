@@ -6,3 +6,8 @@ void RK4Scheme::pipeline(std::vector<Atom>& atoms, SimBox& box, ForceField& forc
     // TODO: dedicated RK4 implementation (k1/k2/k3/k4 with temporary states).
     VerletScheme{}.pipeline(atoms, box, forceField, dt);
 }
+
+void RK4Scheme::pipeline(AtomStorage& atomStorage, std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const {
+    // TODO: dedicated RK4 implementation (k1/k2/k3/k4 with temporary states).
+    VerletScheme{}.pipeline(atomStorage, atoms, box, forceField, dt);
+}
