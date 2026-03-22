@@ -28,50 +28,8 @@ constexpr int LPS = 1;
 constexpr double Dt = 0.01;
 
 /* тестовые сцены, можно запускать в main и экспериментировать*/
-void crystal(Simulation& simulation, int n, Atom::Type type, bool is3d, double padding = 3, double margin = 15) {
-    const int sib_box_size = n * padding + padding + 2.0*margin;
-    const double half = sib_box_size / 2.0;
-
-    simulation.setSizeBox(
-        Vec3D(-half, -half, is3d ? -half : simulation.sim_box.start.z),
-        Vec3D( half,  half, is3d ?  half : simulation.sim_box.end.z)
-    );
-
-    const int zMax = is3d ? n : 1;
-    const Vec3D vecMargin(margin, margin, is3d? margin : 0);
-    for (int x = 1; x <= n; x++)
-        for (int y = 1; y <= n; y++)
-            for (int z = 1; z <= zMax; z++)
-                simulation.createAtom( Vec3D(x, y, z) * padding + vecMargin, Vec3D::Random() * 0.5, type);
-}
-
-void diffusionTest(Simulation& simulation) {
-    simulation.setSizeBox(
-        Vec3D(-25, -25, simulation.sim_box.start.z),
-        Vec3D(25, 25, simulation.sim_box.end.z),
-        5
-    );
-    for (int i = 0; i < 15; i++) {
-        for (int j = 0; j < 8; j++) {
-            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), Vec3D::Random() * 0.5, Atom::Type::H);
-        }
-    }
-    for (int i = 0; i < 15; i++) {
-        for (int j = 8; j < 15; j++) {
-            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), Vec3D::Random() * 0.5, Atom::Type::O);
-        }
-    }
-}
-
-std::string_view schemeName(Integrator::Scheme s) {
-    switch (s) {
-        case Integrator::Scheme::Verlet:   return "Velocity Verlet";
-        case Integrator::Scheme::KDK:      return "KDK (Kick-Drift-Kick)";
-        case Integrator::Scheme::RK4:      return "Runge-Kutta 4";
-        case Integrator::Scheme::Langevin: return "Langevin";
-    }
-    return "Unknown";
-}
+void crystal(Simulation& simulation, int n, Atom::Type type, bool is3d, double padding = 3, double margin = 15);
+void diffusionTest(Simulation& simulation);
 
 struct PerSecondCounter {
     Timer timer;
@@ -95,15 +53,15 @@ struct PerSecondCounter {
     }
 };
 
+std::string_view schemeName(Integrator::Scheme s);
+
 int main() {
     sf::ContextSettings settings;
     settings.depthBits = 24;
 
     sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator", sf::State::Fullscreen, settings);
     sf::Image icon;
-    if (icon.loadFromFile("icon.png")) {
-        window.setIcon(icon.getSize(), icon.getPixelsPtr());
-    }
+    if (icon.loadFromFile("icon.png")) { window.setIcon(icon.getSize(), icon.getPixelsPtr()); }
 
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(box);
@@ -118,7 +76,7 @@ int main() {
         return simulation.createAtom(coords, speed, type, fixed);
     });
 
-    crystal(simulation, 20, Atom::Type::_, false);
+    crystal(simulation, 20, Atom::Type::Z, false);
 
     IRenderer* renderer = new Renderer2D(window, gameView, uiView);
     renderer->camera.setPosition(0, 0);
@@ -260,4 +218,49 @@ int main() {
     delete renderer;
 
     return 0;
+}
+
+void crystal(Simulation& simulation, int n, Atom::Type type, bool is3d, double padding, double margin) {
+    const int sib_box_size = n * padding + padding + 2.0*margin;
+    const double half = sib_box_size / 2.0;
+
+    simulation.setSizeBox(
+        Vec3D(-half, -half, is3d ? -half : simulation.sim_box.start.z),
+        Vec3D( half,  half, is3d ?  half : simulation.sim_box.end.z)
+    );
+
+    const int zMax = is3d ? n : 1;
+    const Vec3D vecMargin(margin, margin, is3d? margin : 0);
+    for (int x = 1; x <= n; x++)
+        for (int y = 1; y <= n; y++)
+            for (int z = 1; z <= zMax; z++)
+                simulation.createAtom( Vec3D(x, y, z) * padding + vecMargin, Vec3D::Random() * 0.5, type);
+}
+
+void diffusionTest(Simulation& simulation) {
+    simulation.setSizeBox(
+        Vec3D(-25, -25, simulation.sim_box.start.z),
+        Vec3D(25, 25, simulation.sim_box.end.z),
+        5
+    );
+    for (int i = 0; i < 15; i++) {
+        for (int j = 0; j < 8; j++) {
+            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), Vec3D::Random() * 0.5, Atom::Type::H);
+        }
+    }
+    for (int i = 0; i < 15; i++) {
+        for (int j = 8; j < 15; j++) {
+            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), Vec3D::Random() * 0.5, Atom::Type::O);
+        }
+    }
+}
+
+std::string_view schemeName(Integrator::Scheme s) {
+    switch (s) {
+        case Integrator::Scheme::Verlet:   return "Velocity Verlet";
+        case Integrator::Scheme::KDK:      return "KDK (Kick-Drift-Kick)";
+        case Integrator::Scheme::RK4:      return "Runge-Kutta 4";
+        case Integrator::Scheme::Langevin: return "Langevin";
+    }
+    return "Unknown";
 }
