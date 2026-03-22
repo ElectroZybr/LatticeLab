@@ -183,6 +183,7 @@ int main() {
             renderCounter.timer.stop();
             renderCounter.tick(renderCounter.timer.elapsedMilliseconds());
             shotTmr = 0;
+            window.display();
 
             debugSim->add_data("Полная энергия", simulation.fullAverageEnergy());
         }

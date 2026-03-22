@@ -8,8 +8,8 @@
 #include "Renderer3D.h"
 #include "imgui-SFML.h"
 
-Renderer3D::Renderer3D(sf::RenderWindow& w, sf::View& gv, sf::View& uv)
-    : IRenderer(w, gv), window(w), uiView(uv)
+Renderer3D::Renderer3D(sf::RenderTarget& t, sf::View& gv, sf::View& uv)
+    : IRenderer(gv), target(t), uiView(uv)
 {
     gladLoadGL();
     camera.setOrbitMode(true);
@@ -186,7 +186,7 @@ void Renderer3D::initShaders() {
 }
 
 void Renderer3D::updateMatrices() {
-    const auto size = window.getSize();
+    const auto size = target.getSize();
     const float aspect = static_cast<float>(size.x) / static_cast<float>(size.y);
 
     projection = glm::perspective(glm::radians(45.f), aspect, 0.1f, 1000.f);
@@ -219,7 +219,7 @@ void Renderer3D::drawShot(const std::vector<Atom>& atoms,
     }
 
     // рисуем через OpenGL
-    window.setActive(true);
+    target.setActive(true);
 
     glDepthFunc(GL_LESS);
     glEnable(GL_DEPTH_TEST);
@@ -259,13 +259,11 @@ void Renderer3D::drawShot(const std::vector<Atom>& atoms,
     drawBox(box);
 
     // ImGui поверх
-    window.setActive(true);
-    window.pushGLStates();
-    window.setView(uiView);
-    ImGui::SFML::Render(window);
-    window.popGLStates();
-
-    window.display();
+    target.setActive(true);
+    target.pushGLStates();
+    target.setView(uiView);
+    ImGui::SFML::Render(target);
+    target.popGLStates();
 }
 
 void Renderer3D::setSelectionFrame(Vec2D start, Vec2D end, float scale) {

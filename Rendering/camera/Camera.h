@@ -24,9 +24,9 @@ private:
     float azimuth   = 0.f;
     float elevation = 1.0f; 
 public:
-    Camera(sf::RenderWindow& window, sf::View* view, float moveSpeed = 500.f, float zoomSpeed = 0.1f);
+    Camera(sf::View* view, float moveSpeed = 500.f, float zoomSpeed = 0.1f);
     
-    void update(float deltaTime, sf::RenderWindow& window);
+    void update(float deltaTime, sf::RenderTarget& target);
     
     void move(float offsetX, float offsetY);
     

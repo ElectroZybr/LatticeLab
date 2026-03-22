@@ -8,7 +8,7 @@
 
 class Renderer2D : public IRenderer {
 public:
-    Renderer2D(sf::RenderWindow& window, sf::View& gameView, sf::View& uiView);
+    Renderer2D(sf::RenderTarget& window, sf::View& gameView, sf::View& uiView);
 
     void drawShot(const std::vector<Atom>& atoms,
                   const SimBox& box, float deltaTime) override;
@@ -21,7 +21,7 @@ public:
     sf::Texture forceTexture;
 
 private:
-    sf::RenderWindow& window;
+    sf::RenderTarget& target;
     sf::View& gameView;
     sf::View& uiView;
 
@@ -41,7 +41,7 @@ private:
     bool drawLassoContour       = false;
 
     void initAtomTexture(sf::Texture& texture, unsigned texSize);
-    void drawTransparencyMap(sf::RenderWindow& window, const SpatialGrid& grid);
+    void drawTransparencyMap(sf::RenderTarget& target, const SpatialGrid& grid);
     void drawForceField(const sf::Texture& forceTexture, const SimBox& box);
     int getWallForce(int coord, int min, int max);
 };

@@ -20,8 +20,8 @@ namespace {
     }
 }
 
-Renderer2D::Renderer2D(sf::RenderWindow& w, sf::View& gv, sf::View& uv)
-    : window(w), gameView(gv), uiView(uv), IRenderer(w, gv) {
+Renderer2D::Renderer2D(sf::RenderTarget& t, sf::View& gv, sf::View& uv)
+    : target(t), gameView(gv), uiView(uv), IRenderer(gv) {
     const int gridSize = 50;
     for (int x = -1000; x <= 1000; x += gridSize) {
         gridLines.emplace_back(sf::Vector2f(x, -1000), sf::Color(60, 60, 60));
@@ -118,16 +118,16 @@ int Renderer2D::getWallForce(int coord, int min, int max) {
 void Renderer2D::drawShot(const std::vector<Atom>& atoms, const SimBox& box, float deltaTime) {
     // 1: 7000 мкс - отрисовка 225 атомов
     // 2: оптимизация батч на gpu. 1000 мкс - отрисовка 961 атома
-    camera.update(deltaTime, window);
+    camera.update(deltaTime, target);
 
-    window.clear(sf::Color(35, 35, 35, 255));
-    window.setView(gameView);
+    target.clear(sf::Color(35, 35, 35, 255));
+    target.setView(gameView);
 
-    window.draw(&gridLines[0], gridLines.size(), sf::PrimitiveType::Lines);
+    target.draw(&gridLines[0], gridLines.size(), sf::PrimitiveType::Lines);
     drawForceField(forceTexture, box);
 
     if (drawGrid) {
-        drawTransparencyMap(window, box.grid);
+        drawTransparencyMap(target, box.grid);
     }
 
     sortedAtoms.clear();
@@ -220,7 +220,7 @@ void Renderer2D::drawShot(const std::vector<Atom>& atoms, const SimBox& box, flo
     if (atomBatch.getVertexCount() > 0) {
         sf::RenderStates atomStates;
         atomStates.texture = activeAtomTexture;
-        window.draw(atomBatch, atomStates);
+        target.draw(atomBatch, atomStates);
     }
 
     if (drawBonds && camera.getZoom() > drawBondsZoom) {
@@ -245,23 +245,22 @@ void Renderer2D::drawShot(const std::vector<Atom>& atoms, const SimBox& box, flo
         }
 
         if (!bondBatch.empty()) {
-            window.draw(bondBatch.data(), bondBatch.size(), sf::PrimitiveType::Lines);
+            target.draw(bondBatch.data(), bondBatch.size(), sf::PrimitiveType::Lines);
         }
     }
 
     if (drawSelectionFrame) {
-        window.draw(frameShape);
+        target.draw(frameShape);
     }
     if (drawLassoContour && lassoContour.getVertexCount() > 1) {
-        window.draw(lassoContour);
+        target.draw(lassoContour);
     }
 
-    window.setView(uiView);
-    ImGui::SFML::Render(window);
-    window.display();
+    target.setView(uiView);
+    ImGui::SFML::Render(target);
 }
 
-void Renderer2D::drawTransparencyMap(sf::RenderWindow& window, const SpatialGrid& grid) {
+void Renderer2D::drawTransparencyMap(sf::RenderTarget& target, const SpatialGrid& grid) {
     sf::RectangleShape cellRect(sf::Vector2f(
         static_cast<float>(grid.cellSize),
         static_cast<float>(grid.cellSize)
@@ -278,7 +277,7 @@ void Renderer2D::drawTransparencyMap(sf::RenderWindow& window, const SpatialGrid
                         static_cast<float>(x * grid.cellSize),
                         static_cast<float>(y * grid.cellSize)
                     });
-                    window.draw(cellRect);
+                    target.draw(cellRect);
                 }
             }
         }
@@ -295,7 +294,7 @@ void Renderer2D::drawForceField(const sf::Texture& forceTexture, const SimBox& b
     forceFieldQuad.setPosition(box.start);
     forceFieldQuad.setTexture(&forceTexture, true);
 
-    window.draw(forceFieldQuad, &forceFieldShader);
+    target.draw(forceFieldQuad, &forceFieldShader);
 }
 
 void Renderer2D::setSelectionFrame(Vec2D start, Vec2D end, float scale) {

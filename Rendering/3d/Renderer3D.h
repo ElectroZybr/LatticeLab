@@ -11,7 +11,7 @@
 
 class Renderer3D : public IRenderer {
 public:
-    Renderer3D(sf::RenderWindow& window, sf::View& gameView, sf::View& uiView);
+    Renderer3D(sf::RenderTarget& target, sf::View& gameView, sf::View& uiView);
     ~Renderer3D() override;
 
     void initBoxGL();
@@ -26,7 +26,7 @@ public:
     void showSelectionFrame(bool show) override;
     void showLassoContour(bool show) override;
 private:
-    sf::RenderWindow& window;
+    sf::RenderTarget& target;
     sf::View& uiView;
 
     // OpenGL объекты

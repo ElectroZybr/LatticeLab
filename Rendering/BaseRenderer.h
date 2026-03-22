@@ -30,6 +30,6 @@ public:
     Camera camera;
 
 protected:
-IRenderer(sf::RenderWindow& w, sf::View& gv)
-    : camera(w, &gv) {}
+IRenderer(sf::View& gv)
+    : camera(&gv) {}
 };

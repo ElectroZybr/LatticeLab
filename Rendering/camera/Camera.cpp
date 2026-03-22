@@ -5,13 +5,13 @@
 
 #include "Camera.h"
 
-Camera::Camera(sf::RenderWindow& window, sf::View* view, float moveSpeed, float zoomSpeed) 
+Camera::Camera(sf::View* view, float moveSpeed, float zoomSpeed) 
     : view(view), position(0, 0), zoom(20.f), speed(moveSpeed / 20.f), moveSpeed(moveSpeed), zoomSpeed(zoomSpeed),
         isDragging(false), lastMousePos(0, 0) {}
     
-void Camera::update(float deltaTime, sf::RenderWindow& window) {
+void Camera::update(float deltaTime, sf::RenderTarget& target) {
     view->setCenter(position);
-    view->setSize(sf::Vector2f(window.getSize()) / zoom);
+    view->setSize(sf::Vector2f(target.getSize()) / zoom);
 }
 
 void Camera::move(float offsetX, float offsetY) {
