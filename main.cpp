@@ -67,6 +67,7 @@ int main() {
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
+    simulation.forceField.setGravity();
 
     sf::View gameView = window.getDefaultView();
     sf::View uiView = window.getDefaultView();
@@ -77,7 +78,7 @@ int main() {
         return simulation.createAtom(coords, speed, type, fixed);
     });
 
-    crystal(simulation, 20, Atom::Type::Z, false);
+    crystal(simulation, 20, Atom::Type::H, false);
 
     IRenderer* renderer = new Renderer2D(window, gameView, uiView);
     renderer->camera.setPosition(0, 0);

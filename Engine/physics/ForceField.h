@@ -1,7 +1,11 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <vector>
+
+#include "../math/Vec3D.h"
+#include "Atom.h"
 
 class Atom;
 class SimBox;
@@ -12,12 +16,15 @@ public:
 
     void compute(std::vector<Atom>& atoms, SimBox& box, double dt) const;
 
+    void setGravity(Vec3D gravity = Vec3D(0, 5, 0)) { static_force = gravity; }
+
 private:
     struct LJParams {
         float a0 = 3.0f;
         float eps = 0.1f;
     };
-    using LJPairTable = std::array<std::array<LJParams, 118>, 118>;
+    static constexpr std::size_t TypeCount = static_cast<std::size_t>(Atom::Type::COUNT);
+    using LJPairTable = std::array<std::array<LJParams, TypeCount>, TypeCount>;
 
     static LJPairTable buildLJPairTable();
 
@@ -25,6 +32,8 @@ private:
     void softWalls(Atom& atom, SimBox& box) const;
     void ComputeForces(Atom& atom, SimBox& box) const;
     void pairNonBondedInteraction(Atom& a, Atom& b) const;
+    void applyGravityForce(Atom& atom) const;
 
+    Vec3D static_force;
     LJPairTable ljPairTable;
 };
