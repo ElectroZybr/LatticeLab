@@ -24,12 +24,13 @@
 #include "memory_monitor.h"
 
 constexpr int FPS = 60;
-constexpr int LPS = 1;
+constexpr int LPS = 20;
 constexpr double Dt = 0.01;
 
 /* тестовые сцены, можно запускать в main и экспериментировать*/
 void crystal(Simulation& simulation, int n, Atom::Type type, bool is3d, double padding = 3, double margin = 15);
 void diffusionTest(Simulation& simulation);
+
 
 struct PerSecondCounter {
     Timer timer;
@@ -116,7 +117,6 @@ int main() {
     double shotTmr = 0.0;
     double simTmr = 0.0;
     double logTmr = 0.0;
-    int while_cycle_per_second = 0;
 
     PerSecondCounter physicsCounter;
     PerSecondCounter renderCounter;
@@ -188,31 +188,22 @@ int main() {
             shotTmr = 0;
 
             debugSim->add_data("Полная энергия", simulation.fullAverageEnergy());
-            debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
-            debugSim->add_data("Рендер (мс)", renderCounter.timer.elapsedMilliseconds());
-            debugSim->add_data("Физика (мс)", physicsCounter.timer.elapsedMilliseconds());
-            debugSim->add_data("Количество атомов", static_cast<float>(simulation.atoms.size()));
-            debugSim->add_data("Шаги симуляции", simulation.getSimStep());
-            debugSim->add_data("Шагов/с", physicsCounter.rate);
-            debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
         }
 
         logTmr += deltaTime;
         if (logTmr >= 1. / LPS) {
-            std::cout << "[perf] loop/s: "         << while_cycle_per_second
-                      << " | phys/s: "             << physicsCounter.steps_per_second
-                      << " | phys avg ms: "        << physicsCounter.avgMs()
-                      << " | phys total ms: "      << physicsCounter.time_ms_accum
-                      << " | render/s: "           << renderCounter.steps_per_second
-                      << " | render avg ms: "      << renderCounter.avgMs()
-                      << " | render total ms: "    << renderCounter.time_ms_accum
-                      << "\n";
-            while_cycle_per_second = 0;
+            debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
+            debugSim->add_data("Рендер (мс)", static_cast<float>(renderCounter.avgMs()));
+            debugSim->add_data("Физика (мс)", static_cast<float>(physicsCounter.avgMs()));
+            debugSim->add_data("Количество атомов", static_cast<float>(simulation.atoms.size()));
+            debugSim->add_data("Шаги симуляции", simulation.getSimStep());
+            debugSim->add_data("Шагов/с", physicsCounter.rate);
+            debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
+
             physicsCounter.reset();
             renderCounter.reset();
             logTmr = 0;
         }
-        while_cycle_per_second++;
     }
     ImGui::SFML::Shutdown();
     delete renderer;
