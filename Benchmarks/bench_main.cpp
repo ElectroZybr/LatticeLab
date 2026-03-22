@@ -1,90 +1,128 @@
-#include <cmath>
-
 #include <benchmark/benchmark.h>
 
+#include "BenchmarkCase.h"
+#include "BenchmarkScenes.h"
 #include "Engine/Simulation.h"
+#include "Engine/physics/integrators/StepOps.h"
 #include "Engine/physics/integrators/VerletScheme.h"
 
-void crystal(Simulation& simulation, int n, Atom::Type type, bool is3d, double padding = 3, double margin = 15) {
-    const int sib_box_size = n * padding + padding + 2.0*margin;
-    const double half = sib_box_size / 2.0;
+namespace {
 
-    simulation.setSizeBox(
-        Vec3D(-half, -half, is3d ? -half : simulation.sim_box.start.z),
-        Vec3D( half,  half, is3d ?  half : simulation.sim_box.end.z)
-    );
+constexpr double kDt = 0.01;
 
-    const int zMax = is3d ? n : 1;
-    const Vec3D vecMargin(margin, margin, is3d? margin : 0);
-    for (int x = 1; x <= n; x++)
-        for (int y = 1; y <= n; y++)
-            for (int z = 1; z <= zMax; z++)
-                simulation.createAtom( Vec3D(x, y, z) * padding + vecMargin, Vec3D::Random() * 0.5, type);
+Benchmarks::BenchmarkCase makeCrystal3DCase(int atomCount) {
+    return Benchmarks::BenchmarkCase{
+        .scene = Benchmarks::SceneKind::Crystal3D,
+        .integrator = Integrator::Scheme::Verlet,
+        .atomCount = atomCount,
+        .boxStart = Vec3D(-80.0, -80.0, -80.0),
+        .boxEnd = Vec3D(80.0, 80.0, 80.0),
+        .cellSize = 5
+    };
 }
 
-constexpr double dt = 0.01;
-
-static void BM_Simulation(benchmark::State& state) {
-    const int countAtoms = state.range(0);
-    const int n = std::cbrt(countAtoms);
-
-    SimBox simBox(Vec3D(-30, -30, -30), Vec3D(10, 10, 10));
-    Simulation simulation(simBox);
-
-    crystal(simulation, n, Atom::Type::H, true);
-
-    for (auto _ : state) {
-        simulation.update(dt);
-    }
+void rebuildScene(Simulation& simulation, int atomCount) {
+    Benchmarks::BenchmarkScenes::build(simulation, makeCrystal3DCase(atomCount));
 }
 
-static void BM_Predict(benchmark::State& state) {
-    const int countAtoms = state.range(0);
-    const int n = std::cbrt(countAtoms);
+void prepareForPredict(Simulation& simulation, int atomCount) {
+    rebuildScene(simulation, atomCount);
+    StepOps::computeForces(simulation.atoms, simulation.sim_box, simulation.forceField, kDt);
+}
+
+void prepareForCorrect(Simulation& simulation, int atomCount) {
+    prepareForPredict(simulation, atomCount);
+    StepOps::predictAndSync(simulation.atoms, simulation.sim_box, kDt, &VerletScheme::predict);
+    StepOps::computeForces(simulation.atoms, simulation.sim_box, simulation.forceField, kDt);
+}
+
+void setBenchmarkCounters(benchmark::State& state, int atomCount) {
+    state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(atomCount));
+}
+
+}
+
+static void BM_SimulationStep(benchmark::State& state) {
+    const int atomCount = static_cast<int>(state.range(0));
 
     SimBox simBox(Vec3D(-30, -30, -30), Vec3D(30, 30, 30));
     Simulation simulation(simBox);
-    crystal(simulation, n, Atom::Type::H, true);
 
     for (auto _ : state) {
-        for (Atom& atom : simulation.atoms)
-            VerletScheme::predict(atom, dt);
+        state.PauseTiming();
+        rebuildScene(simulation, atomCount);
+        state.ResumeTiming();
+
+        simulation.update(kDt);
         benchmark::ClobberMemory();
     }
+
+    setBenchmarkCounters(state, atomCount);
 }
 
-// static void BM_ComputeForces(benchmark::State& state) {
-//    const int countAtoms = state.range(0);
-//    const int n = std::cbrt(countAtoms);
-//     SimBox simBox(Vec3D(-30, -30, -30), Vec3D(30, 30, 30));
-//     Simulation simulation(simBox);
-//     crystal(simulation, n, Atom::Type::H, true);
+static void BM_ComputeForces(benchmark::State& state) {
+    const int atomCount = static_cast<int>(state.range(0));
 
-//     for (auto _ : state) {
-//         StepOps::computeForces(simulation.atoms, simulation.sim_box, simulation.forceField, dt);
-//         benchmark::ClobberMemory();
-//     }
-// }
+    SimBox simBox(Vec3D(-30, -30, -30), Vec3D(30, 30, 30));
+    Simulation simulation(simBox);
+
+    for (auto _ : state) {
+        state.PauseTiming();
+        rebuildScene(simulation, atomCount);
+        state.ResumeTiming();
+
+        StepOps::computeForces(simulation.atoms, simulation.sim_box, simulation.forceField, kDt);
+        benchmark::DoNotOptimize(simulation.atoms.data());
+        benchmark::ClobberMemory();
+    }
+
+    setBenchmarkCounters(state, atomCount);
+}
+
+static void BM_PredictAndSync(benchmark::State& state) {
+    const int atomCount = static_cast<int>(state.range(0));
+
+    SimBox simBox(Vec3D(-30, -30, -30), Vec3D(30, 30, 30));
+    Simulation simulation(simBox);
+
+    for (auto _ : state) {
+        state.PauseTiming();
+        prepareForPredict(simulation, atomCount);
+        state.ResumeTiming();
+
+        StepOps::predictAndSync(simulation.atoms, simulation.sim_box, kDt, &VerletScheme::predict);
+        benchmark::DoNotOptimize(simulation.atoms.data());
+        benchmark::ClobberMemory();
+    }
+
+    setBenchmarkCounters(state, atomCount);
+}
 
 static void BM_Correct(benchmark::State& state) {
-    const int countAtoms = state.range(0);
-    const int n = std::cbrt(countAtoms);
+    const int atomCount = static_cast<int>(state.range(0));
+
     SimBox simBox(Vec3D(-30, -30, -30), Vec3D(30, 30, 30));
     Simulation simulation(simBox);
-    crystal(simulation, n, Atom::Type::H, true);
 
     for (auto _ : state) {
+        state.PauseTiming();
+        prepareForCorrect(simulation, atomCount);
+        state.ResumeTiming();
+
         for (Atom& atom : simulation.atoms) {
             if (!atom.isFixed) {
-                VerletScheme::correct(atom, dt);
+                VerletScheme::correct(atom, kDt);
             }
         }
+
+        benchmark::DoNotOptimize(simulation.atoms.data());
         benchmark::ClobberMemory();
     }
+
+    setBenchmarkCounters(state, atomCount);
 }
 
-
-BENCHMARK(BM_Simulation)->Args({5*5*5})->Args({20*20*20});
-BENCHMARK(BM_Predict)->Args({5*5*5})->Args({20*20*20});
-// BENCHMARK(BM_ComputeForces)->Args({10*10*10})->Args({20*20*20});
-BENCHMARK(BM_Correct)->Args({5*5*5})->Args({20*20*20});
+BENCHMARK(BM_SimulationStep)->Args({5 * 5 * 5})->Args({10 * 10 * 10})->Args({20 * 20 * 20});
+BENCHMARK(BM_ComputeForces)->Args({5 * 5 * 5})->Args({10 * 10 * 10})->Args({20 * 20 * 20});
+BENCHMARK(BM_PredictAndSync)->Args({5 * 5 * 5})->Args({10 * 10 * 10})->Args({20 * 20 * 20});
+BENCHMARK(BM_Correct)->Args({5 * 5 * 5})->Args({10 * 10 * 10})->Args({20 * 20 * 20});

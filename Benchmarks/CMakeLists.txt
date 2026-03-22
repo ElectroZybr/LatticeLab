@@ -1,5 +1,6 @@
 add_executable(benchmarks
     bench_main.cpp
+    BenchmarkScenes.cpp
 )
 
 target_compile_options(benchmarks PRIVATE -O3 -march=native)

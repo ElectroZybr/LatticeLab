@@ -99,7 +99,7 @@ void ForceField::ComputeForces(Atom& atom, SimBox& box) const {
     box.grid.forEachNeighbor(atom.coords, [&](Atom* neighbour) {
         if (neighbour <= &atom) return;
 
-        // Vec3D delta = coords - neighbour->coords;
+        // Vec3D delta = atom.coords - neighbour->coords;
         // float distance = sqrt(delta.dot(delta));
         
         const bool bonded = std::find(atom.bonds.begin(), atom.bonds.end(), neighbour) != atom.bonds.end();
@@ -109,8 +109,8 @@ void ForceField::ComputeForces(Atom& atom, SimBox& box) const {
         }
 
         if (!bonded) {
-            // if (distance < 1.3 * r0 && valence > 0 && neighbour->valence > 0) {
-            //     Bond::CreateBond(this, neighbour);
+            // if (distance < 1.3 * 3 && atom.valence > 0 && neighbour->valence > 0) {
+            //     Bond::CreateBond(&atom, neighbour);
             // }
             pairNonBondedInteraction(atom, *neighbour);
         }
