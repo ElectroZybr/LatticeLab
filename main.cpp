@@ -65,11 +65,12 @@ int main() {
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    // simulation.forceField.setGravity();
 
     crystal(simulation, 20, Atom::Type::Z, false);
 
     sf::View gameView = window.getDefaultView();
+    gameView.setRotation(sf::degrees(180.f));
+    window.setView(gameView);
     sf::View uiView = window.getDefaultView();
 
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView, uiView);

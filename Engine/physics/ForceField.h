@@ -16,7 +16,7 @@ public:
 
     void compute(std::vector<Atom>& atoms, SimBox& box, double dt) const;
 
-    void setGravity(Vec3D gravity = Vec3D(0, 5, 0)) { static_force = gravity; }
+    void setGravity(const Vec3D& gravity) { static_force = gravity; }
     Vec3D getGravity() const { return static_force; }
 
 private:

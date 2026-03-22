@@ -313,7 +313,7 @@ void Tools::onLeftReleased(std::vector<Atom>& atoms) {
         const float zoom = rend->camera.getZoom();
         const Vec2D local = screenToBox(mouse_pos, zoom);
         if (lassoPoints.empty() || (lassoPoints.back() - local).sqrAbs() > Consts::Epsilon) {
-            lassoPoints.push_back(local);
+            lassoPoints.emplace_back(local);
         }
 
         int count = 0;
@@ -436,7 +436,7 @@ void Tools::selectionFrame(sf::Vector2i start_mouse_pos, sf::Vector2i mouse_pos,
 }
 
 Vec2D Tools::screenToWorld(sf::Vector2i mouse_pos, float zoom) {
-    sf::Vector2f world = (sf::Vector2f(mouse_pos) - sf::Vector2f(window->getSize()) / 2.f) / zoom + gameView->getCenter();
+    sf::Vector2f world = (sf::Vector2f(window->getSize()) / 2.f - sf::Vector2f(mouse_pos)) / zoom + gameView->getCenter();
     return Vec2D(world.x, world.y);
 }
 

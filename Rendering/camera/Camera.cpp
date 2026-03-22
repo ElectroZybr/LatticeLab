@@ -38,7 +38,7 @@ void Camera::zoomAt(float factor, sf::Vector2f mousePos, sf::RenderWindow& windo
 
     // Плавное следование за указателем мыши при зуме
     if (zoom > 1.f && zoom < 500.f) {
-        sf::Vector2i deltaPos = sf::Mouse::getPosition(window) - sf::Vector2i(window.getSize()) / 2;
+        sf::Vector2i deltaPos = sf::Vector2i(window.getSize()) / 2 - sf::Mouse::getPosition(window);
         position += sf::Vector2f(deltaPos) * 0.1f / zoom * factor;
     }
 }

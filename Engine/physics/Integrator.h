@@ -2,6 +2,7 @@
 
 #include <variant>
 #include <vector>
+#include <cstdint>
 
 class Atom;
 class ForceField;
@@ -14,7 +15,7 @@ class SimBox;
 
 class Integrator {
 public:
-    enum class Scheme {
+    enum class Scheme: uint8_t {
         Verlet,      // классический Velocity Verlet: устойчивый и быстрый базовый выбор
         KDK,         // Kick-Drift-Kick: симплектическая схема, удобна для поэтапного обновления сил
         RK4,         // Runge-Kutta 4-го порядка: высокая точность на шаг, но дороже по вычислениям

@@ -5,7 +5,7 @@
 
 class SideToolsPanel {
 public:
-    enum class Tool : int {
+    enum class Tool : uint8_t {
         Cursor = 0,
         Frame = 1,
         Lasso = 2,

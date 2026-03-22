@@ -3,9 +3,10 @@
 #include <SFML/Graphics/Color.hpp>
 #include <array>
 #include <cstddef>
-#include "../math/Vec2D.h"
-#include "../math/Vec3D.h"
 #include <vector>
+#include <cstdint>
+
+#include "../math/Vec3D.h"
 
 class SimBox;
 
@@ -22,7 +23,7 @@ struct StaticAtomicData {
 
 class Atom {
 public:
-    enum class Type {
+    enum class Type: uint8_t {
         Z,
 
         // Period 1

@@ -25,10 +25,10 @@ void Keyboard::onFrame(float deltaTime) {
     std::unique_ptr<IRenderer>& rend = *render;
     if (!rend->camera.orbitMode) {
         float deltaSpeed = rend->camera.speed * deltaTime;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) rend->camera.move(0, -deltaSpeed);
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) rend->camera.move(0,  deltaSpeed);
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) rend->camera.move(-deltaSpeed, 0);
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) rend->camera.move( deltaSpeed, 0);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) rend->camera.move(0,  deltaSpeed);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) rend->camera.move(0, -deltaSpeed);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) rend->camera.move( deltaSpeed, 0);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) rend->camera.move(-deltaSpeed, 0);
     }
     else {
         float rotSpeed = 1.5f * deltaTime;

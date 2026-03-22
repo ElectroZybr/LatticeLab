@@ -3,7 +3,7 @@
 #include <string>
 #include <optional>
 
-enum class FileDialogCommand : std::uint8_t { Save, Load };
+enum class FileDialogCommand : uint8_t { Save, Load };
 
 struct InterfaceCommand {
     FileDialogCommand command;

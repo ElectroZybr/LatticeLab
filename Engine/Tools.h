@@ -5,6 +5,7 @@
 #include <vector>
 #include <unordered_set>
 #include <memory>
+#include <cstdint>
 
 #include "physics/SpatialGrid.h"
 #include "math/Vec2D.h"
@@ -18,12 +19,12 @@ class Tools {
 public:
     using AtomCreator = std::function<Atom*(Vec3D, Vec3D, Atom::Type, bool)>;
 
-    enum class Mode {
-        Cursor = 0,
-        Frame = 1,
-        Lasso = 2,
-        AddAtom = 3,
-        RemoveAtom = 4,
+    enum class Mode: uint8_t {
+        Cursor,
+        Frame,
+        Lasso,
+        AddAtom,
+        RemoveAtom,
     };
 
     static void init(sf::RenderWindow* window, sf::View* gameView, SpatialGrid* grid, SimBox* box, std::unique_ptr<IRenderer>& r, AtomCreator atomCreator = {});
