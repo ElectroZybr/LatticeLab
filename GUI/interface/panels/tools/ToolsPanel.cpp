@@ -1,14 +1,16 @@
-#include "ToolsPanel.h"
-#include "GUI/interface/panels/debug/DebugPanel.h"
-#include "GUI/interface/file_dialog/FileDialogManager.h"
 #include <cmath>
+
+#include "ToolsPanel.h"
+
+#include "GUI/interface/panels/debug/DebugPanel.h"
+#include "GUI/interface/panels/settings/SettingsPanel.h"
+#include "GUI/interface/file_dialog/FileDialogManager.h"
 
 #define ICON_FA_FLASK   "\uf0c3"
 #define ICON_FA_COG     "\uf013"
 #define ICON_FA_BUG     "\uf188"
 
-void ToolsPanel::draw(float scale, sf::RenderWindow& window,
-                      DebugPanel& debug, FileDialogManager& fileDialog)
+void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, FileDialogManager& fileDialog, SettingsPanel& settings)
 {
     constexpr float baseTopOffset = 0.0f;
     constexpr float baseLeftOffset = 0.0f;
@@ -28,6 +30,21 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window,
     const float x = std::round(baseLeftOffset * scale);
     const float y = std::round(baseTopOffset * scale);
 
+    auto toggleButton = [&](const char* icon, auto& primary, auto& secondary) {
+        const bool visible = primary.isVisible();
+        if (visible) {
+            ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.06f, 0.53f, 0.98f, 1.00f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.06f, 0.53f, 0.98f, 1.00f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.06f, 0.53f, 0.98f, 1.00f));
+        }
+        if (ImGui::Button(icon, ImVec2(buttonSize, buttonSize))) {
+            primary.toggle();
+            if (primary.isVisible() && secondary.isVisible())
+                secondary.toggle();
+        }
+        if (visible) ImGui::PopStyleColor(3);
+    };
+
     ImGui::SetNextWindowPos(ImVec2(x, y));
     ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
 
@@ -35,7 +52,8 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window,
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacingX, 0.0f));
     ImGui::Begin("Tools", nullptr, PANEL_FLAGS);
 
-    if (ImGui::Button(ICON_FA_COG, ImVec2(buttonSize, buttonSize))) ImGui::OpenPopup("tools_popup");
+    toggleButton(ICON_FA_COG, settings, debug);
+
     ImGui::SameLine();
     if (ImGui::Button(ICON_FA_FLASK, ImVec2(buttonSize, buttonSize))) ImGui::OpenPopup("tools_popup");
     ImGui::SameLine();
@@ -47,16 +65,7 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window,
     }
     ImGui::SameLine();
 
-    const bool debugVisible = debug.isVisible();
-    if (debugVisible) {
-        ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.06f, 0.53f, 0.98f, 1.00f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.06f, 0.53f, 0.98f, 1.00f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.06f, 0.53f, 0.98f, 1.00f));
-    }
-    if (ImGui::Button(ICON_FA_BUG, ImVec2(buttonSize, buttonSize)))
-        debug.toggle();
-    if (debugVisible)
-        ImGui::PopStyleColor(3);
+    toggleButton(ICON_FA_BUG, debug, settings);
 
     if (ImGui::BeginPopup("tools_popup")) {
         if (ImGui::MenuItem("save"))  fileDialog.openSave();

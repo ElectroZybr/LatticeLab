@@ -16,6 +16,9 @@
 #define ICON_FA_BUG "\uf188"
 
 sf::RenderWindow* Interface::window = nullptr;
+Simulation* Interface::simulation = nullptr;
+std::unique_ptr<IRenderer>* Interface::renderer = nullptr;
+
 sf::Clock Interface::clock;
 int Interface::selectedAtom = -1;
 bool Interface::pause;
@@ -36,9 +39,12 @@ SideToolsPanel Interface::sideToolsPanel;
 SimControlPanel Interface::simControlPanel;
 PeriodicPanel Interface::periodicPanel;
 StatsPanel Interface::statsPanel;
+SettingsPanel Interface::settingsPanel;
 
-int Interface::init(sf::RenderWindow& w) {
+int Interface::init(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r) {
     window = &w;
+    simulation = &s;
+    renderer = &r;
 
     if (!ImGui::SFML::Init(*window)) return EXIT_FAILURE;
 
@@ -73,7 +79,7 @@ int Interface::Update() {
     ImGui::SFML::Update(*window, clock.restart());
 
     ImGui::PushFont(fontManager.main);
-        toolsPanel.draw(styleManager.getScale(), *window, debugPanel, fileDialog);
+        toolsPanel.draw(styleManager.getScale(), *window, debugPanel, fileDialog, settingsPanel);
         periodicPanel.draw(styleManager.getScale(), window->getSize(), selectedAtom);
         simControlPanel.draw(styleManager.getScale(), window->getSize(), pause, simulationSpeed);
         sideToolsPanel.draw(styleManager.getScale(), window->getSize(), fontManager.icons, fontManager.dialog);
@@ -91,6 +97,7 @@ int Interface::Update() {
     ImGui::PushFont(fontManager.dialog);
         fileDialog.draw(styleManager.getScale());
         debugPanel.draw(styleManager.getScale(), window->getSize());
+        settingsPanel.draw(styleManager.getScale(), window->getSize(), *simulation, *renderer);
     ImGui::PopFont();
 
     // Проверка на вхождение курсора в область

@@ -10,6 +10,7 @@ enum class ToolsCommand : std::uint8_t { ToggleRenderer2D, ToggleRenderer3D };
 
 class DebugPanel;
 class FileDialogManager;
+class SettingsPanel;
 
 class ToolsPanel {
 public:
@@ -20,8 +21,7 @@ public:
         ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoScrollbar;
 
-    void draw(float scale, sf::RenderWindow& window,
-              DebugPanel& debug, FileDialogManager& fileDialog);
+    void draw(float scale, sf::RenderWindow& window, DebugPanel& debug, FileDialogManager& fileDialog, SettingsPanel& settings);
 
     std::optional<ToolsCommand> popResult();
 private:

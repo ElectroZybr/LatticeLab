@@ -1,5 +1,4 @@
 ﻿#include <cmath>
-#include <iostream>
 #include <string_view>
 
 #include <SFML/Graphics.hpp>
@@ -30,7 +29,6 @@ constexpr double Dt = 0.01;
 /* тестовые сцены, можно запускать в main и экспериментировать*/
 void crystal(Simulation& simulation, int n, Atom::Type type, bool is3d, double padding = 3, double margin = 15);
 void diffusionTest(Simulation& simulation);
-
 
 struct PerSecondCounter {
     Timer timer;
@@ -72,25 +70,23 @@ int main() {
     sf::View gameView = window.getDefaultView();
     sf::View uiView = window.getDefaultView();
 
-    Interface::init(window);
     Tools::init(&window, &gameView, &box.grid, &box,
     [&](Vec3D coords, Vec3D speed, Atom::Type type, bool fixed) {
         return simulation.createAtom(coords, speed, type, fixed);
     });
 
-    crystal(simulation, 20, Atom::Type::H, false);
+    crystal(simulation, 20, Atom::Type::Z, false);
 
-    IRenderer* renderer = new Renderer2D(window, gameView, uiView);
+    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView, uiView);
     renderer->camera.setPosition(0, 0);
     renderer->camera.setZoom(15);
     renderer->drawBonds = true;
     renderer->speedGradient = true;
     renderer->wallImage(box.start, box.end);
-    // renderer->drawGrid = true;
-    // renderer->speedGradientTurbo = true;
 
-    EventManager::init(&window, &uiView, renderer, &simulation.sim_box, &simulation.atoms);
-    Tools::setRenderer(renderer);
+    Interface::init(window, simulation, renderer);
+    EventManager::init(&window, &uiView, renderer.get(), &simulation.sim_box, &simulation.atoms);
+    Tools::setRenderer(renderer.get());
 
     Interface::pause = true;
 
@@ -164,22 +160,26 @@ int main() {
             }
 
             if (auto result = Interface::toolsPanel.popResult()) {
-                IRenderer* oldRenderer = renderer;
-                switch (result.value()) {
-                    case ToolsCommand::ToggleRenderer2D:
-                        renderer = new Renderer2D(window, gameView, uiView);
-                        break;
-                    case ToolsCommand::ToggleRenderer3D:
-                        renderer = new Renderer3D(window, gameView, uiView);
-                        break;
-                }
-                renderer->drawBonds = oldRenderer->drawBonds;
-                renderer->speedGradient = oldRenderer->speedGradient;
-                renderer->speedGradientTurbo = oldRenderer->speedGradientTurbo;
-                renderer->wallImage(box.start, box.end);
-                Tools::setRenderer(renderer);
-                EventManager::updateRenderer(renderer);
-                delete oldRenderer;
+                auto newRenderer = [&]() -> std::unique_ptr<IRenderer> {
+                    switch (result.value()) {
+                        case ToolsCommand::ToggleRenderer2D:
+                            return std::make_unique<Renderer2D>(window, gameView, uiView);
+                        case ToolsCommand::ToggleRenderer3D:
+                            return std::make_unique<Renderer3D>(window, gameView, uiView);
+                    }
+                }();
+
+                newRenderer->drawGrid = renderer->drawGrid;
+                newRenderer->drawBonds = renderer->drawBonds;
+                newRenderer->speedGradient = renderer->speedGradient;
+                newRenderer->speedGradientTurbo = renderer->speedGradientTurbo;
+                newRenderer->wallImage(box.start, box.end);
+
+                renderer = std::move(newRenderer);
+                
+                Tools::setRenderer(renderer.get());
+                EventManager::updateRenderer(renderer.get());
+
             }
 
             renderCounter.timer.start();
@@ -207,7 +207,6 @@ int main() {
         }
     }
     ImGui::SFML::Shutdown();
-    delete renderer;
 
     return 0;
 }
