@@ -39,9 +39,9 @@ public:
 
     SimBox& sim_box;
     std::vector<Atom> atoms;
-private:
     Integrator integrator;
     ForceField forceField;
+private:
 
     int sim_step = 0;
 

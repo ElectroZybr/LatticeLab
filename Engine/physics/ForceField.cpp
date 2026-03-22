@@ -93,6 +93,7 @@ void ForceField::applyWall(double& coord, double& speed, double& force, double m
 
 void ForceField::ComputeForces(Atom& atom, SimBox& box) const {
     softWalls(atom, box);
+    applyGravityForce(atom);
 
     /* перебор соседей атома */
     box.grid.forEachNeighbor(atom.coords, [&](Atom* neighbour) {
@@ -114,6 +115,8 @@ void ForceField::ComputeForces(Atom& atom, SimBox& box) const {
             pairNonBondedInteraction(atom, *neighbour);
         }
     });
+
+
 }
 
 void ForceField::pairNonBondedInteraction(Atom& a, Atom& b) const {
@@ -140,4 +143,8 @@ void ForceField::pairNonBondedInteraction(Atom& a, Atom& b) const {
     const float potential = 4.0f * params.eps * (ratio12 - ratio6);
     a.potential_energy += 0.5f * potential;
     b.potential_energy += 0.5f * potential;
+}
+
+void ForceField::applyGravityForce(Atom& atom) const {
+    atom.force += static_force;
 }
