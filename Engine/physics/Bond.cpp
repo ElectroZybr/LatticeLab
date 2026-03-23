@@ -4,12 +4,14 @@
 
 #include "Bond.h"
 #include "Atom.h"
+#include "AtomStorage.h"
 
 BondTable Bond::bond_default_props;
 std::list<Bond> Bond::bonds_list;
 
-Bond::Bond(Atom* _a, Atom* _b) : a(_a), b(_b) {
-    const BondParams bondParams = bond_default_props.get(_a->type, _b->type);
+Bond::Bond(std::size_t aIndex, std::size_t bIndex, Atom::Type aType, Atom::Type bType)
+    : aIndex(aIndex), bIndex(bIndex) {
+    const BondParams bondParams = bond_default_props.get(aType, bType);
     params.r0 = bondParams.r0;
     params.a = bondParams.a;
     params.De = bondParams.De;
@@ -28,39 +30,28 @@ float Bond::MorseForce(float distanse) {
     return 2.0f * params.De * params.a * (expA * expA - expA);
 }
 
-void Bond::angleForce(Atom* o, Atom* b, Atom* c) {
-    (void)o;
-    (void)b;
-    (void)c;
+void Bond::angleForce(std::size_t aIndex, std::size_t bIndex, std::size_t cIndex) {
+    (void)aIndex;
+    (void)bIndex;
+    (void)cIndex;
 }
 
-Bond* Bond::CreateBond(Atom* a, Atom* b) {
-    bonds_list.emplace_back(a, b);
-    auto it = std::prev(bonds_list.end());
-    a->bonds.emplace_back(b);
-    b->bonds.emplace_back(a);
+Bond* Bond::CreateBond(std::size_t aIndex, std::size_t bIndex, const AtomStorage& atomStorage) {
+    if (aIndex >= atomStorage.size() || bIndex >= atomStorage.size()) {
+        return nullptr;
+    }
 
-    a->valence--;
-    b->valence--;
-    return &(*it);
+    bonds_list.emplace_back(aIndex, bIndex, atomStorage.type(aIndex), atomStorage.type(bIndex));
+    return &bonds_list.back();
 }
 
 void Bond::detach() {
-    std::vector<Atom*>* bonds = &a->bonds;
-    std::erase(*bonds, b);
-    bonds = &b->bonds;
-    std::erase(*bonds, a);
-
-    a->valence++;
-    b->valence++;
 }
 
 void Bond::BreakBond(Bond* bond) {
     if (!bond) {
         return;
     }
-
-    bond->detach();
 
     if (auto it = std::ranges::find_if(bonds_list, [bond](const Bond& currentBond) { return &currentBond == bond; });
         it != bonds_list.end()) {

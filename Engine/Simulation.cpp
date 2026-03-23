@@ -8,7 +8,7 @@
 Simulation::Simulation(SimBox& box)
     :  sim_box(box), integrator()
 {
-    // резервируем место под создание атомов
+    // СЂРµР·РµСЂРІРёСЂСѓРµРј РјРµСЃС‚Рѕ РїРѕРґ СЃРѕР·РґР°РЅРёРµ Р°С‚РѕРјРѕРІ
     atoms.reserve(50000);
     atomStorage.reserve(50000);
 }
@@ -86,12 +86,23 @@ Atom* Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type t
 }
 
 void Simulation::addBond(Atom* a1, Atom* a2) {
-    // FIXME Здесь возможен баг, что если вектор атомов переаллоцирован, то указатели станут не валидными
-    Bond::CreateBond(a1, a2);
+    if (!a1 || !a2 || atoms.empty()) {
+        return;
+    }
+
+    const Atom* base = atoms.data();
+    const Atom* end = base + atoms.size();
+    if (a1 < base || a1 >= end || a2 < base || a2 >= end) {
+        return;
+    }
+
+    const std::size_t aIndex = static_cast<std::size_t>(a1 - base);
+    const std::size_t bIndex = static_cast<std::size_t>(a2 - base);
+    Bond::CreateBond(aIndex, bIndex, atomStorage);
 }
 
 double Simulation::averageKineticEnegry() const {
-    /* расчет средней кинетической энергии */
+    /* СЂР°СЃС‡РµС‚ СЃСЂРµРґРЅРµР№ РєРёРЅРµС‚РёС‡РµСЃРєРѕР№ СЌРЅРµСЂРіРёРё */
     if (atomStorage.empty()) {
         return 0.0;
     }
@@ -105,7 +116,7 @@ double Simulation::averageKineticEnegry() const {
 }
 
 double Simulation::averagePotentialEnergy() const {
-    /* расчет средней потенциальной энергии */
+    /* СЂР°СЃС‡РµС‚ СЃСЂРµРґРЅРµР№ РїРѕС‚РµРЅС†РёР°Р»СЊРЅРѕР№ СЌРЅРµСЂРіРёРё */
     if (atomStorage.empty()) {
         return 0.0;
     }
@@ -119,7 +130,7 @@ double Simulation::averagePotentialEnergy() const {
 }
 
 double Simulation::fullAverageEnergy() const {
-    /* расчет полной средней энергии */
+    /* СЂР°СЃС‡РµС‚ РїРѕР»РЅРѕР№ СЃСЂРµРґРЅРµР№ СЌРЅРµСЂРіРёРё */
     return averageKineticEnegry() + averagePotentialEnergy();
 }
 
@@ -135,9 +146,19 @@ void Simulation::logAtomPos() const {
 }
 
 void Simulation::logBondList() const {
-    for (const Atom& atom : atoms) {
-        if (atom.bonds.size() > 0) {
-            std::cout << atom.bonds.size() << std::endl;
+    std::vector<int> bondCounts(atoms.size(), 0);
+    for (const Bond& bond : Bond::bonds_list) {
+        if (bond.aIndex < bondCounts.size()) {
+            ++bondCounts[bond.aIndex];
+        }
+        if (bond.bIndex < bondCounts.size()) {
+            ++bondCounts[bond.bIndex];
+        }
+    }
+
+    for (int count : bondCounts) {
+        if (count > 0) {
+            std::cout << count << std::endl;
         }
     }
 }
@@ -170,7 +191,7 @@ void Simulation::load(std::string_view path) {
 
     clear();
 
-    // временный буфер чтобы не было реаллокаций
+    // РІСЂРµРјРµРЅРЅС‹Р№ Р±СѓС„РµСЂ С‡С‚РѕР±С‹ РЅРµ Р±С‹Р»Рѕ СЂРµР°Р»Р»РѕРєР°С†РёР№
     struct AtomData {
         Vec3D coords, speed;
         int type;

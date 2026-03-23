@@ -62,11 +62,9 @@ private:
 
 public:
     Type type;
-    int valence;
 
     bool isFixed = false;
     bool isSelect = false;
-    std::vector<Atom*> bonds;
 
     Atom (Vec3D start_coords, Vec3D start_speed, Type type, bool fixed = false);
 
