@@ -44,7 +44,7 @@ public:
 
     static Mode currentMode();
     static bool isSelectionMode(Mode mode);
-    static Atom* pickAtom(sf::Vector2i mouse_pos);
+    static Atom* pickAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
     static bool tryAddAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, Atom::Type atomType);
     static bool tryRemoveAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, Atom*& selectedMoveAtom);
 

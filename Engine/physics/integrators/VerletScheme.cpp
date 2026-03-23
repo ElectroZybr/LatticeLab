@@ -20,9 +20,9 @@ void VerletScheme::pipeline(AtomStorage& atomStorage, std::vector<Atom>& atoms, 
     // Один раз синхронизируем AoS -> SoA в начале шага
     StepOps::syncToAtomStorage(atoms, atomStorage);
     // Расчет новых позиций уже в SoA
-    StepOps::predictAndSync(atomStorage, atoms, box, dt, &predict);
+    StepOps::predictAndSync(atomStorage, box, dt, &predict);
     // Расчет сил через SoA-путь
-    StepOps::computeForces(atomStorage, atoms, box, forceField, dt);
+    StepOps::computeForces(atomStorage, box, forceField, dt);
     // Корректировка скоростей в SoA
     for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
         if (!atomStorage.isAtomFixed(atomIndex)) {
@@ -78,3 +78,4 @@ void VerletScheme::correct(AtomStorage& atomStorage, std::size_t atomIndex, doub
     atomStorage.velY(atomIndex) += (prevAy + ay) * halfDt;
     atomStorage.velZ(atomIndex) += (prevAz + az) * halfDt;
 }
+

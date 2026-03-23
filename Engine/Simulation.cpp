@@ -98,16 +98,16 @@ double Simulation::averageKineticEnegry() const {
 
 double Simulation::averagePotentialEnergy() const {
     /* расчет средней потенциальной энергии */
-    if (atoms.empty()) {
+    if (atomStorage.empty()) {
         return 0.0;
     }
 
     double potentialEnergy = 0.0;
-    for (const Atom& atom : atoms) {
-        potentialEnergy += atom.potential_energy;
+    for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
+        potentialEnergy += atomStorage.energy(atomIndex);
     }
 
-    return potentialEnergy / static_cast<double>(atoms.size());
+    return potentialEnergy / static_cast<double>(atomStorage.size());
 }
 
 double Simulation::fullAverageEnergy() const {
@@ -205,4 +205,5 @@ void Simulation::clear() {
     Bond::bonds_list.clear();
     sim_step = 0;
 }
+
 

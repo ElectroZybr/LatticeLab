@@ -41,8 +41,8 @@ inline void computeForces(std::vector<Atom>& atoms, SimBox& box, ForceField& for
     forceField.compute(atoms, box, dt);
 }
 
-inline void computeForces(AtomStorage& atomStorage, std::vector<Atom>& atomRefs, SimBox& box, ForceField& forceField, double dt) {
-    forceField.compute(atomStorage, atomRefs.data(), atomRefs.size(), box, dt);
+inline void computeForces(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, double dt) {
+    forceField.compute(atomStorage, box, dt);
 }
 
 inline void syncToAtomStorage(const std::vector<Atom>& atoms, AtomStorage& atomStorage) {
@@ -55,8 +55,6 @@ inline void syncToAtomStorage(const std::vector<Atom>& atoms, AtomStorage& atomS
             const std::size_t atomIndex = atomStorage.size() - 1;
             atomStorage.setForce(atomIndex, atom.force);
             atomStorage.setPrevForce(atomIndex, atom.prev_force);
-            atomStorage.energy(atomIndex) = static_cast<float>(atom.potential_energy);
-            atomStorage.valenceCount(atomIndex) = atom.valence;
         }
 
         return;
@@ -66,7 +64,6 @@ inline void syncToAtomStorage(const std::vector<Atom>& atoms, AtomStorage& atomS
         const Atom& atom = atoms[i];
         atomStorage.setPos(i, atom.coords);
         atomStorage.setVel(i, atom.speed);
-        atomStorage.valenceCount(i) = atom.valence;
         atomStorage.setFixed(i, atom.isFixed);
     }
 }
@@ -78,20 +75,18 @@ inline void syncFromAtomStorage(const AtomStorage& atomStorage, std::vector<Atom
         Atom& atom = atoms[i];
         atom.coords = atomStorage.pos(i);
         atom.speed = atomStorage.vel(i);
-        atom.potential_energy = atomStorage.energy(i);
-        atom.valence = atomStorage.valenceCount(i);
     }
 }
 
 inline void computeForcesViaStorage(AtomStorage& atomStorage, std::vector<Atom>& atomRefs, SimBox& box, ForceField& forceField, double dt) {
     syncToAtomStorage(atomRefs, atomStorage);
-    computeForces(atomStorage, atomRefs, box, forceField, dt);
+    computeForces(atomStorage, box, forceField, dt);
     syncFromAtomStorage(atomStorage, atomRefs);
 }
 
-inline void predictAndSync(AtomStorage& atomStorage, std::vector<Atom>& atomRefs, SimBox& box, double dt, AtomStorageStepFn predictFn) {
+inline void predictAndSync(AtomStorage& atomStorage, SimBox& box, double dt, AtomStorageStepFn predictFn) {
     auto& grid = box.grid;
-    const std::size_t atomCount = std::min(atomStorage.size(), atomRefs.size());
+    const std::size_t atomCount = atomStorage.size();
 
     for (std::size_t atomIndex = 0; atomIndex < atomCount; ++atomIndex) {
         const int prevX = grid.worldToCellX(atomStorage.posX(atomIndex));
