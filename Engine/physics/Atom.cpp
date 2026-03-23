@@ -45,19 +45,13 @@ const std::array<StaticAtomicData, static_cast<std::size_t>(Atom::Type::COUNT)> 
 }};
 
 Atom::Atom(Vec3D start_coords, Vec3D start_speed, Type type, bool fixed)
-    : coords(start_coords),
-      speed(start_speed),
-      type(type),
-      isFixed(fixed),
-      force(0, 0),
-      prev_force(0, 0) {
+    : type(type),
+      isFixed(fixed) {
+    (void)start_coords;
+    (void)start_speed;
     valence = getProps().maxValence;
     bonds.reserve(getProps().maxValence);
     Bond::bond_default_props.init();
-}
-
-float Atom::kineticEnergy() const {
-    return kineticEnergy(type, speed);
 }
 
 float Atom::kineticEnergy(Type type, const Vec3D& speed) {

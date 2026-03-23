@@ -61,16 +61,8 @@ private:
     static const std::array<StaticAtomicData, static_cast<std::size_t>(Type::COUNT)> properties;
 
 public:
-
-
-    Vec3D coords;
-    Vec3D speed;
-    Vec3D force;
-    Vec3D prev_force;
-
     Type type;
     int valence;
-    float potential_energy = 0.0;
 
     bool isFixed = false;
     bool isSelect = false;
@@ -78,7 +70,6 @@ public:
 
     Atom (Vec3D start_coords, Vec3D start_speed, Type type, bool fixed = false);
 
-    float kineticEnergy() const;
     static float kineticEnergy(Type type, const Vec3D& speed);
 
     const StaticAtomicData& getProps() const {

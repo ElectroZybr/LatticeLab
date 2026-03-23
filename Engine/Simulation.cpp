@@ -77,9 +77,9 @@ Atom* Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type t
     atoms.emplace_back(start_coords, start_speed, type, fixed);
     Atom* atom = &atoms.back();
     const std::size_t atomIndex = atoms.size() - 1;
-    const int cellX = sim_box.grid.worldToCellX(atom->coords.x);
-    const int cellY = sim_box.grid.worldToCellY(atom->coords.y);
-    const int cellZ = sim_box.grid.worldToCellZ(atom->coords.z);
+    const int cellX = sim_box.grid.worldToCellX(start_coords.x);
+    const int cellY = sim_box.grid.worldToCellY(start_coords.y);
+    const int cellZ = sim_box.grid.worldToCellZ(start_coords.z);
     sim_box.grid.insert(cellX, cellY, cellZ, atom);
     sim_box.grid.insertIndex(cellX, cellY, cellZ, atomIndex);
     return atom;

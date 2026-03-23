@@ -15,34 +15,18 @@ inline void computeForces(AtomStorage& atomStorage, SimBox& box, ForceField& for
 
 inline void syncToAtomStorage(const std::vector<Atom>& atoms, AtomStorage& atomStorage) {
     if (atomStorage.size() != atoms.size()) {
-        atomStorage.clear();
-        atomStorage.reserve(atoms.size());
-
-        for (const Atom& atom : atoms) {
-            atomStorage.addAtom(atom.coords, atom.speed, atom.type, atom.isFixed);
-            const std::size_t atomIndex = atomStorage.size() - 1;
-            atomStorage.setForce(atomIndex, atom.force);
-            atomStorage.setPrevForce(atomIndex, atom.prev_force);
-        }
-
         return;
     }
 
     for (std::size_t i = 0; i < atoms.size(); ++i) {
         const Atom& atom = atoms[i];
-        atomStorage.setPos(i, atom.coords);
-        atomStorage.setVel(i, atom.speed);
         atomStorage.setFixed(i, atom.isFixed);
     }
 }
 
 inline void syncFromAtomStorage(const AtomStorage& atomStorage, std::vector<Atom>& atoms) {
-    const std::size_t atomCount = std::min(atomStorage.size(), atoms.size());
-
-    for (std::size_t i = 0; i < atomCount; ++i) {
-        Atom& atom = atoms[i];
-        atom.coords = atomStorage.pos(i);
-    }
+    (void)atomStorage;
+    (void)atoms;
 }
 
 inline void predictAndSync(AtomStorage& atomStorage, SimBox& box, double dt, AtomStorageStepFn predictFn) {

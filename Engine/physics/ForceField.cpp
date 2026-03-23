@@ -78,21 +78,21 @@ void ForceField::applyWall(float& coord, float& speed, float& force, float min, 
     constexpr float k = 500.0f;
     constexpr float border = 2.0f;
 
-    if (coord < min) {
-        coord = min;
-        if (speed < 0.0f) {
-            speed = -speed * 0.8f;
-        }
-        return;
-    }
+    // if (coord < min) {
+    //     coord = min;
+    //     if (speed < 0.0f) {
+    //         speed = -speed * 0.8f;
+    //     }
+    //     return;
+    // }
 
-    if (coord > max) {
-        coord = max;
-        if (speed > 0.0f) {
-            speed = -speed * 0.8f;
-        }
-        return;
-    }
+    // if (coord > max) {
+    //     coord = max;
+    //     if (speed > 0.0f) {
+    //         speed = -speed * 0.8f;
+    //     }
+    //     return;
+    // }
 
     if (coord < min + border) {
         const float penetration = (min + border) - coord;
