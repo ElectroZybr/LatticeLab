@@ -11,7 +11,7 @@ void Integrator::setScheme(Scheme scheme) {
     scheme_impl = makeSchemeImpl(scheme);
 }
 
-void Integrator::step(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, double dt) const {
+void Integrator::step(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, float dt) const {
     std::visit([&](const auto& scheme) {
         scheme.pipeline(atomStorage, box, forceField, dt);
     }, scheme_impl);

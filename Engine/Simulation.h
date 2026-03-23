@@ -22,9 +22,9 @@ public:
     bool removeAtom(std::size_t atomIndex);
     void addBond(std::size_t aIndex, std::size_t bIndex);
 
-    double averageKineticEnegry() const;
-    double averagePotentialEnergy() const;
-    double fullAverageEnergy() const;
+    float averageKineticEnegry() const;
+    float averagePotentialEnergy() const;
+    float fullAverageEnergy() const;
 
     void logEnergies() const;
     void logAtomPos() const;
@@ -49,4 +49,5 @@ private:
 
     bool checkNeighbor(Vec3D coords, float delta);
 };
+
 

@@ -17,7 +17,7 @@ Bond::Bond(std::size_t aIndex, std::size_t bIndex, AtomData::Type aType, AtomDat
     params.De = bondParams.De;
 }
 
-void Bond::forceBond(double dt) {
+void Bond::forceBond(float dt) {
     (void)dt;
 }
 
