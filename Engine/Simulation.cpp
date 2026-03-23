@@ -13,7 +13,7 @@ float kineticEnergy(Atom::Type type, const Vec3D& speed) {
 
 Simulation::Simulation(SimBox& box)
     : sim_box(box), integrator() {
-    atomStorage.reserve(50000);
+    atomStorage.reserve(250000);
 }
 
 void Simulation::update(float dt) {
@@ -265,6 +265,7 @@ void Simulation::clear() {
     atoms.clear();
     atomStorage.clear();
     Bond::bonds_list.clear();
+    sim_box.grid.resize(sim_box.grid.sizeX, sim_box.grid.sizeY, sim_box.grid.sizeZ, sim_box.grid.cellSize);
     sim_step = 0;
 }
 

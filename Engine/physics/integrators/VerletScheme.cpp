@@ -18,21 +18,30 @@ void VerletScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& f
 void VerletScheme::predict(AtomStorage& atomStorage, std::size_t atomIndex, float dt) {
     const auto props = AtomData::getProps(atomStorage.type(atomIndex));
     const float invMass = 1.0f / props.mass;
+    constexpr float damping = 0.6f;
 
-    atomStorage.velX(atomIndex) += static_cast<float>(0.5f * atomStorage.prevForceX(atomIndex) * invMass * dt);
-    atomStorage.velY(atomIndex) += static_cast<float>(0.5f * atomStorage.prevForceY(atomIndex) * invMass * dt);
-    atomStorage.velZ(atomIndex) += static_cast<float>(0.5f * atomStorage.prevForceZ(atomIndex) * invMass * dt);
+    const float accX = atomStorage.forceX(atomIndex) * invMass;
+    const float accY = atomStorage.forceY(atomIndex) * invMass;
+    const float accZ = atomStorage.forceZ(atomIndex) * invMass;
 
-    atomStorage.posX(atomIndex) += static_cast<float>(atomStorage.velX(atomIndex) * dt);
-    atomStorage.posY(atomIndex) += static_cast<float>(atomStorage.velY(atomIndex) * dt);
-    atomStorage.posZ(atomIndex) += static_cast<float>(atomStorage.velZ(atomIndex) * dt);
+    atomStorage.posX(atomIndex) += (atomStorage.velX(atomIndex) * damping + accX * 0.5f * dt) * dt;
+    atomStorage.posY(atomIndex) += (atomStorage.velY(atomIndex) * damping + accY * 0.5f * dt) * dt;
+    atomStorage.posZ(atomIndex) += (atomStorage.velZ(atomIndex) * damping + accZ * 0.5f * dt) * dt;
 }
 
 void VerletScheme::correct(AtomStorage& atomStorage, std::size_t atomIndex, float dt) {
     const auto props = AtomData::getProps(atomStorage.type(atomIndex));
     const float invMass = 1.0f / props.mass;
 
-    atomStorage.velX(atomIndex) += static_cast<float>(0.5f * atomStorage.forceX(atomIndex) * invMass * dt);
-    atomStorage.velY(atomIndex) += static_cast<float>(0.5f * atomStorage.forceY(atomIndex) * invMass * dt);
-    atomStorage.velZ(atomIndex) += static_cast<float>(0.5f * atomStorage.forceZ(atomIndex) * invMass * dt);
+    const float accX = atomStorage.forceX(atomIndex) * invMass;
+    const float accY = atomStorage.forceY(atomIndex) * invMass;
+    const float accZ = atomStorage.forceZ(atomIndex) * invMass;
+
+    const float prevAccX = atomStorage.prevForceX(atomIndex) * invMass;
+    const float prevAccY = atomStorage.prevForceY(atomIndex) * invMass;
+    const float prevAccZ = atomStorage.prevForceZ(atomIndex) * invMass;
+
+    atomStorage.velX(atomIndex) += (prevAccX + accX) * 0.5f * dt;
+    atomStorage.velY(atomIndex) += (prevAccY + accY) * 0.5f * dt;
+    atomStorage.velZ(atomIndex) += (prevAccZ + accZ) * 0.5f * dt;
 }
