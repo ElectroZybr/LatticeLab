@@ -19,7 +19,7 @@ public:
 
     Bond(std::size_t aIndex, std::size_t bIndex, AtomData::Type aType, AtomData::Type bType);
 
-    void forceBond(double dt);
+    void forceBond(float dt);
     bool shouldBreak() const;
     void detach();
     float MorseForce(float distanse);

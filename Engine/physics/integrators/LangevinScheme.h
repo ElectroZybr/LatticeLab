@@ -6,5 +6,5 @@ class SimBox;
 
 class LangevinScheme {
 public:
-    void pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, double dt) const;
+    void pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, float dt) const;
 };

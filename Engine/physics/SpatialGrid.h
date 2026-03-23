@@ -35,9 +35,9 @@ public:
         return inBounds(x, y, z) ? &indexGrid[index(x, y, z)] : nullptr;
     }
 
-    int worldToCellX(double x) const  { return toCell(x, sizeX); };
-    int worldToCellY(double y) const  { return toCell(y, sizeY); };
-    int worldToCellZ(double z) const  { return toCell(z, sizeZ); };
+    int worldToCellX(float x) const  { return toCell(x, sizeX); };
+    int worldToCellY(float y) const  { return toCell(y, sizeY); };
+    int worldToCellZ(float z) const  { return toCell(z, sizeZ); };
 
     template<typename F>
     void forEachAtXY(int x, int y, F&& callback) const {
@@ -102,9 +102,10 @@ private:
             && y >= 0 && y < sizeY
             && z >= 0 && z < sizeZ;
     }
-    [[nodiscard]] int toCell(double coord, int size) const {
-        if (coord < 0.0) return -1;
+    [[nodiscard]] int toCell(float coord, int size) const {
+        if (coord < 0.0f) return -1;
         int c = static_cast<int>(coord / cellSize);
         return c < size ? c : -1;
     }
 };
+

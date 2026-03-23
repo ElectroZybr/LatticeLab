@@ -27,7 +27,7 @@ private:
 
     static LJPairTable buildLJPairTable();
 
-    static void applyWall(float& coord, float& speed, float& force, float min, float max);
+    static void applyWall(float coord, float& force, float min, float max);
     void softWalls(AtomStorage& atoms, std::size_t atomIndex, SimBox& box) const;
     void ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox& box) const;
     void pairNonBondedInteraction(AtomStorage& atoms, std::size_t aIndex, std::size_t bIndex) const;

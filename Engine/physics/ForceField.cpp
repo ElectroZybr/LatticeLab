@@ -49,50 +49,26 @@ void ForceField::softWalls(AtomStorage& atoms, std::size_t atomIndex, SimBox& bo
     float coordY = atoms.posY(atomIndex);
     float coordZ = atoms.posZ(atomIndex);
 
-    float speedX = atoms.velX(atomIndex);
-    float speedY = atoms.velY(atomIndex);
-    float speedZ = atoms.velZ(atomIndex);
-
     float forceX = atoms.forceX(atomIndex);
     float forceY = atoms.forceY(atomIndex);
     float forceZ = atoms.forceZ(atomIndex);
 
-    applyWall(coordX, speedX, forceX, 0.0f, static_cast<float>(max.x));
-    applyWall(coordY, speedY, forceY, 0.0f, static_cast<float>(max.y));
-    applyWall(coordZ, speedZ, forceZ, 0.0f, static_cast<float>(max.z));
-
-    atoms.posX(atomIndex) = coordX;
-    atoms.posY(atomIndex) = coordY;
-    atoms.posZ(atomIndex) = coordZ;
-
-    atoms.velX(atomIndex) = speedX;
-    atoms.velY(atomIndex) = speedY;
-    atoms.velZ(atomIndex) = speedZ;
+    applyWall(coordX, forceX, 0.0f, static_cast<float>(max.x));
+    applyWall(coordY, forceY, 0.0f, static_cast<float>(max.y));
+    applyWall(coordZ, forceZ, 0.0f, static_cast<float>(max.z));
 
     atoms.forceX(atomIndex) = forceX;
     atoms.forceY(atomIndex) = forceY;
     atoms.forceZ(atomIndex) = forceZ;
 }
 
-void ForceField::applyWall(float& coord, float& speed, float& force, float min, float max) {
+void ForceField::applyWall(float coord, float& force, float min, float max) {
     constexpr float k = 500.0f;
     constexpr float border = 2.0f;
 
-    // if (coord < min) {
-    //     coord = min;
-    //     if (speed < 0.0f) {
-    //         speed = -speed * 0.8f;
-    //     }
-    //     return;
-    // }
-
-    // if (coord > max) {
-    //     coord = max;
-    //     if (speed > 0.0f) {
-    //         speed = -speed * 0.8f;
-    //     }
-    //     return;
-    // }
+    if (coord <= min || coord >= max) {
+        return;
+    }
 
     if (coord < min + border) {
         const float penetration = (min + border) - coord;
