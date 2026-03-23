@@ -49,8 +49,6 @@ Atom::Atom(Vec3D start_coords, Vec3D start_speed, Type type, bool fixed)
       isFixed(fixed) {
     (void)start_coords;
     (void)start_speed;
-    valence = getProps().maxValence;
-    bonds.reserve(getProps().maxValence);
     Bond::bond_default_props.init();
 }
 
