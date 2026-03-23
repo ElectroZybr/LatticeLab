@@ -1,8 +1,5 @@
 #pragma once
 
-#include <vector>
-
-#include "../Atom.h"
 #include "../ForceField.h"
 #include "../../SimBox.h"
 
@@ -11,22 +8,6 @@ using AtomStorageStepFn = void (*)(AtomStorage& atomStorage, std::size_t atomInd
 
 inline void computeForces(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, double dt) {
     forceField.compute(atomStorage, box, dt);
-}
-
-inline void syncToAtomStorage(const std::vector<Atom>& atoms, AtomStorage& atomStorage) {
-    if (atomStorage.size() != atoms.size()) {
-        return;
-    }
-
-    for (std::size_t i = 0; i < atoms.size(); ++i) {
-        const Atom& atom = atoms[i];
-        atomStorage.setFixed(i, atom.isFixed);
-    }
-}
-
-inline void syncFromAtomStorage(const AtomStorage& atomStorage, std::vector<Atom>& atoms) {
-    (void)atomStorage;
-    (void)atoms;
 }
 
 inline void predictAndSync(AtomStorage& atomStorage, SimBox& box, double dt, AtomStorageStepFn predictFn) {

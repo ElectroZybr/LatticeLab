@@ -18,8 +18,9 @@ public:
     void setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize = -1);
 
     void createRandomAtoms(Atom::Type type, int quantity);
-    Atom* createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type type, bool fixed = false);
-    void addBond(Atom* a1, Atom* a2);
+    bool createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type type, bool fixed = false);
+    bool removeAtom(std::size_t atomIndex);
+    void addBond(std::size_t aIndex, std::size_t bIndex);
 
     double averageKineticEnegry() const;
     double averagePotentialEnergy() const;
@@ -39,7 +40,6 @@ public:
     void clear();
 
     SimBox& sim_box;
-    std::vector<Atom> atoms;
     AtomStorage atomStorage;
     Integrator integrator;
     ForceField forceField;

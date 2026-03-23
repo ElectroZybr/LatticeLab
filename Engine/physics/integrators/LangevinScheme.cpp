@@ -2,7 +2,6 @@
 
 #include "VerletScheme.h"
 
-void LangevinScheme::pipeline(AtomStorage& atomStorage, std::vector<Atom>& atoms, SimBox& box,
-                              ForceField& forceField, double dt) const {
-    VerletScheme{}.pipeline(atomStorage, atoms, box, forceField, dt);
+void LangevinScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, double dt) const {
+    VerletScheme{}.pipeline(atomStorage, box, forceField, dt);
 }

@@ -3,10 +3,7 @@
 #include "StepOps.h"
 #include "../Atom.h"
 
-void KDKScheme::pipeline(AtomStorage& atomStorage, std::vector<Atom>& atoms, SimBox& box, ForceField& forceField,
-                         double dt) const {
-    StepOps::syncToAtomStorage(atoms, atomStorage);
-
+void KDKScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, double dt) const {
     for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
         if (atomStorage.isAtomFixed(atomIndex)) {
             continue;
@@ -25,8 +22,6 @@ void KDKScheme::pipeline(AtomStorage& atomStorage, std::vector<Atom>& atoms, Sim
 
         halfKick(atomStorage, atomIndex, dt);
     }
-
-    StepOps::syncFromAtomStorage(atomStorage, atoms);
 }
 
 void KDKScheme::halfKick(AtomStorage& atomStorage, std::size_t atomIndex, double dt) {

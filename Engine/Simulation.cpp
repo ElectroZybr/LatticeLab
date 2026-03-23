@@ -6,27 +6,22 @@
 #include "physics/Bond.h"
 
 Simulation::Simulation(SimBox& box)
-    :  sim_box(box), integrator()
-{
-    // СЂРµР·РµСЂРІРёСЂСѓРµРј РјРµСЃС‚Рѕ РїРѕРґ СЃРѕР·РґР°РЅРёРµ Р°С‚РѕРјРѕРІ
-    atoms.reserve(50000);
+    : sim_box(box), integrator() {
     atomStorage.reserve(50000);
 }
 
 void Simulation::update(float dt) {
-    integrator.step(atomStorage, atoms, sim_box, forceField, dt);
+    integrator.step(atomStorage, sim_box, forceField, dt);
     ++sim_step;
 }
 
 void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
     if (sim_box.setSizeBox(newStart, newEnd, cellSize)) {
-        for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
-            Atom& atom = atoms[atomIndex];
+        for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
             const Vec3D pos = atomStorage.pos(atomIndex);
             const int cellX = sim_box.grid.worldToCellX(pos.x);
             const int cellY = sim_box.grid.worldToCellY(pos.y);
             const int cellZ = sim_box.grid.worldToCellZ(pos.z);
-            sim_box.grid.insert(cellX, cellY, cellZ, &atom);
             sim_box.grid.insertIndex(cellX, cellY, cellZ, atomIndex);
         }
     }
@@ -36,9 +31,9 @@ void Simulation::createRandomAtoms(Atom::Type type, int quantity) {
     const double z_mid = (sim_box.end.z - sim_box.start.z) * 0.5;
     for (int i = 0; i < quantity; ++i) {
         for (int j = 0; j < 10; ++j) {
-            double r_x = std::rand() % int(sim_box.end.x-sim_box.start.x-4);
-            double r_y = std::rand() % int(sim_box.end.y-sim_box.start.y-4);
-            Vec3D coords(r_x+2, r_y+2, z_mid);
+            double r_x = std::rand() % int(sim_box.end.x - sim_box.start.x - 4);
+            double r_y = std::rand() % int(sim_box.end.y - sim_box.start.y - 4);
+            Vec3D coords(r_x + 2, r_y + 2, z_mid);
             if (!checkNeighbor(coords, 4)) {
                 createAtom(coords, Vec3D::Random() * 5.0, type);
                 break;
@@ -72,37 +67,64 @@ bool Simulation::checkNeighbor(Vec3D coords, float delta) {
     return false;
 }
 
-Atom* Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type type, bool fixed) {
+bool Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type type, bool fixed) {
     atomStorage.addAtom(start_coords, start_speed, type, fixed);
-    atoms.emplace_back(start_coords, start_speed, type, fixed);
-    Atom* atom = &atoms.back();
-    const std::size_t atomIndex = atoms.size() - 1;
+    const std::size_t atomIndex = atomStorage.size() - 1;
     const int cellX = sim_box.grid.worldToCellX(start_coords.x);
     const int cellY = sim_box.grid.worldToCellY(start_coords.y);
     const int cellZ = sim_box.grid.worldToCellZ(start_coords.z);
-    sim_box.grid.insert(cellX, cellY, cellZ, atom);
     sim_box.grid.insertIndex(cellX, cellY, cellZ, atomIndex);
-    return atom;
+    return true;
 }
 
-void Simulation::addBond(Atom* a1, Atom* a2) {
-    if (!a1 || !a2 || atoms.empty()) {
+bool Simulation::removeAtom(std::size_t atomIndex) {
+    if (atomIndex >= atomStorage.size()) {
+        return false;
+    }
+
+    const std::size_t lastIndex = atomStorage.size() - 1;
+
+    for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end();) {
+        if (it->aIndex == atomIndex || it->bIndex == atomIndex) {
+            it = Bond::bonds_list.erase(it);
+            continue;
+        }
+
+        if (atomIndex != lastIndex) {
+            if (it->aIndex == lastIndex) {
+                it->aIndex = atomIndex;
+            }
+            if (it->bIndex == lastIndex) {
+                it->bIndex = atomIndex;
+            }
+        }
+
+        ++it;
+    }
+
+    atomStorage.removeAtom(atomIndex);
+
+    sim_box.grid.resize(sim_box.grid.sizeX, sim_box.grid.sizeY, sim_box.grid.sizeZ, sim_box.grid.cellSize);
+    for (std::size_t index = 0; index < atomStorage.size(); ++index) {
+        const Vec3D pos = atomStorage.pos(index);
+        const int cellX = sim_box.grid.worldToCellX(pos.x);
+        const int cellY = sim_box.grid.worldToCellY(pos.y);
+        const int cellZ = sim_box.grid.worldToCellZ(pos.z);
+        sim_box.grid.insertIndex(cellX, cellY, cellZ, index);
+    }
+
+    return true;
+}
+
+void Simulation::addBond(std::size_t aIndex, std::size_t bIndex) {
+    if (aIndex >= atomStorage.size() || bIndex >= atomStorage.size()) {
         return;
     }
 
-    const Atom* base = atoms.data();
-    const Atom* end = base + atoms.size();
-    if (a1 < base || a1 >= end || a2 < base || a2 >= end) {
-        return;
-    }
-
-    const std::size_t aIndex = static_cast<std::size_t>(a1 - base);
-    const std::size_t bIndex = static_cast<std::size_t>(a2 - base);
     Bond::CreateBond(aIndex, bIndex, atomStorage);
 }
 
 double Simulation::averageKineticEnegry() const {
-    /* СЂР°СЃС‡РµС‚ СЃСЂРµРґРЅРµР№ РєРёРЅРµС‚РёС‡РµСЃРєРѕР№ СЌРЅРµСЂРіРёРё */
     if (atomStorage.empty()) {
         return 0.0;
     }
@@ -116,7 +138,6 @@ double Simulation::averageKineticEnegry() const {
 }
 
 double Simulation::averagePotentialEnergy() const {
-    /* СЂР°СЃС‡РµС‚ СЃСЂРµРґРЅРµР№ РїРѕС‚РµРЅС†РёР°Р»СЊРЅРѕР№ СЌРЅРµСЂРіРёРё */
     if (atomStorage.empty()) {
         return 0.0;
     }
@@ -130,7 +151,6 @@ double Simulation::averagePotentialEnergy() const {
 }
 
 double Simulation::fullAverageEnergy() const {
-    /* СЂР°СЃС‡РµС‚ РїРѕР»РЅРѕР№ СЃСЂРµРґРЅРµР№ СЌРЅРµСЂРіРёРё */
     return averageKineticEnegry() + averagePotentialEnergy();
 }
 
@@ -146,7 +166,7 @@ void Simulation::logAtomPos() const {
 }
 
 void Simulation::logBondList() const {
-    std::vector<int> bondCounts(atoms.size(), 0);
+    std::vector<int> bondCounts(atomStorage.size(), 0);
     for (const Bond& bond : Bond::bonds_list) {
         if (bond.aIndex < bondCounts.size()) {
             ++bondCounts[bond.aIndex];
@@ -163,8 +183,7 @@ void Simulation::logBondList() const {
     }
 }
 
-void Simulation::save(std::string_view path) const
-{
+void Simulation::save(std::string_view path) const {
     std::ofstream file(path.data());
     if (!file.is_open()) return;
 
@@ -191,7 +210,6 @@ void Simulation::load(std::string_view path) {
 
     clear();
 
-    // РІСЂРµРјРµРЅРЅС‹Р№ Р±СѓС„РµСЂ С‡С‚РѕР±С‹ РЅРµ Р±С‹Р»Рѕ СЂРµР°Р»Р»РѕРєР°С†РёР№
     struct AtomData {
         Vec3D coords, speed;
         int type;
@@ -223,18 +241,13 @@ void Simulation::load(std::string_view path) {
 
     setSizeBox(boxStart, boxEnd, cellSize);
 
-    atoms.reserve(buffer.size());
     for (const AtomData& d : buffer) {
-        Atom* atom = createAtom(d.coords, d.speed, static_cast<Atom::Type>(d.type), d.fixed);
+        createAtom(d.coords, d.speed, static_cast<Atom::Type>(d.type), d.fixed);
     }
 }
 
 void Simulation::clear() {
-    atoms.clear();
     atomStorage.clear();
     Bond::bonds_list.clear();
     sim_step = 0;
 }
-
-
-
