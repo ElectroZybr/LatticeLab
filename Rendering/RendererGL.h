@@ -59,6 +59,7 @@ protected:
     struct alignas(16) GridInstance {
         glm::vec3 origin;
         float cellSize;
+        float atomCount;
     };
 
     std::vector<AtomInstance> instanceData;
