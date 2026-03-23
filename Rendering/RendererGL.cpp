@@ -238,7 +238,7 @@ GLuint RendererGL::linkProgram(std::string_view vert, std::string_view frag,
 // ------------------------------------------------------------------ draw ---
 
 void RendererGL::drawShot(const std::vector<Atom>& atoms,
-                          const SimBox& box, float deltaTime)
+                          const SimBox& box)
 {
     currentBox = &box;
     updateMatrices();

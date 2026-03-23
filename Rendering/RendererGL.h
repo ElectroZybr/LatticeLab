@@ -12,7 +12,7 @@ public:
     virtual ~RendererGL();
 
     void drawShot(const std::vector<Atom>& atoms,
-                  const SimBox& box, float deltaTime) override;
+                  const SimBox& box) override;
 
 protected:
     virtual bool useLighting() { return true; }

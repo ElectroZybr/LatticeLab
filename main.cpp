@@ -170,7 +170,7 @@ int main() {
             }
             renderer->camera.update(window);
             renderCounter.timer.start();
-            renderer->drawShot(simulation.atoms, simulation.sim_box, shotTmr);
+            renderer->drawShot(simulation.atoms, simulation.sim_box);
             ImGui::SFML::Render(window);
             renderCounter.timer.stop();
             renderCounter.tick(renderCounter.timer.elapsedMilliseconds());

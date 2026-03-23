@@ -157,14 +157,13 @@ static void BM_Renderer2D_DrawShot(benchmark::State& state) {
     SimBox box(Vec3D(0, 0, 0), Vec3D(300, 300, 300));
 
     for (auto _ : state) {
-        renderer.drawShot(atoms, box, 0.016f);
+        renderer.drawShot(atoms, box);
         benchmark::ClobberMemory();
     }
 }
-
 
 BENCHMARK(BM_SimulationStep)->Args({5 * 5 * 5})->Args({10 * 10 * 10});//->Args({20 * 20 * 20});
 BENCHMARK(BM_ComputeForces)->Args({5 * 5 * 5})->Args({10 * 10 * 10});//->Args({20 * 20 * 20});
 BENCHMARK(BM_PredictAndSync)->Args({5 * 5 * 5})->Args({10 * 10 * 10});//->Args({20 * 20 * 20});
 BENCHMARK(BM_Correct)->Args({5 * 5 * 5})->Args({10 * 10 * 10});//->Args({20 * 20 * 20});
-// BENCHMARK(BM_Renderer2D_DrawShot)->Args({5 * 5 * 5})->Args({30 * 30 * 30})->Args({100 * 100 * 100});
+BENCHMARK(BM_Renderer2D_DrawShot)->Args({5 * 5 * 5})->Args({30 * 30 * 30})->Args({100 * 100 * 100});
