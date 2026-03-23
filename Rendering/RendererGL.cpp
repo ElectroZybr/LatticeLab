@@ -162,6 +162,11 @@ void RendererGL::initGridGL() {
                           (void*)offsetof(GridInstance, cellSize));
     glVertexAttribDivisor(2, 1);
 
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, gs,
+                        (void*)offsetof(GridInstance, atomCount));
+    glVertexAttribDivisor(3, 1);
+
     glBindVertexArray(0);
 
     gridShader = linkProgram("Rendering/3d/shaders/grid.vert",
@@ -385,6 +390,8 @@ void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
 void RendererGL::drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset) {
     gridData.clear();
 
+    int maxCount = 1;
+
     for (int z = 0; z < grid.sizeZ; ++z) {
         for (int y = 0; y < grid.sizeY; ++y) {
             for (int x = 0; x < grid.sizeX; ++x) {
@@ -394,8 +401,10 @@ void RendererGL::drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset)
                     glm::vec3(x * grid.cellSize,
                             y * grid.cellSize,
                             z * grid.cellSize) + boxOffset,
-                    static_cast<float>(grid.cellSize)
+                    static_cast<float>(grid.cellSize),
+                    static_cast<float>(cell->size())
                 });
+                maxCount = std::max(maxCount, (int)cell->size());
             }
         }
     }
@@ -412,6 +421,7 @@ void RendererGL::drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset)
                        1, GL_FALSE, glm::value_ptr(projection));
     glUniformMatrix4fv(glGetUniformLocation(gridShader, "view"),
                        1, GL_FALSE, glm::value_ptr(view));
+    glUniform1f(glGetUniformLocation(gridShader, "uMaxCount"), float(maxCount));
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
