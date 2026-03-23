@@ -8,6 +8,7 @@
 
 namespace StepOps {
 using AtomStepFn = void (*)(Atom& atom, double dt);
+using AtomStorageStepFn = void (*)(AtomStorage& atomStorage, std::size_t atomIndex, double dt);
 
 inline void predictAndSync(std::vector<Atom>& atoms, SimBox& box, double dt, AtomStepFn predictFn) {
     auto& grid = box.grid;
@@ -41,7 +42,7 @@ inline void computeForces(std::vector<Atom>& atoms, SimBox& box, ForceField& for
 }
 
 inline void computeForces(AtomStorage& atomStorage, std::vector<Atom>& atomRefs, SimBox& box, ForceField& forceField, double dt) {
-    forceField.compute(atomStorage, atomRefs, box, dt);
+    forceField.compute(atomStorage, atomRefs.data(), atomRefs.size(), box, dt);
 }
 
 inline void syncToAtomStorage(const std::vector<Atom>& atoms, AtomStorage& atomStorage) {
@@ -65,10 +66,8 @@ inline void syncToAtomStorage(const std::vector<Atom>& atoms, AtomStorage& atomS
         const Atom& atom = atoms[i];
         atomStorage.setPos(i, atom.coords);
         atomStorage.setVel(i, atom.speed);
-        atomStorage.setForce(i, atom.force);
-        atomStorage.setPrevForce(i, atom.prev_force);
-        atomStorage.energy(i) = static_cast<float>(atom.potential_energy);
         atomStorage.valenceCount(i) = atom.valence;
+        atomStorage.setFixed(i, atom.isFixed);
     }
 }
 
@@ -79,7 +78,6 @@ inline void syncFromAtomStorage(const AtomStorage& atomStorage, std::vector<Atom
         Atom& atom = atoms[i];
         atom.coords = atomStorage.pos(i);
         atom.speed = atomStorage.vel(i);
-        atom.force = atomStorage.force(i);
         atom.potential_energy = atomStorage.energy(i);
         atom.valence = atomStorage.valenceCount(i);
     }
@@ -89,5 +87,40 @@ inline void computeForcesViaStorage(AtomStorage& atomStorage, std::vector<Atom>&
     syncToAtomStorage(atomRefs, atomStorage);
     computeForces(atomStorage, atomRefs, box, forceField, dt);
     syncFromAtomStorage(atomStorage, atomRefs);
+}
+
+inline void predictAndSync(AtomStorage& atomStorage, std::vector<Atom>& atomRefs, SimBox& box, double dt, AtomStorageStepFn predictFn) {
+    auto& grid = box.grid;
+    const std::size_t atomCount = std::min(atomStorage.size(), atomRefs.size());
+
+    for (std::size_t atomIndex = 0; atomIndex < atomCount; ++atomIndex) {
+        Atom& atomRef = atomRefs[atomIndex];
+
+        const int prevX = grid.worldToCellX(atomStorage.posX(atomIndex));
+        const int prevY = grid.worldToCellY(atomStorage.posY(atomIndex));
+        const int prevZ = grid.worldToCellZ(atomStorage.posZ(atomIndex));
+
+        if (!atomStorage.isAtomFixed(atomIndex)) {
+            predictFn(atomStorage, atomIndex, dt);
+        }
+
+        const int currX = grid.worldToCellX(atomStorage.posX(atomIndex));
+        const int currY = grid.worldToCellY(atomStorage.posY(atomIndex));
+        const int currZ = grid.worldToCellZ(atomStorage.posZ(atomIndex));
+
+        if (prevX != currX || prevY != currY || prevZ != currZ) {
+            grid.erase(prevX, prevY, prevZ, &atomRef);
+            grid.insert(currX, currY, currZ, &atomRef);
+        }
+
+        atomStorage.prevForceX(atomIndex) = atomStorage.forceX(atomIndex);
+        atomStorage.prevForceY(atomIndex) = atomStorage.forceY(atomIndex);
+        atomStorage.prevForceZ(atomIndex) = atomStorage.forceZ(atomIndex);
+
+        atomStorage.forceX(atomIndex) = 0.0f;
+        atomStorage.forceY(atomIndex) = 0.0f;
+        atomStorage.forceZ(atomIndex) = 0.0f;
+        atomStorage.energy(atomIndex) = 0.0f;
+    }
 }
 }

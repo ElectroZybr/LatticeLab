@@ -16,7 +16,7 @@ public:
     ForceField();
 
     void compute(std::vector<Atom>& atoms, SimBox& box, float dt) const;
-    void compute(AtomStorage& atoms, std::vector<Atom>& atomRefs, SimBox& box, float dt) const;
+    void compute(AtomStorage& atoms, Atom* atomBase, std::size_t atomCount, SimBox& box, float dt) const;
 
     void setGravity(Vec3D gravity = Vec3D(0, 5, 0)) { static_force = gravity; }
     Vec3D getGravity() const { return static_force; }
@@ -35,7 +35,7 @@ private:
     void softWalls(Atom& atom, SimBox& box) const;
     void softWalls(AtomStorage& atoms, std::size_t atomIndex, SimBox& box) const;
     void ComputeForces(Atom& atom, SimBox& box) const;
-    void ComputeForces(AtomStorage& atoms, std::vector<Atom>& atomRefs, std::size_t atomIndex, SimBox& box) const;
+    void ComputeForces(AtomStorage& atoms, Atom* atomBase, std::size_t atomCount, std::size_t atomIndex, SimBox& box) const;
     void pairNonBondedInteraction(Atom& a, Atom& b) const;
     void pairNonBondedInteraction(AtomStorage& atoms, std::size_t aIndex, std::size_t bIndex) const;
     void applyGravityForce(Atom& atom) const;

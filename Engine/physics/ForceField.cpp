@@ -10,14 +10,14 @@
 #include "../math/Consts.h"
 
 namespace {
-std::size_t atomIndexFromPtr(const Atom* atom, const std::vector<Atom>& atomRefs) {
-    return static_cast<std::size_t>(atom - atomRefs.data());
+std::size_t atomIndexFromPtr(const Atom* atom, const Atom* atomBase) {
+    return static_cast<std::size_t>(atom - atomBase);
 }
 
-bool shouldBreakBondSoA(const Bond& bond, const AtomStorage& atoms, const std::vector<Atom>& atomRefs) {
-    const std::size_t aIndex = atomIndexFromPtr(bond.a, atomRefs);
-    const std::size_t bIndex = atomIndexFromPtr(bond.b, atomRefs);
-    if (aIndex >= atoms.size() || bIndex >= atoms.size()) return false;
+bool shouldBreakBondSoA(const Bond& bond, const AtomStorage& atoms, const Atom* atomBase, std::size_t atomCount) {
+    const std::size_t aIndex = atomIndexFromPtr(bond.a, atomBase);
+    const std::size_t bIndex = atomIndexFromPtr(bond.b, atomBase);
+    if (aIndex >= atoms.size() || bIndex >= atoms.size() || aIndex >= atomCount || bIndex >= atomCount) return false;
 
     const float dx = atoms.posX(aIndex) - atoms.posX(bIndex);
     const float dy = atoms.posY(aIndex) - atoms.posY(bIndex);
@@ -26,10 +26,10 @@ bool shouldBreakBondSoA(const Bond& bond, const AtomStorage& atoms, const std::v
     return distanceSqr > 3.0f * 3.0f;
 }
 
-void applyBondForceSoA(Bond& bond, AtomStorage& atoms, const std::vector<Atom>& atomRefs) {
-    const std::size_t aIndex = atomIndexFromPtr(bond.a, atomRefs);
-    const std::size_t bIndex = atomIndexFromPtr(bond.b, atomRefs);
-    if (aIndex >= atoms.size() || bIndex >= atoms.size()) return;
+void applyBondForceSoA(Bond& bond, AtomStorage& atoms, const Atom* atomBase, std::size_t atomCount) {
+    const std::size_t aIndex = atomIndexFromPtr(bond.a, atomBase);
+    const std::size_t bIndex = atomIndexFromPtr(bond.b, atomBase);
+    if (aIndex >= atoms.size() || bIndex >= atoms.size() || aIndex >= atomCount || bIndex >= atomCount) return;
 
     const float dx = atoms.posX(aIndex) - atoms.posX(bIndex);
     const float dy = atoms.posY(aIndex) - atoms.posY(bIndex);
@@ -160,17 +160,18 @@ void ForceField::compute(std::vector<Atom>& atoms, SimBox& box, float dt) const 
     }
 }
 
-void ForceField::compute(AtomStorage& atoms, std::vector<Atom>& atomRefs, SimBox& box, float dt) const {
-    const std::size_t atomCount = std::min(atoms.size(), atomRefs.size());
+void ForceField::compute(AtomStorage& atoms, Atom* atomBase, std::size_t atomCount, SimBox& box, float dt) const {
+    if (atomBase == nullptr) return;
+    atomCount = std::min(atomCount, atoms.size());
 
     for (std::size_t atomIndex = 0; atomIndex < atomCount; ++atomIndex) {
-        ComputeForces(atoms, atomRefs, atomIndex, box);
+        ComputeForces(atoms, atomBase, atomCount, atomIndex, box);
     }
 
     for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end();) {
-        if (shouldBreakBondSoA(*it, atoms, atomRefs)) {
-            const std::size_t aIndex = atomIndexFromPtr(it->a, atomRefs);
-            const std::size_t bIndex = atomIndexFromPtr(it->b, atomRefs);
+        if (shouldBreakBondSoA(*it, atoms, atomBase, atomCount)) {
+            const std::size_t aIndex = atomIndexFromPtr(it->a, atomBase);
+            const std::size_t bIndex = atomIndexFromPtr(it->b, atomBase);
             it->detach();
             if (aIndex < atoms.size()) {
                 atoms.valenceCount(aIndex) = it->a->valence;
@@ -185,7 +186,7 @@ void ForceField::compute(AtomStorage& atoms, std::vector<Atom>& atomRefs, SimBox
     }
 
     for (Bond& bond : Bond::bonds_list) {
-        applyBondForceSoA(bond, atoms, atomRefs);
+        applyBondForceSoA(bond, atoms, atomBase, atomCount);
     }
 }
 
@@ -310,25 +311,25 @@ void ForceField::ComputeForces(Atom& atom, SimBox& box) const {
 
 }
 
-void ForceField::ComputeForces(AtomStorage& atoms, std::vector<Atom>& atomRefs, std::size_t atomIndex, SimBox& box) const {
-    if (atomIndex >= atoms.size() || atomIndex >= atomRefs.size()) return;
+void ForceField::ComputeForces(AtomStorage& atoms, Atom* atomBase, std::size_t atomCount, std::size_t atomIndex, SimBox& box) const {
+    if (atomBase == nullptr || atomIndex >= atoms.size() || atomIndex >= atomCount) return;
 
     softWalls(atoms, atomIndex, box);
     applyGravityForce(atoms, atomIndex);
 
-    const auto& atomBonds = atomRefs[atomIndex].bonds;
+    const auto& atomBonds = atomBase[atomIndex].bonds;
     const auto& atomProps = Atom::getProps(atoms.type(atomIndex));
     box.grid.forEachNeighbor(atoms.pos(atomIndex), [&](Atom* neighbour) {
-        const std::size_t neighbourIndex = static_cast<std::size_t>(neighbour - atomRefs.data());
-        if (neighbourIndex >= atoms.size() || neighbourIndex <= atomIndex) {
+        const std::size_t neighbourIndex = static_cast<std::size_t>(neighbour - atomBase);
+        if (neighbourIndex >= atoms.size() || neighbourIndex >= atomCount || neighbourIndex <= atomIndex) {
             return;
         }
 
         const bool bonded = std::find(atomBonds.begin(), atomBonds.end(), neighbour) != atomBonds.end();
 
         if (atomProps.maxValence - atoms.valenceCount(atomIndex) >= 2 && atomBonds.size() >= 2) {
-            const std::size_t bondAIndex = atomIndexFromPtr(atomBonds[0], atomRefs);
-            const std::size_t bondBIndex = atomIndexFromPtr(atomBonds[1], atomRefs);
+            const std::size_t bondAIndex = atomIndexFromPtr(atomBonds[0], atomBase);
+            const std::size_t bondBIndex = atomIndexFromPtr(atomBonds[1], atomBase);
             if (bondAIndex < atoms.size() && bondBIndex < atoms.size()) {
                 applyAngleForceSoA(atoms, atomIndex, bondAIndex, bondBIndex);
             }

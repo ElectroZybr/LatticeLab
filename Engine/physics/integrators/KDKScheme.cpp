@@ -23,16 +23,17 @@ void KDKScheme::pipeline(std::vector<Atom>& atoms, SimBox& box, ForceField& forc
 }
 
 void KDKScheme::pipeline(AtomStorage& atomStorage, std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const {
-    // Kick: половина шага
-    for (Atom& atom : atoms) {
-        if (!atom.isFixed) {
-            halfKick(atom, dt);
+    // Один раз синхронизируем AoS -> SoA в начале шага
+    StepOps::syncToAtomStorage(atoms, atomStorage);
+    // Kick: половина шага в SoA
+    for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
+        if (!atomStorage.isAtomFixed(atomIndex)) {
+            halfKick(atomStorage, atomIndex, dt);
         }
     }
-    // Расчет новых позиций
-    StepOps::predictAndSync(atoms, box, dt, &drift);
+    // Расчет новых позиций уже в SoA
+    StepOps::predictAndSync(atomStorage, atoms, box, dt, &drift);
     // Расчет сил через SoA-путь
-    StepOps::syncToAtomStorage(atoms, atomStorage);
     StepOps::computeForces(atomStorage, atoms, box, forceField, dt);
     // Kick: вторая половина шага в SoA
     for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
@@ -61,4 +62,11 @@ void KDKScheme::halfKick(AtomStorage& atomStorage, std::size_t atomIndex, double
 
 void KDKScheme::drift(Atom& atom, double dt) {
     atom.coords += atom.speed * dt;
+}
+
+void KDKScheme::drift(AtomStorage& atomStorage, std::size_t atomIndex, double dt) {
+    const float dtf = static_cast<float>(dt);
+    atomStorage.posX(atomIndex) += atomStorage.velX(atomIndex) * dtf;
+    atomStorage.posY(atomIndex) += atomStorage.velY(atomIndex) * dtf;
+    atomStorage.posZ(atomIndex) += atomStorage.velZ(atomIndex) * dtf;
 }

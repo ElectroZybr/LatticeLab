@@ -14,6 +14,7 @@
 
 class SimBox;
 class Atom;
+class AtomStorage;
 
 class Tools {
 public:
@@ -27,7 +28,8 @@ public:
         RemoveAtom,
     };
 
-    static void init(sf::RenderWindow* window, sf::View* gameView, SpatialGrid* grid, SimBox* box, std::unique_ptr<IRenderer>& r, AtomCreator atomCreator = {});
+    static void init(sf::RenderWindow* window, sf::View* gameView, SpatialGrid* grid, SimBox* box,
+                     std::unique_ptr<IRenderer>& r, AtomStorage* atomStorage = nullptr, AtomCreator atomCreator = {});
 
     static void selectionFrame(sf::Vector2i start_mouse_pos, sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
     static Vec2D screenToWorld(sf::Vector2i mouse_pos);
@@ -53,6 +55,7 @@ private:
     static SpatialGrid* grid;
     static std::unique_ptr<IRenderer>* renderer;
     static SimBox* box;
+    static AtomStorage* atomStorage;
     static AtomCreator atomCreator;
 
     static bool atomMoveFlag;

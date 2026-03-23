@@ -179,6 +179,7 @@ class AtomStorage {
         const int& valenceCount(std::size_t i) const { return valence[i]; }
         
         bool isAtomFixed(std::size_t i) { return isFixed[i]; }
+        void setFixed(std::size_t i, bool fixed) { isFixed[i] = fixed; }
 
         Vec3D pos(std::size_t i) const {
             return Vec3D(x[i], y[i], z[i]);

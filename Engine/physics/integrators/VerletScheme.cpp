@@ -17,10 +17,11 @@ void VerletScheme::pipeline(std::vector<Atom>& atoms, SimBox& box, ForceField& f
 }
 
 void VerletScheme::pipeline(AtomStorage& atomStorage, std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const {
-    // Расчет новых позиций
-    StepOps::predictAndSync(atoms, box, dt, &predict);
-    // Расчет сил через SoA-путь
+    // Один раз синхронизируем AoS -> SoA в начале шага
     StepOps::syncToAtomStorage(atoms, atomStorage);
+    // Расчет новых позиций уже в SoA
+    StepOps::predictAndSync(atomStorage, atoms, box, dt, &predict);
+    // Расчет сил через SoA-путь
     StepOps::computeForces(atomStorage, atoms, box, forceField, dt);
     // Корректировка скоростей в SoA
     for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
@@ -36,6 +37,22 @@ void VerletScheme::predict(Atom& atom, double dt) {
     constexpr float damping = 0.6f;
     const Vec3D acceleration = atom.force / atom.getProps().mass;
     atom.coords += (atom.speed * damping + acceleration * 0.5f * dt) * dt;
+}
+
+void VerletScheme::predict(AtomStorage& atomStorage, std::size_t atomIndex, double dt) {
+    constexpr float damping = 0.6f;
+    const auto& props = Atom::getProps(atomStorage.type(atomIndex));
+    const float invMass = 1.0f / static_cast<float>(props.mass);
+    const float halfDt = static_cast<float>(0.5 * dt);
+    const float dtf = static_cast<float>(dt);
+
+    const float ax = atomStorage.forceX(atomIndex) * invMass;
+    const float ay = atomStorage.forceY(atomIndex) * invMass;
+    const float az = atomStorage.forceZ(atomIndex) * invMass;
+
+    atomStorage.posX(atomIndex) += (atomStorage.velX(atomIndex) * damping + ax * halfDt) * dtf;
+    atomStorage.posY(atomIndex) += (atomStorage.velY(atomIndex) * damping + ay * halfDt) * dtf;
+    atomStorage.posZ(atomIndex) += (atomStorage.velZ(atomIndex) * damping + az * halfDt) * dtf;
 }
 
 void VerletScheme::correct(Atom& atom, double dt) {

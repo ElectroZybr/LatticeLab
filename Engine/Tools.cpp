@@ -10,6 +10,7 @@
 #include "SimBox.h"
 #include "GUI/interface/interface.h"
 #include "physics/Bond.h"
+#include "physics/AtomStorage.h"
 
 namespace {
 Tools::Mode mapPanelTool(SideToolsPanel::Tool tool) {
@@ -23,10 +24,20 @@ Tools::Mode mapPanelTool(SideToolsPanel::Tool tool) {
     return Tools::Mode::Cursor;
 }
 
-void removeBondsWithAtom(Atom* atom) {
+void removeBondsWithAtom(Atom* atom, AtomStorage* atomStorage, std::vector<Atom>& atoms) {
     for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end();) {
         if (it->a == atom || it->b == atom) {
             it->detach();
+            if (atomStorage) {
+                if (it->a >= atoms.data() && it->a < atoms.data() + atoms.size()) {
+                    const std::size_t aIndex = static_cast<std::size_t>(it->a - atoms.data());
+                    atomStorage->valenceCount(aIndex) = it->a->valence;
+                }
+                if (it->b >= atoms.data() && it->b < atoms.data() + atoms.size()) {
+                    const std::size_t bIndex = static_cast<std::size_t>(it->b - atoms.data());
+                    atomStorage->valenceCount(bIndex) = it->b->valence;
+                }
+            }
             it = Bond::bonds_list.erase(it);
         } else {
             ++it;
@@ -88,7 +99,7 @@ void rebuildGrid(SpatialGrid* grid, std::vector<Atom>& atoms) {
     }
 }
 
-bool removeAtomInternal(Atom* target, SpatialGrid* grid, std::vector<Atom>& atoms, Atom*& selectedMoveAtom, bool rebuildAfterRemove) {
+bool removeAtomInternal(Atom* target, SpatialGrid* grid, AtomStorage* atomStorage, std::vector<Atom>& atoms, Atom*& selectedMoveAtom, bool rebuildAfterRemove) {
     if (!target || atoms.empty()) {
         return false;
     }
@@ -103,7 +114,7 @@ bool removeAtomInternal(Atom* target, SpatialGrid* grid, std::vector<Atom>& atom
         selectedMoveAtom = nullptr;
     }
 
-    removeBondsWithAtom(target);
+    removeBondsWithAtom(target, atomStorage, atoms);
 
     const std::size_t lastIndex = atoms.size() - 1;
     if (removeIndex != lastIndex) {
@@ -111,6 +122,10 @@ bool removeAtomInternal(Atom* target, SpatialGrid* grid, std::vector<Atom>& atom
         std::swap(atoms[removeIndex], atoms[lastIndex]);
         Atom* movedNewPtr = &atoms[removeIndex];
         replaceAtomPointer(movedOldPtr, movedNewPtr, atoms, selectedMoveAtom);
+    }
+
+    if (atomStorage) {
+        atomStorage->removeAtom(removeIndex);
     }
 
     atoms.pop_back();
@@ -222,6 +237,7 @@ sf::View* Tools::gameView = nullptr;
 std::unique_ptr<IRenderer>* Tools::renderer = nullptr;
 SpatialGrid* Tools::grid = nullptr;
 SimBox* Tools::box = nullptr;
+AtomStorage* Tools::atomStorage = nullptr;
 Tools::AtomCreator Tools::atomCreator = {};
 std::unordered_set<Atom*> Tools::selected_atom_batch{};
 bool Tools::atomMoveFlag = false;
@@ -231,12 +247,14 @@ Atom* Tools::selectedMoveAtom = nullptr;
 sf::Vector2i Tools::start_mouse_pos = {};
 std::vector<sf::Vector2i> Tools::lassoPoints{};
 
-void Tools::init(sf::RenderWindow* w, sf::View* gv, SpatialGrid* gr, SimBox* b, std::unique_ptr<IRenderer>& rend, AtomCreator createAtomFn) {
+void Tools::init(sf::RenderWindow* w, sf::View* gv, SpatialGrid* gr, SimBox* b,
+                 std::unique_ptr<IRenderer>& rend, AtomStorage* storage, AtomCreator createAtomFn) {
     window = w;
     gameView = gv;
     grid = gr;
     box = b;
     renderer = &rend;
+    atomStorage = storage;
     atomCreator = std::move(createAtomFn);
 }
 
@@ -378,10 +396,22 @@ void Tools::onFrame(std::vector<Atom>& atoms, float deltaTime) {
         if (!selected_atom_batch.empty()) {
             for (Atom* atom : selected_atom_batch) {
                 atom->force -= force;
+                if (atomStorage && atom >= atoms.data() && atom < atoms.data() + atoms.size()) {
+                    const std::size_t atomIndex = static_cast<std::size_t>(atom - atoms.data());
+                    atomStorage->forceX(atomIndex) = static_cast<float>(atom->force.x);
+                    atomStorage->forceY(atomIndex) = static_cast<float>(atom->force.y);
+                    atomStorage->forceZ(atomIndex) = static_cast<float>(atom->force.z);
+                }
             }
         }
         else {
             selectedMoveAtom->force -= force;
+            if (atomStorage && selectedMoveAtom >= atoms.data() && selectedMoveAtom < atoms.data() + atoms.size()) {
+                const std::size_t atomIndex = static_cast<std::size_t>(selectedMoveAtom - atoms.data());
+                atomStorage->forceX(atomIndex) = static_cast<float>(selectedMoveAtom->force.x);
+                atomStorage->forceY(atomIndex) = static_cast<float>(selectedMoveAtom->force.y);
+                atomStorage->forceZ(atomIndex) = static_cast<float>(selectedMoveAtom->force.z);
+            }
         }
     }
 }
@@ -516,7 +546,7 @@ bool Tools::tryRemoveAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, Atom
     if (target->isSelect && !selected_atom_batch.empty()) {
         while (!selected_atom_batch.empty()) {
             Atom* selectedTarget = *selected_atom_batch.begin();
-            if (!removeAtomInternal(selectedTarget, grid, atoms, selectedMoveAtom, false)) {
+            if (!removeAtomInternal(selectedTarget, grid, atomStorage, atoms, selectedMoveAtom, false)) {
                 selected_atom_batch.erase(selectedTarget);
                 continue;
             }
@@ -526,7 +556,7 @@ bool Tools::tryRemoveAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, Atom
             rebuildGrid(grid, atoms);
         }
     } else {
-        removed = removeAtomInternal(target, grid, atoms, selectedMoveAtom, true);
+        removed = removeAtomInternal(target, grid, atomStorage, atoms, selectedMoveAtom, true);
     }
 
     Interface::countSelectedAtom = static_cast<int>(selected_atom_batch.size());
