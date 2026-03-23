@@ -2,8 +2,10 @@
 
 #include <cmath>
 #include <cstddef>
+#include <vector>
 
 #include "AtomData.h"
+#include "Bond.h"
 #include "../SimBox.h"
 #include "../math/Consts.h"
 
@@ -39,6 +41,42 @@ void ForceField::compute(AtomStorage& atoms, SimBox& box, float dt) const {
     (void)dt;
     for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
         ComputeForces(atoms, atomIndex, box);
+    }
+
+    for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end();) {
+        Bond& bond = *it;
+        if (bond.shouldBreak(atoms)) {
+            Bond* currentBond = &bond;
+            ++it;
+            Bond::BreakBond(currentBond, atoms);
+            continue;
+        }
+
+        bond.forceBond(atoms, dt);
+        ++it;
+    }
+
+    std::vector<std::vector<std::size_t>> bondedNeighbours(atoms.size());
+    for (const Bond& bond : Bond::bonds_list) {
+        if (bond.aIndex >= atoms.size() || bond.bIndex >= atoms.size()) {
+            continue;
+        }
+
+        bondedNeighbours[bond.aIndex].push_back(bond.bIndex);
+        bondedNeighbours[bond.bIndex].push_back(bond.aIndex);
+    }
+
+    for (std::size_t atomIndex = 0; atomIndex < bondedNeighbours.size(); ++atomIndex) {
+        const auto& neighbours = bondedNeighbours[atomIndex];
+        if (neighbours.size() < 2) {
+            continue;
+        }
+
+        for (std::size_t i = 0; i + 1 < neighbours.size(); ++i) {
+            for (std::size_t j = i + 1; j < neighbours.size(); ++j) {
+                Bond::angleForce(atoms, atomIndex, neighbours[i], neighbours[j]);
+            }
+        }
     }
 }
 

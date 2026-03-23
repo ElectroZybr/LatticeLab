@@ -93,6 +93,12 @@ bool Simulation::removeAtom(std::size_t atomIndex) {
 
     for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end();) {
         if (it->aIndex == atomIndex || it->bIndex == atomIndex) {
+            if (it->aIndex == atomIndex && it->bIndex != atomIndex && it->bIndex < atomStorage.size()) {
+                ++atomStorage.valenceCount(it->bIndex);
+            }
+            if (it->bIndex == atomIndex && it->aIndex != atomIndex && it->aIndex < atomStorage.size()) {
+                ++atomStorage.valenceCount(it->aIndex);
+            }
             it = Bond::bonds_list.erase(it);
             continue;
         }
