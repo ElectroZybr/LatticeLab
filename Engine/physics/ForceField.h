@@ -3,10 +3,9 @@
 #include <array>
 #include <cstddef>
 #include "../math/Vec3D.h"
-#include "Atom.h"
+#include "AtomData.h"
 #include "AtomStorage.h"
 
-class Atom;
 class SimBox;
 
 class ForceField {
@@ -23,7 +22,7 @@ private:
         float a0 = 3.0f;
         float eps = 0.1f;
     };
-    static constexpr std::size_t TypeCount = static_cast<std::size_t>(Atom::Type::COUNT);
+    static constexpr std::size_t TypeCount = static_cast<std::size_t>(AtomData::Type::COUNT);
     using LJPairTable = std::array<std::array<LJParams, TypeCount>, TypeCount>;
 
     static LJPairTable buildLJPairTable();
@@ -37,3 +36,4 @@ private:
     Vec3D static_force;
     LJPairTable ljPairTable;
 };
+

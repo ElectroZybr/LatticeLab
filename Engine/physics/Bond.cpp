@@ -3,13 +3,13 @@
 #include <ranges>
 
 #include "Bond.h"
-#include "Atom.h"
+#include "AtomData.h"
 #include "AtomStorage.h"
 
 BondTable Bond::bond_default_props;
 std::list<Bond> Bond::bonds_list;
 
-Bond::Bond(std::size_t aIndex, std::size_t bIndex, Atom::Type aType, Atom::Type bType)
+Bond::Bond(std::size_t aIndex, std::size_t bIndex, AtomData::Type aType, AtomData::Type bType)
     : aIndex(aIndex), bIndex(bIndex) {
     const BondParams bondParams = bond_default_props.get(aType, bType);
     params.r0 = bondParams.r0;
@@ -58,3 +58,4 @@ void Bond::BreakBond(Bond* bond) {
         bonds_list.erase(it);
     }
 }
+

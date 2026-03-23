@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstddef>
 
-#include "Atom.h"
+#include "AtomData.h"
 #include "../SimBox.h"
 #include "../math/Consts.h"
 
@@ -14,12 +14,12 @@ ForceField::LJPairTable ForceField::buildLJPairTable() {
     constexpr int typeCount = static_cast<int>(table.size());
 
     for (int i = 0; i < typeCount; ++i) {
-        const auto& pi = Atom::getProps(static_cast<Atom::Type>(i));
+        const auto& pi = AtomData::getProps(static_cast<AtomData::Type>(i));
         const float a0i = static_cast<float>(pi.ljA0);
         const float epsi = static_cast<float>(pi.ljEps);
 
         for (int j = i; j < typeCount; ++j) {
-            const auto& pj = Atom::getProps(static_cast<Atom::Type>(j));
+            const auto& pj = AtomData::getProps(static_cast<AtomData::Type>(j));
             const float a0j = static_cast<float>(pj.ljA0);
             const float epsj = static_cast<float>(pj.ljEps);
 
@@ -166,3 +166,4 @@ void ForceField::applyGravityForce(AtomStorage& atoms, std::size_t atomIndex) co
     atoms.forceY(atomIndex) += static_cast<float>(static_force.y);
     atoms.forceZ(atomIndex) += static_cast<float>(static_force.z);
 }
+

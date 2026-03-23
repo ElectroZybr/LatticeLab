@@ -5,6 +5,12 @@
 #include "Simulation.h"
 #include "physics/Bond.h"
 
+namespace {
+float kineticEnergy(AtomData::Type type, const Vec3D& speed) {
+    return 0.5f * AtomData::getProps(type).mass * speed.sqrAbs();
+}
+}
+
 Simulation::Simulation(SimBox& box)
     : sim_box(box), integrator() {
     atomStorage.reserve(50000);
@@ -27,7 +33,7 @@ void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
     }
 }
 
-void Simulation::createRandomAtoms(Atom::Type type, int quantity) {
+void Simulation::createRandomAtoms(AtomData::Type type, int quantity) {
     const double z_mid = (sim_box.end.z - sim_box.start.z) * 0.5;
     for (int i = 0; i < quantity; ++i) {
         for (int j = 0; j < 10; ++j) {
@@ -67,7 +73,7 @@ bool Simulation::checkNeighbor(Vec3D coords, float delta) {
     return false;
 }
 
-bool Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type type, bool fixed) {
+bool Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, AtomData::Type type, bool fixed) {
     atomStorage.addAtom(start_coords, start_speed, type, fixed);
     atoms.emplace_back(start_coords, start_speed, type, fixed);
     const std::size_t atomIndex = atomStorage.size() - 1;
@@ -140,7 +146,7 @@ double Simulation::averageKineticEnegry() const {
 
     double kineticEnergy = 0.0;
     for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
-        kineticEnergy += Atom::kineticEnergy(atomStorage.type(atomIndex), atomStorage.vel(atomIndex));
+        kineticEnergy += ::kineticEnergy(atomStorage.type(atomIndex), atomStorage.vel(atomIndex));
     }
 
     return kineticEnergy / static_cast<double>(atomStorage.size());
@@ -219,13 +225,13 @@ void Simulation::load(std::string_view path) {
 
     clear();
 
-    struct AtomData {
+    struct LoadedAtomData {
         Vec3D coords, speed;
         int type;
         float a0, eps;
         bool fixed;
     };
-    std::vector<AtomData> buffer;
+    std::vector<LoadedAtomData> buffer;
 
     Vec3D boxStart, boxEnd;
     int cellSize = -1;
@@ -240,7 +246,7 @@ void Simulation::load(std::string_view path) {
             file >> sim_step;
         }
         else if (tag == "atom") {
-            AtomData d;
+            LoadedAtomData d;
             file >> d.coords.x >> d.coords.y >> d.coords.z
                  >> d.speed.x  >> d.speed.y  >> d.speed.z
                  >> d.type >> d.a0 >> d.eps >> d.fixed;
@@ -250,8 +256,8 @@ void Simulation::load(std::string_view path) {
 
     setSizeBox(boxStart, boxEnd, cellSize);
 
-    for (const AtomData& d : buffer) {
-        createAtom(d.coords, d.speed, static_cast<Atom::Type>(d.type), d.fixed);
+    for (const LoadedAtomData& d : buffer) {
+        createAtom(d.coords, d.speed, static_cast<AtomData::Type>(d.type), d.fixed);
     }
 }
 
@@ -261,3 +267,4 @@ void Simulation::clear() {
     Bond::bonds_list.clear();
     sim_step = 0;
 }
+

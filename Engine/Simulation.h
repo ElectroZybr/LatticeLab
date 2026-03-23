@@ -2,7 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "physics/Atom.h"
+#include "physics/AtomData.h"
 #include "physics/AtomStorage.h"
 #include "physics/SpatialGrid.h"
 #include "SimBox.h"
@@ -17,8 +17,8 @@ public:
 
     void setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize = -1);
 
-    void createRandomAtoms(Atom::Type type, int quantity);
-    bool createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type type, bool fixed = false);
+    void createRandomAtoms(AtomData::Type type, int quantity);
+    bool createAtom(Vec3D start_coords, Vec3D start_speed, AtomData::Type type, bool fixed = false);
     bool removeAtom(std::size_t atomIndex);
     void addBond(std::size_t aIndex, std::size_t bIndex);
 
@@ -49,3 +49,4 @@ private:
 
     bool checkNeighbor(Vec3D coords, float delta);
 };
+

@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <list>
 
-class Atom;
 class AtomStorage;
 
 
@@ -18,7 +17,7 @@ public:
     static std::list<Bond> bonds_list;
     static void angleForce(std::size_t aIndex, std::size_t bIndex, std::size_t cIndex);
 
-    Bond(std::size_t aIndex, std::size_t bIndex, Atom::Type aType, Atom::Type bType);
+    Bond(std::size_t aIndex, std::size_t bIndex, AtomData::Type aType, AtomData::Type bType);
 
     void forceBond(double dt);
     bool shouldBreak() const;
@@ -30,3 +29,4 @@ public:
 
     BondParams params;
 };
+

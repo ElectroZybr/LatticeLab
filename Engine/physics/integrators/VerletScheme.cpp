@@ -1,7 +1,7 @@
 #include "VerletScheme.h"
 
 #include "StepOps.h"
-#include "../Atom.h"
+#include "../AtomData.h"
 
 void VerletScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, double dt) const {
     StepOps::predictAndSync(atomStorage, box, dt, &predict);
@@ -17,7 +17,7 @@ void VerletScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& f
 }
 
 void VerletScheme::predict(AtomStorage& atomStorage, std::size_t atomIndex, double dt) {
-    const auto props = Atom::getProps(atomStorage.type(atomIndex));
+    const auto props = AtomData::getProps(atomStorage.type(atomIndex));
     const float invMass = 1.0f / props.mass;
     constexpr double damping = 0.6;
 
@@ -31,7 +31,7 @@ void VerletScheme::predict(AtomStorage& atomStorage, std::size_t atomIndex, doub
 }
 
 void VerletScheme::correct(AtomStorage& atomStorage, std::size_t atomIndex, double dt) {
-    const auto props = Atom::getProps(atomStorage.type(atomIndex));
+    const auto props = AtomData::getProps(atomStorage.type(atomIndex));
     const float invMass = 1.0f / props.mass;
     constexpr double damping = 0.6;
 
@@ -39,3 +39,4 @@ void VerletScheme::correct(AtomStorage& atomStorage, std::size_t atomIndex, doub
     atomStorage.velY(atomIndex) += static_cast<float>(0.5 * atomStorage.forceY(atomIndex) * invMass * dt * damping);
     atomStorage.velZ(atomIndex) += static_cast<float>(0.5 * atomStorage.forceZ(atomIndex) * invMass * dt * damping);
 }
+

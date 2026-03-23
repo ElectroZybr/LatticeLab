@@ -1,7 +1,7 @@
 #include "KDKScheme.h"
 
 #include "StepOps.h"
-#include "../Atom.h"
+#include "../AtomData.h"
 
 void KDKScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, double dt) const {
     for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
@@ -25,7 +25,7 @@ void KDKScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forc
 }
 
 void KDKScheme::halfKick(AtomStorage& atomStorage, std::size_t atomIndex, double dt) {
-    const auto props = Atom::getProps(atomStorage.type(atomIndex));
+    const auto props = AtomData::getProps(atomStorage.type(atomIndex));
     const float invMass = 1.0f / props.mass;
 
     atomStorage.velX(atomIndex) += static_cast<float>(0.5 * atomStorage.forceX(atomIndex) * invMass * dt);
@@ -38,3 +38,4 @@ void KDKScheme::drift(AtomStorage& atomStorage, std::size_t atomIndex, double dt
     atomStorage.posY(atomIndex) += static_cast<float>(atomStorage.velY(atomIndex) * dt);
     atomStorage.posZ(atomIndex) += static_cast<float>(atomStorage.velZ(atomIndex) * dt);
 }
+
