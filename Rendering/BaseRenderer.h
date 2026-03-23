@@ -5,8 +5,6 @@
 #include "Rendering/camera/Camera.h"
 #include "Engine/physics/Atom.h"
 #include "Engine/SimBox.h"
-#include "Engine/math/Vec2D.h"
-#include "Engine/math/Vec3D.h"
 
 class IRenderer {
 public:
@@ -14,11 +12,13 @@ public:
 
     virtual void drawShot(const std::vector<Atom>& atoms,
                           const SimBox& box, float deltaTime) = 0;
-    virtual void setSelectionFrame(Vec2D start, Vec2D end, float scale) = 0;
-    virtual void setLassoContour(const std::vector<Vec2D>& points, float scale) = 0;
-    virtual void wallImage(Vec3D start, Vec3D end) = 0;
-    virtual void showSelectionFrame(bool show) = 0;
-    virtual void showLassoContour(bool show) = 0;
+    
+    virtual void drawOverlay() = 0;
+    virtual void setBoxContour(sf::Vector2i screenStart, sf::Vector2i screenEnd) = 0;
+    virtual void setLassoContour(const std::vector<sf::Vector2i>& screenPoints) = 0;
+
+    virtual void showBoxContour(bool show) { isBoxVisible = show; }
+    virtual void showLassoContour(bool show) { isLassoVisible = show; }
 
     bool drawGrid           = false;
     bool drawBonds          = false;
@@ -27,9 +27,24 @@ public:
     float drawBondsZoom     = 25.f;
     float alpha             = 0.05f;
 
+    bool isBoxVisible = false;
+    bool isLassoVisible = false;
+
     Camera camera;
 
 protected:
-IRenderer(sf::View& gv)
-    : camera(&gv) {}
+    IRenderer(sf::View& gv)
+        : camera(&gv) {}
+
+    sf::Color turboColor(float t) {
+        t = std::clamp(t, 0.f, 1.f);
+        const float r = 34.61f + t * (1172.33f + t * (-10793.56f + t * (33300.12f + t * (-38394.49f + t * 14825.05f))));
+        const float g = 23.31f + t * (557.33f + t * (1225.33f + t * (-3574.96f + t * (1073.77f + t * 707.56f))));
+        const float b = 27.20f + t * (3211.10f + t * (-15327.97f + t * (27814.00f + t * (-22569.18f + t * 6838.66f))));;
+        return sf::Color(
+            std::clamp<uint8_t>(r, 0, 255),
+            std::clamp<uint8_t>(g, 0, 255),
+            std::clamp<uint8_t>(b, 0, 255))
+        ;
+    }
 };

@@ -22,11 +22,11 @@ private:
 
     bool orbitMode = false;
     float azimuth   = 0.f;
-    float elevation = 1.0f; 
+    float elevation = 0.f; 
 public:
     Camera(sf::View* view, float moveSpeed = 500.f, float zoomSpeed = 0.1f);
     
-    void update(float deltaTime, sf::RenderTarget& target);
+    void update(sf::RenderTarget& target);
     
     void move(float offsetX, float offsetY);
     
@@ -38,14 +38,14 @@ public:
     void orbitDrag(sf::Vector2i delta);
 
     void zoomAt(float factor, sf::Vector2f mousePos, sf::RenderWindow& window);
-    
-    float getZoom() const;
+
+    float getZoom() const { return zoom; }
 
     void setZoom(float new_zoom);
     
-    const sf::View& getView() const;
+    sf::View& getView() { return *view; }
+    const sf::View& getView() const { return *view; }
 
     glm::vec3 getEyePosition() const;
     glm::mat4 getViewMatrix() const;
-    // void resize(sf::Vector2f newSize);
 };

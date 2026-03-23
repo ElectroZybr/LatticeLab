@@ -3,6 +3,7 @@ in vec3 fragAtomPos;
 in float fragRadius;
 in vec3 fragColor;
 in vec2 fragQuadPos;
+in float vIsSelected;
 
 uniform vec3 lightDir;
 uniform mat4 projection;
@@ -21,7 +22,6 @@ void main() {
     viewPos.z   += z * fragRadius;
 
     vec4 clipPos = projection * viewPos;
-
     gl_FragDepth = (clipPos.z / clipPos.w) * 0.5 + 0.5;
 
     vec3 light  = normalize(lightDir);
@@ -33,5 +33,14 @@ void main() {
     vec3 diffuse  = 0.7 * diff * fragColor;
     vec3 specular = 0.4 * spec * vec3(1.0);
 
-    outColor = vec4(ambient + diffuse + specular, 1.0);
+    vec3 color = ambient + diffuse + specular;
+
+    if (vIsSelected > 0.5) {
+        float rim = 1.0 - z;
+        float ring = smoothstep(0.6, 0.7, rim);
+        color = mix(color, vec3(1.0, 0.8, 0.0), ring);
+    }
+
+    outColor = vec4(color, 1.0);
+
 }

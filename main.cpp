@@ -65,23 +65,15 @@ int main() {
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-
     crystal(simulation, 20, Atom::Type::Z, false);
 
-    sf::View gameView = window.getDefaultView();
-    gameView.setRotation(sf::degrees(180.f));
-    window.setView(gameView);
-    sf::View uiView = window.getDefaultView();
-
-    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView, uiView);
-    renderer->camera.setPosition(0, 0);
-    renderer->camera.setZoom(15);
+    sf::View& gameView = const_cast<sf::View&>(window.getView());
+    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
     renderer->drawBonds = true;
     renderer->speedGradient = true;
-    renderer->wallImage(box.start, box.end);
 
     Interface::init(window, simulation, renderer);
-    EventManager::init(&window, &uiView, renderer, &simulation.sim_box, &simulation.atoms);
+    EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atoms);
     Tools::init(&window, &gameView, &box.grid, &box, renderer,
         [&](Vec3D coords, Vec3D speed, Atom::Type type, bool fixed) {
             return simulation.createAtom(coords, speed, type, fixed);
@@ -163,9 +155,9 @@ int main() {
                 auto newRenderer = [&]() -> std::unique_ptr<IRenderer> {
                     switch (result.value()) {
                         case ToolsCommand::ToggleRenderer2D:
-                            return std::make_unique<Renderer2D>(window, gameView, uiView);
+                            return std::make_unique<Renderer2D>(window, gameView);
                         case ToolsCommand::ToggleRenderer3D:
-                            return std::make_unique<Renderer3D>(window, gameView, uiView);
+                            return std::make_unique<Renderer3D>(window, gameView);
                     }
                 }();
 
@@ -173,11 +165,10 @@ int main() {
                 newRenderer->drawBonds = renderer->drawBonds;
                 newRenderer->speedGradient = renderer->speedGradient;
                 newRenderer->speedGradientTurbo = renderer->speedGradientTurbo;
-                newRenderer->wallImage(box.start, box.end);
 
                 renderer = std::move(newRenderer);
             }
-
+            renderer->camera.update(window);
             renderCounter.timer.start();
             renderer->drawShot(simulation.atoms, simulation.sim_box, shotTmr);
             ImGui::SFML::Render(window);

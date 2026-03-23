@@ -8,8 +8,6 @@
 #include "Engine/physics/integrators/VerletScheme.h"
 #include "Rendering/2d/Renderer2D.h"
 
-#include "imgui.h"
-
 namespace {
 
 constexpr double kDt = 0.01;
@@ -151,9 +149,8 @@ static void BM_Renderer2D_DrawShot(benchmark::State& state) {
         return;
     }
 
-    sf::View gameView(sf::FloatRect({0, 0}, {800, 600}));
-    sf::View uiView(sf::FloatRect({0, 0}, {800, 600}));
-    Renderer2D renderer(renderTexture, gameView, uiView);
+    sf::View& gameView = const_cast<sf::View&>(renderTexture.getView());
+    Renderer2D renderer(renderTexture, gameView);
 
     std::vector<Atom> atoms = makeRandomAtoms(static_cast<int>(state.range(0)));
 
@@ -166,8 +163,8 @@ static void BM_Renderer2D_DrawShot(benchmark::State& state) {
 }
 
 
-BENCHMARK(BM_SimulationStep)->Args({5 * 5 * 5})->Args({10 * 10 * 10})->Args({20 * 20 * 20});
-BENCHMARK(BM_ComputeForces)->Args({5 * 5 * 5})->Args({10 * 10 * 10})->Args({20 * 20 * 20});
-BENCHMARK(BM_PredictAndSync)->Args({5 * 5 * 5})->Args({10 * 10 * 10})->Args({20 * 20 * 20});
-BENCHMARK(BM_Correct)->Args({5 * 5 * 5})->Args({10 * 10 * 10})->Args({20 * 20 * 20});
-BENCHMARK(BM_Renderer2D_DrawShot)->Args({5 * 5 * 5})->Args({30 * 30 * 30})->Args({100 * 100 * 100});
+BENCHMARK(BM_SimulationStep)->Args({5 * 5 * 5})->Args({10 * 10 * 10});//->Args({20 * 20 * 20});
+BENCHMARK(BM_ComputeForces)->Args({5 * 5 * 5})->Args({10 * 10 * 10});//->Args({20 * 20 * 20});
+BENCHMARK(BM_PredictAndSync)->Args({5 * 5 * 5})->Args({10 * 10 * 10});//->Args({20 * 20 * 20});
+BENCHMARK(BM_Correct)->Args({5 * 5 * 5})->Args({10 * 10 * 10});//->Args({20 * 20 * 20});
+// BENCHMARK(BM_Renderer2D_DrawShot)->Args({5 * 5 * 5})->Args({30 * 30 * 30})->Args({100 * 100 * 100});

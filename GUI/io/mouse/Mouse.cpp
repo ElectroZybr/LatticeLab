@@ -45,15 +45,15 @@ void Mouse::onEvent(const sf::Event& event) {
 
     if (event.getIf<sf::Event::MouseMoved>() && rend->camera.isDragging) {
         const sf::Vector2i currentPixelPos = sf::Mouse::getPosition(*window);
-        const sf::Vector2i deltaPixel = currentPixelPos - rend->camera.dragStartPixelPos;
+        sf::Vector2i deltaPixel = currentPixelPos - rend->camera.dragStartPixelPos;
 
         if (rend->camera.orbitMode) {
             rend->camera.orbitDrag(deltaPixel);
             rend->camera.dragStartPixelPos = currentPixelPos;
         }
         else {
-            const sf::Vector2f deltaWorld = window->mapPixelToCoords(rend->camera.dragStartPixelPos, *rend->camera.view)
-                - window->mapPixelToCoords(currentPixelPos, *rend->camera.view);
+            sf::Vector2f deltaWorld = Tools::screenToWorld(rend->camera.dragStartPixelPos) 
+                                    - Tools::screenToWorld(currentPixelPos);
             rend->camera.position = rend->camera.dragStartCameraPos + deltaWorld;
         }
     }
@@ -71,8 +71,8 @@ void Mouse::onFrame() {
 
 void Mouse::logMousePos() {
     sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
-    Vec2D world_pos = Tools::screenToWorld(mouse_pos, (*renderer)->camera.getZoom());
-    Vec2D local_pos(world_pos.x - box->start.x, world_pos.y - box->start.y);
+    Vec2D world_pos = Tools::screenToWorld(mouse_pos);
+    Vec2D local_pos = Tools::screenToBox(mouse_pos);
     std::cout << "<Mouse pos>"
               << " Screen: "
               << "X " << mouse_pos.x

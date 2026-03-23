@@ -1,47 +1,21 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
+#include "../RendererGL.h"
 
-#include "../BaseRenderer.h"
-#include "Engine/physics/SpatialGrid.h"
-#include "Engine/physics/Bond.h"
-
-class Renderer2D : public IRenderer {
+class Renderer2D : public RendererGL {
 public:
-    Renderer2D(sf::RenderTarget& window, sf::View& gameView, sf::View& uiView);
+    Renderer2D(sf::RenderTarget& t, sf::View& gv);
+    ~Renderer2D() override = default;
 
-    void drawShot(const std::vector<Atom>& atoms,
-                  const SimBox& box, float deltaTime) override;
-    void setSelectionFrame(Vec2D start, Vec2D end, float scale) override;
-    void setLassoContour(const std::vector<Vec2D>& points, float scale) override;
-    void wallImage(Vec3D start, Vec3D end) override;
-    void showSelectionFrame(bool show) override { drawSelectionFrame = show; }
-    void showLassoContour(bool show) override { drawLassoContour = show; }
+    void setBoxContour(sf::Vector2i screenStart, sf::Vector2i screenEnd) override;
+    void setLassoContour(const std::vector<sf::Vector2i>& screenPoints) override;
 
-    sf::Texture forceTexture;
+    void drawOverlay() override;
+protected:
+    bool useLighting() override { return false; }
+    void updateMatrices() override;
+    glm::vec3 getLightDir() override { return glm::vec3(0.f); };
 
-private:
-    sf::RenderTarget& target;
-    sf::View& gameView;
-    sf::View& uiView;
-
-    std::vector<sf::Vertex> gridLines;
-    sf::Texture atomTextureLow;
-    sf::Texture atomTextureMid;
-    sf::Texture atomTextureHigh;
-    sf::VertexArray atomBatch{sf::PrimitiveType::Triangles};
-    std::vector<sf::Vertex> bondBatch;
-    std::vector<const Atom*> sortedAtoms;
-    sf::RectangleShape frameShape;
-    sf::VertexArray lassoContour{sf::PrimitiveType::LineStrip};
-    sf::RectangleShape forceFieldQuad;
-    sf::Shader forceFieldShader;
-    bool forceFieldShaderLoaded = false;
-    bool drawSelectionFrame     = false;
-    bool drawLassoContour       = false;
-
-    void initAtomTexture(sf::Texture& texture, unsigned texSize);
-    void drawTransparencyMap(sf::RenderTarget& target, const SpatialGrid& grid);
-    void drawForceField(const sf::Texture& forceTexture, const SimBox& box);
-    int getWallForce(int coord, int min, int max);
+    sf::RectangleShape boxShape;
+    sf::VertexArray lassoShape;
 };

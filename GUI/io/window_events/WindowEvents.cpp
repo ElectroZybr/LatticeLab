@@ -3,11 +3,11 @@
 #include "imgui-SFML.h"
 
 sf::RenderWindow* WindowEvents::window = nullptr;
-sf::View*         WindowEvents::uiView = nullptr;
+sf::View*         WindowEvents::gameView = nullptr;
 
-void WindowEvents::init(sf::RenderWindow* w, sf::View* ui) {
+void WindowEvents::init(sf::RenderWindow* w, sf::View* gv) {
     window = w;
-    uiView = ui;
+    gameView = gv;
 }
 
 void WindowEvents::onEvent(const sf::Event& event) {
@@ -15,8 +15,8 @@ void WindowEvents::onEvent(const sf::Event& event) {
         window->close();
 
     if (const auto* e = event.getIf<sf::Event::Resized>()) {
-        uiView->setSize(sf::Vector2f(e->size));
-        uiView->setCenter(sf::Vector2f(e->size) / 2.f);
+        gameView->setSize(sf::Vector2f(e->size));
+        gameView->setCenter(sf::Vector2f(e->size) / 2.f);
         Interface::styleManager.onResize(e->size);
         if (Interface::fontManager.load(Interface::styleManager.getScale()))
         {

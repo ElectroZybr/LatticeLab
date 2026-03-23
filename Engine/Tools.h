@@ -30,8 +30,12 @@ public:
     static void init(sf::RenderWindow* window, sf::View* gameView, SpatialGrid* grid, SimBox* box, std::unique_ptr<IRenderer>& r, AtomCreator atomCreator = {});
 
     static void selectionFrame(sf::Vector2i start_mouse_pos, sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
-    static Vec2D screenToWorld(sf::Vector2i mouse_pos, float zoom);
-    static Vec2D screenToBox(sf::Vector2i mouse_pos, float zoom);
+    static Vec2D screenToWorld(sf::Vector2i mouse_pos);
+    static Vec2D screenToBox(sf::Vector2i mouse_pos);
+
+    static sf::Vector2i worldToScreen(Vec2D pos);
+    static sf::Vector2i boxToScreen(Vec2D pos);
+
     static void onLeftPressed(sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
     static void onLeftReleased(std::vector<Atom>& atoms);
     static void onFrame(std::vector<Atom>& atoms);
@@ -56,5 +60,5 @@ private:
     static bool lassoSelectionMoveFlag;
     static Atom* selectedMoveAtom;
     static sf::Vector2i start_mouse_pos;
-    static std::vector<Vec2D> lassoPoints;
+    static std::vector<sf::Vector2i> lassoPoints;
 };

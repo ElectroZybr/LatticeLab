@@ -1,59 +1,18 @@
 #pragma once
 
-#include <string_view>
-#include <vector>
+#include "../RendererGL.h"
 
-#include <glad/glad.h>
-#include <SFML/Graphics.hpp>
-#include <glm/glm.hpp>
-
-#include "../BaseRenderer.h"
-
-class Renderer3D : public IRenderer {
+class Renderer3D : public RendererGL {
 public:
-    Renderer3D(sf::RenderTarget& target, sf::View& gameView, sf::View& uiView);
-    ~Renderer3D() override;
+    Renderer3D(sf::RenderTarget& t, sf::View& gv);
+    ~Renderer3D() override = default;
 
-    void initBoxGL();
-    void drawBox(const SimBox& box);
+    void drawOverlay() override {};
 
-    void drawShot(const std::vector<Atom>& atoms,
-                  const SimBox& box, float deltaTime) override;
-    void setSelectionFrame(Vec2D start, Vec2D end, float scale) override;
-    void setLassoContour(const std::vector<Vec2D>& points, float scale) override;
-    void wallImage(Vec3D start, Vec3D end) override;
+    void setBoxContour(sf::Vector2i screenStart, sf::Vector2i screenEnd) override {}
+    void setLassoContour(const std::vector<sf::Vector2i>& points) override {}
 
-    void showSelectionFrame(bool show) override;
-    void showLassoContour(bool show) override;
-private:
-    sf::RenderTarget& target;
-    sf::View& uiView;
-
-    // OpenGL объекты
-    GLuint vao         = 0;
-    GLuint quadVbo     = 0; // billboard квад
-    GLuint instanceVbo = 0; // данные атомов (pos, radius, color)
-    GLuint shaderProgram = 0;
-
-    GLuint boxVao = 0;
-    GLuint boxVbo = 0;
-    GLuint boxShader = 0;
-
-    // инстансинг буфер
-    struct AtomInstance {
-        glm::vec3 pos;
-        float     radius;
-        glm::vec3 color;
-        float     pad = 0.f; // выравнивание
-    };
-    std::vector<AtomInstance> instanceData;
-
-    glm::mat4 projection;
-    glm::mat4 view;
-
-    void initGL();
-    void initShaders();
-    void updateMatrices();
-    GLuint compileShader(GLenum type, std::string_view src);
-    GLuint loadShader(GLenum type, std::string_view path);
+protected:
+    void updateMatrices() override;
+    glm::vec3 getLightDir() override;
 };

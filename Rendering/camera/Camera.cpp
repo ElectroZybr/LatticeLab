@@ -7,11 +7,12 @@
 
 Camera::Camera(sf::View* view, float moveSpeed, float zoomSpeed) 
     : view(view), position(0, 0), zoom(20.f), speed(moveSpeed / 20.f), moveSpeed(moveSpeed), zoomSpeed(zoomSpeed),
-        isDragging(false), lastMousePos(0, 0) {}
+    isDragging(false), lastMousePos(0, 0) {
+}
     
-void Camera::update(float deltaTime, sf::RenderTarget& target) {
+void Camera::update(sf::RenderTarget& target) {
     view->setCenter(position);
-    view->setSize(sf::Vector2f(target.getSize()) / zoom);
+    view->setSize((sf::Vector2f(target.getSize()) / zoom).componentWiseMul({1.f, -1.f}));
 }
 
 void Camera::move(float offsetX, float offsetY) {
@@ -38,7 +39,8 @@ void Camera::zoomAt(float factor, sf::Vector2f mousePos, sf::RenderWindow& windo
 
     // Плавное следование за указателем мыши при зуме
     if (zoom > 1.f && zoom < 500.f) {
-        sf::Vector2i deltaPos = sf::Vector2i(window.getSize()) / 2 - sf::Mouse::getPosition(window);
+        sf::Vector2i deltaPos = sf::Mouse::getPosition(window) - sf::Vector2i(window.getSize()) / 2;
+        deltaPos.y *= -1;
         position += sf::Vector2f(deltaPos) * 0.1f / zoom * factor;
     }
 }
@@ -48,10 +50,6 @@ void Camera::orbitDrag(sf::Vector2i delta) {
     azimuth   -= delta.x * sensitivity;
     elevation += delta.y * sensitivity;
     elevation = std::clamp(elevation, -1.5f, 1.5f);
-}
-
-float Camera::getZoom() const {
-    return zoom;
 }
 
 void Camera::setZoom(float new_zoom) {

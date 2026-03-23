@@ -8,5 +8,5 @@ public:
     static void onEvent(const sf::Event& event);
 private:
     static sf::RenderWindow* window;
-    static sf::View* uiView;
+    static sf::View* gameView;
 };

@@ -92,8 +92,6 @@ cmake --build build -j 8
 
 - `void drawShot(const std::vector<Atom>& atoms, const SimBox& box, float deltaTime)`
 Полная отрисовка кадра.
-- `void wallImage(const Vec3D start, const Vec3D end)`
-Построение текстуры поля стенок.
 - `void setSelectionFrame(Vec2D start, Vec2D end, float scale)`
 Отрисовка прямоугольника выделения.
 

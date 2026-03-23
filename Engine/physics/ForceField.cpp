@@ -115,8 +115,6 @@ void ForceField::ComputeForces(Atom& atom, SimBox& box) const {
             pairNonBondedInteraction(atom, *neighbour);
         }
     });
-
-
 }
 
 void ForceField::pairNonBondedInteraction(Atom& a, Atom& b) const {
