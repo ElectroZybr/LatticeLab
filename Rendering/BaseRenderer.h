@@ -11,7 +11,7 @@ public:
     virtual ~IRenderer() = default;
 
     virtual void drawShot(const std::vector<Atom>& atoms,
-                          const SimBox& box, float deltaTime) = 0;
+                          const SimBox& box) = 0;
     
     virtual void drawOverlay() = 0;
     virtual void setBoxContour(sf::Vector2i screenStart, sf::Vector2i screenEnd) = 0;
