@@ -57,5 +57,9 @@ Atom::Atom(Vec3D start_coords, Vec3D start_speed, Type type, bool fixed)
 }
 
 float Atom::kineticEnergy() const {
-    return 0.5f * getProps().mass * speed.sqrAbs();
+    return kineticEnergy(type, speed);
+}
+
+float Atom::kineticEnergy(Type type, const Vec3D& speed) {
+    return 0.5f * getProps(type).mass * speed.sqrAbs();
 }

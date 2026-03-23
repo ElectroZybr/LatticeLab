@@ -79,6 +79,7 @@ public:
     Atom (Vec3D start_coords, Vec3D start_speed, Type type, bool fixed = false);
 
     float kineticEnergy() const;
+    static float kineticEnergy(Type type, const Vec3D& speed);
 
     const StaticAtomicData& getProps() const {
         return properties.at(static_cast<int>(type));

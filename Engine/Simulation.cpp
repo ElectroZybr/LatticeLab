@@ -22,9 +22,10 @@ void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
     if (sim_box.setSizeBox(newStart, newEnd, cellSize)) {
         for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
             Atom& atom = atoms[atomIndex];
-            const int cellX = sim_box.grid.worldToCellX(atom.coords.x);
-            const int cellY = sim_box.grid.worldToCellY(atom.coords.y);
-            const int cellZ = sim_box.grid.worldToCellZ(atom.coords.z);
+            const Vec3D pos = atomStorage.pos(atomIndex);
+            const int cellX = sim_box.grid.worldToCellX(pos.x);
+            const int cellY = sim_box.grid.worldToCellY(pos.y);
+            const int cellZ = sim_box.grid.worldToCellZ(pos.z);
             sim_box.grid.insert(cellX, cellY, cellZ, &atom);
             sim_box.grid.insertIndex(cellX, cellY, cellZ, atomIndex);
         }
@@ -50,12 +51,19 @@ bool Simulation::checkNeighbor(Vec3D coords, float delta) {
     int curr_x = sim_box.grid.worldToCellX(coords.x);
     int curr_y = sim_box.grid.worldToCellY(coords.y);
     int curr_z = sim_box.grid.worldToCellZ(coords.z);
+    const float deltaSqr = delta * delta;
     for (int i = -1; i <= 1; ++i) {
         for (int j = -1; j <= 1; ++j) {
             for (int k = -1; k <= 1; ++k) {
-                if (auto cell = sim_box.grid.at(curr_x - i, curr_y - j, curr_z - k)) {
-                    for (Atom* other : *cell) {
-                        if ((coords - other->coords).sqrAbs() < delta*delta) return true;
+                if (auto cell = sim_box.grid.atIndex(curr_x - i, curr_y - j, curr_z - k)) {
+                    for (std::size_t atomIndex : *cell) {
+                        if (atomIndex >= atomStorage.size()) {
+                            continue;
+                        }
+
+                        if ((coords - atomStorage.pos(atomIndex)).sqrAbs() < deltaSqr) {
+                            return true;
+                        }
                     }
                 }
             }
@@ -84,16 +92,16 @@ void Simulation::addBond(Atom* a1, Atom* a2) {
 
 double Simulation::averageKineticEnegry() const {
     /* расчет средней кинетической энергии */
-    if (atoms.empty()) {
+    if (atomStorage.empty()) {
         return 0.0;
     }
 
     double kineticEnergy = 0.0;
-    for (const Atom& atom : atoms) {
-        kineticEnergy += atom.kineticEnergy();
+    for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
+        kineticEnergy += Atom::kineticEnergy(atomStorage.type(atomIndex), atomStorage.vel(atomIndex));
     }
 
-    return kineticEnergy / static_cast<double>(atoms.size());
+    return kineticEnergy / static_cast<double>(atomStorage.size());
 }
 
 double Simulation::averagePotentialEnergy() const {
@@ -116,14 +124,13 @@ double Simulation::fullAverageEnergy() const {
 }
 
 void Simulation::logAtomPos() const {
-    int i = 0;
-    for (const Atom& atom : atoms) {
+    for (std::size_t i = 0; i < atomStorage.size(); ++i) {
+        const Vec3D pos = atomStorage.pos(i);
         std::cout << "<Pos> Atom (" << i
-                  << ") X " << atom.coords.x
-                  << " | Y " << atom.coords.y
-                  << " | Z " << atom.coords.z
+                  << ") X " << pos.x
+                  << " | Y " << pos.y
+                  << " | Z " << pos.z
                   << std::endl;
-        i++;
     }
 }
 
@@ -146,12 +153,14 @@ void Simulation::save(std::string_view path) const
 
     file << "step " << sim_step << "\n";
 
-    for (const Atom& atom : atoms) {
+    for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
+        const Vec3D pos = atomStorage.pos(atomIndex);
+        const Vec3D vel = atomStorage.vel(atomIndex);
         file << "atom "
-             << atom.coords.x << " " << atom.coords.y << " " << atom.coords.z << " "
-             << atom.speed.x  << " " << atom.speed.y  << " " << atom.speed.z  << " "
-             << static_cast<int>(atom.type)     << " "
-             << atom.isFixed  << "\n";
+             << pos.x << " " << pos.y << " " << pos.z << " "
+             << vel.x << " " << vel.y << " " << vel.z << " "
+             << static_cast<int>(atomStorage.type(atomIndex)) << " "
+             << atomStorage.isAtomFixed(atomIndex) << "\n";
     }
 }
 
@@ -205,5 +214,6 @@ void Simulation::clear() {
     Bond::bonds_list.clear();
     sim_step = 0;
 }
+
 
 

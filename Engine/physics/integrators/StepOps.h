@@ -7,39 +7,7 @@
 #include "../../SimBox.h"
 
 namespace StepOps {
-using AtomStepFn = void (*)(Atom& atom, double dt);
 using AtomStorageStepFn = void (*)(AtomStorage& atomStorage, std::size_t atomIndex, double dt);
-
-inline void predictAndSync(std::vector<Atom>& atoms, SimBox& box, double dt, AtomStepFn predictFn) {
-    auto& grid = box.grid;
-
-    for (Atom& atom : atoms) {
-        const int prevX = grid.worldToCellX(atom.coords.x);
-        const int prevY = grid.worldToCellY(atom.coords.y);
-        const int prevZ = grid.worldToCellZ(atom.coords.z);
-
-        if (!atom.isFixed) {
-            predictFn(atom, dt);
-        }
-
-        const int currX = grid.worldToCellX(atom.coords.x);
-        const int currY = grid.worldToCellY(atom.coords.y);
-        const int currZ = grid.worldToCellZ(atom.coords.z);
-
-        if (prevX != currX || prevY != currY || prevZ != currZ) {
-            grid.erase(prevX, prevY, prevZ, &atom);
-            grid.insert(currX, currY, currZ, &atom);
-        }
-
-        atom.prev_force = atom.force;
-        atom.force = Vec3D(0, 0, 0);
-        atom.potential_energy = 0.0f;
-    }
-}
-
-inline void computeForces(std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) {
-    forceField.compute(atoms, box, dt);
-}
 
 inline void computeForces(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, double dt) {
     forceField.compute(atomStorage, box, dt);
@@ -74,14 +42,7 @@ inline void syncFromAtomStorage(const AtomStorage& atomStorage, std::vector<Atom
     for (std::size_t i = 0; i < atomCount; ++i) {
         Atom& atom = atoms[i];
         atom.coords = atomStorage.pos(i);
-        atom.speed = atomStorage.vel(i);
     }
-}
-
-inline void computeForcesViaStorage(AtomStorage& atomStorage, std::vector<Atom>& atomRefs, SimBox& box, ForceField& forceField, double dt) {
-    syncToAtomStorage(atomRefs, atomStorage);
-    computeForces(atomStorage, box, forceField, dt);
-    syncFromAtomStorage(atomStorage, atomRefs);
 }
 
 inline void predictAndSync(AtomStorage& atomStorage, SimBox& box, double dt, AtomStorageStepFn predictFn) {

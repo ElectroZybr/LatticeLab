@@ -3,79 +3,46 @@
 #include "StepOps.h"
 #include "../Atom.h"
 
-void VerletScheme::pipeline(std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const {
-    // Расчет новых позиций
-    StepOps::predictAndSync(atoms, box, dt, &predict);
-    // Расчет сил
-    StepOps::computeForces(atoms, box, forceField, dt);
-    // Корректировка скоростей
-    for (Atom& atom : atoms) {
-        if (!atom.isFixed) {
-            correct(atom, dt);
-        }
-    }
-}
-
-void VerletScheme::pipeline(AtomStorage& atomStorage, std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const {
-    // Один раз синхронизируем AoS -> SoA в начале шага
+void VerletScheme::pipeline(AtomStorage& atomStorage, std::vector<Atom>& atoms, SimBox& box, ForceField& forceField,
+                            double dt) const {
     StepOps::syncToAtomStorage(atoms, atomStorage);
-    // Расчет новых позиций уже в SoA
     StepOps::predictAndSync(atomStorage, box, dt, &predict);
-    // Расчет сил через SoA-путь
     StepOps::computeForces(atomStorage, box, forceField, dt);
-    // Корректировка скоростей в SoA
+
     for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
-        if (!atomStorage.isAtomFixed(atomIndex)) {
-            correct(atomStorage, atomIndex, dt);
+        if (atomStorage.isAtomFixed(atomIndex)) {
+            continue;
         }
+
+        correct(atomStorage, atomIndex, dt);
     }
-    // Возвращаем обновленные данные обратно в AoS
+
     StepOps::syncFromAtomStorage(atomStorage, atoms);
 }
 
-void VerletScheme::predict(Atom& atom, double dt) {
-    constexpr float damping = 0.6f;
-    const Vec3D acceleration = atom.force / atom.getProps().mass;
-    atom.coords += (atom.speed * damping + acceleration * 0.5f * dt) * dt;
-}
-
 void VerletScheme::predict(AtomStorage& atomStorage, std::size_t atomIndex, double dt) {
-    constexpr float damping = 0.6f;
-    const auto& props = Atom::getProps(atomStorage.type(atomIndex));
-    const float invMass = 1.0f / static_cast<float>(props.mass);
-    const float halfDt = static_cast<float>(0.5 * dt);
-    const float dtf = static_cast<float>(dt);
+    const auto props = Atom::getProps(atomStorage.type(atomIndex));
+    const float invMass = 1.0f / props.mass;
+    constexpr double damping = 0.6;
 
-    const float ax = atomStorage.forceX(atomIndex) * invMass;
-    const float ay = atomStorage.forceY(atomIndex) * invMass;
-    const float az = atomStorage.forceZ(atomIndex) * invMass;
+    atomStorage.velX(atomIndex) += static_cast<float>(0.5 * atomStorage.prevForceX(atomIndex) * invMass * dt * damping);
+    atomStorage.velY(atomIndex) += static_cast<float>(0.5 * atomStorage.prevForceY(atomIndex) * invMass * dt * damping);
+    atomStorage.velZ(atomIndex) += static_cast<float>(0.5 * atomStorage.prevForceZ(atomIndex) * invMass * dt * damping);
 
-    atomStorage.posX(atomIndex) += (atomStorage.velX(atomIndex) * damping + ax * halfDt) * dtf;
-    atomStorage.posY(atomIndex) += (atomStorage.velY(atomIndex) * damping + ay * halfDt) * dtf;
-    atomStorage.posZ(atomIndex) += (atomStorage.velZ(atomIndex) * damping + az * halfDt) * dtf;
-}
-
-void VerletScheme::correct(Atom& atom, double dt) {
-    const Vec3D acceleration = atom.force / atom.getProps().mass;
-    const Vec3D prevAcceleration = atom.prev_force / atom.getProps().mass;
-    atom.speed += (prevAcceleration + acceleration) * 0.5f * dt;
+    atomStorage.posX(atomIndex) += static_cast<float>(atomStorage.velX(atomIndex) * dt);
+    atomStorage.posY(atomIndex) += static_cast<float>(atomStorage.velY(atomIndex) * dt);
+    atomStorage.posZ(atomIndex) += static_cast<float>(atomStorage.velZ(atomIndex) * dt);
 }
 
 void VerletScheme::correct(AtomStorage& atomStorage, std::size_t atomIndex, double dt) {
-    const auto& props = Atom::getProps(atomStorage.type(atomIndex));
-    const float invMass = 1.0f / static_cast<float>(props.mass);
+    const auto props = Atom::getProps(atomStorage.type(atomIndex));
+    const float invMass = 1.0f / props.mass;
+    constexpr double damping = 0.6;
 
-    const float ax = atomStorage.forceX(atomIndex) * invMass;
-    const float ay = atomStorage.forceY(atomIndex) * invMass;
-    const float az = atomStorage.forceZ(atomIndex) * invMass;
-
-    const float prevAx = atomStorage.prevForceX(atomIndex) * invMass;
-    const float prevAy = atomStorage.prevForceY(atomIndex) * invMass;
-    const float prevAz = atomStorage.prevForceZ(atomIndex) * invMass;
-
-    const float halfDt = static_cast<float>(0.5 * dt);
-    atomStorage.velX(atomIndex) += (prevAx + ax) * halfDt;
-    atomStorage.velY(atomIndex) += (prevAy + ay) * halfDt;
-    atomStorage.velZ(atomIndex) += (prevAz + az) * halfDt;
+    atomStorage.velX(atomIndex) +=
+        static_cast<float>(0.5 * atomStorage.forceX(atomIndex) * invMass * dt * damping);
+    atomStorage.velY(atomIndex) +=
+        static_cast<float>(0.5 * atomStorage.forceY(atomIndex) * invMass * dt * damping);
+    atomStorage.velZ(atomIndex) +=
+        static_cast<float>(0.5 * atomStorage.forceZ(atomIndex) * invMass * dt * damping);
 }
-

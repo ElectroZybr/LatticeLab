@@ -28,7 +28,6 @@ public:
     void setScheme(Scheme scheme);
     Scheme getScheme() const { return integrator_type; }
 
-    void step(std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const;
     void step(AtomStorage& atomStorage, std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const;
 
 private:
