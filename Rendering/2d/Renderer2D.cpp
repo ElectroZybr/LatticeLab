@@ -1,7 +1,5 @@
 #include "Renderer2D.h"
 
-#include "imgui-SFML.h"
-
 #include <algorithm>
 #include <cmath>
 
@@ -116,8 +114,6 @@ int Renderer2D::getWallForce(int coord, int min, int max) {
 }
 
 void Renderer2D::drawShot(const std::vector<Atom>& atoms, const SimBox& box, float deltaTime) {
-    // 1: 7000 мкс - отрисовка 225 атомов
-    // 2: оптимизация батч на gpu. 1000 мкс - отрисовка 961 атома
     camera.update(deltaTime, target);
 
     target.clear(sf::Color(35, 35, 35, 255));
@@ -257,7 +253,6 @@ void Renderer2D::drawShot(const std::vector<Atom>& atoms, const SimBox& box, flo
     }
 
     target.setView(uiView);
-    ImGui::SFML::Render(target);
 }
 
 void Renderer2D::drawTransparencyMap(sf::RenderTarget& target, const SpatialGrid& grid) {

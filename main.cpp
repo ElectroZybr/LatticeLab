@@ -180,6 +180,7 @@ int main() {
 
             renderCounter.timer.start();
             renderer->drawShot(simulation.atoms, simulation.sim_box, shotTmr);
+            ImGui::SFML::Render(window);
             renderCounter.timer.stop();
             renderCounter.tick(renderCounter.timer.elapsedMilliseconds());
             shotTmr = 0;

@@ -6,7 +6,6 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Renderer3D.h"
-#include "imgui-SFML.h"
 
 Renderer3D::Renderer3D(sf::RenderTarget& t, sf::View& gv, sf::View& uv)
     : IRenderer(gv), target(t), uiView(uv)
@@ -257,13 +256,6 @@ void Renderer3D::drawShot(const std::vector<Atom>& atoms,
     glBindVertexArray(0);
 
     drawBox(box);
-
-    // ImGui поверх
-    target.setActive(true);
-    target.pushGLStates();
-    target.setView(uiView);
-    ImGui::SFML::Render(target);
-    target.popGLStates();
 }
 
 void Renderer3D::setSelectionFrame(Vec2D start, Vec2D end, float scale) {

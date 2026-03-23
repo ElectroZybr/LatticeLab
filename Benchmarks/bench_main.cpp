@@ -2,9 +2,13 @@
 
 #include "BenchmarkCase.h"
 #include "BenchmarkScenes.h"
+
 #include "Engine/Simulation.h"
 #include "Engine/physics/integrators/StepOps.h"
 #include "Engine/physics/integrators/VerletScheme.h"
+#include "Rendering/2d/Renderer2D.h"
+
+#include "imgui.h"
 
 namespace {
 
@@ -43,6 +47,19 @@ void setBenchmarkCounters(benchmark::State& state, int atomCount) {
         static_cast<double>(atomCount),
         benchmark::Counter::kIsIterationInvariantRate | benchmark::Counter::kInvert
     );
+}
+
+std::vector<Atom> makeRandomAtoms(int count) {
+    std::vector<Atom> atoms;
+    atoms.reserve(count);
+    // равномерно распределяем по боксу
+    const int side = static_cast<int>(std::cbrt(count)) + 1;
+    for (int i = 0; i < count; ++i) {
+        atoms.emplace_back(Vec3D((i % side) * 3.0, ((i / side) % side) * 3.0, (i / (side * side)) * 3.0),
+            Vec3D::Random() * 0.5, Atom::Type::H
+        );
+    }
+    return atoms;
 }
 
 }
@@ -127,7 +144,30 @@ static void BM_Correct(benchmark::State& state) {
     setBenchmarkCounters(state, atomCount);
 }
 
+static void BM_Renderer2D_DrawShot(benchmark::State& state) {
+    sf::RenderTexture renderTexture;
+    if (!renderTexture.resize({800, 600})) {
+        state.SkipWithError("RenderTexture resize failed");
+        return;
+    }
+
+    sf::View gameView(sf::FloatRect({0, 0}, {800, 600}));
+    sf::View uiView(sf::FloatRect({0, 0}, {800, 600}));
+    Renderer2D renderer(renderTexture, gameView, uiView);
+
+    std::vector<Atom> atoms = makeRandomAtoms(static_cast<int>(state.range(0)));
+
+    SimBox box(Vec3D(0, 0, 0), Vec3D(300, 300, 300));
+
+    for (auto _ : state) {
+        renderer.drawShot(atoms, box, 0.016f);
+        benchmark::ClobberMemory();
+    }
+}
+
+
 BENCHMARK(BM_SimulationStep)->Args({5 * 5 * 5})->Args({10 * 10 * 10})->Args({20 * 20 * 20});
 BENCHMARK(BM_ComputeForces)->Args({5 * 5 * 5})->Args({10 * 10 * 10})->Args({20 * 20 * 20});
 BENCHMARK(BM_PredictAndSync)->Args({5 * 5 * 5})->Args({10 * 10 * 10})->Args({20 * 20 * 20});
 BENCHMARK(BM_Correct)->Args({5 * 5 * 5})->Args({10 * 10 * 10})->Args({20 * 20 * 20});
+BENCHMARK(BM_Renderer2D_DrawShot)->Args({5 * 5 * 5})->Args({30 * 30 * 30})->Args({100 * 100 * 100});
