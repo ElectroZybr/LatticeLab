@@ -87,15 +87,20 @@ void rebuildGrid(SpatialGrid* grid, std::vector<Atom>& atoms) {
                 if (auto* cell = grid->at(x, y, z)) {
                     cell->clear();
                 }
+                if (auto* cell = grid->atIndex(x, y, z)) {
+                    cell->clear();
+                }
             }
         }
     }
 
-    for (Atom& atom : atoms) {
+    for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
+        Atom& atom = atoms[atomIndex];
         const int cellX = grid->worldToCellX(atom.coords.x);
         const int cellY = grid->worldToCellY(atom.coords.y);
         const int cellZ = grid->worldToCellZ(atom.coords.z);
         grid->insert(cellX, cellY, cellZ, &atom);
+        grid->insertIndex(cellX, cellY, cellZ, atomIndex);
     }
 }
 

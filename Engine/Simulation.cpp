@@ -20,11 +20,13 @@ void Simulation::update(float dt) {
 
 void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
     if (sim_box.setSizeBox(newStart, newEnd, cellSize)) {
-        for (Atom& atom : atoms) {
+        for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
+            Atom& atom = atoms[atomIndex];
             const int cellX = sim_box.grid.worldToCellX(atom.coords.x);
             const int cellY = sim_box.grid.worldToCellY(atom.coords.y);
             const int cellZ = sim_box.grid.worldToCellZ(atom.coords.z);
             sim_box.grid.insert(cellX, cellY, cellZ, &atom);
+            sim_box.grid.insertIndex(cellX, cellY, cellZ, atomIndex);
         }
     }
 }
@@ -66,10 +68,12 @@ Atom* Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type t
     atomStorage.addAtom(start_coords, start_speed, type, fixed);
     atoms.emplace_back(start_coords, start_speed, type, fixed);
     Atom* atom = &atoms.back();
+    const std::size_t atomIndex = atoms.size() - 1;
     const int cellX = sim_box.grid.worldToCellX(atom->coords.x);
     const int cellY = sim_box.grid.worldToCellY(atom->coords.y);
     const int cellZ = sim_box.grid.worldToCellZ(atom->coords.z);
     sim_box.grid.insert(cellX, cellY, cellZ, atom);
+    sim_box.grid.insertIndex(cellX, cellY, cellZ, atomIndex);
     return atom;
 }
 

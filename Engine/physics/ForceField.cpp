@@ -319,12 +319,12 @@ void ForceField::ComputeForces(AtomStorage& atoms, Atom* atomBase, std::size_t a
 
     const auto& atomBonds = atomBase[atomIndex].bonds;
     const auto& atomProps = Atom::getProps(atoms.type(atomIndex));
-    box.grid.forEachNeighbor(atoms.pos(atomIndex), [&](Atom* neighbour) {
-        const std::size_t neighbourIndex = static_cast<std::size_t>(neighbour - atomBase);
+    box.grid.forEachNeighborIndex(atoms.pos(atomIndex), [&](std::size_t neighbourIndex) {
         if (neighbourIndex >= atoms.size() || neighbourIndex >= atomCount || neighbourIndex <= atomIndex) {
             return;
         }
 
+        Atom* neighbour = atomBase + neighbourIndex;
         const bool bonded = std::find(atomBonds.begin(), atomBonds.end(), neighbour) != atomBonds.end();
 
         if (atomProps.maxValence - atoms.valenceCount(atomIndex) >= 2 && atomBonds.size() >= 2) {
@@ -399,7 +399,6 @@ void ForceField::pairNonBondedInteraction(AtomStorage& atoms, std::size_t aIndex
     atoms.forceZ(bIndex) += forceZ;
 
     /* потенциал леннард джонса */
-    // TODO: убрать расчет на каждой итерации
     const float potential = 4.0f * params.eps * (ratio12 - ratio6);
     atoms.energy(aIndex) += 0.5f * potential;
     atoms.energy(bIndex) += 0.5f * potential;

@@ -94,8 +94,6 @@ inline void predictAndSync(AtomStorage& atomStorage, std::vector<Atom>& atomRefs
     const std::size_t atomCount = std::min(atomStorage.size(), atomRefs.size());
 
     for (std::size_t atomIndex = 0; atomIndex < atomCount; ++atomIndex) {
-        Atom& atomRef = atomRefs[atomIndex];
-
         const int prevX = grid.worldToCellX(atomStorage.posX(atomIndex));
         const int prevY = grid.worldToCellY(atomStorage.posY(atomIndex));
         const int prevZ = grid.worldToCellZ(atomStorage.posZ(atomIndex));
@@ -109,8 +107,8 @@ inline void predictAndSync(AtomStorage& atomStorage, std::vector<Atom>& atomRefs
         const int currZ = grid.worldToCellZ(atomStorage.posZ(atomIndex));
 
         if (prevX != currX || prevY != currY || prevZ != currZ) {
-            grid.erase(prevX, prevY, prevZ, &atomRef);
-            grid.insert(currX, currY, currZ, &atomRef);
+            grid.eraseIndex(prevX, prevY, prevZ, atomIndex);
+            grid.insertIndex(currX, currY, currZ, atomIndex);
         }
 
         atomStorage.prevForceX(atomIndex) = atomStorage.forceX(atomIndex);
