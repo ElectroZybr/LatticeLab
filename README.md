@@ -55,7 +55,7 @@ brew install cmake python
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j 8
+cmake --build build -j $(sysctl -n hw.ncpu)
 ```
 
 Запуск:
