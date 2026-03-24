@@ -351,7 +351,7 @@ void Tools::onLeftReleased(std::vector<Atom>& atoms) {
     Interface::drawToolTrip = false;
 }
 
-void Tools::onFrame(std::vector<Atom>& atoms) {
+void Tools::onFrame(std::vector<Atom>& atoms, float deltaTime) {
     std::unique_ptr<IRenderer>& rend = *renderer;
     const sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
 
@@ -378,7 +378,7 @@ void Tools::onFrame(std::vector<Atom>& atoms) {
     if (atomMoveFlag && selectedMoveAtom != nullptr) {
         const Vec2D world = screenToBox(mouse_pos);
         const Vec2D delta = Vec2D(selectedMoveAtom->coords.x, selectedMoveAtom->coords.y) - world;
-        const Vec3D force = delta * 30;
+        const Vec3D force = delta * 50.f * deltaTime;
         if (!selected_atom_batch.empty()) {
             for (Atom* atom : selected_atom_batch) {
                 atom->force -= force;

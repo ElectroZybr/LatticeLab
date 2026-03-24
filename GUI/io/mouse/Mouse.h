@@ -13,7 +13,7 @@ public:
     static void init(sf::RenderWindow* w, std::unique_ptr<IRenderer>&, SimBox* b, std::vector<Atom>* a);
 
     static void onEvent(const sf::Event& event);
-    static void onFrame();
+    static void onFrame(float deltaTime);
 
     static void logMousePos();
 private:

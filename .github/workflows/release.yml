@@ -26,6 +26,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_CXX_FLAGS="-O3" \
           -DCMAKE_C_FLAGS="-O3" \
+          -DOPTIMIZE_FOR_NATIVE=OFF \
           -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++"
         
         cmake --build build --config Release -j 4
