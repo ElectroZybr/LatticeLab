@@ -23,7 +23,7 @@ sf::Clock Interface::clock;
 int Interface::selectedAtom = -1;
 bool Interface::pause;
 bool Interface::cursorHovered = false;
-float Interface::simulationSpeed = 1;
+float Interface::simulationSpeed = 100.f;
 double Interface::averageEnergy = 0.0;
 int Interface::countSelectedAtom = 0;
 bool Interface::drawToolTrip = false;
