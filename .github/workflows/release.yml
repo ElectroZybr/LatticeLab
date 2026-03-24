@@ -36,12 +36,21 @@ jobs:
       run: |
         objdump -p Chemical-simulator.exe | grep "DLL Name"
 
+    - name: Prepare Release Artifacts
+      shell: bash
+      run: |
+        mkdir -p release_dist/assets
+        cp Chemical-simulator.exe release_dist/
+        cp -r assets/* release_dist/assets/
+        cd release_dist
+        7z a ../Chemical-simulator-${{ github.event.inputs.version }}-win64.zip *
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ github.event.inputs.version }}
         name: Release ${{ github.event.inputs.version }}
         body: ${{ github.event.inputs.release_notes }}
-        files: Chemical-simulator.exe
+        files: Chemical-simulator-${{ github.event.inputs.version }}-win64.zip
         draft: false
         prerelease: false

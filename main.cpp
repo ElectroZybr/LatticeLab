@@ -60,7 +60,7 @@ int main() {
 
     sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator", sf::State::Fullscreen, settings);
     sf::Image icon;
-    if (icon.loadFromFile("icon.png")) { window.setIcon(icon.getSize(), icon.getPixelsPtr()); }
+    if (icon.loadFromFile("assets/icon.png")) { window.setIcon(icon.getSize(), icon.getPixelsPtr()); }
 
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(box);
@@ -198,6 +198,8 @@ int main() {
         }
     }
     ImGui::SFML::Shutdown();
+
+    std::cout << "<Simulation finished>" << std::endl;
 
     return 0;
 }

@@ -5,8 +5,8 @@
 Renderer2D::Renderer2D(sf::RenderTarget& t, sf::View& gv)
     : RendererGL(t, gv)
 {
-    shaderProgram = linkProgram("Rendering/2d/shaders/atom.vert",
-                                "Rendering/2d/shaders/atom.frag");
+    shaderProgram = linkProgram("assets/shaders/2d/atom.vert",
+                                "assets/shaders/2d/atom.frag");
 
     camera.setZoom(10.f);
 }
