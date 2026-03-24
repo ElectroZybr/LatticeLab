@@ -1,7 +1,7 @@
 #version 330 core
 
 layout(points) in;
-layout(triangle_strip, max_vertices = 104) out;  // 16 сегментов * 2 * 3 + 2 крышки
+layout(triangle_strip, max_vertices = 98) out;  // 14 сегментов: 30 боковина + 34 + 34 крышки
 
 in vec3  gPos_A[];
 in vec3  gPos_B[];
@@ -13,7 +13,7 @@ uniform mat4 view;
 out vec3 fNormal;
 out vec3 fFragPos;
 
-const int SEGMENTS = 16;
+const int SEGMENTS = 14;
 const float PI = 3.14159265358979;
 
 void buildBasis(vec3 axis, out vec3 u, out vec3 v) {

@@ -171,7 +171,9 @@ int main() {
             renderer->camera.update(window);
             renderCounter.timer.start();
             renderer->drawShot(simulation.atoms, simulation.sim_box);
+            window.pushGLStates();
             ImGui::SFML::Render(window);
+            window.popGLStates();
             renderCounter.timer.stop();
             renderCounter.tick(renderCounter.timer.elapsedMilliseconds());
             shotTmr = 0;

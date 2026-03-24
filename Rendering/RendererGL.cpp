@@ -224,6 +224,8 @@ GLuint RendererGL::linkProgram(std::string_view vert, std::string_view frag,
         char log[512];
         glGetProgramInfoLog(prog, 512, nullptr, log);
         std::cerr << "Shader link error: " << log << '\n';
+        glDeleteProgram(prog);
+        prog = 0;
     }
 
     glDeleteShader(v);
@@ -345,6 +347,8 @@ void RendererGL::drawBox(const SimBox& box) {
 }
 
 void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
+    if (bondShader == 0) return;
+
     bondData.clear();
     bondData.reserve(Bond::bonds_list.size());
 
