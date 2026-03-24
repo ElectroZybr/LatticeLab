@@ -35,8 +35,8 @@ void SimControlPanel::draw(float scale, sf::Vector2u windowSize,
     if (ImGui::Button(pause ? ICON_FA_PLAY : ICON_FA_PAUSE,  ImVec2(50*scale, 50*scale))) pause = !pause;
 
     ImGui::PushItemWidth(106*scale);
-    ImGui::SliderFloat("##Speed", &simulationSpeed, 0.1f, 50.0f, "%.1f",
-                       ImGuiSliderFlags_Logarithmic);
+    ImGui::SliderFloat("##Speed", &simulationSpeed, 1.f, 3000.0f, "%.1f",
+                       ImGuiSliderFlags_AlwaysClamp);
     ImGui::PopItemWidth();
 
     ImGui::End();
