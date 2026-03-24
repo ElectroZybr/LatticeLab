@@ -59,6 +59,7 @@ int main() {
     settings.depthBits = 24;
 
     sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator", sf::State::Fullscreen, settings);
+    window.setVerticalSyncEnabled(true);
     sf::Image icon;
     if (icon.loadFromFile("assets/icon.png")) { window.setIcon(icon.getSize(), icon.getPixelsPtr()); }
 
@@ -126,9 +127,9 @@ int main() {
 
         shotTmr += deltaTime;
         EventManager::poll();
-        if (shotTmr >= 1./FPS) {
-            EventManager::frame(shotTmr);
+        EventManager::frame(deltaTime);
 
+        if (shotTmr >= 1./FPS) {
             Interface::Update();
 
             if (auto result = Keyboard::popResult()) {
@@ -171,9 +172,9 @@ int main() {
             renderer->camera.update(window);
             renderCounter.timer.start();
             renderer->drawShot(simulation.atoms, simulation.sim_box);
-            window.pushGLStates();
+            // window.pushGLStates();
             ImGui::SFML::Render(window);
-            window.popGLStates();
+            // window.popGLStates();
             renderCounter.timer.stop();
             renderCounter.tick(renderCounter.timer.elapsedMilliseconds());
             shotTmr = 0;
@@ -198,8 +199,6 @@ int main() {
         }
     }
     ImGui::SFML::Shutdown();
-
-    std::cout << "<Simulation finished>" << std::endl;
 
     return 0;
 }

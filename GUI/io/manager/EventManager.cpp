@@ -30,5 +30,5 @@ void EventManager::poll() {
 
 void EventManager::frame(float deltaTime) {
     Keyboard::onFrame(deltaTime);
-    Mouse::onFrame();
+    Mouse::onFrame(deltaTime);
 }

@@ -65,8 +65,8 @@ void Mouse::onEvent(const sf::Event& event) {
     }
 }
 
-void Mouse::onFrame() {
-    Tools::onFrame(*atoms);
+void Mouse::onFrame(float deltaTime) {
+    Tools::onFrame(*atoms, deltaTime);
 }
 
 void Mouse::logMousePos() {
