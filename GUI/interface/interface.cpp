@@ -1,6 +1,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "interface.h"
+#include "imgui_impl_opengl3.h"
 
 #define ICON_MIN_FA 0xf000
 #define ICON_MAX_FA 0xf897
@@ -46,12 +47,13 @@ int Interface::init(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRendere
     simulation = &s;
     renderer = &r;
 
-    if (!ImGui::SFML::Init(*window)) return EXIT_FAILURE;
+    if (!ImGui::SFML::Init(*window, false)) return EXIT_FAILURE;
 
     styleManager.applyCustomStyle();
 
     if (!fontManager.load(styleManager.getScale())) return EXIT_FAILURE;
-    if (!ImGui::SFML::UpdateFontTexture()) return EXIT_FAILURE;
+    if (!ImGui_ImplOpenGL3_Init("#version 150")) return EXIT_FAILURE;
+    if (!ImGui_ImplOpenGL3_CreateFontsTexture()) return EXIT_FAILURE;
     return EXIT_SUCCESS;
 }
 
@@ -76,6 +78,7 @@ int Interface::getSelectedAtom() {
 }
 
 int Interface::Update() {
+    ImGui_ImplOpenGL3_NewFrame();
     ImGui::SFML::Update(*window, clock.restart());
 
     ImGui::PushFont(fontManager.main);

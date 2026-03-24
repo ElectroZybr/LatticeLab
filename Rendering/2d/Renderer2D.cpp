@@ -61,6 +61,10 @@ void Renderer2D::setLassoContour(const std::vector<sf::Vector2i>& points) {
 }
 
 void Renderer2D::drawOverlay() {
+    if (!isBoxVisible && !isLassoVisible) {
+        return;
+    }
+
     // Важно: переключаемся на SFML отрисовку поверх OpenGL
     target.pushGLStates();
 
