@@ -2,11 +2,9 @@
 #include "fixtures/SimulationFixture.h"
 
 BENCHMARK_DEFINE_F(SimulationFixture, FullStep)(benchmark::State& state) {
-    for (auto _ : state) {
-        state.PauseTiming();
-        rebuildScene();
-        state.ResumeTiming();
+    rebuildScene();
 
+    for (auto _ : state) {
         simulation_->update(Benchmarks::kDt);
         benchmark::ClobberMemory();
     }

@@ -2,11 +2,9 @@
 #include "fixtures/SimulationFixture.h"
 
 BENCHMARK_DEFINE_F(SimulationFixture, ComputeForces)(benchmark::State& state) {
-    for (auto _ : state) {
-        state.PauseTiming();
-        rebuildScene();
-        state.ResumeTiming();
+    rebuildScene();
 
+    for (auto _ : state) {
         StepOps::computeForces(
             simulation_->atoms, simulation_->sim_box,
             simulation_->forceField, Benchmarks::kDt

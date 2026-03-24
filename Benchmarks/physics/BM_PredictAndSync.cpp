@@ -2,11 +2,9 @@
 #include "fixtures/SimulationFixture.h"
 
 BENCHMARK_DEFINE_F(SimulationFixture, PredictAndSync)(benchmark::State& state) {
-    for (auto _ : state) {
-        state.PauseTiming();
-        prepareForPredict();
-        state.ResumeTiming();
+    prepareForPredict();
 
+    for (auto _ : state) {
         StepOps::predictAndSync(
             simulation_->atoms, simulation_->sim_box,
             Benchmarks::kDt, &VerletScheme::predict

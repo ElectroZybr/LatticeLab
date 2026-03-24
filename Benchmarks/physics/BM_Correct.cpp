@@ -2,11 +2,9 @@
 #include "fixtures/SimulationFixture.h"
 
 BENCHMARK_DEFINE_F(SimulationFixture, Correct)(benchmark::State& state) {
-    for (auto _ : state) {
-        state.PauseTiming();
-        prepareForCorrect();
-        state.ResumeTiming();
+    prepareForCorrect();
 
+    for (auto _ : state) {
         for (Atom& atom : simulation_->atoms) {
             if (!atom.isFixed)
                 VerletScheme::correct(atom, Benchmarks::kDt);
