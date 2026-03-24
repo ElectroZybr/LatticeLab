@@ -24,12 +24,11 @@ jobs:
         export PATH=$(echo $PATH | tr ':' '\n' | grep -v "Git/bin" | tr '\n' ':')
         cmake -S . -B build -G "MinGW Makefiles" \
           -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-          -DOPTIMIZE_FOR_NATIVE=OFF \
-          -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++" \
-          -DCMAKE_CXX_FLAGS="-D_WIN32_WINNT=0x0601"
+          -DCMAKE_CXX_FLAGS="-O3" \
+          -DCMAKE_C_FLAGS="-O3" \
+          -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++"
         
-        cmake --build build -j 4
+        cmake --build build --config Release -j 4
 
     - name: Check Dependencies (Verification)
       shell: bash
