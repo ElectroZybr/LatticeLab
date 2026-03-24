@@ -60,11 +60,15 @@ def list_available_filters() -> list[str]:
     return list(groups.keys())
 
 
-def run_benchmark(filter_regex: str | None) -> dict:
+def run_benchmark(filter_regex: str | None, repetitions: int = 3) -> dict:
     if not BINARY.exists():
         die(f"Бинарник не найден: {BINARY}")
 
-    cmd = [str(BINARY), "--benchmark_format=json"]
+    cmd = [
+        str(BINARY),
+        "--benchmark_format=json",
+        f"--benchmark_repetitions={repetitions}",
+    ]
     if filter_regex:
         cmd += [f"--benchmark_filter={filter_regex}"]
 
@@ -92,7 +96,7 @@ def save_result(data: dict, filter_used: str | None) -> Path:
     return path
 
 
-def interactive_menu() -> tuple[str | None, bool]:
+def interactive_menu() -> tuple[str | None, int, bool]:
     print("\033[1m=== Chemical Simulator Benchmarks ===\033[0m\n")
 
     filters = list_available_filters()
@@ -117,8 +121,11 @@ def interactive_menu() -> tuple[str | None, bool]:
         except ValueError:
             selected = choice  # ввели regex напрямую
 
+    rep_input = input("Количество прогонов [3]: ").strip()
+    repetitions = int(rep_input) if rep_input.isdigit() else 3
+
     save = input("\nСохранить результат? [y/N]: ").strip().lower() == "y"
-    return selected, save
+    return selected, repetitions, save
 
 
 def main() -> None:
@@ -131,6 +138,13 @@ def main() -> None:
     )
     parser.add_argument(
         "--list", action="store_true", help="Показать сохранённые результаты"
+    )
+    parser.add_argument(
+        "--repetitions",
+        metavar="N",
+        type=int,
+        default=3,
+        help="Количество прогонов (default: 3)",
     )
     parser.add_argument(
         "--open", action="store_true", help="Открыть view.html в браузере"
@@ -153,14 +167,15 @@ def main() -> None:
         webbrowser.open(VIEW_HTML.as_uri())
         return
 
+    repetitions = args.repetitions
     if args.filter or args.save:
         filter_regex = args.filter
         save_flag = args.save
     else:
-        filter_regex, save_flag = interactive_menu()
+        filter_regex, repetitions, save_flag = interactive_menu()
 
     print()
-    data = run_benchmark(filter_regex)
+    data = run_benchmark(filter_regex, repetitions)
 
     if save_flag:
         save_result(data, filter_regex)
@@ -170,10 +185,11 @@ def main() -> None:
         tmp.write_text(json.dumps(data, indent=2))
         print(f"\033[90mВременный результат: {tmp}\033[0m")
 
-    if not VIEW_HTML.exists():
-        print(f"\033[33mview.html не найден рядом со скриптом\033[0m")
-    else:
-        webbrowser.open(VIEW_HTML.as_uri())
+    if args.open:
+        if not VIEW_HTML.exists():
+            print(f"\033[33mview.html не найден рядом со скриптом\033[0m")
+        else:
+            webbrowser.open(VIEW_HTML.as_uri())
 
 
 if __name__ == "__main__":
