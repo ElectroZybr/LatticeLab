@@ -1,10 +1,13 @@
 ﻿#include <cmath>
+#include <exception>
+#include <iostream>
 #include <string_view>
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window/WindowHandle.hpp>
 
 #include "imgui-SFML.h"
+#include "imgui_impl_opengl3.h"
 
 #include "GUI/io/manager/EventManager.h"
 #include "GUI/io/keyboard/Keyboard.h"
@@ -55,151 +58,174 @@ struct PerSecondCounter {
 std::string_view schemeName(Integrator::Scheme s);
 
 int main() {
-    sf::ContextSettings settings;
-    settings.depthBits = 24;
+    try {
+        sf::ContextSettings settings;
+        settings.depthBits = 24;
+#ifdef __APPLE__
+        settings.majorVersion = 4;
+        settings.minorVersion = 1;
+        settings.attributeFlags = sf::ContextSettings::Attribute::Core;
+#endif
 
-    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator", sf::State::Fullscreen, settings);
-    sf::Image icon;
-    if (icon.loadFromFile("icon.png")) { window.setIcon(icon.getSize(), icon.getPixelsPtr()); }
-
-    SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
-    Simulation simulation(box);
-    simulation.setIntegrator(Integrator::Scheme::Verlet);
-    crystal(simulation, 20, Atom::Type::Z, false);
-
-    sf::View& gameView = const_cast<sf::View&>(window.getView());
-    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
-    renderer->drawBonds = true;
-    renderer->speedGradient = true;
-
-    Interface::init(window, simulation, renderer);
-    EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atoms);
-    Tools::init(&window, &gameView, &box.grid, &box, renderer,
-        [&](Vec3D coords, Vec3D speed, Atom::Type type, bool fixed) {
-            return simulation.createAtom(coords, speed, type, fixed);
+        sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator", sf::State::Fullscreen, settings);
+        sf::Image icon;
+        if (icon.loadFromFile("icon.png")) { window.setIcon(icon.getSize(), icon.getPixelsPtr()); }
+#ifdef __APPLE__
+        const sf::ContextSettings actualSettings = window.getSettings();
+        const bool hasModernContext = actualSettings.majorVersion > 4
+            || (actualSettings.majorVersion == 4 && actualSettings.minorVersion >= 1)
+            || (actualSettings.majorVersion == 3 && actualSettings.minorVersion >= 2);
+        const bool isCoreContext = (actualSettings.attributeFlags & sf::ContextSettings::Attribute::Core) != 0;
+        if (!hasModernContext || !isCoreContext) {
+            throw std::runtime_error(
+                "Failed to create a modern OpenGL core context on macOS. "
+                "Actual context: " + std::to_string(actualSettings.majorVersion) + "." +
+                std::to_string(actualSettings.minorVersion));
         }
-    );
+#endif
 
-    Interface::pause = true;
+        SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
+        Simulation simulation(box);
+        simulation.setIntegrator(Integrator::Scheme::Verlet);
+        crystal(simulation, 20, Atom::Type::Z, false);
 
-    DebugView* debugSim = Interface::debugPanel.addView(DebugView("Симуляция", 
-    {
-        DebugValue ("Память (МБ)"),
-        DebugValue ("Рендер (мс)"),
-        DebugValue ("Физика (мс)"),
-        DebugValue ("Тип интегратора"),
-        DebugValue ("Шаги симуляции"),
-        DebugValue ("Шагов/с"),
-        DebugValue ("Количество атомов"),
-        DebugSeries("Полная энергия"),
-    }));
+        sf::View& gameView = const_cast<sf::View&>(window.getView());
+        std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
+        renderer->drawBonds = true;
+        renderer->speedGradient = true;
 
-    DebugView* debugAtom = Interface::debugPanel.addView(DebugView("Атом",
-    {
-        DebugValue ("В разработке"),
-    }));
-
-    debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
-    debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
-
-    sf::Clock clock;
-    double shotTmr = 0.0;
-    double simTmr = 0.0;
-    double logTmr = 0.0;
-
-    PerSecondCounter physicsCounter;
-    PerSecondCounter renderCounter;
-
-    while (window.isOpen()) {
-        float deltaTime = clock.restart().asSeconds();
-
-        simTmr += deltaTime;
-        if (simTmr >= Dt/Interface::getSimulationSpeed()) { 
-            if (!Interface::getPause()) {
-                physicsCounter.timer.start();
-                simulation.update(Dt);
-                physicsCounter.timer.stop();
-                physicsCounter.tick(physicsCounter.timer.elapsedMilliseconds());
+        Interface::init(window, simulation, renderer);
+        EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atoms);
+        Tools::init(&window, &gameView, &box.grid, &box, renderer,
+            [&](Vec3D coords, Vec3D speed, Atom::Type type, bool fixed) {
+                return simulation.createAtom(coords, speed, type, fixed);
             }
-            simTmr = 0;
-        }
+        );
 
-        shotTmr += deltaTime;
-        EventManager::poll();
-        if (shotTmr >= 1./FPS) {
-            EventManager::frame(shotTmr);
+        Interface::pause = true;
 
-            Interface::Update();
+        DebugView* debugSim = Interface::debugPanel.addView(DebugView("Симуляция", 
+        {
+            DebugValue ("Память (МБ)"),
+            DebugValue ("Рендер (мс)"),
+            DebugValue ("Физика (мс)"),
+            DebugValue ("Тип интегратора"),
+            DebugValue ("Шаги симуляции"),
+            DebugValue ("Шагов/с"),
+            DebugValue ("Количество атомов"),
+            DebugSeries("Полная энергия"),
+        }));
 
-            if (auto result = Keyboard::popResult()) {
-                switch (result.value()) {
-                    case KeyboardCommand::StepPhysics:
-                    {
-                        physicsCounter.timer.start();
-                        simulation.update(Dt);
-                        physicsCounter.timer.stop();
-                        physicsCounter.tick(physicsCounter.timer.elapsedMilliseconds());
-                        break;
-                    }
+        DebugView* debugAtom = Interface::debugPanel.addView(DebugView("Атом",
+        {
+            DebugValue ("В разработке"),
+        }));
+
+        debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
+        debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
+
+        sf::Clock clock;
+        double shotTmr = 0.0;
+        double simTmr = 0.0;
+        double logTmr = 0.0;
+
+        PerSecondCounter physicsCounter;
+        PerSecondCounter renderCounter;
+
+        while (window.isOpen()) {
+            float deltaTime = clock.restart().asSeconds();
+
+            simTmr += deltaTime;
+            if (simTmr >= Dt/Interface::getSimulationSpeed()) { 
+                if (!Interface::getPause()) {
+                    physicsCounter.timer.start();
+                    simulation.update(Dt);
+                    physicsCounter.timer.stop();
+                    physicsCounter.tick(physicsCounter.timer.elapsedMilliseconds());
                 }
+                simTmr = 0;
             }
 
-            if (auto result = Interface::fileDialog.popResult()) {
-                switch (result->command) {
-                    case FileDialogCommand::Save: simulation.save(result->path); break;
-                    case FileDialogCommand::Load: simulation.load(result->path); break;
-                }
-            }
+            shotTmr += deltaTime;
+            EventManager::poll();
+            if (shotTmr >= 1./FPS) {
+                EventManager::frame(shotTmr);
 
-            if (auto result = Interface::toolsPanel.popResult()) {
-                auto newRenderer = [&]() -> std::unique_ptr<IRenderer> {
+                Interface::Update();
+
+                if (auto result = Keyboard::popResult()) {
                     switch (result.value()) {
-                        case ToolsCommand::ToggleRenderer2D:
-                            return std::make_unique<Renderer2D>(window, gameView);
-                        case ToolsCommand::ToggleRenderer3D:
-                            return std::make_unique<Renderer3D>(window, gameView);
+                        case KeyboardCommand::StepPhysics:
+                        {
+                            physicsCounter.timer.start();
+                            simulation.update(Dt);
+                            physicsCounter.timer.stop();
+                            physicsCounter.tick(physicsCounter.timer.elapsedMilliseconds());
+                            break;
+                        }
                     }
-                }();
+                }
 
-                newRenderer->drawGrid = renderer->drawGrid;
-                newRenderer->drawBonds = renderer->drawBonds;
-                newRenderer->speedGradient = renderer->speedGradient;
-                newRenderer->speedGradientTurbo = renderer->speedGradientTurbo;
+                if (auto result = Interface::fileDialog.popResult()) {
+                    switch (result->command) {
+                        case FileDialogCommand::Save: simulation.save(result->path); break;
+                        case FileDialogCommand::Load: simulation.load(result->path); break;
+                    }
+                }
 
-                renderer = std::move(newRenderer);
+                if (auto result = Interface::toolsPanel.popResult()) {
+                    auto newRenderer = [&]() -> std::unique_ptr<IRenderer> {
+                        switch (result.value()) {
+                            case ToolsCommand::ToggleRenderer2D:
+                                return std::make_unique<Renderer2D>(window, gameView);
+                            case ToolsCommand::ToggleRenderer3D:
+                                return std::make_unique<Renderer3D>(window, gameView);
+                        }
+                    }();
+
+                    newRenderer->drawGrid = renderer->drawGrid;
+                    newRenderer->drawBonds = renderer->drawBonds;
+                    newRenderer->speedGradient = renderer->speedGradient;
+                    newRenderer->speedGradientTurbo = renderer->speedGradientTurbo;
+
+                    renderer = std::move(newRenderer);
+                }
+                renderer->camera.update(window);
+                renderCounter.timer.start();
+                renderer->drawShot(simulation.atoms, simulation.sim_box);
+                ImGui::Render();
+                ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+                renderCounter.timer.stop();
+                renderCounter.tick(renderCounter.timer.elapsedMilliseconds());
+                shotTmr = 0;
+                window.display();
+
+                debugSim->add_data("Полная энергия", simulation.fullAverageEnergy());
             }
-            renderer->camera.update(window);
-            renderCounter.timer.start();
-            renderer->drawShot(simulation.atoms, simulation.sim_box);
-            window.pushGLStates();
-            ImGui::SFML::Render(window);
-            window.popGLStates();
-            renderCounter.timer.stop();
-            renderCounter.tick(renderCounter.timer.elapsedMilliseconds());
-            shotTmr = 0;
-            window.display();
 
-            debugSim->add_data("Полная энергия", simulation.fullAverageEnergy());
+            logTmr += deltaTime;
+            if (logTmr >= 1. / LPS) {
+                debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
+                debugSim->add_data("Рендер (мс)", static_cast<float>(renderCounter.avgMs()));
+                debugSim->add_data("Физика (мс)", static_cast<float>(physicsCounter.avgMs()));
+                debugSim->add_data("Количество атомов", static_cast<float>(simulation.atoms.size()));
+                debugSim->add_data("Шаги симуляции", simulation.getSimStep());
+                debugSim->add_data("Шагов/с", physicsCounter.rate);
+                debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
+
+                physicsCounter.reset();
+                renderCounter.reset();
+                logTmr = 0;
+            }
         }
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui::SFML::Shutdown();
 
-        logTmr += deltaTime;
-        if (logTmr >= 1. / LPS) {
-            debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
-            debugSim->add_data("Рендер (мс)", static_cast<float>(renderCounter.avgMs()));
-            debugSim->add_data("Физика (мс)", static_cast<float>(physicsCounter.avgMs()));
-            debugSim->add_data("Количество атомов", static_cast<float>(simulation.atoms.size()));
-            debugSim->add_data("Шаги симуляции", simulation.getSimStep());
-            debugSim->add_data("Шагов/с", physicsCounter.rate);
-            debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
-
-            physicsCounter.reset();
-            renderCounter.reset();
-            logTmr = 0;
-        }
+        return 0;
+    } catch (const std::exception& ex) {
+        std::cerr << "Fatal error: " << ex.what() << std::endl;
+        return EXIT_FAILURE;
     }
-    ImGui::SFML::Shutdown();
-
-    return 0;
 }
 
 void crystal(Simulation& simulation, int n, Atom::Type type, bool is3d, double padding, double margin) {

@@ -53,6 +53,7 @@ add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
 include_directories(${imgui_SOURCE_DIR})
 
@@ -115,6 +116,7 @@ target_compile_options(chemical_simulator_lib PRIVATE -O3 -march=native)
 target_include_directories(chemical_simulator_lib PUBLIC
     ${CMAKE_SOURCE_DIR}
     ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
     ${imguifiledialog_SOURCE_DIR}
 )
 

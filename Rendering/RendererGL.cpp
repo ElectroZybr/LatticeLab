@@ -1,18 +1,53 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <stdexcept>
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <SFML/Window/Context.hpp>
+
 #include "Engine/physics/Bond.h"
 #include "RendererGL.h"
+
+namespace {
+void ensureGlFunction(bool available, const char* name) {
+    if (!available) {
+        throw std::runtime_error(std::string("OpenGL function is unavailable: ") + name);
+    }
+}
+
+void initializeGlad(sf::RenderTarget& target) {
+    if (!target.setActive(true)) {
+        throw std::runtime_error("Failed to activate the SFML render target");
+    }
+
+    const auto loader = [](const char* name) -> void* {
+        return reinterpret_cast<void*>(sf::Context::getFunction(name));
+    };
+
+    if (!gladLoadGLLoader(loader)) {
+        throw std::runtime_error("gladLoadGLLoader failed to load OpenGL symbols");
+    }
+
+    ensureGlFunction(glad_glGenVertexArrays != nullptr, "glGenVertexArrays");
+    ensureGlFunction(glad_glBindVertexArray != nullptr, "glBindVertexArray");
+    ensureGlFunction(glad_glGenBuffers != nullptr, "glGenBuffers");
+    ensureGlFunction(glad_glBindBuffer != nullptr, "glBindBuffer");
+    ensureGlFunction(glad_glBufferData != nullptr, "glBufferData");
+    ensureGlFunction(glad_glEnableVertexAttribArray != nullptr, "glEnableVertexAttribArray");
+    ensureGlFunction(glad_glVertexAttribPointer != nullptr, "glVertexAttribPointer");
+    ensureGlFunction(glad_glVertexAttribDivisor != nullptr, "glVertexAttribDivisor");
+    ensureGlFunction(glad_glCreateShader != nullptr, "glCreateShader");
+    ensureGlFunction(glad_glCreateProgram != nullptr, "glCreateProgram");
+}
+}
 
 RendererGL::RendererGL(sf::RenderTarget& t, sf::View& gv)
     : IRenderer(gv), target(t)
 {
-    t.setActive(true);
-    gladLoadGL();
+    initializeGlad(t);
     initGL();
     initBoxGL();
     initBondGL();
