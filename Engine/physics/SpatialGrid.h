@@ -50,9 +50,9 @@ public:
         const int y0 = std::max(cy - 1, 0),  y1 = std::min(cy + 1, sizeY - 1);
         const int z0 = std::max(cz - 1, 0),  z1 = std::min(cz + 1, sizeZ - 1);
 
-        for (int ix = x0; ix <= x1; ++ix) {
+        for (int iz = z0; iz <= z1; ++iz) {
             for (int iy = y0; iy <= y1; ++iy) {
-                for (int iz = z0; iz <= z1; ++iz) {
+                for (int ix = x0; ix <= x1; ++ix) {
                     for (Atom* atom : grid[index(ix, iy, iz)]) {
                         callback(atom);
                     }

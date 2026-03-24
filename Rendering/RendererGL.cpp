@@ -81,8 +81,6 @@ void RendererGL::initGL() {
     glVertexAttribDivisor(4, 1);
 
     glBindVertexArray(0);
-
-    initBoxGL();
 }
 
 void RendererGL::initBoxGL() {
@@ -249,18 +247,18 @@ void RendererGL::drawShot(const std::vector<Atom>& atoms,
     instanceData.clear();
     instanceData.reserve(atoms.size());
 
-    float maxSpeed = 1.f;
+    float maxSpeedSqr = 1.f;
     if (speedGradient) {
         for (const Atom& atom : atoms)
-            maxSpeed = std::max(maxSpeed, static_cast<float>(atom.speed.abs()));
-        if (maxSpeed < 1e-6f) maxSpeed = 1.f;
+            maxSpeedSqr = std::max(maxSpeedSqr, static_cast<float>(atom.speed.sqrAbs()));
+        if (maxSpeedSqr < 1e-6f) maxSpeedSqr = 1.f;
     }
 
     for (const Atom& atom : atoms) {
         sf::Color sfColor;
         if (speedGradient) {
             const float t = std::clamp(
-                static_cast<float>(atom.speed.abs()) / maxSpeed, 0.f, 1.f);
+                std::sqrt(static_cast<float>(atom.speed.sqrAbs()) / maxSpeedSqr), 0.f, 1.f);
             sfColor = speedGradientTurbo
                 ? turboColor(t)
                 : sf::Color(255 * t, 0, (1.f - t) * 255.f);
