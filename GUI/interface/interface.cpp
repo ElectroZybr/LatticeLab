@@ -20,7 +20,7 @@ Simulation* Interface::simulation = nullptr;
 std::unique_ptr<IRenderer>* Interface::renderer = nullptr;
 
 sf::Clock Interface::clock;
-int Interface::selectedAtom = -1;
+int Interface::selectedAtom = 0;
 bool Interface::pause;
 bool Interface::cursorHovered = false;
 float Interface::simulationSpeed = 100.f;

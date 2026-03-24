@@ -318,11 +318,7 @@ void Tools::onLeftReleased(std::vector<Atom>& atoms) {
         if (lassoPoints.size() >= 3) {
             selected_atom_batch.clear();
             for (Atom& atom : atoms) {
-                const sf::Vector2f atomLocalCenter(
-                    atom.coords.x + atom.getProps().radius,
-                    atom.coords.y + atom.getProps().radius
-                );
-
+                const sf::Vector2f atomLocalCenter(atom.coords.x, atom.coords.y);
                 const sf::Vector2i atomScreenCenter = boxToScreen(Vec2D(atomLocalCenter.x, atomLocalCenter.y));
 
                 const bool selected = isPointInsidePolygon(atomScreenCenter, lassoPoints);
@@ -403,8 +399,8 @@ void Tools::selectionFrame(sf::Vector2i start_mouse_pos, sf::Vector2i mouse_pos,
 
     int count = 0;
     for (Atom& atom : atoms) {
-        if (s_local.x-0.8 <= atom.coords.x && atom.coords.x <= e_local.x &&
-            s_local.y-0.8 <= atom.coords.y && atom.coords.y <= e_local.y) {
+        if (s_local.x <= atom.coords.x && atom.coords.x <= e_local.x &&
+            s_local.y <= atom.coords.y && atom.coords.y <= e_local.y) {
             atom.isSelect = true;
             selected_atom_batch.insert(&atom);
             count++;
@@ -460,10 +456,7 @@ Atom* Tools::pickAtom(sf::Vector2i mouse_pos) {
     for (int dy = -1; dy <= 1; ++dy) {
         for (int dx = -1; dx <= 1; ++dx) {
             grid->forEachAtXY(cellX + dx, cellY + dy, [&](Atom* atom) {
-                const Vec2D center(
-                    atom->coords.x + atom->getProps().radius,
-                    atom->coords.y + atom->getProps().radius
-                );
+                const Vec2D center(atom->coords.x, atom->coords.y);
                 const Vec2D delta = center - local;
                 const double distSqr = delta.sqrAbs();
                 const double pickRadius = std::max(0.5, atom->getProps().radius);
@@ -482,16 +475,21 @@ bool Tools::tryAddAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, Atom::T
     if (!box || !atomCreator) {
         return false;
     }
-    std::unique_ptr<IRenderer>& rend = *renderer;
 
-    const Vec2D local = screenToBox(mouse_pos);
+    Vec2D world_pos = screenToWorld(mouse_pos);
+
+    if (!(box->start.x + 2 <= world_pos.x && world_pos.x <= box->end.x - 2 && 
+          box->start.y + 2 <= world_pos.y && world_pos.y <= box->end.y - 2)) {
+        return false;
+    }
+    
+    const Vec2D spawnPos = screenToBox(mouse_pos);
 
     const double atomRadius = Atom::getProps(atomType).radius;
-    Vec3D spawnPos = Vec3D(local - atomRadius / 2.0, (box->end.z - box->start.z) * 0.5);
 
     bool hasNearAtom = false;
     for (Atom& atom : atoms) {
-        if ((atom.coords - spawnPos).abs() <= atom.getProps().radius + atomRadius) {
+        if ((Vec2D(atom.coords.x, atom.coords.y) - spawnPos).abs() <= 2.f * (atom.getProps().radius + atomRadius)) { // что бы из-за других сил не было взрыва
             hasNearAtom = true;
             break;
         }
