@@ -9,11 +9,10 @@
 
 class AtomStorage {
 private:
-    static constexpr std::size_t kFloatFieldCount = 12;
+    static constexpr std::size_t kFloatFieldCount = 13;
 
     std::size_t count_ = 0;
     std::size_t capacity_ = 0;
-
     std::vector<float> floatData_;
 
     float* x_ = nullptr;
@@ -28,9 +27,9 @@ private:
     float* pfx_ = nullptr;
     float* pfy_ = nullptr;
     float* pfz_ = nullptr;
+    float* pe_ = nullptr;
 
     std::vector<Atom::Type> atomType_;
-    std::vector<float> potentialEnergy_;
     std::vector<int> valence_;
     std::vector<std::uint8_t> selected_;
     std::vector<std::uint8_t> isFixed_;
@@ -41,6 +40,7 @@ private:
             vx_ = vy_ = vz_ = nullptr;
             fx_ = fy_ = fz_ = nullptr;
             pfx_ = pfy_ = pfz_ = nullptr;
+            pe_ = nullptr;
             return;
         }
 
@@ -57,6 +57,7 @@ private:
         pfx_ = base +  9 * capacity_;
         pfy_ = base + 10 * capacity_;
         pfz_ = base + 11 * capacity_;
+        pe_  = base + 12 * capacity_;
     }
 
     void ensureCapacity(std::size_t requiredCount) {
@@ -88,6 +89,7 @@ private:
             newField(9)[i]  = pfx_[i];
             newField(10)[i] = pfy_[i];
             newField(11)[i] = pfz_[i];
+            newField(12)[i] = pe_[i];
         }
 
         floatData_ = std::move(newFloatData);
@@ -102,7 +104,6 @@ public:
     void clear() {
         count_ = 0;
         atomType_.clear();
-        potentialEnergy_.clear();
         valence_.clear();
         selected_.clear();
         isFixed_.clear();
@@ -111,7 +112,6 @@ public:
     void reserve(std::size_t count) {
         ensureCapacity(count);
         atomType_.reserve(count);
-        potentialEnergy_.reserve(count);
         valence_.reserve(count);
         selected_.reserve(count);
         isFixed_.reserve(count);
@@ -135,9 +135,9 @@ public:
         pfx_[count_] = 0.0f;
         pfy_[count_] = 0.0f;
         pfz_[count_] = 0.0f;
+        pe_[count_]  = 0.0f;
 
         atomType_.push_back(type);
-        potentialEnergy_.push_back(0.0f);
         valence_.push_back(Atom::getProps(type).maxValence);
         selected_.push_back(0);
         isFixed_.push_back(fixed ? 1 : 0);
@@ -165,9 +165,9 @@ public:
         std::swap(pfx_[aIndex], pfx_[bIndex]);
         std::swap(pfy_[aIndex], pfy_[bIndex]);
         std::swap(pfz_[aIndex], pfz_[bIndex]);
+        std::swap(pe_[aIndex], pe_[bIndex]);
 
         std::swap(atomType_[aIndex], atomType_[bIndex]);
-        std::swap(potentialEnergy_[aIndex], potentialEnergy_[bIndex]);
         std::swap(valence_[aIndex], valence_[bIndex]);
         std::swap(selected_[aIndex], selected_[bIndex]);
         std::swap(isFixed_[aIndex], isFixed_[bIndex]);
@@ -184,7 +184,6 @@ public:
         }
 
         atomType_.pop_back();
-        potentialEnergy_.pop_back();
         valence_.pop_back();
         selected_.pop_back();
         isFixed_.pop_back();
@@ -222,8 +221,8 @@ public:
     Atom::Type& type(std::size_t i) { return atomType_[i]; }
     const Atom::Type& type(std::size_t i) const { return atomType_[i]; }
 
-    float& energy(std::size_t i) { return potentialEnergy_[i]; }
-    const float& energy(std::size_t i) const { return potentialEnergy_[i]; }
+    float& energy(std::size_t i) { return pe_[i]; }
+    const float& energy(std::size_t i) const { return pe_[i]; }
 
     int& valenceCount(std::size_t i) { return valence_[i]; }
     const int& valenceCount(std::size_t i) const { return valence_[i]; }
