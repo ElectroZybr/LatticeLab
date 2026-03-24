@@ -14,6 +14,7 @@ RendererGL::RendererGL(sf::RenderTarget& t, sf::View& gv)
     t.setActive(true);
     gladLoadGL();
     initGL();
+    initBoxGL();
     initBondGL();
     initGridGL();
 }
