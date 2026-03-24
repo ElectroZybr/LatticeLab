@@ -25,8 +25,16 @@ jobs:
         cmake -S . -B build -G "MinGW Makefiles" \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-          -DOPTIMIZE_FOR_NATIVE=OFF
+          -DOPTIMIZE_FOR_NATIVE=OFF \
+          -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++" \
+          -DCMAKE_CXX_FLAGS="-D_WIN32_WINNT=0x0601"
+        
         cmake --build build -j 4
+
+    - name: Check Dependencies (Verification)
+      shell: bash
+      run: |
+        objdump -p Chemical-simulator.exe | grep "DLL Name"
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
