@@ -271,6 +271,7 @@ int main() {
                 newRenderer->drawBonds = renderer->drawBonds;
                 newRenderer->speedGradient = renderer->speedGradient;
                 newRenderer->speedGradientTurbo = renderer->speedGradientTurbo;
+                newRenderer->speedGradientMax = renderer->speedGradientMax;
 
                 renderer = std::move(newRenderer);
             }

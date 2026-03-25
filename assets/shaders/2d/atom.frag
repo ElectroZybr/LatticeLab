@@ -12,11 +12,11 @@ void main() {
 
     float d = sqrt(d2);
 
-    float outline = smoothstep(0.9, 1.0, d);
+    float outline = step(0.9, d);
 
-    vec3 outlineColor = vec3(0.0, 0.0, 0.0);
+    vec3 outlineColor = vec3(0.05, 0.05, 0.05);
     if (vIsSelected > 0.5) {
-        outlineColor = vec3(1.0, 1.0, 1.0);
+        outlineColor = vec3(0.95, 0.72, 0.28);
     }
 
     vec3 color = mix(fragColor, outlineColor, outline);
