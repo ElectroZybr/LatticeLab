@@ -40,10 +40,12 @@ Tools::Mode mapPanelTool(SideToolsPanel::Tool tool) {
     return Tools::Mode::Cursor;
 }
 
-void removeBondsWithAtom(std::size_t removeIndex) {
+void removeBondsWithAtom(std::size_t removeIndex, AtomStorage* atomStorage) {
     for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end();) {
         if (it->aIndex == removeIndex || it->bIndex == removeIndex) {
-            it->detach();
+            if (atomStorage) {
+                it->detach(*atomStorage);
+            }
             it = Bond::bonds_list.erase(it);
         } else {
             ++it;
@@ -95,7 +97,7 @@ bool removeAtomInternal(Atom* target, SpatialGrid* grid, AtomStorage* atomStorag
         selectedMoveAtom = nullptr;
     }
 
-    removeBondsWithAtom(removeIndex);
+    removeBondsWithAtom(removeIndex, atomStorage);
 
     const std::size_t lastIndex = atoms.size() - 1;
     if (removeIndex != lastIndex) {
