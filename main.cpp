@@ -191,6 +191,7 @@ int main() {
 
     // Рендер
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
+    renderer->setAtomStorage(&simulation.atomStorage);
     renderer->drawBonds = true;
     renderer->speedGradient = true;
 
@@ -259,14 +260,17 @@ int main() {
                 debugAtomSingle->visible = true;
                 debugAtomBatch->visible = false;
                 const Atom* selectedAtom = *Tools::selected_atom_batch.begin();
-                debugAtomSingle->add_data("Позиция", selectedAtom->coords);
-                debugAtomSingle->add_data("Скорость", selectedAtom->speed);
-                debugAtomSingle->add_data("Силы", selectedAtom->force);
-                debugAtomSingle->add_data("Пред. силы", selectedAtom->prev_force);
-                debugAtomSingle->add_data("Потенциальная энергия", selectedAtom->potential_energy);
-                debugAtomSingle->add_data("Масса", Atom::getProps(selectedAtom->type).mass);
-                debugAtomSingle->add_data("Радиус", Atom::getProps(selectedAtom->type).radius);
-                debugAtomSingle->add_data("Тип", static_cast<int>(selectedAtom->type));
+                const std::size_t selectedIndex = static_cast<std::size_t>(selectedAtom - simulation.atoms.data());
+                if (selectedIndex < simulation.atomStorage.size()) {
+                    debugAtomSingle->add_data("Позиция", simulation.atomStorage.pos(selectedIndex));
+                    debugAtomSingle->add_data("Скорость", simulation.atomStorage.vel(selectedIndex));
+                    debugAtomSingle->add_data("Силы", simulation.atomStorage.force(selectedIndex));
+                    debugAtomSingle->add_data("Пред. силы", simulation.atomStorage.prevForce(selectedIndex));
+                    debugAtomSingle->add_data("Потенциальная энергия", simulation.atomStorage.energy(selectedIndex));
+                    debugAtomSingle->add_data("Масса", Atom::getProps(selectedAtom->type).mass);
+                    debugAtomSingle->add_data("Радиус", Atom::getProps(selectedAtom->type).radius);
+                    debugAtomSingle->add_data("Тип", static_cast<int>(selectedAtom->type));
+                }
             }
             else {
                 debugAtomBatch->visible = true;
@@ -299,6 +303,7 @@ int main() {
                 newRenderer->speedGradient = renderer->speedGradient;
                 newRenderer->speedGradientTurbo = renderer->speedGradientTurbo;
                 newRenderer->speedGradientMax = renderer->speedGradientMax;
+                newRenderer->setAtomStorage(&simulation.atomStorage);
 
                 renderer = std::move(newRenderer);
             }

@@ -277,6 +277,7 @@ void RendererGL::drawShot(const std::vector<Atom>& atoms,
                           const SimBox& box)
 {
     currentBox = &box;
+    currentAtoms = &atoms;
     updateMatrices();
 
     const glm::vec3 boxOffset(box.start.x, box.start.y, box.start.z);
@@ -290,8 +291,11 @@ void RendererGL::drawShot(const std::vector<Atom>& atoms,
         if (speedGradientMax > 0.0f) {
             maxSpeedSqr = speedGradientMax * speedGradientMax;
         } else {
-            for (const Atom& atom : atoms) {
-                maxSpeedSqr = std::max(maxSpeedSqr, static_cast<float>(atom.speed.sqrAbs()));
+            for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
+                if (!atomStorage) {
+                    continue;
+                }
+                maxSpeedSqr = std::max(maxSpeedSqr, static_cast<float>(atomStorage->vel(atomIndex).sqrAbs()));
             }
         }
         if (maxSpeedSqr < 1e-6f) {
@@ -299,11 +303,15 @@ void RendererGL::drawShot(const std::vector<Atom>& atoms,
         }
     }
 
-    for (const Atom& atom : atoms) {
+    for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
+        const Atom& atom = atoms[atomIndex];
+        const Vec3D pos = atomStorage ? atomStorage->pos(atomIndex) : Vec3D();
+        const Vec3D vel = atomStorage ? atomStorage->vel(atomIndex) : Vec3D();
+
         sf::Color sfColor;
         if (speedGradient) {
             const float t = std::clamp(
-                std::sqrt(static_cast<float>(atom.speed.sqrAbs()) / maxSpeedSqr), 0.f, 1.f);
+                std::sqrt(static_cast<float>(vel.sqrAbs()) / maxSpeedSqr), 0.f, 1.f);
             sfColor = speedGradientTurbo
                 ? turboColor(t)
                 : sf::Color(255 * t, 0, (1.f - t) * 255.f);
@@ -315,7 +323,7 @@ void RendererGL::drawShot(const std::vector<Atom>& atoms,
         glm::vec3 color = glm::vec3(sfColor.r / 255.f, sfColor.g / 255.f, sfColor.b / 255.f);
 
         instanceData.emplace_back(
-            glm::vec3(atom.coords.x, atom.coords.y, atom.coords.z) + boxOffset,
+            glm::vec3(pos.x, pos.y, pos.z) + boxOffset,
             color,
             static_cast<float>(atom.getProps().radius),
             float(atom.isSelect)
@@ -390,7 +398,7 @@ void RendererGL::drawBox(const SimBox& box) {
 }
 
 void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
-    if (bondShader == 0) return;
+    if (bondShader == 0 || !currentAtoms || !atomStorage) return;
 
     bondData.clear();
     bondData.reserve(Bond::bonds_list.size());
@@ -398,11 +406,19 @@ void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
     for (const Bond& bond : Bond::bonds_list) {
         const Atom* a = bond.a;
         const Atom* b = bond.b;
+        if (a < currentAtoms->data() || a >= currentAtoms->data() + currentAtoms->size() ||
+            b < currentAtoms->data() || b >= currentAtoms->data() + currentAtoms->size()) {
+            continue;
+        }
+        const std::size_t aIndex = static_cast<std::size_t>(a - currentAtoms->data());
+        const std::size_t bIndex = static_cast<std::size_t>(b - currentAtoms->data());
+        const Vec3D aPos = atomStorage->pos(aIndex);
+        const Vec3D bPos = atomStorage->pos(bIndex);
         const float r = (static_cast<float>(a->getProps().radius) +
                          static_cast<float>(b->getProps().radius)) * 0.15f;
         bondData.emplace_back(
-            glm::vec3(a->coords.x, a->coords.y, a->coords.z) + boxOffset,
-            glm::vec3(b->coords.x, b->coords.y, b->coords.z) + boxOffset,
+            glm::vec3(aPos.x, aPos.y, aPos.z) + boxOffset,
+            glm::vec3(bPos.x, bPos.y, bPos.z) + boxOffset,
             r
         );
     }

@@ -21,7 +21,7 @@ Vec3D atomPosition(const Atom* atom, const AtomStorage* atomStorage, const std::
     if (atomStorage && atom >= atoms.data() && atom < atoms.data() + atoms.size()) {
         return atomStorage->pos(atomIndexFromPtr(atom, atoms));
     }
-    return atom->coords;
+    return Vec3D();
 }
 
 Vec2D atomCenter2D(const Atom* atom, const AtomStorage* atomStorage, const std::vector<Atom>& atoms) {
@@ -112,7 +112,7 @@ void rebuildGrid(SpatialGrid* grid, const AtomStorage* atomStorage, std::vector<
 
     for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
         Atom& atom = atoms[atomIndex];
-        const Vec3D pos = atomStorage ? atomStorage->pos(atomIndex) : atom.coords;
+        const Vec3D pos = atomStorage ? atomStorage->pos(atomIndex) : Vec3D();
         const int cellX = grid->worldToCellX(pos.x);
         const int cellY = grid->worldToCellY(pos.y);
         const int cellZ = grid->worldToCellZ(pos.z);
@@ -426,8 +426,6 @@ void Tools::onFrame(std::vector<Atom>& atoms, float deltaTime) {
                     atomStorage->forceX(atomIndex) -= static_cast<float>(force.x);
                     atomStorage->forceY(atomIndex) -= static_cast<float>(force.y);
                     atomStorage->forceZ(atomIndex) -= static_cast<float>(force.z);
-                } else {
-                    atom->force -= force;
                 }
             }
         } else {
@@ -436,8 +434,6 @@ void Tools::onFrame(std::vector<Atom>& atoms, float deltaTime) {
                 atomStorage->forceX(atomIndex) -= static_cast<float>(force.x);
                 atomStorage->forceY(atomIndex) -= static_cast<float>(force.y);
                 atomStorage->forceZ(atomIndex) -= static_cast<float>(force.z);
-            } else {
-                selectedMoveAtom->force -= force;
             }
         }
     }

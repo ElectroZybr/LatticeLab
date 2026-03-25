@@ -4,6 +4,7 @@
 
 #include "Rendering/camera/Camera.h"
 #include "Engine/physics/Atom.h"
+#include "Engine/physics/AtomStorage.h"
 #include "Engine/SimBox.h"
 
 class IRenderer {
@@ -19,6 +20,7 @@ public:
 
     virtual void showBoxContour(bool show) { isBoxVisible = show; }
     virtual void showLassoContour(bool show) { isLassoVisible = show; }
+    void setAtomStorage(const AtomStorage* storage) { atomStorage = storage; }
 
     bool drawGrid           = false;
     bool drawBonds          = false;
@@ -36,6 +38,7 @@ public:
 protected:
     IRenderer(sf::View& gv)
         : camera(&gv) {}
+    const AtomStorage* atomStorage = nullptr;
 
     sf::Color turboColor(float t) {
         t = std::clamp(t, 0.f, 1.f);

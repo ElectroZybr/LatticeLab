@@ -68,4 +68,5 @@ protected:
 
     sf::RenderTarget& target;
     const SimBox* currentBox = nullptr;
+    const std::vector<Atom>* currentAtoms = nullptr;
 };
