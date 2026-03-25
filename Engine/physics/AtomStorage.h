@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "Atom.h"
+#include "AtomData.h"
 
 class AtomStorage {
 private:

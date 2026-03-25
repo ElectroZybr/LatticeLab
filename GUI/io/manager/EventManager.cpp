@@ -8,7 +8,7 @@
 sf::RenderWindow* EventManager::window = nullptr;
 std::unique_ptr<IRenderer>* EventManager::renderer = nullptr;
 
-void EventManager::init(sf::RenderWindow* w, sf::View* ui, std::unique_ptr<IRenderer>& r, SimBox* b, std::vector<Atom>* a) {
+void EventManager::init(sf::RenderWindow* w, sf::View* ui, std::unique_ptr<IRenderer>& r, SimBox* b, std::vector<AtomData>* a) {
     window = w;
     renderer = &r;
 

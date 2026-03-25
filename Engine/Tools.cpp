@@ -206,7 +206,7 @@ Atom* pickSelectedAtomWithPadding(sf::Vector2i mousePos, float zoom, const SimBo
         const Vec2f center = atomCenter2D(atom, atomStorage, atoms);
         const Vec2f delta = center - local;
         const double distSqr = delta.sqrAbs();
-        const double pickRadius = std::max(0.5, atom->getProps().radius) + extraWorld;
+        const float pickRadius = std::max(0.5f, atom->getProps().radius) + extraWorld;
         if (distSqr <= pickRadius * pickRadius && distSqr < bestDistSqr) {
             bestDistSqr = distSqr;
             best = atom;
@@ -511,7 +511,7 @@ Atom* Tools::pickAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms) {
                     const Vec2f center = atomCenter2D(atom, atomStorage, atoms);
                     const Vec2f delta = center - local;
                     const double distSqr = delta.sqrAbs();
-                    const double pickRadius = std::max(0.5, atom->getProps().radius);
+                    const float pickRadius = std::max(0.5f, atom->getProps().radius);
                     if (distSqr <= pickRadius * pickRadius && distSqr < bestDistSqr) {
                         bestDistSqr = distSqr;
                         best = atom;

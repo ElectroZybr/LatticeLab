@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "Rendering/camera/Camera.h"
-#include "Engine/physics/Atom.h"
+#include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/SimBox.h"
 

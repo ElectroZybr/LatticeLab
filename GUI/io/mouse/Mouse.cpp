@@ -8,9 +8,9 @@
 sf::RenderWindow*  Mouse::window = nullptr;
 std::unique_ptr<IRenderer>* Mouse::renderer = nullptr;
 SimBox* Mouse::box = nullptr;
-std::vector<Atom>* Mouse::atoms = nullptr;
+std::vector<AtomData>* Mouse::atoms = nullptr;
 
-void Mouse::init(sf::RenderWindow* w, std::unique_ptr<IRenderer>& r, SimBox* b, std::vector<Atom>* a) {
+void Mouse::init(sf::RenderWindow* w, std::unique_ptr<IRenderer>& r, SimBox* b, std::vector<AtomData>* a) {
     window = w;
     renderer = &r;
     box = b;

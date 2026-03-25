@@ -5,7 +5,7 @@
 
 #include <Engine/math/Vec3f.h>
 
-class Atom;
+class AtomData;
 
 class SpatialGrid {
 public:
@@ -17,15 +17,15 @@ public:
     SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize = 3);
     void resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSize = -1);
 
-    void insert(int x, int y, int z, Atom* atom);
-    void erase(int x, int y, int z, Atom* atom);
+    void insert(int x, int y, int z, AtomData* atom);
+    void erase(int x, int y, int z, AtomData* atom);
     void insertIndex(int x, int y, int z, std::size_t atomIndex);
     void eraseIndex(int x, int y, int z, std::size_t atomIndex);
 
-    [[nodiscard]] const std::vector<Atom*>* at(int x, int y, int z) const {
+    [[nodiscard]] const std::vector<AtomData*>* at(int x, int y, int z) const {
         return inBounds(x, y, z) ? &grid[index(x, y, z)] : nullptr;
     }
-    [[nodiscard]] std::vector<Atom*>* at(int x, int y, int z) {
+    [[nodiscard]] std::vector<AtomData*>* at(int x, int y, int z) {
         return inBounds(x, y, z) ? &grid[index(x, y, z)] : nullptr;
     }
     [[nodiscard]] const std::vector<std::size_t>* atIndex(int x, int y, int z) const {
@@ -43,7 +43,7 @@ public:
     void forEachAtXY(int x, int y, F&& callback) const {
         if (x < 0 || x >= sizeX || y < 0 || y >= sizeY) return;
         for (int z = 0; z < sizeZ; z++) {
-            for (Atom* atom : grid[index(x, y, z)]) {
+            for (AtomData* atom : grid[index(x, y, z)]) {
                 callback(atom);
             }
         }
@@ -62,7 +62,7 @@ public:
         for (int iz = z0; iz <= z1; ++iz) {
             for (int iy = y0; iy <= y1; ++iy) {
                 for (int ix = x0; ix <= x1; ++ix) {
-                    for (Atom* atom : grid[index(ix, iy, iz)]) {
+                    for (AtomData* atom : grid[index(ix, iy, iz)]) {
                         callback(atom);
                     }
                 }
@@ -91,7 +91,7 @@ public:
         }
     }
 private:
-    std::vector<std::vector<Atom*>> grid;
+    std::vector<std::vector<AtomData*>> grid;
     std::vector<std::vector<std::size_t>> indexGrid;
 
     [[nodiscard]] int index(int x, int y, int z) const noexcept {

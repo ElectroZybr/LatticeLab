@@ -5,7 +5,7 @@
 #include <vector>
 #include <cmath>
 
-#include "Engine/physics/Atom.h"
+#include "Engine/physics/AtomData.h"
 #include "Engine/SimBox.h"
 #include "Rendering/2d/Renderer2D.h"
 

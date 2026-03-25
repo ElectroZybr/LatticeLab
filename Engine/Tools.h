@@ -13,7 +13,6 @@
 #include "Rendering/BaseRenderer.h"
 
 class SimBox;
-class Atom;
 class AtomStorage;
 
 class Tools {

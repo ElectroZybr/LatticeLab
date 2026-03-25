@@ -26,13 +26,13 @@ void SpatialGrid::resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSi
     indexGrid.assign(sizeX * sizeY * sizeZ, {});
 }
 
-void SpatialGrid::insert(int x, int y, int z, Atom* atom) {
+void SpatialGrid::insert(int x, int y, int z, AtomData* atom) {
     if (auto* cell = at(x, y, z)) {
         cell->emplace_back(atom);
     }
 }
 
-void SpatialGrid::erase(int x, int y, int z, Atom* atom) {
+void SpatialGrid::erase(int x, int y, int z, AtomData* atom) {
     if (auto* cell = at(x, y, z)) {
         auto it = std::find(cell->begin(), cell->end(), atom);
         if (it != cell->end()) {

@@ -2,7 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "physics/Atom.h"
+#include "physics/AtomData.h"
 #include "physics/AtomStorage.h"
 #include "physics/SpatialGrid.h"
 #include "SimBox.h"

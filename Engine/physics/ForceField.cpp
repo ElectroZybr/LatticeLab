@@ -13,6 +13,7 @@
 ForceField::ForceField() : ljPairTable(buildLJPairTable()) {}
 
 void ForceField::updateBoxCache(const SimBox& box) {
+    /* кеш границ стен */
     wallMinX = 0.0f;
     wallMinY = 0.0f;
     wallMinZ = 0.0f;
@@ -22,6 +23,7 @@ void ForceField::updateBoxCache(const SimBox& box) {
 }
 
 ForceField::LJPairTable ForceField::buildLJPairTable() {
+    /* построение таблицы LJ-параметров */
     LJPairTable table{};
     constexpr int typeCount = static_cast<int>(table.size());
 
@@ -56,10 +58,12 @@ ForceField::LJPairTable ForceField::buildLJPairTable() {
 }
 
 void ForceField::compute(AtomStorage& atoms, SimBox& box, float dt) const {
+    // расчет нековалентных сил для каждого атома
     for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
         ComputeForces(atoms, atomIndex, box);
     }
 
+    // проверка образования и разрыва связей, а также расчет сил
     for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end();) {
         Bond& bond = *it;
         if (bond.shouldBreak(atoms)) {
@@ -144,6 +148,7 @@ void ForceField::applyWall(float coord, float& force, float min, float max) {
 }
 
 void ForceField::ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox& box) const {
+    // загружаем данные текущего атома из AtomStorage
     float posX = atoms.posX(atomIndex);
     float posY = atoms.posY(atomIndex);
     float posZ = atoms.posZ(atomIndex);
@@ -151,11 +156,15 @@ void ForceField::ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox
     float forceY = atoms.forceY(atomIndex);
     float forceZ = atoms.forceZ(atomIndex);
     float potenE = atoms.energy(atomIndex);
+    // выбираем строку таблицы LJ для данного типа атома
     const LJPairRow& ljPairRow = ljPairTable[static_cast<std::size_t>(atoms.type(atomIndex))];
 
+    // мягкие стены
     softWalls(atoms, atomIndex, forceX, forceY, forceZ);
+    // постоянная сила
     applyGravityForce(forceX, forceY, forceZ);
 
+    // взаимодействия с соседями
     box.grid.forEachNeighborIndex(atoms.pos(atomIndex), [&](std::size_t neighbourIndex) {
         if (neighbourIndex >= atoms.size() || neighbourIndex <= atomIndex) {
             return;
@@ -163,6 +172,7 @@ void ForceField::ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox
         pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
     });
 
+    // записываем обратно в AtomStorage
     atoms.forceX(atomIndex) = forceX;
     atoms.forceY(atomIndex) = forceY;
     atoms.forceZ(atomIndex) = forceZ;
@@ -171,6 +181,7 @@ void ForceField::ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox
 
 void ForceField::pairNonBondedInteraction(AtomStorage& atoms, std::size_t bIndex, const LJPairRow& ljPairRow,
                                           float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const {
+    // расчет вектора между атомами
     const float dx = atoms.posX(bIndex) - posX;
     const float dy = atoms.posY(bIndex) - posY;
     const float dz = atoms.posZ(bIndex) - posZ;
@@ -179,25 +190,31 @@ void ForceField::pairNonBondedInteraction(AtomStorage& atoms, std::size_t bIndex
         return;
     }
 
+    // параметры LJ для данной пары атомов
     const LJParams& params = ljPairRow[static_cast<std::size_t>(atoms.type(bIndex))];
 
+    // предварительные расчеты для LJ потенциала
     const float invD2 = 1.0f / d2;
     const float invD6 = invD2 * invD2 * invD2;
     const float invD12 = invD6 * invD6;
 
+    // расчет сил LJ
     const float forceScale = (params.forceC12 * invD12 - params.forceC6 * invD6) * invD2;
     const float pairForceX = dx * forceScale;
     const float pairForceY = dy * forceScale;
     const float pairForceZ = dz * forceScale;
 
+    // добавляем силу в буфер первого атома
     forceX -= pairForceX;
     forceY -= pairForceY;
     forceZ -= pairForceZ;
 
+    // применяем силу второму атому
     atoms.forceX(bIndex) += pairForceX;
     atoms.forceY(bIndex) += pairForceY;
     atoms.forceZ(bIndex) += pairForceZ;
 
+    // расчет потенциальной энергии
     const float potential = params.potentialC12 * invD12 - params.potentialC6 * invD6;
     potenE += 0.5f * potential;
     atoms.energy(bIndex) += 0.5f * potential;
