@@ -8,8 +8,8 @@
 #include <cstdint>
 
 #include "physics/SpatialGrid.h"
-#include "math/Vec2D.h"
-#include "math/Vec3D.h"
+#include "math/Vec2f.h"
+#include "math/Vec3f.h"
 #include "Rendering/BaseRenderer.h"
 
 class SimBox;
@@ -18,7 +18,7 @@ class AtomStorage;
 
 class Tools {
 public:
-    using AtomCreator = std::function<bool(Vec3D, Vec3D, Atom::Type, bool)>;
+    using AtomCreator = std::function<bool(Vec3f, Vec3f, Atom::Type, bool)>;
 
     enum class Mode: uint8_t {
         Cursor,
@@ -32,15 +32,16 @@ public:
                      std::unique_ptr<IRenderer>& r, AtomStorage* atomStorage = nullptr, AtomCreator atomCreator = {});
 
     static void selectionFrame(sf::Vector2i start_mouse_pos, sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
-    static Vec2D screenToWorld(sf::Vector2i mouse_pos);
-    static Vec2D screenToBox(sf::Vector2i mouse_pos);
+    static Vec2f screenToWorld(sf::Vector2i mouse_pos);
+    static Vec2f screenToBox(sf::Vector2i mouse_pos);
 
-    static sf::Vector2i worldToScreen(Vec2D pos);
-    static sf::Vector2i boxToScreen(Vec2D pos);
+    static sf::Vector2i worldToScreen(Vec2f pos);
+    static sf::Vector2i boxToScreen(Vec2f pos);
 
     static void onLeftPressed(sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
     static void onLeftReleased(std::vector<Atom>& atoms);
     static void onFrame(std::vector<Atom>& atoms, float deltaTime);
+    static void resetInteractionState();
 
     static Mode currentMode();
     static bool isSelectionMode(Mode mode);

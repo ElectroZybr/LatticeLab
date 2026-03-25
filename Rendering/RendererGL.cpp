@@ -305,8 +305,8 @@ void RendererGL::drawShot(const std::vector<Atom>& atoms,
 
     for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
         const Atom& atom = atoms[atomIndex];
-        const Vec3D pos = atomStorage ? atomStorage->pos(atomIndex) : Vec3D();
-        const Vec3D vel = atomStorage ? atomStorage->vel(atomIndex) : Vec3D();
+        const Vec3f pos = atomStorage ? atomStorage->pos(atomIndex) : Vec3f();
+        const Vec3f vel = atomStorage ? atomStorage->vel(atomIndex) : Vec3f();
 
         sf::Color sfColor;
         if (speedGradient) {
@@ -415,8 +415,8 @@ void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
         }
         const std::size_t aIndex = bond.aIndex;
         const std::size_t bIndex = bond.bIndex;
-        const Vec3D aPos = atomStorage->pos(aIndex);
-        const Vec3D bPos = atomStorage->pos(bIndex);
+        const Vec3f aPos = atomStorage->pos(aIndex);
+        const Vec3f bPos = atomStorage->pos(bIndex);
         const float r = (static_cast<float>(a->getProps().radius) +
                          static_cast<float>(b->getProps().radius)) * 0.15f;
         bondData.emplace_back(

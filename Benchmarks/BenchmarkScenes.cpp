@@ -39,11 +39,11 @@ namespace Benchmarks {
         int created = 0;
         for (int x = 0; x < side && created < benchmarkCase.atomCount; ++x) {
             for (int y = 0; y < side && created < benchmarkCase.atomCount; ++y) {
-                const Vec3D pos(
+                const Vec3f pos(
                     benchmarkCase.boxStart.x + 3.0 + x * spacing,
                     benchmarkCase.boxStart.y + 3.0 + y * spacing,
                     1.0);
-                simulation.createAtom(pos, Vec3D::Random() * 0.5, Atom::Type::H);
+                simulation.createAtom(pos, Vec3f::Random() * 0.5, Atom::Type::H);
                 ++created;
             }
         }
@@ -57,11 +57,11 @@ namespace Benchmarks {
         for (int x = 0; x < side && created < benchmarkCase.atomCount; ++x) {
             for (int y = 0; y < side && created < benchmarkCase.atomCount; ++y) {
                 for (int z = 0; z < side && created < benchmarkCase.atomCount; ++z) {
-                    const Vec3D pos(
+                    const Vec3f pos(
                         benchmarkCase.boxStart.x + 3.0 + x * spacing,
                         benchmarkCase.boxStart.y + 3.0 + y * spacing,
                         benchmarkCase.boxStart.z + 3.0 + z * spacing);
-                    simulation.createAtom(pos, Vec3D::Random() * 0.5, Atom::Type::H);
+                    simulation.createAtom(pos, Vec3f::Random() * 0.5, Atom::Type::H);
                     ++created;
                 }
             }

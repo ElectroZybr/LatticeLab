@@ -3,7 +3,7 @@
 #include <array>
 #include <cstddef>
 
-#include "../math/Vec3D.h"
+#include "../math/Vec3f.h"
 #include "AtomData.h"
 #include "AtomStorage.h"
 
@@ -16,8 +16,8 @@ public:
     void compute(AtomStorage& atoms, SimBox& box, float dt) const;
     void updateBoxCache(const SimBox& box);
 
-    void setGravity(Vec3D gravity = Vec3D(0, 5, 0)) { static_force = gravity; }
-    Vec3D getGravity() const { return static_force; }
+    void setGravity(Vec3f gravity = Vec3f(0, 5, 0)) { static_force = gravity; }
+    Vec3f getGravity() const { return static_force; }
 
 private:
     struct LJParams {
@@ -39,7 +39,7 @@ private:
     void pairNonBondedInteraction(AtomStorage& atoms, std::size_t bIndex, const LJPairRow& ljPairRow, float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const;
     void applyGravityForce(float& forceX, float& forceY, float& forceZ) const;
 
-    Vec3D static_force;
+    Vec3f static_force;
     LJPairTable ljPairTable;
     float wallMinX = 0.0f;
     float wallMinY = 0.0f;

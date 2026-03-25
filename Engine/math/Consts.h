@@ -3,5 +3,5 @@
 #include <numbers>
 
 namespace Consts {
-inline constexpr double Epsilon = 1e-12;
+inline constexpr float Epsilon = 1e-6f;
 }  // namespace Consts

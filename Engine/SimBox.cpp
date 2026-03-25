@@ -2,7 +2,7 @@
 
 #include "SimBox.h"
 
-SimBox::SimBox(Vec3D s, Vec3D e)
+SimBox::SimBox(Vec3f s, Vec3f e)
     : start(s),
       end(e),
       grid(std::max(1, static_cast<int>(e.x - s.x)),
@@ -10,7 +10,7 @@ SimBox::SimBox(Vec3D s, Vec3D e)
            std::max(1, static_cast<int>(e.z - s.z))
         ) {}
 
-bool SimBox::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
+bool SimBox::setSizeBox(Vec3f newStart, Vec3f newEnd, int cellSize) {
     bool resized = false;
 
     const int newW = std::max(1, static_cast<int>(newEnd.x - newStart.x));

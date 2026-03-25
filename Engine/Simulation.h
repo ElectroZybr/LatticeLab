@@ -15,10 +15,10 @@ public:
 
     void update(float dt);
 
-    void setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize = -1);
+    void setSizeBox(Vec3f newStart, Vec3f newEnd, int cellSize = -1);
 
     void createRandomAtoms(Atom::Type type, int quantity);
-    bool createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type type, bool fixed = false);
+    bool createAtom(Vec3f start_coords, Vec3f start_speed, Atom::Type type, bool fixed = false);
     bool removeAtom(std::size_t atomIndex);
     void addBond(std::size_t aIndex, std::size_t bIndex);
 
@@ -47,7 +47,7 @@ public:
 private:
     int sim_step = 0;
 
-    bool checkNeighbor(Vec3D coords, float delta);
+    bool checkNeighbor(Vec3f coords, float delta);
 };
 
 

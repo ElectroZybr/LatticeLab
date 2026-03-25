@@ -39,7 +39,7 @@ protected:
     std::unique_ptr<Renderer2D> renderer_;
     sf::View view_;
     std::vector<Atom> atoms_;
-    SimBox box_{ Vec3D(0, 0, 0), Vec3D(300, 300, 300) };
+    SimBox box_{ Vec3f(0, 0, 0), Vec3f(300, 300, 300) };
 
 private:
     static std::vector<Atom> makeGridAtoms(int count) {
@@ -48,12 +48,12 @@ private:
         const int side = static_cast<int>(std::cbrt(count)) + 1;
         for (int i = 0; i < count; ++i) {
             atoms.emplace_back(
-                Vec3D(
+                Vec3f(
                     (i % side) * 3.0,
                     ((i / side) % side) * 3.0,
                     (i / static_cast<double>(side * side)) * 3.0
                 ),
-                Vec3D::Random() * 0.5,
+                Vec3f::Random() * 0.5,
                 Atom::Type::H
             );
         }

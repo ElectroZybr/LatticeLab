@@ -6,7 +6,7 @@
 #include <vector>
 #include <cstdint>
 
-#include "../math/Vec3D.h"
+#include "../math/Vec3f.h"
 
 class SimBox;
 
@@ -66,9 +66,9 @@ public:
     bool isFixed = false;
     bool isSelect = false;
 
-    Atom (Vec3D start_coords, Vec3D start_speed, Type type, bool fixed = false);
+    Atom (Vec3f start_coords, Vec3f start_speed, Type type, bool fixed = false);
 
-    static float kineticEnergy(Type type, const Vec3D& speed);
+    static float kineticEnergy(Type type, const Vec3f& speed);
 
     const StaticAtomicData& getProps() const {
         return properties.at(static_cast<int>(type));

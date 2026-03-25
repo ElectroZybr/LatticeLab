@@ -46,33 +46,33 @@ namespace Scenes {
         const double half = side / 2.0;
  
         sim.setSizeBox(
-            Vec3D(-half, -half, is3d ? -half : sim.sim_box.start.z),
-            Vec3D( half,  half, is3d ?  half : sim.sim_box.end.z)
+            Vec3f(-half, -half, is3d ? -half : sim.sim_box.start.z),
+            Vec3f( half,  half, is3d ?  half : sim.sim_box.end.z)
         );
  
-        const Vec3D vecMargin(margin, margin, is3d ? margin : 0.0);
+        const Vec3f vecMargin(margin, margin, is3d ? margin : 0.0);
         const int   zMax = is3d ? n : 1;
  
         for (int x = 1; x <= n; ++x)
             for (int y = 1; y <= n; ++y)
                 for (int z = 1; z <= zMax; ++z)
-                    sim.createAtom(Vec3D(x, y, z) * padding + vecMargin,
-                                   Vec3D::Random() * 0.5, type);
+                    sim.createAtom(Vec3f(x, y, z) * padding + vecMargin,
+                                   Vec3f::Random() * 0.5, type);
     }
  
     void diffusionTest(Simulation& sim)
     {
         sim.setSizeBox(
-            Vec3D(-25, -25, sim.sim_box.start.z),
-            Vec3D( 25,  25, sim.sim_box.end.z),
+            Vec3f(-25, -25, sim.sim_box.start.z),
+            Vec3f( 25,  25, sim.sim_box.end.z),
             5
         );
  
         for (int i = 0; i < 15; ++i) {
             for (int j = 0;  j < 8;  ++j)
-                sim.createAtom(Vec3D(4 + i*3, 4 + j*3, 1), Vec3D::Random() * 0.5, Atom::Type::H);
+                sim.createAtom(Vec3f(4 + i*3, 4 + j*3, 1), Vec3f::Random() * 0.5, Atom::Type::H);
             for (int j = 8;  j < 15; ++j)
-                sim.createAtom(Vec3D(4 + i*3, 4 + j*3, 1), Vec3D::Random() * 0.5, Atom::Type::O);
+                sim.createAtom(Vec3f(4 + i*3, 4 + j*3, 1), Vec3f::Random() * 0.5, Atom::Type::O);
         }
     }
 }
@@ -124,10 +124,10 @@ static DebugView* buildDebugSimView(DebugPanel& panel) {
 
 static DebugView* buildDebugAtomSingle(DebugPanel& panel) {
     return panel.addView(DebugView("Атом", {
-        DebugValue("Позиция", DebugDrawers::Vec3D, 3),
-        DebugValue("Скорость", DebugDrawers::Vec3D, 3),
-        DebugValue("Силы", DebugDrawers::Vec3D, 3),
-        DebugValue("Пред. силы", DebugDrawers::Vec3D, 3),
+        DebugValue("Позиция", DebugDrawers::Vec3f, 3),
+        DebugValue("Скорость", DebugDrawers::Vec3f, 3),
+        DebugValue("Силы", DebugDrawers::Vec3f, 3),
+        DebugValue("Пред. силы", DebugDrawers::Vec3f, 3),
         DebugValue("Потенциальная энергия", DebugDrawers::Float, 4),
         DebugValue("Масса", DebugDrawers::Float, 3),
         DebugValue("Радиус", DebugDrawers::Float, 3),
@@ -184,7 +184,7 @@ int main() {
     sf::View& gameView = const_cast<sf::View&>(window.getView());
 
     // Симуляция
-    SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
+    SimBox box(Vec3f(-25, -25, 0), Vec3f(25, 25, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
     Scenes::crystal(simulation, 25, Atom::Type::Z, false);
@@ -199,7 +199,7 @@ int main() {
     Interface::init(window, simulation, renderer);
     EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atoms);
     Tools::init(&window, &gameView, &box.grid, &box, renderer, &simulation.atomStorage,
-        [&](Vec3D coords, Vec3D speed, Atom::Type type, bool fixed) {
+        [&](Vec3f coords, Vec3f speed, Atom::Type type, bool fixed) {
             return simulation.createAtom(coords, speed, type, fixed);
         }
     );
@@ -288,6 +288,11 @@ int main() {
 
             // Смена рендерера
             if (auto result = Interface::toolsPanel.popResult()) {
+                if (result.value() == ToolsCommand::ClearSimulation) {
+                    simulation.clear();
+                    Tools::resetInteractionState();
+                }
+                else {
                 std::unique_ptr<IRenderer> newRenderer;
                 switch (result.value()) {
                     case ToolsCommand::ToggleRenderer2D:
@@ -296,16 +301,21 @@ int main() {
                     case ToolsCommand::ToggleRenderer3D:
                         newRenderer = std::make_unique<Renderer3D>(window, gameView);
                         break;
+                    case ToolsCommand::ClearSimulation:
+                        break;
                 }
 
-                newRenderer->drawGrid = renderer->drawGrid;
-                newRenderer->drawBonds = renderer->drawBonds;
-                newRenderer->speedGradient = renderer->speedGradient;
-                newRenderer->speedGradientTurbo = renderer->speedGradientTurbo;
-                newRenderer->speedGradientMax = renderer->speedGradientMax;
-                newRenderer->setAtomStorage(&simulation.atomStorage);
+                if (newRenderer) {
+                    newRenderer->drawGrid = renderer->drawGrid;
+                    newRenderer->drawBonds = renderer->drawBonds;
+                    newRenderer->speedGradient = renderer->speedGradient;
+                    newRenderer->speedGradientTurbo = renderer->speedGradientTurbo;
+                    newRenderer->speedGradientMax = renderer->speedGradientMax;
+                    newRenderer->setAtomStorage(&simulation.atomStorage);
 
-                renderer = std::move(newRenderer);
+                    renderer = std::move(newRenderer);
+                }
+                }
             }
 
             renderer->camera.update(window);
