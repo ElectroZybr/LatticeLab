@@ -404,14 +404,17 @@ void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
     bondData.reserve(Bond::bonds_list.size());
 
     for (const Bond& bond : Bond::bonds_list) {
-        const Atom* a = bond.a;
-        const Atom* b = bond.b;
+        if (bond.aIndex >= currentAtoms->size() || bond.bIndex >= currentAtoms->size()) {
+            continue;
+        }
+        const Atom* a = &(*currentAtoms)[bond.aIndex];
+        const Atom* b = &(*currentAtoms)[bond.bIndex];
         if (a < currentAtoms->data() || a >= currentAtoms->data() + currentAtoms->size() ||
             b < currentAtoms->data() || b >= currentAtoms->data() + currentAtoms->size()) {
             continue;
         }
-        const std::size_t aIndex = static_cast<std::size_t>(a - currentAtoms->data());
-        const std::size_t bIndex = static_cast<std::size_t>(b - currentAtoms->data());
+        const std::size_t aIndex = bond.aIndex;
+        const std::size_t bIndex = bond.bIndex;
         const Vec3D aPos = atomStorage->pos(aIndex);
         const Vec3D bPos = atomStorage->pos(bIndex);
         const float r = (static_cast<float>(a->getProps().radius) +

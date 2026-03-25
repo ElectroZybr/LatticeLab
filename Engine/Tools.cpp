@@ -40,54 +40,13 @@ Tools::Mode mapPanelTool(SideToolsPanel::Tool tool) {
     return Tools::Mode::Cursor;
 }
 
-void removeBondsWithAtom(Atom* atom, AtomStorage* atomStorage, std::vector<Atom>& atoms) {
+void removeBondsWithAtom(std::size_t removeIndex) {
     for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end();) {
-        if (it->a == atom || it->b == atom) {
+        if (it->aIndex == removeIndex || it->bIndex == removeIndex) {
             it->detach();
-            if (atomStorage) {
-                if (it->a >= atoms.data() && it->a < atoms.data() + atoms.size()) {
-                    const std::size_t aIndex = static_cast<std::size_t>(it->a - atoms.data());
-                    atomStorage->valenceCount(aIndex) = it->a->valence;
-                }
-                if (it->b >= atoms.data() && it->b < atoms.data() + atoms.size()) {
-                    const std::size_t bIndex = static_cast<std::size_t>(it->b - atoms.data());
-                    atomStorage->valenceCount(bIndex) = it->b->valence;
-                }
-            }
             it = Bond::bonds_list.erase(it);
         } else {
             ++it;
-        }
-    }
-}
-
-void replaceAtomPointer(Atom* oldPtr, Atom* newPtr, std::vector<Atom>& atoms, Atom*& selectedMoveAtom) {
-    if (!oldPtr || !newPtr || oldPtr == newPtr) {
-        return;
-    }
-
-    if (selectedMoveAtom == oldPtr) {
-        selectedMoveAtom = newPtr;
-    }
-
-    if (Tools::selected_atom_batch.erase(oldPtr) > 0) {
-        Tools::selected_atom_batch.insert(newPtr);
-    }
-
-    for (Bond& bond : Bond::bonds_list) {
-        if (bond.a == oldPtr) {
-            bond.a = newPtr;
-        }
-        if (bond.b == oldPtr) {
-            bond.b = newPtr;
-        }
-    }
-
-    for (Atom& atom : atoms) {
-        for (Atom*& bondedAtom : atom.bonds) {
-            if (bondedAtom == oldPtr) {
-                bondedAtom = newPtr;
-            }
         }
     }
 }
@@ -136,14 +95,20 @@ bool removeAtomInternal(Atom* target, SpatialGrid* grid, AtomStorage* atomStorag
         selectedMoveAtom = nullptr;
     }
 
-    removeBondsWithAtom(target, atomStorage, atoms);
+    removeBondsWithAtom(removeIndex);
 
     const std::size_t lastIndex = atoms.size() - 1;
     if (removeIndex != lastIndex) {
-        Atom* movedOldPtr = &atoms[lastIndex];
         std::swap(atoms[removeIndex], atoms[lastIndex]);
-        Atom* movedNewPtr = &atoms[removeIndex];
-        replaceAtomPointer(movedOldPtr, movedNewPtr, atoms, selectedMoveAtom);
+
+        for (Bond& bond : Bond::bonds_list) {
+            if (bond.aIndex == lastIndex) {
+                bond.aIndex = removeIndex;
+            }
+            if (bond.bIndex == lastIndex) {
+                bond.bIndex = removeIndex;
+            }
+        }
     }
 
     if (atomStorage) {
