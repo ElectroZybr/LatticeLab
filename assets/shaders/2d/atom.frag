@@ -12,7 +12,7 @@ void main() {
 
     float d = sqrt(d2);
 
-    float outline = smoothstep(0.7, 1.0, d);
+    float outline = smoothstep(0.9, 1.0, d);
 
     vec3 outlineColor = vec3(0.0, 0.0, 0.0);
     if (vIsSelected > 0.5) {

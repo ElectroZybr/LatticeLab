@@ -13,6 +13,7 @@
 
 #include "GUI/interface/interface.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
+#include "GUI/interface/panels/debug/DebugDrawers.h"
 #include "Engine/utils/Timer.h"
 
 #include "Rendering/2d/Renderer2D.h"
@@ -95,13 +96,31 @@ static DebugView* buildDebugSimView(DebugPanel& panel) {
         DebugValue ("Память (МБ)"),
         DebugValue ("Рендер (мс)"),
         DebugValue ("Физика (мс)"),
-        DebugValue ("Тип интегратора"),
-        DebugValue ("Шаги симуляции"),
-        DebugValue ("Количество атомов"),
+        DebugValue ("Тип интегратора", DebugDrawers::String),
+        DebugValue ("Шаги симуляции", DebugDrawers::Int),
+        DebugValue ("Количество атомов", DebugDrawers::Int),
         DebugSeries("Полная энергия"),
     }));
 }
 
+static DebugView* buildDebugAtomSingle(DebugPanel& panel) {
+    return panel.addView(DebugView("Атом", {
+        DebugValue("Позиция", DebugDrawers::Vec3D),
+        DebugValue("Скорость", DebugDrawers::Vec3D),
+        DebugValue("Силы", DebugDrawers::Vec3D),
+        DebugValue("Пред. силы", DebugDrawers::Vec3D),
+        DebugValue("Потенциальная энергия", DebugDrawers::Float),
+        DebugValue("Масса"),
+        DebugValue("Радиус"),
+        DebugValue("Тип", DebugDrawers::Int),
+    }));
+}
+
+static DebugView* buildDebugAtomBatch(DebugPanel& panel) {
+    return panel.addView(DebugView("Атомы", {
+        DebugValue("Выбрано атомов", DebugDrawers::Int),
+    }));
+}
 struct RateCounter {
     Timer  timer;
     double accumulated_ms  = 0.0;
@@ -156,11 +175,8 @@ int main() {
 
     // Дебаг-панель
     DebugView* debugSim = buildDebugSimView(Interface::debugPanel);
-    /* DebugView* debugAtom = */ Interface::debugPanel.addView(DebugView("Атом", {
-        DebugValue("В разработке"),
-    }));
-    debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
-    debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
+    DebugView* debugAtomSingle = buildDebugAtomSingle(Interface::debugPanel);
+    DebugView* debugAtomBatch = buildDebugAtomBatch(Interface::debugPanel);
 
     // Главный цикл
     sf::Clock clock;
@@ -196,8 +212,7 @@ int main() {
             physicsAccum = 0.0;
         }
 
-        if (auto cmd = Keyboard::popResult(); cmd == KeyboardCommand::StepPhysics)
-        {
+        if (auto cmd = Keyboard::popResult(); cmd == KeyboardCommand::StepPhysics) {
             physicsCounter.startStep();
             simulation.update(Dt);
             physicsCounter.finishStep();
@@ -207,6 +222,26 @@ int main() {
             renderAccum -= RENDER_INTERVAL;
 
             Interface::Update();
+
+            if (Tools::selected_atom_batch.size() == 1)
+            {
+                debugAtomSingle->visible = true;
+                debugAtomBatch->visible = false;
+                const Atom* selectedAtom = *Tools::selected_atom_batch.begin();
+                debugAtomSingle->add_data("Позиция", selectedAtom->coords);
+                debugAtomSingle->add_data("Скорость", selectedAtom->speed);
+                debugAtomSingle->add_data("Силы", selectedAtom->force);
+                debugAtomSingle->add_data("Пред. силы", selectedAtom->prev_force);
+                debugAtomSingle->add_data("Потенциальная энергия", selectedAtom->potential_energy);
+                debugAtomSingle->add_data("Масса", Atom::getProps(selectedAtom->type).mass);
+                debugAtomSingle->add_data("Радиус", Atom::getProps(selectedAtom->type).radius);
+                debugAtomSingle->add_data("Тип", static_cast<int>(selectedAtom->type));
+            }
+            else {
+                debugAtomBatch->visible = true;
+                debugAtomSingle->visible = false;
+                debugAtomBatch->add_data("Выбрано атомов", Tools::selected_atom_batch.size());
+            }
 
             // Диалог сохранения / загрузки
             if (auto result = Interface::fileDialog.popResult()) {
@@ -248,16 +283,16 @@ int main() {
 
         if (logAccum >= LOG_INTERVAL) {
             logAccum -= LOG_INTERVAL;
-            physicsCounter.flush(logAccum);
-            renderCounter.flush(logAccum);
-
-            debugSim->add_data("Полная энергия", simulation.fullAverageEnergy());
+            debugSim->add_data("Полная энергия", static_cast<float>(simulation.fullAverageEnergy()));
             debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
             debugSim->add_data("Рендер (мс)", renderCounter.avgMs());
             debugSim->add_data("Физика (мс)", physicsCounter.avgMs());
-            debugSim->add_data("Количество атомов", static_cast<float>(simulation.atoms.size()));
+            debugSim->add_data("Количество атомов", simulation.atoms.size());
             debugSim->add_data("Шаги симуляции", simulation.getSimStep());
             debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
+
+            physicsCounter.flush(logAccum);
+            renderCounter.flush(logAccum);
         }
     }
     ImGui::SFML::Shutdown();

@@ -1,10 +1,8 @@
 #include "DebugView.h"
-
 #include <algorithm>
 #include <cmath>
 #include <format>
 #include <vector>
-
 #include "imgui.h"
 
 DebugView::DebugView(std::string_view title, std::initializer_list<DebugEntry> entries) : title(title) {
@@ -13,73 +11,53 @@ DebugView::DebugView(std::string_view title, std::initializer_list<DebugEntry> e
 
     for (const auto& e : entries) {
         const std::size_t index = data.size();
-        if (e.type == DebugDisplayType::Series)
-            data.push_back(DebugData{e, std::deque<float>{}});
-        else
-            data.push_back(DebugData{e, 0.f});
+        Storage storage = (e.type == DebugDisplayType::Series)
+            ? Storage{ std::deque<float>{} }
+            : Storage{ std::any{} };
 
+        data.emplace_back(DebugData{ e, std::move(storage) });
         indicesByLabel.emplace(e.label, index);
     }
 }
 
-void DebugView::add_data(std::string_view label, float value) {
+void DebugView::add_data(std::string_view label, std::any value) {
     auto it = indicesByLabel.find(std::string(label));
     if (it == indicesByLabel.end()) return;
 
     auto& d = data[it->second];
     if (d.entry.type == DebugDisplayType::Series) {
-        auto& deque = std::get<std::deque<float>>(d.history);
-        if (deque.size() >= HISTORY_SIZE) deque.pop_front();
-        deque.emplace_back(value);
-    } else {
-        d.history = value;
+        auto& dq = std::get<std::deque<float>>(d.storage);
+        if (dq.size() >= HISTORY_SIZE) dq.pop_front();
+        dq.emplace_back(std::any_cast<float>(value));
     }
-}
-
-void DebugView::add_data(std::string_view label, std::string_view value) {
-    auto it = indicesByLabel.find(std::string(label));
-    if (it == indicesByLabel.end()) return;
-
-    auto& d = data[it->second];
-    if (d.entry.type == DebugDisplayType::Series) return;
-    d.history = std::string(value);
+    else {
+        d.storage = std::move(value);
+    }
 }
 
 void DebugView::draw(float uiScale) {
     for (auto& d : data) {
         const std::string& label = d.entry.label;
-
         if (d.entry.type == DebugDisplayType::Value) {
-            ImGui::TextDisabled("%s", label.data());
-            ImGui::SameLine();
-
-            if (std::holds_alternative<std::string>(d.history)) {
-                const auto& text = std::get<std::string>(d.history);
-                ImGui::Text("%s", text.c_str());
-            } else {
-                const float val = std::get<float>(d.history);
-                const std::string valStr = (val == std::floor(val))
-                    ? std::format("{:.0f}", val)
-                    : (label.find("(мс)") != std::string::npos ? std::format("{:.4f}", val) : std::format("{:f}", val));
-                ImGui::Text("%s", valStr.data());
-            }
-        } else {
-            auto& deque = std::get<std::deque<float>>(d.history);
+            const auto& a = std::get<std::any>(d.storage);
+            d.entry.draw(label, a);
+        }
+        else {
+            auto& dq = std::get<std::deque<float>>(d.storage);
             ImGui::TextDisabled("%s", (label + ": ").data());
 
-            if (!deque.empty()) {
+            if (!dq.empty()) {
                 ImGui::SameLine();
-                ImGui::Text("%s", std::format("{:f}", deque.back()).data());
+                ImGui::Text("%s", std::format("{:f}", dq.back()).data());
             }
 
-            if (deque.size() >= 2) {
-                const float minVal = *std::ranges::min_element(deque);
-                const float maxVal = *std::ranges::max_element(deque);
+            if (dq.size() >= 2) {
+                const auto [minVal, maxVal] = std::ranges::minmax(dq);
                 const float range = (maxVal - minVal) < 1e-6f ? 1.f : (maxVal - minVal);
 
                 ImGui::TextDisabled("%s", std::format("{:f}", maxVal).data());
 
-                std::vector<float> buf(deque.begin(), deque.end());
+                std::vector<float> buf(dq.begin(), dq.end());
                 ImGui::PlotLines(
                     label.data(), buf.data(), static_cast<int>(buf.size()), 0, nullptr,
                     minVal - range * 0.1f, maxVal + range * 0.1f, ImVec2(-1, 60 * uiScale));
