@@ -1,10 +1,8 @@
 #pragma once
 
 #include <variant>
-#include <vector>
 #include <cstdint>
 
-class Atom;
 class AtomStorage;
 class ForceField;
 class SimBox;
@@ -28,7 +26,7 @@ public:
     void setScheme(Scheme scheme);
     Scheme getScheme() const { return integrator_type; }
 
-    void step(AtomStorage& atomStorage, std::vector<Atom>& atoms, SimBox& box, ForceField& forceField, double dt) const;
+    void step(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, double dt) const;
 
 private:
     using SchemeVariant = std::variant<VerletScheme, KDKScheme, RK4Scheme, LangevinScheme>;

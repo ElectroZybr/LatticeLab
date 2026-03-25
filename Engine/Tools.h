@@ -18,7 +18,7 @@ class AtomStorage;
 
 class Tools {
 public:
-    using AtomCreator = std::function<Atom*(Vec3D, Vec3D, Atom::Type, bool)>;
+    using AtomCreator = std::function<bool(Vec3D, Vec3D, Atom::Type, bool)>;
 
     enum class Mode: uint8_t {
         Cursor,

@@ -532,7 +532,7 @@ bool Tools::tryAddAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, Atom::T
         return false;
     }
 
-    return atomCreator(spawnPos, Vec3D::Random() * 5.f, atomType, false) != nullptr;
+    return atomCreator(spawnPos, Vec3D::Random() * 5.f, atomType, false);
 }
 
 bool Tools::tryRemoveAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, Atom*& selectedMoveAtom) {

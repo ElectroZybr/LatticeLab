@@ -69,6 +69,7 @@ bool Simulation::checkNeighbor(Vec3D coords, float delta) {
 
 bool Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type type, bool fixed) {
     atomStorage.addAtom(start_coords, start_speed, type, fixed);
+    atoms.emplace_back(start_coords, start_speed, type, fixed);
     const std::size_t atomIndex = atomStorage.size() - 1;
     const int cellX = sim_box.grid.worldToCellX(start_coords.x);
     const int cellY = sim_box.grid.worldToCellY(start_coords.y);
@@ -100,6 +101,14 @@ bool Simulation::removeAtom(std::size_t atomIndex) {
         }
 
         ++it;
+    }
+
+    if (atomIndex < atoms.size()) {
+        const std::size_t lastAtomIndex = atoms.size() - 1;
+        if (atomIndex != lastAtomIndex) {
+            std::swap(atoms[atomIndex], atoms[lastAtomIndex]);
+        }
+        atoms.pop_back();
     }
 
     atomStorage.removeAtom(atomIndex);
@@ -247,6 +256,7 @@ void Simulation::load(std::string_view path) {
 }
 
 void Simulation::clear() {
+    atoms.clear();
     atomStorage.clear();
     Bond::bonds_list.clear();
     sim_step = 0;

@@ -40,6 +40,7 @@ public:
     void clear();
 
     SimBox& sim_box;
+    std::vector<Atom> atoms;
     AtomStorage atomStorage;
     Integrator integrator;
     ForceField forceField;
