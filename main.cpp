@@ -187,7 +187,7 @@ int main() {
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    Scenes::crystal(simulation, 250, Atom::Type::Z, false);
+    Scenes::crystal(simulation, 25, Atom::Type::Z, false);
 
     // Рендер
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
