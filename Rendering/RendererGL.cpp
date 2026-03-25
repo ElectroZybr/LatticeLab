@@ -48,7 +48,8 @@ RendererGL::RendererGL(sf::RenderTarget& t, sf::View& gv)
     : IRenderer(gv), target(t)
 {
     initializeGlad(t);
-    initGL();
+    initQuadGL();
+    initAtomGL();
     initBoxGL();
     initBondGL();
     initGridGL();
@@ -74,23 +75,26 @@ RendererGL::~RendererGL() {
     glDeleteProgram(gridShader);
 }
 
-// ------------------------------------------------------------------ init ---
-
-void RendererGL::initGL() {
+void RendererGL::initQuadGL() {
     const float quad[] = {
         -1.f, -1.f,  1.f, -1.f,  1.f,  1.f,
         -1.f, -1.f,  1.f,  1.f, -1.f,  1.f,
     };
-
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
     glGenBuffers(1, &quadVbo);
     glBindBuffer(GL_ARRAY_BUFFER, quadVbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+}
+
+void RendererGL::initAtomGL() {
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    // quad (location 0)
+    glBindBuffer(GL_ARRAY_BUFFER, quadVbo);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 
+    // instance VBO (location 1..4)
     glGenBuffers(1, &instanceVbo);
     glBindBuffer(GL_ARRAY_BUFFER, instanceVbo);
 
@@ -113,11 +117,12 @@ void RendererGL::initGL() {
 
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, stride,
-                      (void*)offsetof(AtomInstance, isSelected));
+                          (void*)offsetof(AtomInstance, isSelected));
     glVertexAttribDivisor(4, 1);
 
     glBindVertexArray(0);
 }
+
 
 void RendererGL::initBoxGL() {
     glGenVertexArrays(1, &boxVao);
@@ -127,9 +132,6 @@ void RendererGL::initBoxGL() {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glBindVertexArray(0);
-
-    boxShader = linkProgram("assets/shaders/3d/box.vert",
-                            "assets/shaders/3d/box.frag");
 }
 
 void RendererGL::initBondGL() {
@@ -159,10 +161,6 @@ void RendererGL::initBondGL() {
     glVertexAttribDivisor(2, 1);
 
     glBindVertexArray(0);
-
-    bondShader = linkProgram("assets/shaders/3d/bond.vert",
-                             "assets/shaders/3d/bond.frag",
-                             "assets/shaders/3d/bond.geom");
 }
 
 void RendererGL::initGridGL() {
@@ -202,9 +200,6 @@ void RendererGL::initGridGL() {
     glVertexAttribDivisor(3, 1);
 
     glBindVertexArray(0);
-
-    gridShader = linkProgram("assets/shaders/3d/grid.vert",
-                             "assets/shaders/3d/grid.frag");
 }
 
 // --------------------------------------------------------------- shaders ---

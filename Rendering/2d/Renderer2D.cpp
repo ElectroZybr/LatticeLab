@@ -9,10 +9,16 @@ constexpr sf::Color kSelectionContourColor(75, 75, 75);
 Renderer2D::Renderer2D(sf::RenderTarget& t, sf::View& gv)
     : RendererGL(t, gv)
 {
+    camera.setZoom(10.f);
     shaderProgram = linkProgram("assets/shaders/2d/atom.vert",
                                 "assets/shaders/2d/atom.frag");
-
-    camera.setZoom(10.f);
+    boxShader = linkProgram("assets/shaders/3d/box.vert",
+                            "assets/shaders/3d/box.frag");
+    bondShader = linkProgram("assets/shaders/3d/bond.vert",
+                             "assets/shaders/3d/bond.frag",
+                             "assets/shaders/3d/bond.geom");
+    gridShader = linkProgram("assets/shaders/3d/grid.vert",
+                            "assets/shaders/3d/grid.frag");
 }
 
 void Renderer2D::updateMatrices() {

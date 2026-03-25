@@ -19,7 +19,8 @@ protected:
     virtual void updateMatrices() = 0;
     virtual glm::vec3 getLightDir() = 0;
 
-    void initGL();
+    void initQuadGL();
+    void initAtomGL();
     void initBondGL();
     void initGridGL();
     void initBoxGL();
