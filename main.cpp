@@ -92,25 +92,25 @@ static sf::RenderWindow createWindow() {
 
 static DebugView* buildDebugSimView(DebugPanel& panel) {
     return panel.addView(DebugView("Симуляция", {
-        DebugValue ("Память (МБ)"),
-        DebugValue ("Рендер (мс)"),
-        DebugValue ("Физика (мс)"),
+        DebugValue ("Память (МБ)", DebugDrawers::Float, 2),
+        DebugValue ("Рендер (мс)", DebugDrawers::Float, 4),
+        DebugValue ("Физика (мс)", DebugDrawers::Float, 4),
         DebugValue ("Тип интегратора", DebugDrawers::String),
         DebugValue ("Шаги симуляции", DebugDrawers::Int),
         DebugValue ("Количество атомов", DebugDrawers::Int),
-        DebugSeries("Полная энергия"),
+        DebugSeries("Полная энергия", 3),
     }));
 }
 
 static DebugView* buildDebugAtomSingle(DebugPanel& panel) {
     return panel.addView(DebugView("Атом", {
-        DebugValue("Позиция", DebugDrawers::Vec3D),
-        DebugValue("Скорость", DebugDrawers::Vec3D),
-        DebugValue("Силы", DebugDrawers::Vec3D),
-        DebugValue("Пред. силы", DebugDrawers::Vec3D),
-        DebugValue("Потенциальная энергия", DebugDrawers::Float),
-        DebugValue("Масса"),
-        DebugValue("Радиус"),
+        DebugValue("Позиция", DebugDrawers::Vec3D, 3),
+        DebugValue("Скорость", DebugDrawers::Vec3D, 3),
+        DebugValue("Силы", DebugDrawers::Vec3D, 3),
+        DebugValue("Пред. силы", DebugDrawers::Vec3D, 3),
+        DebugValue("Потенциальная энергия", DebugDrawers::Float, 4),
+        DebugValue("Масса", DebugDrawers::Float, 3),
+        DebugValue("Радиус", DebugDrawers::Float, 3),
         DebugValue("Тип", DebugDrawers::Int),
     }));
 }
@@ -142,7 +142,11 @@ struct RateCounter {
     }
  
     void flush(double elapsed_seconds) {
-        steps_per_second = static_cast<float>(steps_this_tick / elapsed_seconds);
+        if (elapsed_seconds > 0.0) {
+            steps_per_second = static_cast<float>(steps_this_tick / elapsed_seconds);
+        } else {
+            steps_per_second = 0.0f;
+        }
         accumulated_ms   = 0.0;
         steps_this_tick  = 0;
     }
@@ -156,7 +160,7 @@ int main() {
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    Scenes::crystal(simulation, 20, Atom::Type::Z, false);
+    Scenes::crystal(simulation, 15, Atom::Type::Z, false);
 
     // Рендер
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
@@ -201,12 +205,12 @@ int main() {
 
         if (!Interface::getPause()) {
             const double physicsInterval = 1.0 / Interface::getSimulationSpeed();
-            physicsCounter.startStep();
             while (physicsAccum >= physicsInterval) {
+                physicsCounter.startStep();
                 simulation.update(Dt);
+                physicsCounter.finishStep();
                 physicsAccum -= physicsInterval;
             }
-            physicsCounter.finishStep();
         }
         else {
             physicsAccum = 0.0;
@@ -290,8 +294,8 @@ int main() {
             debugSim->add_data("Шаги симуляции", simulation.getSimStep());
             debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
 
-            physicsCounter.flush(logAccum);
-            renderCounter.flush(logAccum);
+            physicsCounter.flush(LOG_INTERVAL);
+            renderCounter.flush(LOG_INTERVAL);
         }
     }
     ImGui::SFML::Shutdown();
