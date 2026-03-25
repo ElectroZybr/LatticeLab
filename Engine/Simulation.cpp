@@ -6,8 +6,8 @@
 #include "physics/Bond.h"
 
 namespace {
-float kineticEnergy(AtomData::Type type, const Vec3D& speed) {
-    return 0.5f * AtomData::getProps(type).mass * speed.sqrAbs();
+float kineticEnergy(Atom::Type type, const Vec3D& speed) {
+    return 0.5f * Atom::getProps(type).mass * speed.sqrAbs();
 }
 }
 
@@ -33,7 +33,7 @@ void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
     }
 }
 
-void Simulation::createRandomAtoms(AtomData::Type type, int quantity) {
+void Simulation::createRandomAtoms(Atom::Type type, int quantity) {
     const double z_mid = (sim_box.end.z - sim_box.start.z) * 0.5;
     for (int i = 0; i < quantity; ++i) {
         for (int j = 0; j < 10; ++j) {
@@ -73,7 +73,7 @@ bool Simulation::checkNeighbor(Vec3D coords, float delta) {
     return false;
 }
 
-bool Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, AtomData::Type type, bool fixed) {
+bool Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type type, bool fixed) {
     atomStorage.addAtom(start_coords, start_speed, type, fixed);
     atoms.emplace_back(start_coords, start_speed, type, fixed);
     const std::size_t atomIndex = atomStorage.size() - 1;
@@ -257,7 +257,7 @@ void Simulation::load(std::string_view path) {
     setSizeBox(boxStart, boxEnd, cellSize);
 
     for (const LoadedAtomData& d : buffer) {
-        createAtom(d.coords, d.speed, static_cast<AtomData::Type>(d.type), d.fixed);
+        createAtom(d.coords, d.speed, static_cast<Atom::Type>(d.type), d.fixed);
     }
 }
 
