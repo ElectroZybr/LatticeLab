@@ -49,7 +49,7 @@ protected:
     void prepareForPredict() {
         rebuildScene();
         StepOps::computeForces(
-            simulation_->atoms, simulation_->sim_box,
+            simulation_->atomStorage, simulation_->sim_box,
             simulation_->forceField, Benchmarks::kDt
         );
     }
@@ -57,11 +57,11 @@ protected:
     void prepareForCorrect() {
         prepareForPredict();
         StepOps::predictAndSync(
-            simulation_->atoms, simulation_->sim_box,
+            simulation_->atomStorage, simulation_->sim_box,
             Benchmarks::kDt, &VerletScheme::predict
         );
         StepOps::computeForces(
-            simulation_->atoms, simulation_->sim_box,
+            simulation_->atomStorage, simulation_->sim_box,
             simulation_->forceField, Benchmarks::kDt
         );
     }
