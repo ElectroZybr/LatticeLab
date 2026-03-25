@@ -19,6 +19,7 @@ public:
     void compute(AtomStorage& atoms, std::vector<Atom>& atomRefs, SimBox& box, float dt) const;
 
     void setGravity(Vec3D gravity = Vec3D(0, 5, 0)) { static_force = gravity; }
+    Vec3D getGravity() const { return static_force; }
 
 private:
     struct LJParams {
