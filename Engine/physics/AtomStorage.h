@@ -117,7 +117,7 @@ public:
         isFixed_.reserve(count);
     }
 
-    void addAtom(const Vec3D& coords, const Vec3D& speed, Atom::Type type, bool fixed = false) {
+    void addAtom(const Vec3f& coords, const Vec3f& speed, Atom::Type type, bool fixed = false) {
         ensureCapacity(count_ + 1);
 
         x_[count_] = static_cast<float>(coords.x);
@@ -234,30 +234,30 @@ public:
     bool isAtomFixed(std::size_t i) const { return isFixed_[i] != 0; }
     void setFixed(std::size_t i, bool fixed) { isFixed_[i] = fixed ? 1 : 0; }
 
-    Vec3D pos(std::size_t i) const { return Vec3D(x_[i], y_[i], z_[i]); }
-    Vec3D vel(std::size_t i) const { return Vec3D(vx_[i], vy_[i], vz_[i]); }
-    Vec3D force(std::size_t i) const { return Vec3D(fx_[i], fy_[i], fz_[i]); }
-    Vec3D prevForce(std::size_t i) const { return Vec3D(pfx_[i], pfy_[i], pfz_[i]); }
+    Vec3f pos(std::size_t i) const { return Vec3f(x_[i], y_[i], z_[i]); }
+    Vec3f vel(std::size_t i) const { return Vec3f(vx_[i], vy_[i], vz_[i]); }
+    Vec3f force(std::size_t i) const { return Vec3f(fx_[i], fy_[i], fz_[i]); }
+    Vec3f prevForce(std::size_t i) const { return Vec3f(pfx_[i], pfy_[i], pfz_[i]); }
 
-    void setPos(std::size_t i, const Vec3D& coords) {
+    void setPos(std::size_t i, const Vec3f& coords) {
         x_[i] = static_cast<float>(coords.x);
         y_[i] = static_cast<float>(coords.y);
         z_[i] = static_cast<float>(coords.z);
     }
 
-    void setVel(std::size_t i, const Vec3D& speed) {
+    void setVel(std::size_t i, const Vec3f& speed) {
         vx_[i] = static_cast<float>(speed.x);
         vy_[i] = static_cast<float>(speed.y);
         vz_[i] = static_cast<float>(speed.z);
     }
 
-    void setForce(std::size_t i, const Vec3D& force) {
+    void setForce(std::size_t i, const Vec3f& force) {
         fx_[i] = static_cast<float>(force.x);
         fy_[i] = static_cast<float>(force.y);
         fz_[i] = static_cast<float>(force.z);
     }
 
-    void setPrevForce(std::size_t i, const Vec3D& prevForce) {
+    void setPrevForce(std::size_t i, const Vec3f& prevForce) {
         pfx_[i] = static_cast<float>(prevForce.x);
         pfy_[i] = static_cast<float>(prevForce.y);
         pfz_[i] = static_cast<float>(prevForce.z);

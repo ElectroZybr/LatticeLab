@@ -71,8 +71,8 @@ void Mouse::onFrame(float deltaTime) {
 
 void Mouse::logMousePos() {
     sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
-    Vec2D world_pos = Tools::screenToWorld(mouse_pos);
-    Vec2D local_pos = Tools::screenToBox(mouse_pos);
+    Vec2f world_pos = Tools::screenToWorld(mouse_pos);
+    Vec2f local_pos = Tools::screenToBox(mouse_pos);
     std::cout << "<Mouse pos>"
               << " Screen: "
               << "X " << mouse_pos.x

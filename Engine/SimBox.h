@@ -1,13 +1,13 @@
 #pragma once
 
-#include "math/Vec3D.h"
+#include "math/Vec3f.h"
 #include "physics/SpatialGrid.h"
 
 class SimBox {
     public:
-        SimBox(Vec3D start, Vec3D end);
-        bool setSizeBox(Vec3D newStart = Vec3D(0, 0, 0), Vec3D newEnd = Vec3D(50, 50, 3), int cellSize = -1);
+        SimBox(Vec3f start, Vec3f end);
+        bool setSizeBox(Vec3f newStart = Vec3f(0, 0, 0), Vec3f newEnd = Vec3f(50, 50, 3), int cellSize = -1);
         SpatialGrid grid;
-        Vec3D start;
-        Vec3D end;
+        Vec3f start;
+        Vec3f end;
 };

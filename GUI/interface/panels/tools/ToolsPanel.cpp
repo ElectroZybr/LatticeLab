@@ -70,6 +70,7 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, 
     if (ImGui::BeginPopup("tools_popup")) {
         if (ImGui::MenuItem("save"))  fileDialog.openSave();
         if (ImGui::MenuItem("load"))  fileDialog.openLoad();
+        if (ImGui::MenuItem("clear")) pendingResult = ToolsCommand::ClearSimulation;
         ImGui::Separator();
         if (ImGui::MenuItem("exit"))  window.close();
         ImGui::EndPopup();

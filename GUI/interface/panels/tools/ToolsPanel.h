@@ -6,7 +6,7 @@
 #include <SFML/Window.hpp>
 #include "imgui.h"
 
-enum class ToolsCommand : uint8_t { ToggleRenderer2D, ToggleRenderer3D };
+enum class ToolsCommand : uint8_t { ToggleRenderer2D, ToggleRenderer3D, ClearSimulation };
 
 class DebugPanel;
 class FileDialogManager;

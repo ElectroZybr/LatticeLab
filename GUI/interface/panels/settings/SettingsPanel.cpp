@@ -23,17 +23,17 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
 
     ImGui::SeparatorText("Симуляция");
 
-    Vec3D gravity = simulation.forceField.getGravity();
+    Vec3f gravity = simulation.forceField.getGravity();
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
     if (ImGui::Button("0##gravity", ImVec2(22, 36))) {
-        simulation.forceField.setGravity(Vec3D(0, 0, 0));
+        simulation.forceField.setGravity(Vec3f(0, 0, 0));
     }
     ImGui::PopStyleVar();
     ImGui::SameLine();
 
     float buf[3] = { static_cast<float>(gravity.x), static_cast<float>(gravity.y), static_cast<float>(gravity.z) };
     if (ImGui::SliderFloat3("Гравитация", buf, -20, 20)) {
-        gravity = Vec3D(buf[0], buf[1], buf[2]);
+        gravity = Vec3f(buf[0], buf[1], buf[2]);
         simulation.forceField.setGravity(gravity);
     }
 

@@ -5,8 +5,8 @@
 #include <format>
 #include "imgui.h"
 
-#include "Engine/math/Vec2D.h"
-#include "Engine/math/Vec3D.h"
+#include "Engine/math/Vec2f.h"
+#include "Engine/math/Vec3f.h"
 
 namespace DebugDrawers {
     inline int clampPrecision(int precision) {
@@ -47,16 +47,16 @@ namespace DebugDrawers {
             ImGui::Text("%s", std::any_cast<std::string_view>(a).data());
     }
 
-    inline void Vec2D(std::string_view label, const std::any& a, int precision) {
-        const auto& v = std::any_cast<const ::Vec2D&>(a);
+    inline void Vec2f(std::string_view label, const std::any& a, int precision) {
+        const auto& v = std::any_cast<const ::Vec2f&>(a);
         const int p = clampPrecision(precision);
         ImGui::TextDisabled("%s", label.data());
         ImGui::SameLine();
         ImGui::Text("%s", std::format("{:+.{}f} {:+.{}f}", v.x, p, v.y, p).data());
     }
 
-    inline void Vec3D(std::string_view label, const std::any& a, int precision) {
-        const auto& v = std::any_cast<const ::Vec3D&>(a);
+    inline void Vec3f(std::string_view label, const std::any& a, int precision) {
+        const auto& v = std::any_cast<const ::Vec3f&>(a);
         const int p = clampPrecision(precision);
         ImGui::TextDisabled("%s", label.data());
         ImGui::SameLine();

@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstddef>
 
-#include <Engine/math/Vec3D.h>
+#include <Engine/math/Vec3f.h>
 
 class Atom;
 
@@ -50,7 +50,7 @@ public:
     }
 
     template<typename F>
-    void forEachNeighbor(const Vec3D& coords, F&& callback) const {
+    void forEachNeighbor(const Vec3f& coords, F&& callback) const {
         const int cx = worldToCellX(coords.x);
         const int cy = worldToCellY(coords.y);
         const int cz = worldToCellZ(coords.z);
@@ -71,7 +71,7 @@ public:
     }
 
     template<typename F>
-    void forEachNeighborIndex(const Vec3D& coords, F&& callback) const {
+    void forEachNeighborIndex(const Vec3f& coords, F&& callback) const {
         const int cx = worldToCellX(coords.x);
         const int cy = worldToCellY(coords.y);
         const int cz = worldToCellZ(coords.z);

@@ -6,7 +6,7 @@
 #include "physics/Bond.h"
 
 namespace {
-float kineticEnergy(Atom::Type type, const Vec3D& speed) {
+float kineticEnergy(Atom::Type type, const Vec3f& speed) {
     return 0.5f * Atom::getProps(type).mass * speed.sqrAbs();
 }
 }
@@ -22,11 +22,11 @@ void Simulation::update(float dt) {
     ++sim_step;
 }
 
-void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
+void Simulation::setSizeBox(Vec3f newStart, Vec3f newEnd, int cellSize) {
     if (sim_box.setSizeBox(newStart, newEnd, cellSize)) {
         forceField.updateBoxCache(sim_box);
         for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
-            const Vec3D pos = atomStorage.pos(atomIndex);
+            const Vec3f pos = atomStorage.pos(atomIndex);
             const int cellX = sim_box.grid.worldToCellX(pos.x);
             const int cellY = sim_box.grid.worldToCellY(pos.y);
             const int cellZ = sim_box.grid.worldToCellZ(pos.z);
@@ -41,16 +41,16 @@ void Simulation::createRandomAtoms(Atom::Type type, int quantity) {
         for (int j = 0; j < 10; ++j) {
             double r_x = std::rand() % int(sim_box.end.x - sim_box.start.x - 4);
             double r_y = std::rand() % int(sim_box.end.y - sim_box.start.y - 4);
-            Vec3D coords(r_x + 2, r_y + 2, z_mid);
+            Vec3f coords(r_x + 2, r_y + 2, z_mid);
             if (!checkNeighbor(coords, 4)) {
-                createAtom(coords, Vec3D::Random() * 5.0, type);
+                createAtom(coords, Vec3f::Random() * 5.0, type);
                 break;
             }
         }
     }
 }
 
-bool Simulation::checkNeighbor(Vec3D coords, float delta) {
+bool Simulation::checkNeighbor(Vec3f coords, float delta) {
     int curr_x = sim_box.grid.worldToCellX(coords.x);
     int curr_y = sim_box.grid.worldToCellY(coords.y);
     int curr_z = sim_box.grid.worldToCellZ(coords.z);
@@ -75,7 +75,7 @@ bool Simulation::checkNeighbor(Vec3D coords, float delta) {
     return false;
 }
 
-bool Simulation::createAtom(Vec3D start_coords, Vec3D start_speed, Atom::Type type, bool fixed) {
+bool Simulation::createAtom(Vec3f start_coords, Vec3f start_speed, Atom::Type type, bool fixed) {
     atomStorage.addAtom(start_coords, start_speed, type, fixed);
     atoms.emplace_back(start_coords, start_speed, type, fixed);
     const std::size_t atomIndex = atomStorage.size() - 1;
@@ -129,7 +129,7 @@ bool Simulation::removeAtom(std::size_t atomIndex) {
 
     sim_box.grid.resize(sim_box.grid.sizeX, sim_box.grid.sizeY, sim_box.grid.sizeZ, sim_box.grid.cellSize);
     for (std::size_t index = 0; index < atomStorage.size(); ++index) {
-        const Vec3D pos = atomStorage.pos(index);
+        const Vec3f pos = atomStorage.pos(index);
         const int cellX = sim_box.grid.worldToCellX(pos.x);
         const int cellY = sim_box.grid.worldToCellY(pos.y);
         const int cellZ = sim_box.grid.worldToCellZ(pos.z);
@@ -179,7 +179,7 @@ float Simulation::fullAverageEnergy() const {
 
 void Simulation::logAtomPos() const {
     for (std::size_t i = 0; i < atomStorage.size(); ++i) {
-        const Vec3D pos = atomStorage.pos(i);
+        const Vec3f pos = atomStorage.pos(i);
         std::cout << "<Pos> Atom (" << i
                   << ") X " << pos.x
                   << " | Y " << pos.y
@@ -217,8 +217,8 @@ void Simulation::save(std::string_view path) const {
     file << "step " << sim_step << "\n";
 
     for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
-        const Vec3D pos = atomStorage.pos(atomIndex);
-        const Vec3D vel = atomStorage.vel(atomIndex);
+        const Vec3f pos = atomStorage.pos(atomIndex);
+        const Vec3f vel = atomStorage.vel(atomIndex);
         file << "atom "
              << pos.x << " " << pos.y << " " << pos.z << " "
              << vel.x << " " << vel.y << " " << vel.z << " "
@@ -234,14 +234,14 @@ void Simulation::load(std::string_view path) {
     clear();
 
     struct LoadedAtomData {
-        Vec3D coords, speed;
+        Vec3f coords, speed;
         int type;
         float a0, eps;
         bool fixed;
     };
     std::vector<LoadedAtomData> buffer;
 
-    Vec3D boxStart, boxEnd;
+    Vec3f boxStart, boxEnd;
     int cellSize = -1;
 
     std::string tag;
