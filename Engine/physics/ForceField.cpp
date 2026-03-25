@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 #include "AtomData.h"
@@ -35,8 +36,16 @@ ForceField::LJPairTable ForceField::buildLJPairTable() {
             const float epsj = static_cast<float>(pj.ljEps);
 
             LJParams params{};
-            params.a0 = 0.5f * (a0i + a0j);
-            params.eps = std::sqrt(epsi * epsj);
+            const float a0 = 0.5f * (a0i + a0j);
+            const float eps = std::sqrt(epsi * epsj);
+            const float a2 = a0 * a0;
+            const float a6 = a2 * a2 * a2;
+            const float a12 = a6 * a6;
+
+            params.forceC6 = 24.0f * eps * a6;
+            params.forceC12 = 48.0f * eps * a12;
+            params.potentialC6 = 4.0f * eps * a6;
+            params.potentialC12 = 4.0f * eps * a12;
 
             table[i][j] = params;
             table[j][i] = params;
@@ -59,19 +68,34 @@ void ForceField::compute(AtomStorage& atoms, SimBox& box, float dt) const {
             Bond::BreakBond(currentBond, atoms);
             continue;
         }
-
         bond.forceBond(atoms, dt);
         ++it;
     }
 
-    std::vector<std::vector<std::size_t>> bondedNeighbours(atoms.size());
-    for (const Bond& bond : Bond::bonds_list) {
-        if (bond.aIndex >= atoms.size() || bond.bIndex >= atoms.size()) {
-            continue;
-        }
+    if (Bond::bonds_list.size() < 2) {
+        return;
+    }
 
-        bondedNeighbours[bond.aIndex].push_back(bond.bIndex);
-        bondedNeighbours[bond.bIndex].push_back(bond.aIndex);
+    std::vector<std::uint16_t> degree(atoms.size(), 0);
+    for (const Bond& bond : Bond::bonds_list) {
+        if (bond.aIndex < atoms.size() && bond.bIndex < atoms.size()) {
+            ++degree[bond.aIndex];
+            ++degree[bond.bIndex];
+        }
+    }
+
+    std::vector<std::vector<std::size_t>> bondedNeighbours(atoms.size());
+    for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
+        if (degree[atomIndex] > 0) {
+            bondedNeighbours[atomIndex].reserve(degree[atomIndex]);
+        }
+    }
+
+    for (const Bond& bond : Bond::bonds_list) {
+        if (bond.aIndex < atoms.size() && bond.bIndex < atoms.size()) {
+            bondedNeighbours[bond.aIndex].push_back(bond.bIndex);
+            bondedNeighbours[bond.bIndex].push_back(bond.aIndex);
+        }
     }
 
     for (std::size_t atomIndex = 0; atomIndex < bondedNeighbours.size(); ++atomIndex) {
@@ -159,12 +183,9 @@ void ForceField::pairNonBondedInteraction(AtomStorage& atoms, std::size_t bIndex
 
     const float invD2 = 1.0f / d2;
     const float invD6 = invD2 * invD2 * invD2;
-    const float a2 = params.a0 * params.a0;
-    const float a6 = a2 * a2 * a2;
-    const float ratio6 = a6 * invD6;
-    const float ratio12 = ratio6 * ratio6;
+    const float invD12 = invD6 * invD6;
 
-    const float forceScale = 24.0f * params.eps * (2.0f * ratio12 - ratio6) * invD2;
+    const float forceScale = (params.forceC12 * invD12 - params.forceC6 * invD6) * invD2;
     const float pairForceX = dx * forceScale;
     const float pairForceY = dy * forceScale;
     const float pairForceZ = dz * forceScale;
@@ -177,7 +198,7 @@ void ForceField::pairNonBondedInteraction(AtomStorage& atoms, std::size_t bIndex
     atoms.forceY(bIndex) += pairForceY;
     atoms.forceZ(bIndex) += pairForceZ;
 
-    const float potential = 4.0f * params.eps * (ratio12 - ratio6);
+    const float potential = params.potentialC12 * invD12 - params.potentialC6 * invD6;
     potenE += 0.5f * potential;
     atoms.energy(bIndex) += 0.5f * potential;
 }

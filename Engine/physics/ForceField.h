@@ -21,8 +21,10 @@ public:
 
 private:
     struct LJParams {
-        float a0 = 3.0f;
-        float eps = 0.1f;
+        float forceC6 = 0.0f;      // 24 * eps * a^6
+        float forceC12 = 0.0f;     // 48 * eps * a^12
+        float potentialC6 = 0.0f;  // 4 * eps * a^6
+        float potentialC12 = 0.0f; // 4 * eps * a^12
     };
 
     static constexpr std::size_t TypeCount = static_cast<std::size_t>(AtomData::Type::COUNT);
