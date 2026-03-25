@@ -6,8 +6,8 @@
 #include "physics/Bond.h"
 
 namespace {
-float kineticEnergy(Atom::Type type, const Vec3f& speed) {
-    return 0.5f * Atom::getProps(type).mass * speed.sqrAbs();
+float kineticEnergy(AtomData::Type type, const Vec3f& speed) {
+    return 0.5f * AtomData::getProps(type).mass * speed.sqrAbs();
 }
 }
 
@@ -35,7 +35,7 @@ void Simulation::setSizeBox(Vec3f newStart, Vec3f newEnd, int cellSize) {
     }
 }
 
-void Simulation::createRandomAtoms(Atom::Type type, int quantity) {
+void Simulation::createRandomAtoms(AtomData::Type type, int quantity) {
     const double z_mid = (sim_box.end.z - sim_box.start.z) * 0.5;
     for (int i = 0; i < quantity; ++i) {
         for (int j = 0; j < 10; ++j) {
@@ -75,9 +75,8 @@ bool Simulation::checkNeighbor(Vec3f coords, float delta) {
     return false;
 }
 
-bool Simulation::createAtom(Vec3f start_coords, Vec3f start_speed, Atom::Type type, bool fixed) {
+bool Simulation::createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Type type, bool fixed) {
     atomStorage.addAtom(start_coords, start_speed, type, fixed);
-    atoms.emplace_back(start_coords, start_speed, type, fixed);
     const std::size_t atomIndex = atomStorage.size() - 1;
     const int cellX = sim_box.grid.worldToCellX(start_coords.x);
     const int cellY = sim_box.grid.worldToCellY(start_coords.y);
@@ -115,14 +114,6 @@ bool Simulation::removeAtom(std::size_t atomIndex) {
         }
 
         ++it;
-    }
-
-    if (atomIndex < atoms.size()) {
-        const std::size_t lastAtomIndex = atoms.size() - 1;
-        if (atomIndex != lastAtomIndex) {
-            std::swap(atoms[atomIndex], atoms[lastAtomIndex]);
-        }
-        atoms.pop_back();
     }
 
     atomStorage.removeAtom(atomIndex);
@@ -265,12 +256,11 @@ void Simulation::load(std::string_view path) {
     setSizeBox(boxStart, boxEnd, cellSize);
 
     for (const LoadedAtomData& d : buffer) {
-        createAtom(d.coords, d.speed, static_cast<Atom::Type>(d.type), d.fixed);
+        createAtom(d.coords, d.speed, static_cast<AtomData::Type>(d.type), d.fixed);
     }
 }
 
 void Simulation::clear() {
-    atoms.clear();
     atomStorage.clear();
     Bond::bonds_list.clear();
     sim_box.grid.resize(sim_box.grid.sizeX, sim_box.grid.sizeY, sim_box.grid.sizeZ, sim_box.grid.cellSize);

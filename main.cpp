@@ -39,7 +39,7 @@ std::string_view schemeName(Integrator::Scheme s) {
 }
 
 namespace Scenes {
-    void crystal(Simulation& sim, int n, Atom::Type type, bool is3d,
+    void crystal(Simulation& sim, int n, AtomData::Type type, bool is3d,
                  double padding = 3.0, double margin = 15.0)
     {
         const double side = n * padding + padding + 2.0 * margin;
@@ -70,9 +70,9 @@ namespace Scenes {
  
         for (int i = 0; i < 15; ++i) {
             for (int j = 0;  j < 8;  ++j)
-                sim.createAtom(Vec3f(4 + i*3, 4 + j*3, 1), Vec3f::Random() * 0.5, Atom::Type::H);
+                sim.createAtom(Vec3f(4 + i*3, 4 + j*3, 1), Vec3f::Random() * 0.5, AtomData::Type::H);
             for (int j = 8;  j < 15; ++j)
-                sim.createAtom(Vec3f(4 + i*3, 4 + j*3, 1), Vec3f::Random() * 0.5, Atom::Type::O);
+                sim.createAtom(Vec3f(4 + i*3, 4 + j*3, 1), Vec3f::Random() * 0.5, AtomData::Type::O);
         }
     }
 }
@@ -187,7 +187,7 @@ int main() {
     SimBox box(Vec3f(-25, -25, 0), Vec3f(25, 25, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    Scenes::crystal(simulation, 25, Atom::Type::Z, false);
+    Scenes::crystal(simulation, 25, AtomData::Type::Z, false);
 
     // Рендер
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
@@ -197,10 +197,13 @@ int main() {
 
     // Интерфейс
     Interface::init(window, simulation, renderer);
-    EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atoms);
+    EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atomStorage);
     Tools::init(&window, &gameView, &box.grid, &box, renderer, &simulation.atomStorage,
-        [&](Vec3f coords, Vec3f speed, Atom::Type type, bool fixed) {
+        [&](Vec3f coords, Vec3f speed, AtomData::Type type, bool fixed) {
             return simulation.createAtom(coords, speed, type, fixed);
+        },
+        [&](std::size_t atomIndex) {
+            return simulation.removeAtom(atomIndex);
         }
     );
     Interface::pause = true;
@@ -259,17 +262,17 @@ int main() {
             {
                 debugAtomSingle->visible = true;
                 debugAtomBatch->visible = false;
-                const Atom* selectedAtom = *Tools::selected_atom_batch.begin();
-                const std::size_t selectedIndex = static_cast<std::size_t>(selectedAtom - simulation.atoms.data());
+                const std::size_t selectedIndex = *Tools::selected_atom_batch.begin();
                 if (selectedIndex < simulation.atomStorage.size()) {
                     debugAtomSingle->add_data("Позиция", simulation.atomStorage.pos(selectedIndex));
                     debugAtomSingle->add_data("Скорость", simulation.atomStorage.vel(selectedIndex));
                     debugAtomSingle->add_data("Силы", simulation.atomStorage.force(selectedIndex));
                     debugAtomSingle->add_data("Пред. силы", simulation.atomStorage.prevForce(selectedIndex));
                     debugAtomSingle->add_data("Потенциальная энергия", simulation.atomStorage.energy(selectedIndex));
-                    debugAtomSingle->add_data("Масса", Atom::getProps(selectedAtom->type).mass);
-                    debugAtomSingle->add_data("Радиус", Atom::getProps(selectedAtom->type).radius);
-                    debugAtomSingle->add_data("Тип", static_cast<int>(selectedAtom->type));
+                    const AtomData::Type atomType = simulation.atomStorage.type(selectedIndex);
+                    debugAtomSingle->add_data("Масса", AtomData::getProps(atomType).mass);
+                    debugAtomSingle->add_data("Радиус", AtomData::getProps(atomType).radius);
+                    debugAtomSingle->add_data("Тип", static_cast<int>(atomType));
                 }
             }
             else {
@@ -321,7 +324,7 @@ int main() {
             renderer->camera.update(window);
 
             renderCounter.startStep();
-            renderer->drawShot(simulation.atoms, simulation.sim_box);
+            renderer->drawShot(simulation.atomStorage, simulation.sim_box);
             ImGui::SFML::Render(window);
             window.display();
             renderCounter.finishStep();
@@ -334,7 +337,7 @@ int main() {
             debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
             debugSim->add_data("Рендер (мс)", renderCounter.avgMs());
             debugSim->add_data("Физика (мс)", physicsCounter.avgMs());
-            debugSim->add_data("Количество атомов", simulation.atoms.size());
+            debugSim->add_data("Количество атомов", simulation.atomStorage.size());
             debugSim->add_data("Шаги симуляции", simulation.getSimStep());
             debugSim->add_data("Шагов/с", physicsCounter.steps_per_second);
             debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));

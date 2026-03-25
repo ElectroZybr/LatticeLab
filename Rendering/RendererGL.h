@@ -11,7 +11,7 @@ public:
     RendererGL(sf::RenderTarget& t, sf::View& gv);
     virtual ~RendererGL();
 
-    void drawShot(const std::vector<Atom>& atoms,
+    void drawShot(const AtomStorage& atoms,
                   const SimBox& box) override;
 
 protected:
@@ -68,5 +68,4 @@ protected:
 
     sf::RenderTarget& target;
     const SimBox* currentBox = nullptr;
-    const std::vector<Atom>* currentAtoms = nullptr;
 };

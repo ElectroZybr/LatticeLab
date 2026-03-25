@@ -3,7 +3,7 @@
 
 BENCHMARK_DEFINE_F(RendererFixture, DrawShot)(benchmark::State& state) {
     for (auto _ : state) {
-        renderer_->drawShot(atoms_, box_);
+        renderer_->drawShot(atomStorage_, box_);
         benchmark::ClobberMemory();
     }
     setCounters(state);

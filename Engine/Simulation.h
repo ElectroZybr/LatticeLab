@@ -17,8 +17,8 @@ public:
 
     void setSizeBox(Vec3f newStart, Vec3f newEnd, int cellSize = -1);
 
-    void createRandomAtoms(Atom::Type type, int quantity);
-    bool createAtom(Vec3f start_coords, Vec3f start_speed, Atom::Type type, bool fixed = false);
+    void createRandomAtoms(AtomData::Type type, int quantity);
+    bool createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Type type, bool fixed = false);
     bool removeAtom(std::size_t atomIndex);
     void addBond(std::size_t aIndex, std::size_t bIndex);
 
@@ -40,7 +40,6 @@ public:
     void clear();
 
     SimBox& sim_box;
-    std::vector<Atom> atoms;
     AtomStorage atomStorage;
     Integrator integrator;
     ForceField forceField;

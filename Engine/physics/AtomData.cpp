@@ -50,7 +50,3 @@ AtomData::AtomData(Vec3f startCoords, Vec3f startSpeed, Type type, bool fixed)
     (void)startSpeed;
     Bond::bond_default_props.init();
 }
-
-float AtomData::kineticEnergy(Type type, const Vec3f& speed) {
-    return 0.5f * getProps(type).mass * speed.sqrAbs();
-}

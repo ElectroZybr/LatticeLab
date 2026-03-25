@@ -11,7 +11,7 @@ class IRenderer {
 public:
     virtual ~IRenderer() = default;
 
-    virtual void drawShot(const std::vector<Atom>& atoms,
+    virtual void drawShot(const AtomStorage& atoms,
                           const SimBox& box) = 0;
     
     virtual void drawOverlay() = 0;
