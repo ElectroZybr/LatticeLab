@@ -273,11 +273,10 @@ GLuint RendererGL::linkProgram(std::string_view vert, std::string_view frag,
 
 // ------------------------------------------------------------------ draw ---
 
-void RendererGL::drawShot(const std::vector<Atom>& atoms,
+void RendererGL::drawShot(const AtomStorage& atoms,
                           const SimBox& box)
 {
     currentBox = &box;
-    currentAtoms = &atoms;
     updateMatrices();
 
     const glm::vec3 boxOffset(box.start.x, box.start.y, box.start.z);
@@ -304,9 +303,10 @@ void RendererGL::drawShot(const std::vector<Atom>& atoms,
     }
 
     for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
-        const Atom& atom = atoms[atomIndex];
-        const Vec3f pos = atomStorage ? atomStorage->pos(atomIndex) : Vec3f();
-        const Vec3f vel = atomStorage ? atomStorage->vel(atomIndex) : Vec3f();
+        const Vec3f pos = atoms.pos(atomIndex);
+        const Vec3f vel = atoms.vel(atomIndex);
+        const auto type = atoms.type(atomIndex);
+        const auto& props = AtomData::getProps(type);
 
         sf::Color sfColor;
         if (speedGradient) {
@@ -317,7 +317,7 @@ void RendererGL::drawShot(const std::vector<Atom>& atoms,
                 : sf::Color(255 * t, 0, (1.f - t) * 255.f);
         }
         else {
-            sfColor = atom.getProps().color;
+            sfColor = props.color;
         }
 
         glm::vec3 color = glm::vec3(sfColor.r / 255.f, sfColor.g / 255.f, sfColor.b / 255.f);
@@ -325,8 +325,8 @@ void RendererGL::drawShot(const std::vector<Atom>& atoms,
         instanceData.emplace_back(
             glm::vec3(pos.x, pos.y, pos.z) + boxOffset,
             color,
-            static_cast<float>(atom.getProps().radius),
-            float(atom.isSelect)
+            static_cast<float>(props.radius),
+            atoms.isSelected(atomIndex) ? 1.0f : 0.0f
         );
     }
 
@@ -398,27 +398,21 @@ void RendererGL::drawBox(const SimBox& box) {
 }
 
 void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
-    if (bondShader == 0 || !currentAtoms || !atomStorage) return;
+    if (bondShader == 0 || !atomStorage) return;
 
     bondData.clear();
     bondData.reserve(Bond::bonds_list.size());
 
     for (const Bond& bond : Bond::bonds_list) {
-        if (bond.aIndex >= currentAtoms->size() || bond.bIndex >= currentAtoms->size()) {
-            continue;
-        }
-        const Atom* a = &(*currentAtoms)[bond.aIndex];
-        const Atom* b = &(*currentAtoms)[bond.bIndex];
-        if (a < currentAtoms->data() || a >= currentAtoms->data() + currentAtoms->size() ||
-            b < currentAtoms->data() || b >= currentAtoms->data() + currentAtoms->size()) {
+        if (bond.aIndex >= atomStorage->size() || bond.bIndex >= atomStorage->size()) {
             continue;
         }
         const std::size_t aIndex = bond.aIndex;
         const std::size_t bIndex = bond.bIndex;
         const Vec3f aPos = atomStorage->pos(aIndex);
         const Vec3f bPos = atomStorage->pos(bIndex);
-        const float r = (static_cast<float>(a->getProps().radius) +
-                         static_cast<float>(b->getProps().radius)) * 0.15f;
+        const float r = (AtomData::getProps(atomStorage->type(aIndex)).radius +
+                         AtomData::getProps(atomStorage->type(bIndex)).radius) * 0.15f;
         bondData.emplace_back(
             glm::vec3(aPos.x, aPos.y, aPos.z) + boxOffset,
             glm::vec3(bPos.x, bPos.y, bPos.z) + boxOffset,

@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include "Engine/physics/AtomData.h"
+#include "Engine/physics/AtomStorage.h"
 #include "Engine/SimBox.h"
 #include "Rendering/2d/Renderer2D.h"
 
@@ -21,7 +22,8 @@ public:
         view_ = renderTexture_->getView();;
         renderer_ = std::make_unique<Renderer2D>(*renderTexture_, view_);
 
-        atoms_ = makeGridAtoms(static_cast<int>(state.range(0)));
+        atomStorage_ = makeGridAtoms(static_cast<int>(state.range(0)));
+        renderer_->setAtomStorage(&atomStorage_);
     }
 
     void TearDown(benchmark::State&) override {
@@ -31,30 +33,30 @@ public:
 protected:
     void setCounters(benchmark::State& state) const {
         state.SetItemsProcessed(
-            state.iterations() * static_cast<int64_t>(atoms_.size())
+            state.iterations() * static_cast<int64_t>(atomStorage_.size())
         );
     }
 
     std::unique_ptr<sf::RenderTexture> renderTexture_;
     std::unique_ptr<Renderer2D> renderer_;
     sf::View view_;
-    std::vector<Atom> atoms_;
+    AtomStorage atomStorage_;
     SimBox box_{ Vec3f(0, 0, 0), Vec3f(300, 300, 300) };
 
 private:
-    static std::vector<Atom> makeGridAtoms(int count) {
-        std::vector<Atom> atoms;
+    static AtomStorage makeGridAtoms(int count) {
+        AtomStorage atoms;
         atoms.reserve(count);
         const int side = static_cast<int>(std::cbrt(count)) + 1;
         for (int i = 0; i < count; ++i) {
-            atoms.emplace_back(
+            atoms.addAtom(
                 Vec3f(
                     (i % side) * 3.0,
                     ((i / side) % side) * 3.0,
                     (i / static_cast<double>(side * side)) * 3.0
                 ),
                 Vec3f::Random() * 0.5,
-                Atom::Type::H
+                AtomData::Type::H
             );
         }
         return atoms;

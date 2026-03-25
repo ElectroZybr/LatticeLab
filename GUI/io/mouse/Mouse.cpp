@@ -8,13 +8,13 @@
 sf::RenderWindow*  Mouse::window = nullptr;
 std::unique_ptr<IRenderer>* Mouse::renderer = nullptr;
 SimBox* Mouse::box = nullptr;
-std::vector<AtomData>* Mouse::atoms = nullptr;
+AtomStorage* Mouse::atomStorage = nullptr;
 
-void Mouse::init(sf::RenderWindow* w, std::unique_ptr<IRenderer>& r, SimBox* b, std::vector<AtomData>* a) {
+void Mouse::init(sf::RenderWindow* w, std::unique_ptr<IRenderer>& r, SimBox* b, AtomStorage* storage) {
     window = w;
     renderer = &r;
     box = b;
-    atoms = a;
+    atomStorage = storage;
 }
 
 void Mouse::onEvent(const sf::Event& event) {
@@ -23,7 +23,7 @@ void Mouse::onEvent(const sf::Event& event) {
 
     if (const auto* e = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (e->button == sf::Mouse::Button::Left) {
-            Tools::onLeftPressed(mouse_pos, *atoms);
+            Tools::onLeftPressed(mouse_pos);
         }
 
         if (e->button == sf::Mouse::Button::Right && !Interface::cursorHovered) {
@@ -35,7 +35,7 @@ void Mouse::onEvent(const sf::Event& event) {
 
     if (const auto* e = event.getIf<sf::Event::MouseButtonReleased>()) {
         if (e->button == sf::Mouse::Button::Left) {
-            Tools::onLeftReleased(*atoms);
+            Tools::onLeftReleased();
         }
 
         if (e->button == sf::Mouse::Button::Right) {
@@ -66,7 +66,7 @@ void Mouse::onEvent(const sf::Event& event) {
 }
 
 void Mouse::onFrame(float deltaTime) {
-    Tools::onFrame(*atoms, deltaTime);
+    Tools::onFrame(deltaTime);
 }
 
 void Mouse::logMousePos() {

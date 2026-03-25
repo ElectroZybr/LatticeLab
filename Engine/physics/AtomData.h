@@ -56,8 +56,6 @@ public:
 
     AtomData(Vec3f startCoords, Vec3f startSpeed, Type type, bool fixed = false);
 
-    static float kineticEnergy(Type type, const Vec3f& speed);
-
     const StaticAtomicData& getProps() const {
         return properties.at(static_cast<int>(type));
     }
@@ -66,5 +64,3 @@ public:
         return properties.at(static_cast<int>(type));
     }
 };
-
-using Atom = AtomData;

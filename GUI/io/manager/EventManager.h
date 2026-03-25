@@ -5,11 +5,11 @@
 
 class IRenderer;
 class SimBox;
-class AtomData;
+class AtomStorage;
 
 class EventManager {
 public:
-    static void init(sf::RenderWindow* w, sf::View* ui, std::unique_ptr<IRenderer>& r, SimBox* b, std::vector<AtomData>* a);
+    static void init(sf::RenderWindow* w, sf::View* ui, std::unique_ptr<IRenderer>& r, SimBox* b, AtomStorage* atomStorage);
     static void poll();
     static void frame(float deltaTime);
 
