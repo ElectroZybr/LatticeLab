@@ -28,6 +28,7 @@ private:
 public:
     static bool pause;
     static int init(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r);
+    static void shutdown();
     static int Update();
     static bool getPause();
     static int getSelectedAtom();

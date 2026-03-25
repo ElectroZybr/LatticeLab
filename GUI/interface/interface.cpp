@@ -57,6 +57,12 @@ int Interface::init(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRendere
     return EXIT_SUCCESS;
 }
 
+void Interface::shutdown() {
+    ImGui_ImplOpenGL3_DestroyFontsTexture();
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui::SFML::Shutdown();
+}
+
 float Interface::getSimulationSpeed() {
     return simulationSpeed;
 }

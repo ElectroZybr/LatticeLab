@@ -349,7 +349,7 @@ int main() {
             renderCounter.flush(LOG_INTERVAL);
         }
     }
-    ImGui::SFML::Shutdown();
+    Interface::shutdown();
 
     return 0;
 }
