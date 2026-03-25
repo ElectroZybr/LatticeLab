@@ -11,6 +11,15 @@
 
 ForceField::ForceField() : ljPairTable(buildLJPairTable()) {}
 
+void ForceField::updateBoxCache(const SimBox& box) {
+    wallMinX = 0.0f;
+    wallMinY = 0.0f;
+    wallMinZ = 0.0f;
+    wallMaxX = static_cast<float>(box.end.x - box.start.x - 1.0);
+    wallMaxY = static_cast<float>(box.end.y - box.start.y - 1.0);
+    wallMaxZ = static_cast<float>(box.end.z - box.start.z - 1.0);
+}
+
 ForceField::LJPairTable ForceField::buildLJPairTable() {
     LJPairTable table{};
     constexpr int typeCount = static_cast<int>(table.size());
@@ -38,7 +47,6 @@ ForceField::LJPairTable ForceField::buildLJPairTable() {
 }
 
 void ForceField::compute(AtomStorage& atoms, SimBox& box, float dt) const {
-    (void)dt;
     for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
         ComputeForces(atoms, atomIndex, box);
     }
@@ -80,16 +88,14 @@ void ForceField::compute(AtomStorage& atoms, SimBox& box, float dt) const {
     }
 }
 
-void ForceField::softWalls(const AtomStorage& atoms, std::size_t atomIndex, SimBox& box, float& forceX, float& forceY, float& forceZ) const {
-    const Vec3D max = box.end - box.start - Vec3D(1.0, 1.0, 1.0);
-
+void ForceField::softWalls(const AtomStorage& atoms, std::size_t atomIndex, float& forceX, float& forceY, float& forceZ) const {
     const float coordX = atoms.posX(atomIndex);
     const float coordY = atoms.posY(atomIndex);
     const float coordZ = atoms.posZ(atomIndex);
 
-    applyWall(coordX, forceX, 0.0f, static_cast<float>(max.x));
-    applyWall(coordY, forceY, 0.0f, static_cast<float>(max.y));
-    applyWall(coordZ, forceZ, 0.0f, static_cast<float>(max.z));
+    applyWall(coordX, forceX, wallMinX, wallMaxX);
+    applyWall(coordY, forceY, wallMinY, wallMaxY);
+    applyWall(coordZ, forceZ, wallMinZ, wallMaxZ);
 }
 
 void ForceField::applyWall(float coord, float& force, float min, float max) {
@@ -121,16 +127,16 @@ void ForceField::ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox
     float forceY = atoms.forceY(atomIndex);
     float forceZ = atoms.forceZ(atomIndex);
     float potenE = atoms.energy(atomIndex);
+    const LJPairRow& ljPairRow = ljPairTable[static_cast<std::size_t>(atoms.type(atomIndex))];
 
-    softWalls(atoms, atomIndex, box, forceX, forceY, forceZ);
+    softWalls(atoms, atomIndex, forceX, forceY, forceZ);
     applyGravityForce(forceX, forceY, forceZ);
 
     box.grid.forEachNeighborIndex(atoms.pos(atomIndex), [&](std::size_t neighbourIndex) {
         if (neighbourIndex >= atoms.size() || neighbourIndex <= atomIndex) {
             return;
         }
-
-        pairNonBondedInteraction(atoms, atomIndex, neighbourIndex, forceX, forceY, forceZ, posX, posY, posZ, potenE);
+        pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
     });
 
     atoms.forceX(atomIndex) = forceX;
@@ -139,8 +145,8 @@ void ForceField::ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox
     atoms.energy(atomIndex) = potenE;
 }
 
-void ForceField::pairNonBondedInteraction(AtomStorage& atoms, std::size_t aIndex, std::size_t bIndex,
-                                        float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const {
+void ForceField::pairNonBondedInteraction(AtomStorage& atoms, std::size_t bIndex, const LJPairRow& ljPairRow,
+                                          float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const {
     const float dx = atoms.posX(bIndex) - posX;
     const float dy = atoms.posY(bIndex) - posY;
     const float dz = atoms.posZ(bIndex) - posZ;
@@ -149,8 +155,7 @@ void ForceField::pairNonBondedInteraction(AtomStorage& atoms, std::size_t aIndex
         return;
     }
 
-    const LJParams params = ljPairTable[static_cast<std::size_t>(atoms.type(aIndex))]
-                                       [static_cast<std::size_t>(atoms.type(bIndex))];
+    const LJParams& params = ljPairRow[static_cast<std::size_t>(atoms.type(bIndex))];
 
     const float invD2 = 1.0f / d2;
     const float invD6 = invD2 * invD2 * invD2;
@@ -182,4 +187,3 @@ void ForceField::applyGravityForce(float& forceX, float& forceY, float& forceZ) 
     forceY += static_cast<float>(static_force.y);
     forceZ += static_cast<float>(static_force.z);
 }
-

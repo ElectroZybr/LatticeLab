@@ -14,6 +14,7 @@ float kineticEnergy(Atom::Type type, const Vec3D& speed) {
 Simulation::Simulation(SimBox& box)
     : sim_box(box), integrator() {
     atomStorage.reserve(250000);
+    forceField.updateBoxCache(sim_box); // обновление кэша для параметров стен
 }
 
 void Simulation::update(float dt) {
@@ -23,6 +24,7 @@ void Simulation::update(float dt) {
 
 void Simulation::setSizeBox(Vec3D newStart, Vec3D newEnd, int cellSize) {
     if (sim_box.setSizeBox(newStart, newEnd, cellSize)) {
+        forceField.updateBoxCache(sim_box);
         for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
             const Vec3D pos = atomStorage.pos(atomIndex);
             const int cellX = sim_box.grid.worldToCellX(pos.x);
