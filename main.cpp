@@ -197,7 +197,7 @@ int main() {
     // Интерфейс
     Interface::init(window, simulation, renderer);
     EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atoms);
-    Tools::init(&window, &gameView, &box.grid, &box, renderer,
+    Tools::init(&window, &gameView, &box.grid, &box, renderer, &simulation.atomStorage,
         [&](Vec3D coords, Vec3D speed, Atom::Type type, bool fixed) {
             return simulation.createAtom(coords, speed, type, fixed);
         }
