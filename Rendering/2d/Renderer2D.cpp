@@ -2,11 +2,15 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "Engine/Tools.h"
 
+namespace {
+constexpr sf::Color kSelectionContourColor(75, 75, 75); 
+}
+
 Renderer2D::Renderer2D(sf::RenderTarget& t, sf::View& gv)
     : RendererGL(t, gv)
 {
-    shaderProgram = linkProgram("Rendering/2d/shaders/atom.vert",
-                                "Rendering/2d/shaders/atom.frag");
+    shaderProgram = linkProgram("assets/shaders/2d/atom.vert",
+                                "assets/shaders/2d/atom.frag");
 
     camera.setZoom(10.f);
 }
@@ -43,7 +47,7 @@ void Renderer2D::setBoxContour(sf::Vector2i scrennStart, sf::Vector2i screenEnd)
     boxShape.setSize({width, height});
 
     boxShape.setFillColor(sf::Color::Transparent);
-    boxShape.setOutlineColor(sf::Color::Cyan);
+    boxShape.setOutlineColor(kSelectionContourColor);
     boxShape.setOutlineThickness(1.0f / camera.getZoom());
 }
 
@@ -52,11 +56,11 @@ void Renderer2D::setLassoContour(const std::vector<sf::Vector2i>& points) {
     lassoShape.clear();
 
     for (const auto& p : points) {
-        lassoShape.append(sf::Vertex(Tools::screenToWorld(p), sf::Color::Cyan));
+        lassoShape.append(sf::Vertex(Tools::screenToWorld(p), kSelectionContourColor));
     }
 
     if (!points.empty()) {
-        lassoShape.append(sf::Vertex(Tools::screenToWorld(points[0]), sf::Color::Cyan));
+        lassoShape.append(sf::Vertex(Tools::screenToWorld(points[0]), kSelectionContourColor));
     }
 }
 

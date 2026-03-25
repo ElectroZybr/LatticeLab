@@ -128,8 +128,8 @@ void RendererGL::initBoxGL() {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glBindVertexArray(0);
 
-    boxShader = linkProgram("Rendering/3d/shaders/box.vert",
-                            "Rendering/3d/shaders/box.frag");
+    boxShader = linkProgram("assets/shaders/3d/box.vert",
+                            "assets/shaders/3d/box.frag");
 }
 
 void RendererGL::initBondGL() {
@@ -160,9 +160,9 @@ void RendererGL::initBondGL() {
 
     glBindVertexArray(0);
 
-    bondShader = linkProgram("Rendering/3d/shaders/bond.vert",
-                             "Rendering/3d/shaders/bond.frag",
-                             "Rendering/3d/shaders/bond.geom");
+    bondShader = linkProgram("assets/shaders/3d/bond.vert",
+                             "assets/shaders/3d/bond.frag",
+                             "assets/shaders/3d/bond.geom");
 }
 
 void RendererGL::initGridGL() {
@@ -203,8 +203,8 @@ void RendererGL::initGridGL() {
 
     glBindVertexArray(0);
 
-    gridShader = linkProgram("Rendering/3d/shaders/grid.vert",
-                             "Rendering/3d/shaders/grid.frag");
+    gridShader = linkProgram("assets/shaders/3d/grid.vert",
+                             "assets/shaders/3d/grid.frag");
 }
 
 // --------------------------------------------------------------- shaders ---
@@ -287,9 +287,16 @@ void RendererGL::drawShot(const std::vector<Atom>& atoms,
 
     float maxSpeedSqr = 1.f;
     if (speedGradient) {
-        for (const Atom& atom : atoms)
-            maxSpeedSqr = std::max(maxSpeedSqr, static_cast<float>(atom.speed.sqrAbs()));
-        if (maxSpeedSqr < 1e-6f) maxSpeedSqr = 1.f;
+        if (speedGradientMax > 0.0f) {
+            maxSpeedSqr = speedGradientMax * speedGradientMax;
+        } else {
+            for (const Atom& atom : atoms) {
+                maxSpeedSqr = std::max(maxSpeedSqr, static_cast<float>(atom.speed.sqrAbs()));
+            }
+        }
+        if (maxSpeedSqr < 1e-6f) {
+            maxSpeedSqr = 1.f;
+        }
     }
 
     for (const Atom& atom : atoms) {

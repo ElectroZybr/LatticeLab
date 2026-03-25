@@ -38,7 +38,7 @@ public:
 
     static void onLeftPressed(sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
     static void onLeftReleased(std::vector<Atom>& atoms);
-    static void onFrame(std::vector<Atom>& atoms);
+    static void onFrame(std::vector<Atom>& atoms, float deltaTime);
 
     static Mode currentMode();
     static bool isSelectionMode(Mode mode);

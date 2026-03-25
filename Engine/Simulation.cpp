@@ -9,7 +9,7 @@ Simulation::Simulation(SimBox& box)
     :  sim_box(box), integrator()
 {
     // резервируем место под создание атомов
-    atoms.reserve(50000);
+    atoms.reserve(250000);
 }
 
 void Simulation::update(float dt) {
