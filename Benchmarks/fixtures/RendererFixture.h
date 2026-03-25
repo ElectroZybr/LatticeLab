@@ -2,14 +2,15 @@
 
 #include <benchmark/benchmark.h>
 #include <memory>
-#include <vector>
 #include <cmath>
+
+#include <SFML/Graphics.hpp>
 
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/SimBox.h"
-#include "Rendering/2d/Renderer2D.h"
 
+template <typename TRenderer>
 class RendererFixture : public benchmark::Fixture {
 public:
     void SetUp(benchmark::State& state) override {
@@ -20,7 +21,7 @@ public:
         }
 
         view_ = renderTexture_->getView();;
-        renderer_ = std::make_unique<Renderer2D>(*renderTexture_, view_);
+        renderer_ = std::make_unique<TRenderer>(*renderTexture_, view_);
 
         atomStorage_ = makeGridAtoms(static_cast<int>(state.range(0)));
         renderer_->setAtomStorage(&atomStorage_);
@@ -38,7 +39,7 @@ protected:
     }
 
     std::unique_ptr<sf::RenderTexture> renderTexture_;
-    std::unique_ptr<Renderer2D> renderer_;
+    std::unique_ptr<TRenderer> renderer_;
     sf::View view_;
     AtomStorage atomStorage_;
     SimBox box_{ Vec3f(0, 0, 0), Vec3f(300, 300, 300) };

@@ -450,7 +450,7 @@ void RendererGL::drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset)
     for (int z = 0; z < grid.sizeZ; ++z) {
         for (int y = 0; y < grid.sizeY; ++y) {
             for (int x = 0; x < grid.sizeX; ++x) {
-                auto cell = grid.at(x, y, z);
+                auto cell = grid.atIndex(x, y, z);
                 if (!cell || cell->empty()) continue;
                 gridData.push_back({
                     glm::vec3(x * grid.cellSize,
