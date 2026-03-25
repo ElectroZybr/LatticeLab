@@ -291,10 +291,7 @@ void RendererGL::drawShot(const AtomStorage& atoms,
             maxSpeedSqr = speedGradientMax * speedGradientMax;
         } else {
             for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
-                if (!atomStorage) {
-                    continue;
-                }
-                maxSpeedSqr = std::max(maxSpeedSqr, static_cast<float>(atomStorage->vel(atomIndex).sqrAbs()));
+                maxSpeedSqr = std::max(maxSpeedSqr, static_cast<float>(atoms.vel(atomIndex).sqrAbs()));
             }
         }
         if (maxSpeedSqr < 1e-6f) {

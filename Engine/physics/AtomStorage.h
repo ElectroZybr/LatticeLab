@@ -29,8 +29,8 @@ private:
     float* pfz_ = nullptr;
     float* pe_ = nullptr;
 
-    std::vector<Atom::Type> atomType_;
-    std::vector<int> valence_;
+    std::vector<AtomData::Type> atomType_;
+    std::vector<std::uint8_t> valence_;
     std::vector<std::uint8_t> selected_;
     std::vector<std::uint8_t> isFixed_;
 
@@ -117,7 +117,7 @@ public:
         isFixed_.reserve(count);
     }
 
-    void addAtom(const Vec3f& coords, const Vec3f& speed, Atom::Type type, bool fixed = false) {
+    void addAtom(const Vec3f& coords, const Vec3f& speed, AtomData::Type type, bool fixed = false) {
         ensureCapacity(count_ + 1);
 
         x_[count_] = static_cast<float>(coords.x);
@@ -138,7 +138,7 @@ public:
         pe_[count_]  = 0.0f;
 
         atomType_.push_back(type);
-        valence_.push_back(Atom::getProps(type).maxValence);
+        valence_.push_back(AtomData::getProps(type).maxValence);
         selected_.push_back(0);
         isFixed_.push_back(fixed ? 1 : 0);
 
@@ -218,14 +218,14 @@ public:
     const float& prevForceY(std::size_t i) const { return pfy_[i]; }
     const float& prevForceZ(std::size_t i) const { return pfz_[i]; }
 
-    Atom::Type& type(std::size_t i) { return atomType_[i]; }
-    const Atom::Type& type(std::size_t i) const { return atomType_[i]; }
+    AtomData::Type& type(std::size_t i) { return atomType_[i]; }
+    const AtomData::Type& type(std::size_t i) const { return atomType_[i]; }
 
     float& energy(std::size_t i) { return pe_[i]; }
     const float& energy(std::size_t i) const { return pe_[i]; }
 
-    int& valenceCount(std::size_t i) { return valence_[i]; }
-    const int& valenceCount(std::size_t i) const { return valence_[i]; }
+    std::uint8_t& valenceCount(std::size_t i) { return valence_[i]; }
+    const std::uint8_t& valenceCount(std::size_t i) const { return valence_[i]; }
 
     bool isSelected(std::size_t i) const { return selected_[i] != 0; }
     void setSelected(std::size_t i, bool value) { selected_[i] = value ? 1 : 0; }

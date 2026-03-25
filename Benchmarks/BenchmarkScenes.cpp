@@ -43,7 +43,7 @@ namespace Benchmarks {
                     benchmarkCase.boxStart.x + 3.0 + x * spacing,
                     benchmarkCase.boxStart.y + 3.0 + y * spacing,
                     1.0);
-                simulation.createAtom(pos, Vec3f::Random() * 0.5, Atom::Type::H);
+                simulation.createAtom(pos, Vec3f::Random() * 0.5, AtomData::Type::H);
                 ++created;
             }
         }
@@ -61,7 +61,7 @@ namespace Benchmarks {
                         benchmarkCase.boxStart.x + 3.0 + x * spacing,
                         benchmarkCase.boxStart.y + 3.0 + y * spacing,
                         benchmarkCase.boxStart.z + 3.0 + z * spacing);
-                    simulation.createAtom(pos, Vec3f::Random() * 0.5, Atom::Type::H);
+                    simulation.createAtom(pos, Vec3f::Random() * 0.5, AtomData::Type::H);
                     ++created;
                 }
             }
@@ -69,6 +69,6 @@ namespace Benchmarks {
     }
 
     void BenchmarkScenes::buildRandomGas2D(Simulation& simulation, const BenchmarkCase& benchmarkCase) {
-        simulation.createRandomAtoms(Atom::Type::H, benchmarkCase.atomCount);
+        simulation.createRandomAtoms(AtomData::Type::H, benchmarkCase.atomCount);
     }
 }

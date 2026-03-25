@@ -1,6 +1,8 @@
 #include <fstream>
 #include <cmath>
 #include <iostream>
+#include <sstream>
+#include <vector>
 
 #include "Simulation.h"
 #include "physics/Bond.h"
@@ -227,7 +229,6 @@ void Simulation::load(std::string_view path) {
     struct LoadedAtomData {
         Vec3f coords, speed;
         int type;
-        float a0, eps;
         bool fixed;
     };
     std::vector<LoadedAtomData> buffer;
@@ -245,10 +246,23 @@ void Simulation::load(std::string_view path) {
             file >> sim_step;
         }
         else if (tag == "atom") {
-            LoadedAtomData d;
-            file >> d.coords.x >> d.coords.y >> d.coords.z
-                 >> d.speed.x  >> d.speed.y  >> d.speed.z
-                 >> d.type >> d.a0 >> d.eps >> d.fixed;
+            LoadedAtomData d{Vec3f(0.f, 0.f, 0.f), Vec3f(0.f, 0.f, 0.f), 0, false};
+            std::string atomLine;
+            std::getline(file, atomLine);
+            std::istringstream atomStream(atomLine);
+
+            if (!(atomStream >> d.coords.x >> d.coords.y >> d.coords.z
+                             >> d.speed.x  >> d.speed.y  >> d.speed.z
+                             >> d.type)) {
+                continue;
+            }
+
+            std::vector<double> tail;
+            double value = 0.0;
+            while (atomStream >> value) {
+                tail.push_back(value);
+            }
+            d.fixed = !tail.empty() && (tail.back() != 0.0);
             buffer.emplace_back(d);
         }
     }

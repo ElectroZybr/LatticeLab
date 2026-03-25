@@ -224,8 +224,9 @@ void Tools::onLeftReleased() {
             lassoPoints.emplace_back(mousePos);
         }
 
-        int count = 0;
+        int count = Interface::countSelectedAtom;
         if (lassoPoints.size() >= 3) {
+            count = 0;
             for (std::size_t atomIndex : selected_atom_batch) {
                 if (atomIndex < atomStorage->size()) {
                     atomStorage->setSelected(atomIndex, false);
@@ -235,8 +236,7 @@ void Tools::onLeftReleased() {
 
             for (std::size_t atomIndex = 0; atomIndex < atomStorage->size(); ++atomIndex) {
                 const Vec3f pos = atomStorage->pos(atomIndex);
-                const float radius = AtomData::getProps(atomStorage->type(atomIndex)).radius;
-                const Vec2f center(pos.x + radius, pos.y + radius);
+                const Vec2f center(pos.x, pos.y);
                 const sf::Vector2i centerScreen = boxToScreen(center);
                 const bool selected = isPointInsidePolygon(centerScreen, lassoPoints);
                 atomStorage->setSelected(atomIndex, selected);
@@ -292,10 +292,12 @@ void Tools::onFrame(float deltaTime) {
     }
 
     if (atomMoveFlag && selectedMoveAtomIndex != InvalidIndex && selectedMoveAtomIndex < atomStorage->size()) {
+        (void)deltaTime;
         const Vec2f world = screenToBox(mousePos);
         const Vec3f selectedPos = atomStorage->pos(selectedMoveAtomIndex);
         const Vec2f delta = Vec2f(selectedPos.x, selectedPos.y) - world;
-        const Vec3f force = delta * 50.f * deltaTime;
+        constexpr float dragStiffness = 0.1f;
+        const Vec3f force = delta * dragStiffness;
 
         if (!selected_atom_batch.empty()) {
             for (std::size_t atomIndex : selected_atom_batch) {
@@ -403,7 +405,7 @@ std::size_t Tools::pickAtom(sf::Vector2i mousePos) {
                     }
                     const Vec3f pos = atomStorage->pos(atomIndex);
                     const float radius = std::max(0.5f, AtomData::getProps(atomStorage->type(atomIndex)).radius);
-                    const Vec2f center(pos.x + radius, pos.y + radius);
+                    const Vec2f center(pos.x, pos.y);
                     const Vec2f delta = center - local;
                     const double distSqr = delta.sqrAbs();
                     if (distSqr <= radius * radius && distSqr < bestDistSqr) {
@@ -439,7 +441,7 @@ std::size_t Tools::pickSelectedAtomWithPadding(sf::Vector2i mousePos, float zoom
         }
         const Vec3f pos = atomStorage->pos(atomIndex);
         const float radius = AtomData::getProps(atomStorage->type(atomIndex)).radius;
-        const Vec2f center(pos.x + radius, pos.y + radius);
+        const Vec2f center(pos.x, pos.y);
         const Vec2f delta = center - local;
         const double distSqr = delta.sqrAbs();
         const float pickRadius = std::max(0.5f, radius) + extraWorld;
@@ -490,51 +492,44 @@ bool Tools::tryRemoveAtom(sf::Vector2i mousePos) {
 
     bool removed = false;
     const bool removeSelection = atomStorage->isSelected(target) && !selected_atom_batch.empty();
+    const auto removeByIndex = [&](std::size_t index) -> bool {
+        if (index >= atomStorage->size()) {
+            return false;
+        }
+
+        const std::size_t oldSize = atomStorage->size();
+        const std::size_t movedFrom = oldSize - 1;
+        if (!atomRemover(index)) {
+            return false;
+        }
+
+        selected_atom_batch.erase(index);
+        if (selectedMoveAtomIndex == index) {
+            selectedMoveAtomIndex = InvalidIndex;
+        }
+
+        if (index < movedFrom) {
+            if (selected_atom_batch.erase(movedFrom) > 0) {
+                selected_atom_batch.insert(index);
+            }
+            if (selectedMoveAtomIndex == movedFrom) {
+                selectedMoveAtomIndex = index;
+            }
+        }
+
+        return true;
+    };
 
     if (removeSelection) {
         std::vector<std::size_t> toRemove(selected_atom_batch.begin(), selected_atom_batch.end());
         std::sort(toRemove.begin(), toRemove.end(), std::greater<std::size_t>());
         for (std::size_t index : toRemove) {
-            if (index >= atomStorage->size()) {
-                continue;
-            }
-            if (!atomRemover(index)) {
-                continue;
-            }
-            removed = true;
-            selected_atom_batch.erase(index);
-            if (selectedMoveAtomIndex == index) {
-                selectedMoveAtomIndex = InvalidIndex;
-            }
-            const std::size_t movedFrom = atomStorage->size();
-            if (index < movedFrom) {
-                if (selected_atom_batch.erase(movedFrom) > 0) {
-                    selected_atom_batch.insert(index);
-                }
-                if (selectedMoveAtomIndex == movedFrom) {
-                    selectedMoveAtomIndex = index;
-                }
+            if (removeByIndex(index)) {
+                removed = true;
             }
         }
     } else {
-        const std::size_t oldSize = atomStorage->size();
-        if (!atomRemover(target)) {
-            return false;
-        }
-        removed = true;
-        selected_atom_batch.erase(target);
-        if (selectedMoveAtomIndex == target) {
-            selectedMoveAtomIndex = InvalidIndex;
-        }
-        const std::size_t movedFrom = oldSize - 1;
-        if (target < movedFrom) {
-            if (selected_atom_batch.erase(movedFrom) > 0) {
-                selected_atom_batch.insert(target);
-            }
-            if (selectedMoveAtomIndex == movedFrom) {
-                selectedMoveAtomIndex = target;
-            }
-        }
+        removed = removeByIndex(target);
     }
 
     Interface::countSelectedAtom = static_cast<int>(selected_atom_batch.size());

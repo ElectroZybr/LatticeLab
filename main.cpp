@@ -187,7 +187,7 @@ int main() {
     SimBox box(Vec3f(-25, -25, 0), Vec3f(25, 25, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    Scenes::crystal(simulation, 25, AtomData::Type::Z, false);
+    Scenes::crystal(simulation, 15, AtomData::Type::Z, false);
 
     // Рендер
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
@@ -285,7 +285,10 @@ int main() {
             if (auto result = Interface::fileDialog.popResult()) {
                 switch (result->command) {
                     case FileDialogCommand::Save: simulation.save(result->path); break;
-                    case FileDialogCommand::Load: simulation.load(result->path); break;
+                    case FileDialogCommand::Load:
+                        simulation.load(result->path);
+                        Tools::resetInteractionState();
+                        break;
                 }
             }
 
