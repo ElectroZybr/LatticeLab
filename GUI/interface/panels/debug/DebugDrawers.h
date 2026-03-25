@@ -18,7 +18,7 @@ namespace DebugDrawers {
         const float val = toFloat(a);
         ImGui::TextDisabled("%s", label.data());
         ImGui::SameLine();
-        ImGui::Text("%s", std::format("{:f}", val).data());
+        ImGui::Text("%s", std::format("{:.2f}", val).data());
     }
 
     inline void Int(std::string_view label, const std::any& a) {
@@ -36,7 +36,7 @@ namespace DebugDrawers {
         ImGui::TextDisabled("%s", label.data());
         ImGui::SameLine();
         if (a.type() == typeid(std::string))
-            ImGui::Text("%s", std::any_cast<const std::string&>(a).c_str());
+            ImGui::Text("%s", std::any_cast<const std::string&>(a).data());
         else if (a.type() == typeid(std::string_view))
             ImGui::Text("%s", std::any_cast<std::string_view>(a).data());
     }
@@ -45,13 +45,13 @@ namespace DebugDrawers {
         const auto& v = std::any_cast<const ::Vec2D&>(a);
         ImGui::TextDisabled("%s", label.data());
         ImGui::SameLine();
-        ImGui::Text("%.4f  %.4f", v.x, v.y);
+        ImGui::Text("%s", std::format("{:^+8.2f} {:^+8.2f}", v.x, v.y).data());
     }
 
     inline void Vec3D(std::string_view label, const std::any& a) {
         const auto& v = std::any_cast<const ::Vec3D&>(a);
         ImGui::TextDisabled("%s", label.data());
         ImGui::SameLine();
-        ImGui::Text("%.4f  %.4f  %.4f", v.x, v.y, v.z);
+        ImGui::Text("%s", std::format("{:^+8.2f} {:^+8.2f} {:^+8.2f}", v.x, v.y, v.z).data());
     }
 }
