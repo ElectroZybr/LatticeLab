@@ -31,9 +31,11 @@ void DebugPanel::draw(float uiScale, sf::Vector2u windowSize) {
 
     if (ImGui::BeginTabBar("##DebugTabs")) {
         for (auto& view : views) {
-            if (ImGui::BeginTabItem(view.getTitle())) {
-                view.draw(uiScale);
-                ImGui::EndTabItem();
+            if (view.visible) {
+                if (ImGui::BeginTabItem(view.getTitle())) {
+                    view.draw(uiScale);
+                    ImGui::EndTabItem();
+                }
             }
         }
         ImGui::EndTabBar();

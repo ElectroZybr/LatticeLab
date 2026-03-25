@@ -7,8 +7,8 @@ Renderer3D::Renderer3D(sf::RenderTarget& t, sf::View& gv)
     camera.setOrbitMode(true);
     camera.setZoom(4.f);
 
-    shaderProgram = linkProgram("Rendering/3d/shaders/atom.vert",
-                                "Rendering/3d/shaders/atom.frag");
+    shaderProgram = linkProgram("assets/shaders/3d/atom.vert",
+                                "assets/shaders/3d/atom.frag");
 }
 
 void Renderer3D::updateMatrices() {

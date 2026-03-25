@@ -24,6 +24,7 @@ public:
     bool drawBonds          = false;
     bool speedGradient      = false;
     bool speedGradientTurbo = false;
+    float speedGradientMax  = 5.0f; // 0.0f = auto
     float drawBondsZoom     = 25.f;
     float alpha             = 0.05f;
 

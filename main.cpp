@@ -1,13 +1,11 @@
 ﻿#include <cmath>
-#include <exception>
-#include <iostream>
 #include <string_view>
+#include <iostream>
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window/WindowHandle.hpp>
 
 #include "imgui-SFML.h"
-#include "imgui_impl_opengl3.h"
 
 #include "GUI/io/manager/EventManager.h"
 #include "GUI/io/keyboard/Keyboard.h"
@@ -16,6 +14,7 @@
 
 #include "GUI/interface/interface.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
+#include "GUI/interface/panels/debug/DebugDrawers.h"
 #include "Engine/utils/Timer.h"
 
 #include "Rendering/2d/Renderer2D.h"
@@ -29,240 +28,6 @@ constexpr int FPS = 60;
 constexpr int LPS = 20;
 constexpr double Dt = 0.01;
 
-/* тестовые сцены, можно запускать в main и экспериментировать*/
-void crystal(Simulation& simulation, int n, Atom::Type type, bool is3d, double padding = 3, double margin = 15);
-void diffusionTest(Simulation& simulation);
-
-struct PerSecondCounter {
-    Timer timer;
-    double time_ms_accum = 0.0;
-    int steps_per_second = 0;
-    float rate = 0.0f;
-
-    void tick(double elapsed_ms) {
-        time_ms_accum += elapsed_ms;
-        steps_per_second++;
-    }
-
-    double avgMs() const {
-        return steps_per_second > 0 ? time_ms_accum / steps_per_second : 0.0;
-    }
-
-    void reset() {
-        time_ms_accum = 0.0;
-        rate = steps_per_second * LPS;
-        steps_per_second = 0;
-    }
-};
-
-std::string_view schemeName(Integrator::Scheme s);
-
-int main() {
-    try {
-        sf::ContextSettings settings;
-        settings.depthBits = 24;
-#ifdef __APPLE__
-        settings.majorVersion = 4;
-        settings.minorVersion = 1;
-        settings.attributeFlags = sf::ContextSettings::Attribute::Core;
-#endif
-
-        sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator", sf::State::Fullscreen, settings);
-        sf::Image icon;
-        if (icon.loadFromFile("icon.png")) { window.setIcon(icon.getSize(), icon.getPixelsPtr()); }
-#ifdef __APPLE__
-        const sf::ContextSettings actualSettings = window.getSettings();
-        const bool hasModernContext = actualSettings.majorVersion > 4
-            || (actualSettings.majorVersion == 4 && actualSettings.minorVersion >= 1)
-            || (actualSettings.majorVersion == 3 && actualSettings.minorVersion >= 2);
-        const bool isCoreContext = (actualSettings.attributeFlags & sf::ContextSettings::Attribute::Core) != 0;
-        if (!hasModernContext || !isCoreContext) {
-            throw std::runtime_error(
-                "Failed to create a modern OpenGL core context on macOS. "
-                "Actual context: " + std::to_string(actualSettings.majorVersion) + "." +
-                std::to_string(actualSettings.minorVersion));
-        }
-#endif
-
-        SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
-        Simulation simulation(box);
-        simulation.setIntegrator(Integrator::Scheme::Verlet);
-        crystal(simulation, 20, Atom::Type::Z, false);
-
-        sf::View& gameView = const_cast<sf::View&>(window.getView());
-        std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
-        renderer->drawBonds = true;
-        renderer->speedGradient = true;
-
-        Interface::init(window, simulation, renderer);
-        EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atoms);
-        Tools::init(&window, &gameView, &box.grid, &box, renderer,
-            [&](Vec3D coords, Vec3D speed, Atom::Type type, bool fixed) {
-                return simulation.createAtom(coords, speed, type, fixed);
-            }
-        );
-
-        Interface::pause = true;
-
-        DebugView* debugSim = Interface::debugPanel.addView(DebugView("Симуляция", 
-        {
-            DebugValue ("Память (МБ)"),
-            DebugValue ("Рендер (мс)"),
-            DebugValue ("Физика (мс)"),
-            DebugValue ("Тип интегратора"),
-            DebugValue ("Шаги симуляции"),
-            DebugValue ("Шагов/с"),
-            DebugValue ("Количество атомов"),
-            DebugSeries("Полная энергия"),
-        }));
-
-        DebugView* debugAtom = Interface::debugPanel.addView(DebugView("Атом",
-        {
-            DebugValue ("В разработке"),
-        }));
-
-        debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
-        debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
-
-        sf::Clock clock;
-        double shotTmr = 0.0;
-        double simTmr = 0.0;
-        double logTmr = 0.0;
-
-        PerSecondCounter physicsCounter;
-        PerSecondCounter renderCounter;
-
-        while (window.isOpen()) {
-            float deltaTime = clock.restart().asSeconds();
-
-            simTmr += deltaTime;
-            if (simTmr >= Dt/Interface::getSimulationSpeed()) { 
-                if (!Interface::getPause()) {
-                    physicsCounter.timer.start();
-                    simulation.update(Dt);
-                    physicsCounter.timer.stop();
-                    physicsCounter.tick(physicsCounter.timer.elapsedMilliseconds());
-                }
-                simTmr = 0;
-            }
-
-            shotTmr += deltaTime;
-            EventManager::poll();
-            if (shotTmr >= 1./FPS) {
-                EventManager::frame(shotTmr);
-
-                Interface::Update();
-
-                if (auto result = Keyboard::popResult()) {
-                    switch (result.value()) {
-                        case KeyboardCommand::StepPhysics:
-                        {
-                            physicsCounter.timer.start();
-                            simulation.update(Dt);
-                            physicsCounter.timer.stop();
-                            physicsCounter.tick(physicsCounter.timer.elapsedMilliseconds());
-                            break;
-                        }
-                    }
-                }
-
-                if (auto result = Interface::fileDialog.popResult()) {
-                    switch (result->command) {
-                        case FileDialogCommand::Save: simulation.save(result->path); break;
-                        case FileDialogCommand::Load: simulation.load(result->path); break;
-                    }
-                }
-
-                if (auto result = Interface::toolsPanel.popResult()) {
-                    auto newRenderer = [&]() -> std::unique_ptr<IRenderer> {
-                        switch (result.value()) {
-                            case ToolsCommand::ToggleRenderer2D:
-                                return std::make_unique<Renderer2D>(window, gameView);
-                            case ToolsCommand::ToggleRenderer3D:
-                                return std::make_unique<Renderer3D>(window, gameView);
-                        }
-                    }();
-
-                    newRenderer->drawGrid = renderer->drawGrid;
-                    newRenderer->drawBonds = renderer->drawBonds;
-                    newRenderer->speedGradient = renderer->speedGradient;
-                    newRenderer->speedGradientTurbo = renderer->speedGradientTurbo;
-
-                    renderer = std::move(newRenderer);
-                }
-                renderer->camera.update(window);
-                renderCounter.timer.start();
-                renderer->drawShot(simulation.atoms, simulation.sim_box);
-                ImGui::Render();
-                ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-                renderCounter.timer.stop();
-                renderCounter.tick(renderCounter.timer.elapsedMilliseconds());
-                shotTmr = 0;
-                window.display();
-
-                debugSim->add_data("Полная энергия", simulation.fullAverageEnergy());
-            }
-
-            logTmr += deltaTime;
-            if (logTmr >= 1. / LPS) {
-                debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
-                debugSim->add_data("Рендер (мс)", static_cast<float>(renderCounter.avgMs()));
-                debugSim->add_data("Физика (мс)", static_cast<float>(physicsCounter.avgMs()));
-                debugSim->add_data("Количество атомов", static_cast<float>(simulation.atoms.size()));
-                debugSim->add_data("Шаги симуляции", simulation.getSimStep());
-                debugSim->add_data("Шагов/с", physicsCounter.rate);
-                debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
-
-                physicsCounter.reset();
-                renderCounter.reset();
-                logTmr = 0;
-            }
-        }
-        ImGui_ImplOpenGL3_Shutdown();
-        ImGui::SFML::Shutdown();
-
-        return 0;
-    } catch (const std::exception& ex) {
-        std::cerr << "Fatal error: " << ex.what() << std::endl;
-        return EXIT_FAILURE;
-    }
-}
-
-void crystal(Simulation& simulation, int n, Atom::Type type, bool is3d, double padding, double margin) {
-    const int sib_box_size = n * padding + padding + 2.0*margin;
-    const double half = sib_box_size / 2.0;
-
-    simulation.setSizeBox(
-        Vec3D(-half, -half, is3d ? -half : simulation.sim_box.start.z),
-        Vec3D( half,  half, is3d ?  half : simulation.sim_box.end.z)
-    );
-
-    const int zMax = is3d ? n : 1;
-    const Vec3D vecMargin(margin, margin, is3d? margin : 0);
-    for (int x = 1; x <= n; x++)
-        for (int y = 1; y <= n; y++)
-            for (int z = 1; z <= zMax; z++)
-                simulation.createAtom( Vec3D(x, y, z) * padding + vecMargin, Vec3D::Random() * 0.5, type);
-}
-
-void diffusionTest(Simulation& simulation) {
-    simulation.setSizeBox(
-        Vec3D(-25, -25, simulation.sim_box.start.z),
-        Vec3D(25, 25, simulation.sim_box.end.z),
-        5
-    );
-    for (int i = 0; i < 15; i++) {
-        for (int j = 0; j < 8; j++) {
-            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), Vec3D::Random() * 0.5, Atom::Type::H);
-        }
-    }
-    for (int i = 0; i < 15; i++) {
-        for (int j = 8; j < 15; j++) {
-            simulation.createAtom(Vec3D(4+i*3, 4+j*3, 1), Vec3D::Random() * 0.5, Atom::Type::O);
-        }
-    }
-}
-
 std::string_view schemeName(Integrator::Scheme s) {
     switch (s) {
         case Integrator::Scheme::Verlet:   return "Velocity Verlet";
@@ -271,4 +36,299 @@ std::string_view schemeName(Integrator::Scheme s) {
         case Integrator::Scheme::Langevin: return "Langevin";
     }
     return "Unknown";
+}
+
+namespace Scenes {
+    void crystal(Simulation& sim, int n, Atom::Type type, bool is3d,
+                 double padding = 3.0, double margin = 15.0)
+    {
+        const double side = n * padding + padding + 2.0 * margin;
+        const double half = side / 2.0;
+ 
+        sim.setSizeBox(
+            Vec3D(-half, -half, is3d ? -half : sim.sim_box.start.z),
+            Vec3D( half,  half, is3d ?  half : sim.sim_box.end.z)
+        );
+ 
+        const Vec3D vecMargin(margin, margin, is3d ? margin : 0.0);
+        const int   zMax = is3d ? n : 1;
+ 
+        for (int x = 1; x <= n; ++x)
+            for (int y = 1; y <= n; ++y)
+                for (int z = 1; z <= zMax; ++z)
+                    sim.createAtom(Vec3D(x, y, z) * padding + vecMargin,
+                                   Vec3D::Random() * 0.5, type);
+    }
+ 
+    void diffusionTest(Simulation& sim)
+    {
+        sim.setSizeBox(
+            Vec3D(-25, -25, sim.sim_box.start.z),
+            Vec3D( 25,  25, sim.sim_box.end.z),
+            5
+        );
+ 
+        for (int i = 0; i < 15; ++i) {
+            for (int j = 0;  j < 8;  ++j)
+                sim.createAtom(Vec3D(4 + i*3, 4 + j*3, 1), Vec3D::Random() * 0.5, Atom::Type::H);
+            for (int j = 8;  j < 15; ++j)
+                sim.createAtom(Vec3D(4 + i*3, 4 + j*3, 1), Vec3D::Random() * 0.5, Atom::Type::O);
+        }
+    }
+}
+
+static sf::RenderWindow createWindow() {
+    sf::ContextSettings settings;
+    settings.depthBits = 24;
+#ifdef __APPLE__
+    settings.majorVersion = 4;
+    settings.minorVersion = 1;
+    settings.attributeFlags = sf::ContextSettings::Attribute::Core;
+#endif
+ 
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator",
+                            sf::State::Fullscreen, settings);
+#ifdef __APPLE__
+    const sf::ContextSettings actualSettings = window.getSettings();
+    const bool hasModernContext = actualSettings.majorVersion > 4
+        || (actualSettings.majorVersion == 4 && actualSettings.minorVersion >= 1)
+        || (actualSettings.majorVersion == 3 && actualSettings.minorVersion >= 2);
+    const bool isCoreContext = (actualSettings.attributeFlags & sf::ContextSettings::Attribute::Core) != 0;
+    if (!hasModernContext || !isCoreContext) {
+        std::cerr << "Failed to create modern OpenGL core context on macOS. Actual context: "
+                  << actualSettings.majorVersion << "." << actualSettings.minorVersion << std::endl;
+        window.close();
+        return window;
+    }
+#endif
+ 
+    sf::Image icon;
+    if (icon.loadFromFile("assets/icon.png"))
+        window.setIcon(icon.getSize(), icon.getPixelsPtr());
+ 
+    return window;
+}
+
+static DebugView* buildDebugSimView(DebugPanel& panel) {
+    return panel.addView(DebugView("Симуляция", {
+        DebugValue ("Память (МБ)", DebugDrawers::Float, 2),
+        DebugValue ("Рендер (мс)", DebugDrawers::Float, 4),
+        DebugValue ("Физика (мс)", DebugDrawers::Float, 4),
+        DebugValue ("Тип интегратора", DebugDrawers::String),
+        DebugValue ("Шаги симуляции", DebugDrawers::Int),
+        DebugValue ("Шагов/с", DebugDrawers::Float, 2),
+        DebugValue ("Количество атомов", DebugDrawers::Int),
+        DebugSeries("Полная энергия", 3),
+    }));
+}
+
+static DebugView* buildDebugAtomSingle(DebugPanel& panel) {
+    return panel.addView(DebugView("Атом", {
+        DebugValue("Позиция", DebugDrawers::Vec3D, 3),
+        DebugValue("Скорость", DebugDrawers::Vec3D, 3),
+        DebugValue("Силы", DebugDrawers::Vec3D, 3),
+        DebugValue("Пред. силы", DebugDrawers::Vec3D, 3),
+        DebugValue("Потенциальная энергия", DebugDrawers::Float, 4),
+        DebugValue("Масса", DebugDrawers::Float, 3),
+        DebugValue("Радиус", DebugDrawers::Float, 3),
+        DebugValue("Тип", DebugDrawers::Int),
+    }));
+}
+
+static DebugView* buildDebugAtomBatch(DebugPanel& panel) {
+    return panel.addView(DebugView("Атомы", {
+        DebugValue("Выбрано атомов", DebugDrawers::Int),
+    }));
+}
+
+struct RateCounter {
+    Timer  timer;
+    double accumulated_ms  = 0.0;
+    int    steps_this_tick  = 0;
+    float  steps_per_second = 0.0f;
+    bool   has_rate_sample = false;
+ 
+    void startStep()  { timer.start(); }
+ 
+    void finishStep() {
+        timer.stop();
+        accumulated_ms += timer.elapsedMilliseconds();
+        ++steps_this_tick;
+    }
+ 
+    float avgMs() const {
+        return steps_this_tick > 0
+            ? static_cast<float>(accumulated_ms / steps_this_tick)
+            : 0.0f;
+    }
+ 
+    void flush(double elapsed_seconds) {
+        if (elapsed_seconds > 0.0) {
+            const float instant_rate = static_cast<float>(steps_this_tick / elapsed_seconds);
+            const float alpha = static_cast<float>(1.0 - std::exp(-elapsed_seconds / 0.5));
+            if (!has_rate_sample) {
+                steps_per_second = instant_rate;
+                has_rate_sample = true;
+            } else {
+                steps_per_second += alpha * (instant_rate - steps_per_second);
+            }
+        }
+        accumulated_ms   = 0.0;
+        steps_this_tick  = 0;
+    }
+};
+
+int main() {
+    sf::RenderWindow window = createWindow();
+    if (!window.isOpen()) return EXIT_FAILURE;
+    sf::View& gameView = const_cast<sf::View&>(window.getView());
+
+    // Симуляция
+    SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
+    Simulation simulation(box);
+    simulation.setIntegrator(Integrator::Scheme::Verlet);
+    Scenes::crystal(simulation, 250, Atom::Type::Z, false);
+
+    // Рендер
+    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
+    renderer->drawBonds = true;
+    renderer->speedGradient = true;
+
+    // Интерфейс
+    Interface::init(window, simulation, renderer);
+    EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atoms);
+    Tools::init(&window, &gameView, &box.grid, &box, renderer,
+        [&](Vec3D coords, Vec3D speed, Atom::Type type, bool fixed) {
+            return simulation.createAtom(coords, speed, type, fixed);
+        }
+    );
+    Interface::pause = true;
+
+    // Дебаг-панель
+    DebugView* debugSim = buildDebugSimView(Interface::debugPanel);
+    DebugView* debugAtomSingle = buildDebugAtomSingle(Interface::debugPanel);
+    DebugView* debugAtomBatch = buildDebugAtomBatch(Interface::debugPanel);
+
+    // Главный цикл
+    sf::Clock clock;
+    RateCounter physicsCounter;
+    RateCounter renderCounter;
+
+    double renderAccum = 0.0;
+    double physicsAccum = 0.0;
+    double logAccum = 0.0;
+
+    constexpr double RENDER_INTERVAL = 1.0 / FPS;
+    constexpr double LOG_INTERVAL    = 1.0 / LPS;
+
+    while (window.isOpen()) {
+        float deltaTime = clock.restart().asSeconds();
+        physicsAccum += deltaTime;
+        renderAccum += deltaTime;
+        logAccum += deltaTime;
+
+        EventManager::poll();
+        EventManager::frame(deltaTime);
+
+        if (!Interface::getPause()) {
+            const double physicsInterval = 1.0 / Interface::getSimulationSpeed();
+            if (physicsAccum >= physicsInterval) {
+                physicsCounter.startStep();
+                simulation.update(Dt);
+                physicsCounter.finishStep();
+                physicsAccum = 0.0;
+            }
+        } else {
+            physicsAccum = 0.0;
+        }
+
+        // один шаг симуляции
+        if (auto cmd = Keyboard::popResult(); cmd == KeyboardCommand::StepPhysics) {
+            physicsCounter.startStep();
+            simulation.update(Dt);
+            physicsCounter.finishStep();
+        }
+
+        if (renderAccum >= RENDER_INTERVAL) {
+            renderAccum -= RENDER_INTERVAL;
+
+            Interface::Update();
+
+            if (Tools::selected_atom_batch.size() == 1)
+            {
+                debugAtomSingle->visible = true;
+                debugAtomBatch->visible = false;
+                const Atom* selectedAtom = *Tools::selected_atom_batch.begin();
+                debugAtomSingle->add_data("Позиция", selectedAtom->coords);
+                debugAtomSingle->add_data("Скорость", selectedAtom->speed);
+                debugAtomSingle->add_data("Силы", selectedAtom->force);
+                debugAtomSingle->add_data("Пред. силы", selectedAtom->prev_force);
+                debugAtomSingle->add_data("Потенциальная энергия", selectedAtom->potential_energy);
+                debugAtomSingle->add_data("Масса", Atom::getProps(selectedAtom->type).mass);
+                debugAtomSingle->add_data("Радиус", Atom::getProps(selectedAtom->type).radius);
+                debugAtomSingle->add_data("Тип", static_cast<int>(selectedAtom->type));
+            }
+            else {
+                debugAtomBatch->visible = true;
+                debugAtomSingle->visible = false;
+                debugAtomBatch->add_data("Выбрано атомов", Tools::selected_atom_batch.size());
+            }
+
+            // Диалог сохранения / загрузки
+            if (auto result = Interface::fileDialog.popResult()) {
+                switch (result->command) {
+                    case FileDialogCommand::Save: simulation.save(result->path); break;
+                    case FileDialogCommand::Load: simulation.load(result->path); break;
+                }
+            }
+
+            // Смена рендерера
+            if (auto result = Interface::toolsPanel.popResult()) {
+                std::unique_ptr<IRenderer> newRenderer;
+                switch (result.value()) {
+                    case ToolsCommand::ToggleRenderer2D:
+                        newRenderer = std::make_unique<Renderer2D>(window, gameView);
+                        break;
+                    case ToolsCommand::ToggleRenderer3D:
+                        newRenderer = std::make_unique<Renderer3D>(window, gameView);
+                        break;
+                }
+
+                newRenderer->drawGrid = renderer->drawGrid;
+                newRenderer->drawBonds = renderer->drawBonds;
+                newRenderer->speedGradient = renderer->speedGradient;
+                newRenderer->speedGradientTurbo = renderer->speedGradientTurbo;
+                newRenderer->speedGradientMax = renderer->speedGradientMax;
+
+                renderer = std::move(newRenderer);
+            }
+
+            renderer->camera.update(window);
+
+            renderCounter.startStep();
+            renderer->drawShot(simulation.atoms, simulation.sim_box);
+            ImGui::SFML::Render(window);
+            window.display();
+            renderCounter.finishStep();
+        }
+
+        // обновение логов и данных счетчиков
+        if (logAccum >= LOG_INTERVAL) {
+            logAccum -= LOG_INTERVAL;
+            debugSim->add_data("Полная энергия", static_cast<float>(simulation.fullAverageEnergy()));
+            debugSim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
+            debugSim->add_data("Рендер (мс)", renderCounter.avgMs());
+            debugSim->add_data("Физика (мс)", physicsCounter.avgMs());
+            debugSim->add_data("Количество атомов", simulation.atoms.size());
+            debugSim->add_data("Шаги симуляции", simulation.getSimStep());
+            debugSim->add_data("Шагов/с", physicsCounter.steps_per_second);
+            debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
+
+            physicsCounter.flush(LOG_INTERVAL);
+            renderCounter.flush(LOG_INTERVAL);
+        }
+    }
+    ImGui::SFML::Shutdown();
+
+    return 0;
 }

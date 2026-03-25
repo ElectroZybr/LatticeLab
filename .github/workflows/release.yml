@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g. v1.0.0)'
+        required: true
+      release_notes:
+        description: 'Release notes'
+        required: true
+
+jobs:
+  build-and-release:
+    name: Build and Release (Windows)
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure and Build
+      shell: bash
+      run: |
+        export PATH=$(echo $PATH | tr ':' '\n' | grep -v "Git/bin" | tr '\n' ':')
+        cmake -S . -B build -G "MinGW Makefiles" \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_CXX_FLAGS="-O3" \
+          -DCMAKE_C_FLAGS="-O3" \
+          -DOPTIMIZE_FOR_NATIVE=OFF \
+          -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++"
+        
+        cmake --build build --config Release -j 4
+
+    - name: Check Dependencies (Verification)
+      shell: bash
+      run: |
+        objdump -p Chemical-simulator.exe | grep "DLL Name"
+
+    - name: Prepare Release Artifacts
+      shell: bash
+      run: |
+        mkdir -p release_dist/assets
+        cp Chemical-simulator.exe release_dist/
+        cp -r assets/* release_dist/assets/
+        cd release_dist
+        7z a ../Chemical-simulator-${{ github.event.inputs.version }}-win64.zip *
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ github.event.inputs.version }}
+        name: Release ${{ github.event.inputs.version }}
+        body: ${{ github.event.inputs.release_notes }}
+        files: Chemical-simulator-${{ github.event.inputs.version }}-win64.zip
+        draft: false
+        prerelease: false

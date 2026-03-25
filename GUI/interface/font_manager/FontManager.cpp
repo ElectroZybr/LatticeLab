@@ -25,7 +25,7 @@ bool FontManager::load(float uiScale) {
     mainConfig.OversampleH = 4;
     mainConfig.OversampleV = 4;
     main = fonts->AddFontFromFileTTF(
-        "GUI/fonts/Rubik-VariableFont_wght.ttf", scaledSize(37.5f), &mainConfig);
+        "assets/fonts/Rubik-VariableFont_wght.ttf", scaledSize(37.5f), &mainConfig);
     if (!main) return false;
 
     ImFontConfig iconConfig;
@@ -33,7 +33,7 @@ bool FontManager::load(float uiScale) {
     iconConfig.PixelSnapH = true;
     iconConfig.GlyphMinAdvanceX = scaledSize(30.0f);
     if (!fonts->AddFontFromFileTTF(
-        "GUI/fonts/Font Awesome 5 Free-Solid-900.otf",
+        "assets/fonts/Font Awesome 5 Free-Solid-900.otf",
         scaledSize(30.0f), &iconConfig, iconRanges)) {
         return false;
     }
@@ -43,7 +43,7 @@ bool FontManager::load(float uiScale) {
     sideIconConfig.OversampleH = 4;
     sideIconConfig.OversampleV = 4;
     icons = fonts->AddFontFromFileTTF(
-        "GUI/fonts/Font Awesome 5 Free-Solid-900.otf",
+        "assets/fonts/Font Awesome 5 Free-Solid-900.otf",
         scaledSize(22.5f), &sideIconConfig, iconRanges);
     if (!icons) return false;
 
@@ -51,7 +51,7 @@ bool FontManager::load(float uiScale) {
     dialogConfig.OversampleH = 4;
     dialogConfig.OversampleV = 4;
     dialog = fonts->AddFontFromFileTTF(
-        "GUI/fonts/Rubik-VariableFont_wght.ttf",
+        "assets/fonts/Rubik-VariableFont_wght.ttf",
         scaledSize(18.0f), &dialogConfig, ruRanges);
     if (!dialog) return false;
 

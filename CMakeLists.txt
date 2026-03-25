@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.17)
 project(Chemical-simulator)
+option(OPTIMIZE_FOR_NATIVE "Enable -march=native optimization" ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # CMake 4.x: allow legacy dependencies that declare very old minimum policies.
@@ -111,7 +112,12 @@ list(FILTER CORE_SOURCES EXCLUDE REGEX "build/.*")
 
 add_library(chemical_simulator_lib STATIC ${CORE_SOURCES})
 
-target_compile_options(chemical_simulator_lib PRIVATE -O3 -march=native)
+if(OPTIMIZE_FOR_NATIVE)
+    target_compile_options(chemical_simulator_lib PRIVATE -O3 -march=native)
+    else()
+    target_compile_options(chemical_simulator_lib PRIVATE -O3)
+endif()
+
 
 target_include_directories(chemical_simulator_lib PUBLIC
     ${CMAKE_SOURCE_DIR}
@@ -135,12 +141,19 @@ target_link_libraries(chemical_simulator_lib PUBLIC
 
 add_executable(${CMAKE_PROJECT_NAME} main.cpp)
 
-target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -O3 -march=native)
+if(OPTIMIZE_FOR_NATIVE)
+    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -O3 -march=native)
+else()
+    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -O3)
+endif()
 
 if (WIN32)
-    set(APP_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/app_icon.rc")
-    if(EXISTS ${APP_ICON_RESOURCE})
-        target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${APP_ICON_RESOURCE})
+    set(APP_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/assets/app_icon.rc")
+    if(EXISTS "${APP_ICON_RESOURCE}")
+        source_group("Resource Files" FILES "${APP_ICON_RESOURCE}")        
+        target_sources(${CMAKE_PROJECT_NAME} PRIVATE "${APP_ICON_RESOURCE}")
+    else()
+        message(WARNING "Resource file not found: ${APP_ICON_RESOURCE}")
     endif()
 endif()
 
