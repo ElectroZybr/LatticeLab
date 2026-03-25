@@ -1,7 +1,6 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
-#include <cstddef>
 #include <functional>
 #include <vector>
 #include <unordered_set>
@@ -20,7 +19,6 @@ class AtomStorage;
 class Tools {
 public:
     using AtomCreator = std::function<Atom*(Vec3D, Vec3D, Atom::Type, bool)>;
-    static constexpr std::size_t InvalidAtomIndex = static_cast<std::size_t>(-1);
 
     enum class Mode: uint8_t {
         Cursor,
@@ -46,11 +44,11 @@ public:
 
     static Mode currentMode();
     static bool isSelectionMode(Mode mode);
-    static std::size_t pickAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
+    static Atom* pickAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
     static bool tryAddAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, Atom::Type atomType);
-    static bool tryRemoveAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms);
+    static bool tryRemoveAtom(sf::Vector2i mouse_pos, std::vector<Atom>& atoms, Atom*& selectedMoveAtom);
 
-    static std::unordered_set<std::size_t> selected_atom_batch;
+    static std::unordered_set<Atom*> selected_atom_batch;
 private:
     static sf::RenderWindow* window;
     static sf::View* gameView;
@@ -63,7 +61,7 @@ private:
     static bool atomMoveFlag;
     static bool selectionFrameMoveFlag;
     static bool lassoSelectionMoveFlag;
-    static std::size_t selectedMoveAtomIndex;
+    static Atom* selectedMoveAtom;
     static sf::Vector2i start_mouse_pos;
     static std::vector<sf::Vector2i> lassoPoints;
 };

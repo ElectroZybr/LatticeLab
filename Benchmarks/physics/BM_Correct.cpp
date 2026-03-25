@@ -5,11 +5,12 @@ BENCHMARK_DEFINE_F(SimulationFixture, Correct)(benchmark::State& state) {
     prepareForCorrect();
 
     for (auto _ : state) {
-        for (Atom& atom : simulation_->atoms) {
-            if (!atom.isFixed)
-                VerletScheme::correct(atom, Benchmarks::kDt);
+        for (std::size_t atomIndex = 0; atomIndex < simulation_->atomStorage.size(); ++atomIndex) {
+            if (!simulation_->atomStorage.isAtomFixed(atomIndex)) {
+                VerletScheme::correct(simulation_->atomStorage, atomIndex, Benchmarks::kDt);
+            }
         }
-        benchmark::DoNotOptimize(simulation_->atoms.data());
+        benchmark::DoNotOptimize(simulation_->atomStorage.size());
         benchmark::ClobberMemory();
     }
     setCounters(state);
