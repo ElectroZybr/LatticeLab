@@ -38,7 +38,7 @@ void main() {
     if (vIsSelected > 0.5) {
         float rim = 1.0 - z;
         float ring = smoothstep(0.6, 0.7, rim);
-        color = mix(color, vec3(1.0, 1.0, 1.0), ring);
+        color = mix(color, vec3(0.95, 0.72, 0.28), ring);
     }
 
     outColor = vec4(color, 1.0);

@@ -97,6 +97,7 @@ static DebugView* buildDebugSimView(DebugPanel& panel) {
         DebugValue ("Физика (мс)", DebugDrawers::Float, 4),
         DebugValue ("Тип интегратора", DebugDrawers::String),
         DebugValue ("Шаги симуляции", DebugDrawers::Int),
+        DebugValue ("Шагов/с", DebugDrawers::Float, 2),
         DebugValue ("Количество атомов", DebugDrawers::Int),
         DebugSeries("Полная энергия", 3),
     }));
@@ -126,6 +127,7 @@ struct RateCounter {
     double accumulated_ms  = 0.0;
     int    steps_this_tick  = 0;
     float  steps_per_second = 0.0f;
+    bool   has_rate_sample = false;
  
     void startStep()  { timer.start(); }
  
@@ -143,9 +145,14 @@ struct RateCounter {
  
     void flush(double elapsed_seconds) {
         if (elapsed_seconds > 0.0) {
-            steps_per_second = static_cast<float>(steps_this_tick / elapsed_seconds);
-        } else {
-            steps_per_second = 0.0f;
+            const float instant_rate = static_cast<float>(steps_this_tick / elapsed_seconds);
+            const float alpha = static_cast<float>(1.0 - std::exp(-elapsed_seconds / 0.5));
+            if (!has_rate_sample) {
+                steps_per_second = instant_rate;
+                has_rate_sample = true;
+            } else {
+                steps_per_second += alpha * (instant_rate - steps_per_second);
+            }
         }
         accumulated_ms   = 0.0;
         steps_this_tick  = 0;
@@ -160,7 +167,7 @@ int main() {
     SimBox box(Vec3D(-25, -25, 0), Vec3D(25, 25, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    Scenes::crystal(simulation, 15, Atom::Type::Z, false);
+    Scenes::crystal(simulation, 250, Atom::Type::Z, false);
 
     // Рендер
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
@@ -203,19 +210,20 @@ int main() {
         EventManager::poll();
         EventManager::frame(deltaTime);
 
-        if (!Interface::getPause()) {
-            const double physicsInterval = 1.0 / Interface::getSimulationSpeed();
-            while (physicsAccum >= physicsInterval) {
+        const double physicsInterval = 1.0 / Interface::getSimulationSpeed();
+        if (physicsAccum >= physicsInterval) {
+            if (!Interface::getPause()) {
                 physicsCounter.startStep();
                 simulation.update(Dt);
                 physicsCounter.finishStep();
-                physicsAccum -= physicsInterval;
+                physicsAccum = 0.0;
             }
         }
         else {
             physicsAccum = 0.0;
         }
 
+        // один шаг симуляции
         if (auto cmd = Keyboard::popResult(); cmd == KeyboardCommand::StepPhysics) {
             physicsCounter.startStep();
             simulation.update(Dt);
@@ -285,6 +293,7 @@ int main() {
             renderCounter.finishStep();
         }
 
+        // обновение логов и данных счетчиков
         if (logAccum >= LOG_INTERVAL) {
             logAccum -= LOG_INTERVAL;
             debugSim->add_data("Полная энергия", static_cast<float>(simulation.fullAverageEnergy()));
@@ -293,6 +302,7 @@ int main() {
             debugSim->add_data("Физика (мс)", physicsCounter.avgMs());
             debugSim->add_data("Количество атомов", simulation.atoms.size());
             debugSim->add_data("Шаги симуляции", simulation.getSimStep());
+            debugSim->add_data("Шагов/с", physicsCounter.steps_per_second);
             debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
 
             physicsCounter.flush(LOG_INTERVAL);
