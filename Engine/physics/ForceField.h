@@ -28,10 +28,10 @@ private:
     static LJPairTable buildLJPairTable();
 
     static void applyWall(float coord, float& force, float min, float max);
-    void softWalls(AtomStorage& atoms, std::size_t atomIndex, SimBox& box) const;
+    void softWalls(const AtomStorage& atoms, std::size_t atomIndex, SimBox& box, float& forceX, float& forceY, float& forceZ) const;
     void ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox& box) const;
-    void pairNonBondedInteraction(AtomStorage& atoms, std::size_t aIndex, std::size_t bIndex) const;
-    void applyGravityForce(AtomStorage& atoms, std::size_t atomIndex) const;
+    void pairNonBondedInteraction(AtomStorage& atoms, std::size_t aIndex, std::size_t bIndex, float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const;
+    void applyGravityForce(float& forceX, float& forceY, float& forceZ) const;
 
     Vec3D static_force;
     LJPairTable ljPairTable;

@@ -80,24 +80,16 @@ void ForceField::compute(AtomStorage& atoms, SimBox& box, float dt) const {
     }
 }
 
-void ForceField::softWalls(AtomStorage& atoms, std::size_t atomIndex, SimBox& box) const {
+void ForceField::softWalls(const AtomStorage& atoms, std::size_t atomIndex, SimBox& box, float& forceX, float& forceY, float& forceZ) const {
     const Vec3D max = box.end - box.start - Vec3D(1.0, 1.0, 1.0);
 
-    float coordX = atoms.posX(atomIndex);
-    float coordY = atoms.posY(atomIndex);
-    float coordZ = atoms.posZ(atomIndex);
-
-    float forceX = atoms.forceX(atomIndex);
-    float forceY = atoms.forceY(atomIndex);
-    float forceZ = atoms.forceZ(atomIndex);
+    const float coordX = atoms.posX(atomIndex);
+    const float coordY = atoms.posY(atomIndex);
+    const float coordZ = atoms.posZ(atomIndex);
 
     applyWall(coordX, forceX, 0.0f, static_cast<float>(max.x));
     applyWall(coordY, forceY, 0.0f, static_cast<float>(max.y));
     applyWall(coordZ, forceZ, 0.0f, static_cast<float>(max.z));
-
-    atoms.forceX(atomIndex) = forceX;
-    atoms.forceY(atomIndex) = forceY;
-    atoms.forceZ(atomIndex) = forceZ;
 }
 
 void ForceField::applyWall(float coord, float& force, float min, float max) {
@@ -122,26 +114,36 @@ void ForceField::applyWall(float coord, float& force, float min, float max) {
 }
 
 void ForceField::ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox& box) const {
-    if (atomIndex >= atoms.size()) {
-        return;
-    }
+    float posX = atoms.posX(atomIndex);
+    float posY = atoms.posY(atomIndex);
+    float posZ = atoms.posZ(atomIndex);
+    float forceX = atoms.forceX(atomIndex);
+    float forceY = atoms.forceY(atomIndex);
+    float forceZ = atoms.forceZ(atomIndex);
+    float potenE = atoms.energy(atomIndex);
 
-    softWalls(atoms, atomIndex, box);
-    applyGravityForce(atoms, atomIndex);
+    softWalls(atoms, atomIndex, box, forceX, forceY, forceZ);
+    applyGravityForce(forceX, forceY, forceZ);
 
     box.grid.forEachNeighborIndex(atoms.pos(atomIndex), [&](std::size_t neighbourIndex) {
         if (neighbourIndex >= atoms.size() || neighbourIndex <= atomIndex) {
             return;
         }
 
-        pairNonBondedInteraction(atoms, atomIndex, neighbourIndex);
+        pairNonBondedInteraction(atoms, atomIndex, neighbourIndex, forceX, forceY, forceZ, posX, posY, posZ, potenE);
     });
+
+    atoms.forceX(atomIndex) = forceX;
+    atoms.forceY(atomIndex) = forceY;
+    atoms.forceZ(atomIndex) = forceZ;
+    atoms.energy(atomIndex) = potenE;
 }
 
-void ForceField::pairNonBondedInteraction(AtomStorage& atoms, std::size_t aIndex, std::size_t bIndex) const {
-    const float dx = atoms.posX(bIndex) - atoms.posX(aIndex);
-    const float dy = atoms.posY(bIndex) - atoms.posY(aIndex);
-    const float dz = atoms.posZ(bIndex) - atoms.posZ(aIndex);
+void ForceField::pairNonBondedInteraction(AtomStorage& atoms, std::size_t aIndex, std::size_t bIndex,
+                                        float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const {
+    const float dx = atoms.posX(bIndex) - posX;
+    const float dy = atoms.posY(bIndex) - posY;
+    const float dz = atoms.posZ(bIndex) - posZ;
     const float d2 = dx * dx + dy * dy + dz * dz;
     if (d2 <= Consts::Epsilon) {
         return;
@@ -158,26 +160,26 @@ void ForceField::pairNonBondedInteraction(AtomStorage& atoms, std::size_t aIndex
     const float ratio12 = ratio6 * ratio6;
 
     const float forceScale = 24.0f * params.eps * (2.0f * ratio12 - ratio6) * invD2;
-    const float forceX = dx * forceScale;
-    const float forceY = dy * forceScale;
-    const float forceZ = dz * forceScale;
+    const float pairForceX = dx * forceScale;
+    const float pairForceY = dy * forceScale;
+    const float pairForceZ = dz * forceScale;
 
-    atoms.forceX(aIndex) -= forceX;
-    atoms.forceY(aIndex) -= forceY;
-    atoms.forceZ(aIndex) -= forceZ;
+    forceX -= pairForceX;
+    forceY -= pairForceY;
+    forceZ -= pairForceZ;
 
-    atoms.forceX(bIndex) += forceX;
-    atoms.forceY(bIndex) += forceY;
-    atoms.forceZ(bIndex) += forceZ;
+    atoms.forceX(bIndex) += pairForceX;
+    atoms.forceY(bIndex) += pairForceY;
+    atoms.forceZ(bIndex) += pairForceZ;
 
     const float potential = 4.0f * params.eps * (ratio12 - ratio6);
-    atoms.energy(aIndex) += 0.5f * potential;
+    potenE += 0.5f * potential;
     atoms.energy(bIndex) += 0.5f * potential;
 }
 
-void ForceField::applyGravityForce(AtomStorage& atoms, std::size_t atomIndex) const {
-    atoms.forceX(atomIndex) += static_cast<float>(static_force.x);
-    atoms.forceY(atomIndex) += static_cast<float>(static_force.y);
-    atoms.forceZ(atomIndex) += static_cast<float>(static_force.z);
+void ForceField::applyGravityForce(float& forceX, float& forceY, float& forceZ) const {
+    forceX += static_cast<float>(static_force.x);
+    forceY += static_cast<float>(static_force.y);
+    forceZ += static_cast<float>(static_force.z);
 }
 
