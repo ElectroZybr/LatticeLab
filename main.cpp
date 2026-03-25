@@ -82,7 +82,6 @@ static sf::RenderWindow createWindow() {
  
     sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator",
                             sf::State::Fullscreen, settings);
-    window.setVerticalSyncEnabled(true);
  
     sf::Image icon;
     if (icon.loadFromFile("assets/icon.png"))
@@ -121,6 +120,7 @@ static DebugView* buildDebugAtomBatch(DebugPanel& panel) {
         DebugValue("Выбрано атомов", DebugDrawers::Int),
     }));
 }
+
 struct RateCounter {
     Timer  timer;
     double accumulated_ms  = 0.0;
@@ -201,12 +201,12 @@ int main() {
 
         if (!Interface::getPause()) {
             const double physicsInterval = 1.0 / Interface::getSimulationSpeed();
+            physicsCounter.startStep();
             while (physicsAccum >= physicsInterval) {
-                physicsCounter.startStep();
                 simulation.update(Dt);
-                physicsCounter.finishStep();
                 physicsAccum -= physicsInterval;
             }
+            physicsCounter.finishStep();
         }
         else {
             physicsAccum = 0.0;
@@ -276,9 +276,8 @@ int main() {
             renderCounter.startStep();
             renderer->drawShot(simulation.atoms, simulation.sim_box);
             ImGui::SFML::Render(window);
-            renderCounter.finishStep();
-
             window.display();
+            renderCounter.finishStep();
         }
 
         if (logAccum >= LOG_INTERVAL) {
