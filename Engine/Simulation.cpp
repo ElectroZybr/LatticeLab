@@ -139,7 +139,7 @@ void Simulation::addBond(std::size_t aIndex, std::size_t bIndex) {
     Bond::CreateBond(aIndex, bIndex, atomStorage);
 }
 
-double Simulation::averageKineticEnegry() const {
+float Simulation::averageKineticEnegry() const {
     if (atomStorage.empty()) {
         return 0.0;
     }
@@ -152,7 +152,7 @@ double Simulation::averageKineticEnegry() const {
     return kineticEnergy / static_cast<double>(atomStorage.size());
 }
 
-double Simulation::averagePotentialEnergy() const {
+float Simulation::averagePotentialEnergy() const {
     if (atomStorage.empty()) {
         return 0.0;
     }
@@ -165,7 +165,7 @@ double Simulation::averagePotentialEnergy() const {
     return potentialEnergy / static_cast<double>(atomStorage.size());
 }
 
-double Simulation::fullAverageEnergy() const {
+float Simulation::fullAverageEnergy() const {
     return averageKineticEnegry() + averagePotentialEnergy();
 }
 
