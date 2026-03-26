@@ -27,7 +27,7 @@ public:
     void setScheme(Scheme scheme);
     Scheme getScheme() const { return integrator_type; }
 
-    void step(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList& neighborList, float dt) const;
+    void step(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) const;
 
 private:
     using SchemeVariant = std::variant<VerletScheme, KDKScheme, RK4Scheme, LangevinScheme>;

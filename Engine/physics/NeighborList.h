@@ -25,6 +25,11 @@ public:
     [[nodiscard]] std::size_t atomCount() const;
     [[nodiscard]] std::size_t pairStorageSize() const;
     [[nodiscard]] std::pair<std::size_t, std::size_t> rangeFor(std::size_t atomIndex) const;
+    [[nodiscard]] std::size_t memoryBytes() const;
+    [[nodiscard]] float cutoff() const { return cutoff_; }
+    [[nodiscard]] float skin() const { return skin_; }
+    [[nodiscard]] float listRadius() const { return listRadius_; }
+    [[nodiscard]] bool isValid() const { return valid_; }
 
     [[nodiscard]] const std::vector<std::size_t>& neighbors() const { return neighbors_; }
     [[nodiscard]] const std::vector<std::size_t>& offsets() const { return offsets_; }

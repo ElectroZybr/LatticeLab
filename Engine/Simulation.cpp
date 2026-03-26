@@ -21,12 +21,23 @@ Simulation::Simulation(SimBox& box)
     neighborList.setParams(5.f, 1.f);
 }
 
-void Simulation::update(float dt) {
-    if (neighborList.needsRebuild(atomStorage)) {
-        neighborList.build(atomStorage, sim_box);
-        // std::cout << "rebuild on step: " << sim_step << std::endl;
+void Simulation::setNeighborListEnabled(bool enabled) {
+    if (useNeighborList_ == enabled) {
+        return;
     }
-    integrator.step(atomStorage, sim_box, forceField, neighborList, dt);
+
+    useNeighborList_ = enabled;
+    if (!useNeighborList_) {
+        neighborList.clear();
+    }
+}
+
+void Simulation::update(float dt) {
+    if (useNeighborList_ && neighborList.needsRebuild(atomStorage)) {
+        neighborList.build(atomStorage, sim_box);
+        onNeighborListRebuild();
+    }
+    integrator.step(atomStorage, sim_box, forceField, useNeighborList_ ? &neighborList : nullptr, dt);
     ++sim_step;
 }
 
@@ -284,6 +295,33 @@ void Simulation::clear() {
     atomStorage.clear();
     Bond::bonds_list.clear();
     sim_box.grid.resize(sim_box.grid.sizeX, sim_box.grid.sizeY, sim_box.grid.sizeZ, sim_box.grid.cellSize);
+    neighborList.clear();
     sim_step = 0;
+    neighborListRebuildCount_ = 0;
+    neighborListRebuildIntervalsSum_ = 0;
+    lastNeighborListRebuildStep_ = -1;
+}
+
+float Simulation::averageStepsPerNeighborListRebuild() const {
+    if (neighborListRebuildCount_ <= 1) {
+        return 0.0f;
+    }
+    return static_cast<float>(neighborListRebuildIntervalsSum_) /
+        static_cast<float>(neighborListRebuildCount_ - 1);
+}
+
+int Simulation::stepsSinceNeighborListRebuild() const {
+    if (lastNeighborListRebuildStep_ < 0) {
+        return sim_step;
+    }
+    return sim_step - lastNeighborListRebuildStep_;
+}
+
+void Simulation::onNeighborListRebuild() {
+    if (lastNeighborListRebuildStep_ >= 0 && sim_step >= lastNeighborListRebuildStep_) {
+        neighborListRebuildIntervalsSum_ += static_cast<std::size_t>(sim_step - lastNeighborListRebuildStep_);
+    }
+    lastNeighborListRebuildStep_ = sim_step;
+    ++neighborListRebuildCount_;
 }
 
