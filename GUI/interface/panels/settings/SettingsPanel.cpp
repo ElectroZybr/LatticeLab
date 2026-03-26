@@ -37,10 +37,6 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
         simulation.forceField.setGravity(gravity);
     }
 
-
-    bool neighborListEnabled = simulation.isNeighborListEnabled();
-    if (ImGui::Checkbox("NeighborList", &neighborListEnabled))
-        simulation.setNeighborListEnabled(neighborListEnabled);
     ImGui::SeparatorText("Рендер");
     ImGui::Checkbox("Сетка", &renderer->drawGrid);
     ImGui::Checkbox("Связи", &renderer->drawBonds);
@@ -50,6 +46,28 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
     ImGui::PushItemWidth(220.0f * uiScale);
     ImGui::SliderFloat("##speed_gradient_max", &renderer->speedGradientMax, 0.0f, 10.0f, "%.2f");
     ImGui::PopItemWidth();
+
+    ImGui::SeparatorText("Список соседей");
+    bool neighborListEnabled = simulation.isNeighborListEnabled();
+    if (ImGui::Checkbox("NeighborList", &neighborListEnabled))
+        simulation.setNeighborListEnabled(neighborListEnabled);
+
+    int cellSize = simulation.sim_box.grid.cellSize;
+    if (ImGui::SliderInt("Cell size", &cellSize, 1, 32)) {
+        simulation.setSizeBox(simulation.sim_box.start, simulation.sim_box.end, cellSize);
+    }
+
+    if (simulation.isNeighborListEnabled()) {
+        float cutoff = simulation.neighborList.cutoff();
+        if (ImGui::SliderFloat("Cutoff NL", &cutoff, 0.5f, 20.0f, "%.2f")) {
+            simulation.neighborList.setCutoff(cutoff);
+        }
+
+        float skin = simulation.neighborList.skin();
+        if (ImGui::SliderFloat("Skin NL", &skin, 0.1f, 10.0f, "%.2f")) {
+            simulation.neighborList.setSkin(skin);
+        }
+    }
 
     ImGui::End();
 }

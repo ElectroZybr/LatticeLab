@@ -107,6 +107,13 @@ public:
 
     std::size_t size() const { return count_; }
     bool empty() const { return count_ == 0; }
+    std::size_t memoryBytes() const {
+        return floatData_.capacity() * sizeof(float)
+            + atomType_.capacity() * sizeof(AtomData::Type)
+            + valence_.capacity() * sizeof(std::uint8_t)
+            + selected_.capacity() * sizeof(std::uint8_t)
+            + isFixed_.capacity() * sizeof(std::uint8_t);
+    }
 
     void clear() {
         count_ = 0;

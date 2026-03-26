@@ -18,7 +18,7 @@ Simulation::Simulation(SimBox& box)
     atomStorage.reserve(250000);
     forceField.updateBoxCache(sim_box); // обновление кэша для параметров стен
 
-    neighborList.setParams(5.f, 1.f);
+    neighborList.setParams(5.f, 1.f); // параметры отсечки и скин для NL
 }
 
 void Simulation::setNeighborListEnabled(bool enabled) {

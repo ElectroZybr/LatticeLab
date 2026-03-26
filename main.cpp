@@ -151,7 +151,8 @@ static DebugView* buildDebugNeighborView(DebugPanel& panel) {
         DebugValue("Размер сетки", DebugDrawers::String),
         DebugValue("Размер ячейки", DebugDrawers::Int),
         DebugValue("NeighborList включен", DebugDrawers::String),
-        DebugValue("Память NL (МБ)", DebugDrawers::Float<3>),
+        DebugValue("Память AtomStorage (МБ)", DebugDrawers::Float<3>),
+        DebugValue("Память NeighborList (МБ)", DebugDrawers::Float<3>),
         DebugValue("Пар в NL", DebugDrawers::Int),
         DebugValue("Cutoff", DebugDrawers::Float<3>),
         DebugValue("Skin", DebugDrawers::Float<3>),
@@ -207,7 +208,7 @@ int main() {
     SimBox box(Vec3f(-25, -25, 0), Vec3f(25, 25, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    Scenes::crystal(simulation, 250, AtomData::Type::Z, false);
+    Scenes::crystal(simulation, 25, AtomData::Type::Z, false);
 
     // Рендер
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
@@ -366,22 +367,21 @@ int main() {
             debugSim->add_data("Шагов/с", physicsCounter.steps_per_second);
             debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
 
-            const std::string gridSize = std::to_string(simulation.sim_box.grid.sizeX)
-                + " x " + std::to_string(simulation.sim_box.grid.sizeY)
-                + " x " + std::to_string(simulation.sim_box.grid.sizeZ);
+            const std::string gridSize = std::to_string(static_cast<int>(simulation.sim_box.grid.sizeX/simulation.sim_box.grid.cellSize))
+                + " x " + std::to_string(static_cast<int>(simulation.sim_box.grid.sizeY/simulation.sim_box.grid.cellSize))
+                + " x " + std::to_string(static_cast<int>(simulation.sim_box.grid.sizeZ/simulation.sim_box.grid.cellSize));
             debugNeighbor->add_data("Размер сетки", gridSize);
             debugNeighbor->add_data("Размер ячейки", simulation.sim_box.grid.cellSize);
             debugNeighbor->add_data("NeighborList включен",
                 simulation.isNeighborListEnabled() ? std::string("Да") : std::string("Нет"));
-            debugNeighbor->add_data("Память NL (МБ)",
-                static_cast<float>(simulation.neighborList.memoryBytes()) / 1024.0f / 1024.0f);
+            debugNeighbor->add_data("Память AtomStorage (МБ)", static_cast<float>(simulation.atomStorage.memoryBytes()) / 1024.0f / 1024.0f);
+            debugNeighbor->add_data("Память NeighborList (МБ)", static_cast<float>(simulation.neighborList.memoryBytes()) / 1024.0f / 1024.0f);
             debugNeighbor->add_data("Пар в NL", simulation.neighborList.pairStorageSize());
             debugNeighbor->add_data("Cutoff", simulation.neighborList.cutoff());
             debugNeighbor->add_data("Skin", simulation.neighborList.skin());
             debugNeighbor->add_data("List radius", simulation.neighborList.listRadius());
             debugNeighbor->add_data("Ребилдов NL", simulation.neighborListRebuildCount());
-            debugNeighbor->add_data("Шагов между ребилдами (avg)",
-                simulation.averageStepsPerNeighborListRebuild());
+            debugNeighbor->add_data("Шагов между ребилдами (avg)", simulation.averageStepsPerNeighborListRebuild());
 
             physicsCounter.flush(LOG_INTERVAL);
             renderCounter.flush(LOG_INTERVAL);

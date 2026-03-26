@@ -13,7 +13,6 @@ Testing/
 
 # Binaries and libraries
 Chemical-simulator
-/benchmarks
 Benchmarks/*.json
 Benchmarks/*.png
 *.exe
@@ -24,6 +23,7 @@ Benchmarks/*.png
 *.lib
 *.pdb
 *.ilk
+*.sim
 
 # Object and intermediate files
 *.o

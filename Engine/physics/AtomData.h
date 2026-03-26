@@ -48,18 +48,7 @@ public:
 
 private:
     static const std::array<StaticAtomicData, static_cast<std::size_t>(Type::COUNT)> properties;
-
 public:
-    Type type{};
-    bool isFixed = false;
-    bool isSelect = false;
-
-    AtomData(Vec3f startCoords, Vec3f startSpeed, Type type, bool fixed = false);
-
-    const StaticAtomicData& getProps() const {
-        return properties.at(static_cast<int>(type));
-    }
-
     static const StaticAtomicData& getProps(Type type) {
         return properties.at(static_cast<int>(type));
     }

@@ -27,7 +27,6 @@ public:
     float averagePotentialEnergy() const;
     float fullAverageEnergy() const;
 
-    void logEnergies() const;
     void logAtomPos() const;
     void logBondList() const;
 
