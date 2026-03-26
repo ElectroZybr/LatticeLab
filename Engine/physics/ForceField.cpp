@@ -165,12 +165,31 @@ void ForceField::ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox
     applyGravityForce(forceX, forceY, forceZ);
 
     // взаимодействия с соседями
-    box.grid.forEachNeighborIndex(atoms.pos(atomIndex), [&](std::size_t neighbourIndex) {
-        if (neighbourIndex >= atoms.size() || neighbourIndex <= atomIndex) {
-            return;
+    const int cx = box.grid.worldToCellX(posX);
+    const int cy = box.grid.worldToCellY(posY);
+    const int cz = box.grid.worldToCellZ(posZ);
+
+    const int x0 = std::max(cx - 1, 0);
+    const int x1 = std::min(cx + 1, box.grid.sizeX - 1);
+    const int y0 = std::max(cy - 1, 0);
+    const int y1 = std::min(cy + 1, box.grid.sizeY - 1);
+    const int z0 = std::max(cz - 1, 0);
+    const int z1 = std::min(cz + 1, box.grid.sizeZ - 1);
+
+    for (int ix = x0; ix <= x1; ++ix) {
+        for (int iy = y0; iy <= y1; ++iy) {
+            for (int iz = z0; iz <= z1; ++iz) {
+                if (const auto* cell = box.grid.atIndex(ix, iy, iz)) {
+                    for (std::size_t neighbourIndex : *cell) {
+                        if (neighbourIndex >= atoms.size() || neighbourIndex <= atomIndex) {
+                            continue;
+                        }
+                        pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
+                    }
+                }
+            }
         }
-        pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
-    });
+    }
 
     // записываем обратно в AtomStorage
     atoms.forceX(atomIndex) = forceX;
