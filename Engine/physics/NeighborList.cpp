@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 #include "AtomStorage.h"
 #include "SpatialGrid.h"
@@ -41,22 +42,72 @@ void NeighborList::clear() {
 }
 
 void NeighborList::build(const AtomStorage& atoms, const SimBox& box) {
+    /* перестройка списка соседей */
     const SpatialGrid& grid = box.grid;
     reserveListBuffers(atoms, grid);
 
-    for (std::size_t index = 0; index < atoms.size(); ++index) {
+    const std::size_t atomCount = atoms.size();
+    std::vector<std::size_t> counts(atomCount, 0);
+
+    // расчет количества соседей у каждого атома
+    for (std::size_t index = 0; index < atomCount; ++index) {
         forEachNeighbor(grid, atoms, index, [&](std::size_t neighborIndex) {
-            (void)neighborIndex;
+            if (index <= neighborIndex) return;
+            if (distanceSqr(atoms, index, neighborIndex) <= listRadiusSqr_) {
+                ++counts[index];
+            }
         });
+    }
+
+    // строим карту оффсетов по списку количества соседей
+    offsets_[0] = 0;
+    for (std::size_t index = 0; index < atomCount; ++index) {
+        offsets_[index + 1] = offsets_[index] + counts[index];
+    }
+
+    neighbors_.resize(offsets_[atomCount]); // подгоняем под нужный размер
+    std::vector<std::size_t> writeOffsets = offsets_; // курсор для записи
+
+    // записываем индексы соседей в ячейки
+    for (std::size_t index = 0; index < atomCount; ++index) {
+        forEachNeighbor(grid, atoms, index, [&](std::size_t neighborIndex) {
+            if (index <= neighborIndex) return;
+            if (distanceSqr(atoms, index, neighborIndex) <= listRadiusSqr_) {
+                neighbors_[writeOffsets[index]++] = neighborIndex;
+            }
+        });
+    }
+
+    // обновляем позиции последнего перестроения списка
+    for (std::size_t index = 0; index < atomCount; ++index) {
+        refPosX_[index] = atoms.posX(index);
+        refPosY_[index] = atoms.posY(index);
+        refPosZ_[index] = atoms.posZ(index);
     }
 
     valid_ = true;
 }
 
 bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
-    (void)atoms;
-    // TODO: implement displacement-based rebuild criterion.
-    return !valid_;
+    /* проверка на необходимость перестройки списка */
+    if (!valid_) return true;
+    if (atoms.size() != refPosX_.size()) return true;
+
+    const float maxDisp = 0.5f * skin_; 
+    const float maxDispSqr = maxDisp * maxDisp;
+
+    // если атом сместился более 0.5*skin, перестраиваем список
+    for (std::size_t index = 0; index < atoms.size(); ++index) {
+        const float dx = atoms.posX(index) - refPosX_[index];
+        const float dy = atoms.posY(index) - refPosY_[index];
+        const float dz = atoms.posZ(index) - refPosZ_[index];
+        const float dispSqr = dx * dx + dy * dy + dz * dz;
+        if (dispSqr > maxDispSqr) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 std::size_t NeighborList::atomCount() const {

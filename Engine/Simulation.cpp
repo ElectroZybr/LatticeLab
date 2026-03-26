@@ -20,6 +20,8 @@ Simulation::Simulation(SimBox& box)
 }
 
 void Simulation::update(float dt) {
+    if (neighborList.needsRebuild(atomStorage))
+        neighborList.build(atomStorage, sim_box);
     integrator.step(atomStorage, sim_box, forceField, dt);
     ++sim_step;
 }

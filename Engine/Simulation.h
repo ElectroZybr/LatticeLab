@@ -8,6 +8,7 @@
 #include "SimBox.h"
 #include "physics/Integrator.h"
 #include "physics/ForceField.h"
+#include "physics/NeighborList.h"
 
 class Simulation {
 public:
@@ -43,6 +44,7 @@ public:
     AtomStorage atomStorage;
     Integrator integrator;
     ForceField forceField;
+    NeighborList neighborList;
 private:
     int sim_step = 0;
 
