@@ -14,6 +14,8 @@ public:
     void drawShot(const AtomStorage& atoms,
                   const SimBox& box) override;
 
+    void drawOverlay(const OverlayState& overlay) override;
+
 protected:
     virtual bool useLighting() { return true; }
     virtual void updateMatrices() = 0;

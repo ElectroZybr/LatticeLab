@@ -52,9 +52,9 @@ void Mouse::onEvent(const sf::Event& event) {
             rend->camera.dragStartPixelPos = currentPixelPos;
         }
         else {
-            Vec2f deltaWorld = Tools::screenToWorld(rend->camera.dragStartPixelPos) 
+            Vec3f deltaWorld = Tools::screenToWorld(rend->camera.dragStartPixelPos) 
                              - Tools::screenToWorld(currentPixelPos);
-            rend->camera.position = rend->camera.dragStartCameraPos + deltaWorld;
+            rend->camera.position = rend->camera.dragStartCameraPos + Vec2f(deltaWorld.x, deltaWorld.y);
         }
     }
 
@@ -71,17 +71,17 @@ void Mouse::onFrame(float deltaTime) {
 
 void Mouse::logMousePos() {
     sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
-    Vec2f world_pos = Tools::screenToWorld(mouse_pos);
-    Vec2f local_pos = Tools::screenToBox(mouse_pos);
+    Vec3f world_pos = Tools::screenToWorld(mouse_pos);
+    Vec3f local_pos = Tools::screenToBox(mouse_pos);
     std::cout << "<Mouse pos>"
               << " Screen: "
               << "X " << mouse_pos.x
-              << " Y " << mouse_pos.y
+              << "Y " << mouse_pos.y
               << " | World: "
               << "X " << world_pos.x
-              << " Y " << world_pos.y
+              << "Y " << world_pos.y
               << " | Local: "
               << "X " << local_pos.x
-              << " Y " << local_pos.y
+              << "Y " << local_pos.y
             << std::endl;
 }

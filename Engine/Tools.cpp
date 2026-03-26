@@ -80,7 +80,7 @@ bool isPointInsidePolygon(const sf::Vector2i& p, const std::vector<sf::Vector2i>
 void syncLassoContour(std::unique_ptr<IRenderer>& render, const std::vector<sf::Vector2i>& screenPoints) {
     render->setLassoContour(screenPoints);
 }
-} // namespace
+}
 
 sf::RenderWindow* Tools::window = nullptr;
 sf::View* Tools::gameView = nullptr;
@@ -236,8 +236,7 @@ void Tools::onLeftReleased() {
 
             for (std::size_t atomIndex = 0; atomIndex < atomStorage->size(); ++atomIndex) {
                 const Vec3f pos = atomStorage->pos(atomIndex);
-                const Vec2f center(pos.x, pos.y);
-                const sf::Vector2i centerScreen = boxToScreen(center);
+                const sf::Vector2i centerScreen = boxToScreen(pos);
                 const bool selected = isPointInsidePolygon(centerScreen, lassoPoints);
                 atomStorage->setSelected(atomIndex, selected);
                 if (selected) {
@@ -293,9 +292,9 @@ void Tools::onFrame(float deltaTime) {
 
     if (atomMoveFlag && selectedMoveAtomIndex != InvalidIndex && selectedMoveAtomIndex < atomStorage->size()) {
         (void)deltaTime;
-        const Vec2f world = screenToBox(mousePos);
+        const Vec3f world = screenToBox(mousePos);
         const Vec3f selectedPos = atomStorage->pos(selectedMoveAtomIndex);
-        const Vec2f delta = Vec2f(selectedPos.x, selectedPos.y) - world;
+        const Vec3f delta =  selectedPos - world;
         constexpr float dragStiffness = 0.1f;
         const Vec3f force(delta * dragStiffness);
 
@@ -323,8 +322,8 @@ void Tools::selectionFrame(sf::Vector2i startMousePos, sf::Vector2i mousePos) {
     std::unique_ptr<IRenderer>& rend = *renderer;
     rend->setBoxContour(startMousePos, mousePos);
 
-    Vec2f sLocal = screenToBox(startMousePos);
-    Vec2f eLocal = screenToBox(mousePos);
+    Vec3f sLocal = screenToBox(startMousePos);
+    Vec3f eLocal = screenToBox(mousePos);
 
     if (sLocal.x > eLocal.x) std::swap(sLocal.x, eLocal.x);
     if (sLocal.y > eLocal.y) std::swap(sLocal.y, eLocal.y);
@@ -352,21 +351,20 @@ void Tools::selectionFrame(sf::Vector2i startMousePos, sf::Vector2i mousePos) {
     Interface::countSelectedAtom = count;
 }
 
-Vec2f Tools::screenToWorld(sf::Vector2i mousePos) {
-    sf::Vector2f world = window->mapPixelToCoords(mousePos, *gameView);
-    return Vec2f(world.x, world.y);
+Vec3f Tools::screenToWorld(sf::Vector2i mousePos) {
+    return (*renderer)->camera.screenToWorld(mousePos);
 }
 
-Vec2f Tools::screenToBox(sf::Vector2i mousePos) {
-    return screenToWorld(mousePos) - Vec2f(box->start.x, box->start.y);
+Vec3f Tools::screenToBox(sf::Vector2i mousePos) {
+    return screenToWorld(mousePos) - box->start;
 }
 
-sf::Vector2i Tools::worldToScreen(Vec2f pos) {
-    return window->mapCoordsToPixel(pos, *gameView);
+sf::Vector2i Tools::worldToScreen(Vec3f pos) {
+    return (*renderer)->camera.worldToScreen(pos);
 }
 
-sf::Vector2i Tools::boxToScreen(Vec2f pos) {
-    return worldToScreen(pos + Vec2f(box->start.x, box->start.y));
+sf::Vector2i Tools::boxToScreen(Vec3f pos) {
+    return worldToScreen(pos + box->start);
 }
 
 Tools::Mode Tools::currentMode() {
@@ -382,7 +380,7 @@ std::size_t Tools::pickAtom(sf::Vector2i mousePos) {
         return InvalidIndex;
     }
 
-    const Vec2f local = screenToBox(mousePos);
+    const Vec3f local = screenToBox(mousePos);
     const int cellX = grid->worldToCellX(local.x);
     const int cellY = grid->worldToCellY(local.y);
     if (cellX < 0 || cellY < 0) {
@@ -405,9 +403,7 @@ std::size_t Tools::pickAtom(sf::Vector2i mousePos) {
                     }
                     const Vec3f pos = atomStorage->pos(atomIndex);
                     const float radius = std::max(0.5f, AtomData::getProps(atomStorage->type(atomIndex)).radius);
-                    const Vec2f center(pos.x, pos.y);
-                    const Vec2f delta = center - local;
-                    const double distSqr = delta.sqrAbs();
+                    const double distSqr = (pos - local).sqrAbs();
                     if (distSqr <= radius * radius && distSqr < bestDistSqr) {
                         bestDistSqr = distSqr;
                         bestIndex = atomIndex;
@@ -425,8 +421,7 @@ std::size_t Tools::pickSelectedAtomWithPadding(sf::Vector2i mousePos, float zoom
         return InvalidIndex;
     }
 
-    const Vec2f world = screenToWorld(mousePos);
-    const Vec2f local(world.x - box->start.x, world.y - box->start.y);
+    const Vec3f local = screenToBox(mousePos);
 
     std::size_t bestIndex = InvalidIndex;
     double bestDistSqr = std::numeric_limits<double>::max();
@@ -441,8 +436,7 @@ std::size_t Tools::pickSelectedAtomWithPadding(sf::Vector2i mousePos, float zoom
         }
         const Vec3f pos = atomStorage->pos(atomIndex);
         const float radius = AtomData::getProps(atomStorage->type(atomIndex)).radius;
-        const Vec2f center(pos.x, pos.y);
-        const Vec2f delta = center - local;
+        const Vec3f delta = pos - local;
         const double distSqr = delta.sqrAbs();
         const float pickRadius = std::max(0.5f, radius) + extraWorld;
         if (distSqr <= pickRadius * pickRadius && distSqr < bestDistSqr) {
@@ -459,25 +453,26 @@ bool Tools::tryAddAtom(sf::Vector2i mousePos, AtomData::Type atomType) {
         return false;
     }
 
-    const Vec2f worldPos = screenToWorld(mousePos);
+    const Vec3f worldPos = screenToWorld(mousePos);
 
     if (!(box->start.x + 2 <= worldPos.x && worldPos.x <= box->end.x - 2 &&
-          box->start.y + 2 <= worldPos.y && worldPos.y <= box->end.y - 2)) {
+          box->start.y + 2 <= worldPos.y && worldPos.y <= box->end.y - 2 &&
+          box->start.z + 2 <= worldPos.z && worldPos.z <= box->end.z - 2)) {
         return false;
     }
 
-    const Vec2f spawnPos = screenToBox(mousePos);
+    const Vec3f spawnPos = screenToBox(mousePos);
     const float atomRadius = AtomData::getProps(atomType).radius;
 
     for (std::size_t atomIndex = 0; atomIndex < atomStorage->size(); ++atomIndex) {
         const Vec3f atomPos = atomStorage->pos(atomIndex);
         const float radius = AtomData::getProps(atomStorage->type(atomIndex)).radius;
-        if ((Vec2f(atomPos.x, atomPos.y) - spawnPos).abs() <= 2.f * (radius + atomRadius)) {
+        if ((atomPos - spawnPos).abs() <= 2.f * (radius + atomRadius)) {
             return false;
         }
     }
 
-    return atomCreator(Vec3f(spawnPos, 0), Vec3f::Random() * 5.f, atomType, false);
+    return atomCreator(spawnPos, Vec3f::Random() * 5.f, atomType, false);
 }
 
 bool Tools::tryRemoveAtom(sf::Vector2i mousePos) {

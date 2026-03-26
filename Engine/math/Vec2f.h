@@ -17,7 +17,7 @@ public:
     Vec2f(const Vec2f& vec) : x(vec.x), y(vec.y) {}
     Vec2f(float x = 0.0f, float y = 0.0f) : x(x), y(y) {}
 
-    operator sf::Vector2f() const { return sf::Vector2f(static_cast<float>(x), static_cast<float>(y)); }
+    operator sf::Vector2f() const { return {x, y}; }
 
     [[nodiscard]] Vec2f operator-() const { return Vec2f(-x, -y); }
 

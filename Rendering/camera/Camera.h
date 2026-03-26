@@ -5,11 +5,6 @@
 
 #include "Engine/math/Ray.h"
 
-struct ScreenPoint {
-    Vec2f pos;
-    bool  visible;
-};
-
 class Camera {
     friend class Mouse;
     friend class Keyboard;
@@ -27,17 +22,18 @@ public:
     void move(Vec2f offset) { position += offset; }
 
     void setPosition(Vec2f pos) { position = pos; };
+    Vec2f getPosition() const { return position; };
 
     void setMode(Mode newMode) { mode = newMode; }
     Mode getMode() const { return mode; }
 
-    Vec2f getPosition() const { return position; };
-
     void orbitDrag(sf::Vector2i delta);
     void freeDrag(sf::Vector2i delta);  // для Free mode
 
-    void zoomAt(float factor, sf::Vector2f mousePos, sf::RenderWindow& window);
+    Vec3f screenToWorld(sf::Vector2i screenPos) const;
+    sf::Vector2i worldToScreen(Vec3f worldPos) const;
 
+    void zoomAt(float factor, sf::Vector2f mousePos, sf::RenderWindow& target);
     float getZoom() const { return zoom; }
     void  setZoom(float new_zoom);
 
@@ -46,12 +42,12 @@ public:
 
     glm::vec3 getEyePosition() const;
     glm::mat4 getViewMatrix()  const;
-    glm::mat4 getProjectionMatrix(float screenWidth, float screenHeight) const;
+    glm::mat4 getProjectionMatrix() const;
 
-    Ray screenToRay(float screenX, float screenY, float screenWidth, float screenHeight) const;
-    ScreenPoint worldToScreen(const Vec3f& worldPos, float screenWidth, float screenHeight) const;
+    Ray screenToRay(float screenX, float screenY) const;
 
 private:
+    sf::Vector2f screenSize;
     sf::View* view;
     Vec2f position;
     float zoom;

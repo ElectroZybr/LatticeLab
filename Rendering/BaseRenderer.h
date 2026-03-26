@@ -1,9 +1,7 @@
 #pragma once
 
-#include <vector>
-
 #include "Rendering/camera/Camera.h"
-#include "Engine/physics/AtomData.h"
+#include "Engine/selection/OverlayState.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/SimBox.h"
 
@@ -13,13 +11,8 @@ public:
 
     virtual void drawShot(const AtomStorage& atoms,
                           const SimBox& box) = 0;
-    
-    virtual void drawOverlay() = 0;
-    virtual void setBoxContour(sf::Vector2i screenStart, sf::Vector2i screenEnd) = 0;
-    virtual void setLassoContour(const std::vector<sf::Vector2i>& screenPoints) = 0;
 
-    virtual void showBoxContour(bool show) { isBoxVisible = show; }
-    virtual void showLassoContour(bool show) { isLassoVisible = show; }
+    virtual void drawOverlay(const OverlayState& overlay) = 0;
     void setAtomStorage(const AtomStorage* storage) { atomStorage = storage; }
 
     bool drawGrid           = false;
@@ -29,9 +22,6 @@ public:
     float speedGradientMax  = 5.0f; // 0.0f = auto
     float drawBondsZoom     = 25.f;
     float alpha             = 0.05f;
-
-    bool isBoxVisible = false;
-    bool isLassoVisible = false;
 
     Camera camera;
 
