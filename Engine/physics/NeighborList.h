@@ -31,6 +31,7 @@ public:
 
 private:
     template<typename F>
+    /* helper функция, перебирает не пустые ячейки */
     void forEachNonEmptyCell(const SpatialGrid& grid, F&& callback) const {
         for (int z = 0; z < grid.sizeZ; ++z) {
             for (int y = 0; y < grid.sizeY; ++y) {
@@ -44,6 +45,7 @@ private:
     }
 
     template<typename F>
+    /* helper функция, перебирает всех соседей атома */
     void forEachNeighbor(const SpatialGrid& grid, const AtomStorage& atoms, std::size_t atomIndex, F&& callback) const {
         const int cx = grid.worldToCellX(atoms.posX(atomIndex));
         const int cy = grid.worldToCellY(atoms.posY(atomIndex));
@@ -69,6 +71,13 @@ private:
         }
     }
 
+    static inline float distanceSqr(const AtomStorage& atoms, std::size_t aIndex, std::size_t bIndex) {
+        const float dx = atoms.posX(bIndex) - atoms.posX(aIndex);
+        const float dy = atoms.posY(bIndex) - atoms.posY(aIndex);
+        const float dz = atoms.posZ(bIndex) - atoms.posZ(aIndex);
+        return dx * dx + dy * dy + dz * dz;
+    }
+
     [[nodiscard]] const std::vector<std::size_t>* getCellAtomIndices(
         const SpatialGrid& grid, int x, int y, int z) const;
     [[nodiscard]] std::size_t estimateNeighborCapacity(
@@ -78,13 +87,14 @@ private:
     std::vector<std::size_t> neighbors_;
     std::vector<std::size_t> offsets_;
 
+    // позиции атомов на момент перестройки списка
     std::vector<float> refPosX_;
     std::vector<float> refPosY_;
     std::vector<float> refPosZ_;
 
-    float cutoff_ = 0.0f;
-    float skin_ = 0.0f;
-    float listRadius_ = 0.0f;
-    float listRadiusSqr_ = 0.0f;
-    bool valid_ = false;
+    float cutoff_ = 0.0f;        // радиус отсечки
+    float skin_ = 0.0f;          // запас к радиусу отсечки
+    float listRadius_ = 0.0f;    // общий радиус отсечки cutoff + skin
+    float listRadiusSqr_ = 0.0f; // квадрат общего радиуса отсечки
+    bool valid_ = false;         // действителен ли список
 };

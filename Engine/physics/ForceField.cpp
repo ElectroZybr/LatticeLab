@@ -9,6 +9,7 @@
 #include "Bond.h"
 #include "../SimBox.h"
 #include "../math/Consts.h"
+#include "NeighborList.h"
 
 ForceField::ForceField() : ljPairTable(buildLJPairTable()) {}
 
@@ -181,15 +182,15 @@ void ForceField::ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox
             for (int iz = z0; iz <= z1; ++iz) {
                 if (const auto* cell = box.grid.atIndex(ix, iy, iz)) {
                     for (std::size_t neighbourIndex : *cell) {
-                        if (neighbourIndex >= atoms.size() || neighbourIndex <= atomIndex) {
-                            continue;
-                        }
+                        if (atomIndex <= neighbourIndex) continue;
                         pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
                     }
                 }
             }
         }
     }
+
+    
 
     // записываем обратно в AtomStorage
     atoms.forceX(atomIndex) = forceX;
