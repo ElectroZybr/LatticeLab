@@ -4,11 +4,12 @@
 
 class AtomStorage;
 class ForceField;
+class NeighborList;
 class SimBox;
 
 class KDKScheme {
 public:
-    void pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, float dt) const;
+    void pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) const;
 
     static void halfKick(AtomStorage& atomStorage, std::size_t atomIndex, float dt);
     static void drift(AtomStorage& atomStorage, std::size_t atomIndex, float dt);

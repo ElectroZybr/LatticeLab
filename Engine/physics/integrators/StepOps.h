@@ -3,6 +3,8 @@
 #include "../ForceField.h"
 #include "../../SimBox.h"
 
+class NeighborList;
+
 namespace StepOps {
 using AtomStorageStepFn = void (*)(AtomStorage& atomStorage, std::size_t atomIndex, float dt);
 
@@ -29,8 +31,8 @@ inline void confineToBox(AtomStorage& atomStorage, SimBox& box, std::size_t atom
     confineAxis(atomStorage.posZ(atomIndex), atomStorage.velZ(atomIndex), static_cast<float>(max.z));
 }
 
-inline void computeForces(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, float dt) {
-    forceField.compute(atomStorage, box, dt);
+inline void computeForces(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) {
+    forceField.compute(atomStorage, box, neighborList, dt);
 }
 
 inline void predictAndSync(AtomStorage& atomStorage, SimBox& box, float dt, AtomStorageStepFn predictFn) {

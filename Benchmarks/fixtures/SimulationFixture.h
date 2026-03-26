@@ -50,8 +50,12 @@ protected:
         rebuildScene();
         StepOps::computeForces(
             simulation_->atomStorage, simulation_->sim_box,
-            simulation_->forceField, Benchmarks::kDt
+            simulation_->forceField, nullptr, Benchmarks::kDt
         );
+    }
+
+    void prepareNeighborList() {
+        simulation_->neighborList.build(simulation_->atomStorage, simulation_->sim_box);
     }
 
     void prepareForCorrect() {
@@ -62,7 +66,7 @@ protected:
         );
         StepOps::computeForces(
             simulation_->atomStorage, simulation_->sim_box,
-            simulation_->forceField, Benchmarks::kDt
+            simulation_->forceField, nullptr, Benchmarks::kDt
         );
     }
 

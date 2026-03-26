@@ -58,10 +58,10 @@ ForceField::LJPairTable ForceField::buildLJPairTable() {
     return table;
 }
 
-void ForceField::compute(AtomStorage& atoms, SimBox& box, float dt) const {
+void ForceField::compute(AtomStorage& atoms, SimBox& box, NeighborList* neighborList, float dt) const {
     // расчет нековалентных сил для каждого атома
     for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
-        ComputeForces(atoms, atomIndex, box);
+        ComputeForces(atoms, atomIndex, box, neighborList);
     }
 
     // проверка образования и разрыва связей, а также расчет сил
@@ -148,7 +148,7 @@ void ForceField::applyWall(float coord, float& force, float min, float max) {
     }
 }
 
-void ForceField::ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox& box) const {
+void ForceField::ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox& box, NeighborList* neighborList) const {
     // загружаем данные текущего атома из AtomStorage
     float posX = atoms.posX(atomIndex);
     float posY = atoms.posY(atomIndex);
@@ -166,31 +166,46 @@ void ForceField::ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox
     applyGravityForce(forceX, forceY, forceZ);
 
     // взаимодействия с соседями
-    const int cx = box.grid.worldToCellX(posX);
-    const int cy = box.grid.worldToCellY(posY);
-    const int cz = box.grid.worldToCellZ(posZ);
+    if (!neighborList) {
+        // без списка соседей
+        const int cx = box.grid.worldToCellX(posX);
+        const int cy = box.grid.worldToCellY(posY);
+        const int cz = box.grid.worldToCellZ(posZ);
 
-    const int x0 = std::max(cx - 1, 0);
-    const int x1 = std::min(cx + 1, box.grid.sizeX - 1);
-    const int y0 = std::max(cy - 1, 0);
-    const int y1 = std::min(cy + 1, box.grid.sizeY - 1);
-    const int z0 = std::max(cz - 1, 0);
-    const int z1 = std::min(cz + 1, box.grid.sizeZ - 1);
+        const int x0 = std::max(cx - 1, 0);
+        const int x1 = std::min(cx + 1, box.grid.sizeX - 1);
+        const int y0 = std::max(cy - 1, 0);
+        const int y1 = std::min(cy + 1, box.grid.sizeY - 1);
+        const int z0 = std::max(cz - 1, 0);
+        const int z1 = std::min(cz + 1, box.grid.sizeZ - 1);
 
-    for (int ix = x0; ix <= x1; ++ix) {
-        for (int iy = y0; iy <= y1; ++iy) {
-            for (int iz = z0; iz <= z1; ++iz) {
-                if (const auto* cell = box.grid.atIndex(ix, iy, iz)) {
-                    for (std::size_t neighbourIndex : *cell) {
-                        if (atomIndex <= neighbourIndex) continue;
-                        pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
+        for (int ix = x0; ix <= x1; ++ix) {
+            for (int iy = y0; iy <= y1; ++iy) {
+                for (int iz = z0; iz <= z1; ++iz) {
+                    if (const auto* cell = box.grid.atIndex(ix, iy, iz)) {
+                        for (std::size_t neighbourIndex : *cell) {
+                            if (atomIndex <= neighbourIndex) continue;
+                            pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
+                        }
                     }
                 }
             }
         }
-    }
+    } else {
+        // используем список соседей
+        if (atomIndex < neighborList->atomCount()) {
+            const auto [begin, end] = neighborList->rangeFor(atomIndex);
+            const auto& neighborIndices = neighborList->neighbors();
 
-    
+            for (std::size_t cursor = begin; cursor < end; ++cursor) {
+                const std::size_t neighbourIndex = neighborIndices[cursor];
+                if (neighbourIndex >= atoms.size() || atomIndex <= neighbourIndex) {
+                    continue;
+                }
+                pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
+            }
+        }
+    }
 
     // записываем обратно в AtomStorage
     atoms.forceX(atomIndex) = forceX;

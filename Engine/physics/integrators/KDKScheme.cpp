@@ -3,7 +3,7 @@
 #include "StepOps.h"
 #include "../AtomData.h"
 
-void KDKScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, float dt) const {
+void KDKScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) const {
     // Kick: половина шага
     for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
         if (!atomStorage.isAtomFixed(atomIndex))
@@ -12,7 +12,7 @@ void KDKScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forc
     // Расчет новых позиций
     StepOps::predictAndSync(atomStorage, box, dt, &drift);
     // Расчет сил
-    StepOps::computeForces(atomStorage, box, forceField, dt);
+    StepOps::computeForces(atomStorage, box, forceField, neighborList, dt);
     // Kick: вторая половина шага
     for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
         if (!atomStorage.isAtomFixed(atomIndex))

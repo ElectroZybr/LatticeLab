@@ -12,6 +12,7 @@ bench.py — запускалка бенчмарков для Chemical Simulator
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import webbrowser
@@ -106,20 +107,36 @@ def interactive_menu() -> tuple[str | None, int, bool]:
         print(f"  {i}) {f}")
 
     print()
-    choice = input("Выбери номер (Enter = все): ").strip()
+    choice = input("Выбери номер(а) через пробел (Enter = все): ").strip()
 
     selected: str | None = None
     if choice == "" or choice == "0":
         selected = None
     else:
-        try:
-            idx = int(choice) - 1
-            if 0 <= idx < len(filters):
-                selected = filters[idx]
-            else:
-                die("Неверный номер")
-        except ValueError:
-            selected = choice  # ввели regex напрямую
+        tokens = choice.split()
+        if len(tokens) == 1:
+            try:
+                idx = int(tokens[0]) - 1
+                if 0 <= idx < len(filters):
+                    selected = filters[idx]
+                else:
+                    die("Неверный номер")
+            except ValueError:
+                selected = choice  # ввели regex напрямую
+        else:
+            if not all(token.isdigit() for token in tokens):
+                die("Для множественного выбора укажи только номера через пробел")
+
+            selected_filters: list[str] = []
+            for token in tokens:
+                idx = int(token) - 1
+                if 0 <= idx < len(filters):
+                    selected_filters.append(filters[idx])
+                else:
+                    die("Неверный номер")
+
+            selected_filters = list(dict.fromkeys(selected_filters))
+            selected = "(" + "|".join(re.escape(item) for item in selected_filters) + ")"
 
     rep_input = input("Количество прогонов [3]: ").strip()
     repetitions = int(rep_input) if rep_input.isdigit() else 3

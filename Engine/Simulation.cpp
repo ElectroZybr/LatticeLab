@@ -17,12 +17,16 @@ Simulation::Simulation(SimBox& box)
     : sim_box(box), integrator() {
     atomStorage.reserve(250000);
     forceField.updateBoxCache(sim_box); // обновление кэша для параметров стен
+
+    neighborList.setParams(5.f, 1.f);
 }
 
 void Simulation::update(float dt) {
-    if (neighborList.needsRebuild(atomStorage))
+    if (neighborList.needsRebuild(atomStorage)) {
         neighborList.build(atomStorage, sim_box);
-    integrator.step(atomStorage, sim_box, forceField, dt);
+        // std::cout << "rebuild on step: " << sim_step << std::endl;
+    }
+    integrator.step(atomStorage, sim_box, forceField, neighborList, dt);
     ++sim_step;
 }
 

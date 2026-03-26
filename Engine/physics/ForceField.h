@@ -8,12 +8,13 @@
 #include "AtomStorage.h"
 
 class SimBox;
+class NeighborList;
 
 class ForceField {
 public:
     ForceField();
 
-    void compute(AtomStorage& atoms, SimBox& box, float dt) const;
+    void compute(AtomStorage& atoms, SimBox& box, NeighborList* neighborList, float dt) const;
     void updateBoxCache(const SimBox& box);
 
     void setGravity(Vec3f gravity = Vec3f(0, 5, 0)) { static_force = gravity; }
@@ -35,7 +36,7 @@ private:
 
     static void applyWall(float coord, float& force, float min, float max);
     void softWalls(const AtomStorage& atoms, std::size_t atomIndex, float& forceX, float& forceY, float& forceZ) const;
-    void ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox& box) const;
+    void ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox& box, NeighborList* neighborList) const;
     void pairNonBondedInteraction(AtomStorage& atoms, std::size_t bIndex, const LJPairRow& ljPairRow, float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const;
     void applyGravityForce(float& forceX, float& forceY, float& forceZ) const;
 

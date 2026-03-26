@@ -85,9 +85,14 @@ static sf::RenderWindow createWindow() {
     settings.minorVersion = 1;
     settings.attributeFlags = sf::ContextSettings::Attribute::Core;
 #endif
- 
-    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator",
-                            sf::State::Fullscreen, settings);
+    sf::RenderWindow window(
+        sf::VideoMode({1280, 720}),
+        "Chemical-simulator",
+        sf::State::Windowed,
+        settings
+    );
+    // sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator",
+    //                         sf::State::Fullscreen, settings);
 #ifdef __APPLE__
     const sf::ContextSettings actualSettings = window.getSettings();
     const bool hasModernContext = actualSettings.majorVersion > 4
@@ -187,7 +192,7 @@ int main() {
     SimBox box(Vec3f(-25, -25, 0), Vec3f(25, 25, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    Scenes::crystal(simulation, 20, AtomData::Type::Z, false);
+    Scenes::crystal(simulation, 250, AtomData::Type::Z, false);
 
     // Рендер
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);

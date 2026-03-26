@@ -7,7 +7,22 @@ BENCHMARK_DEFINE_F(SimulationFixture, ComputeForces)(benchmark::State& state) {
     for (auto _ : state) {
         StepOps::computeForces(
             simulation_->atomStorage, simulation_->sim_box,
-            simulation_->forceField, Benchmarks::kDt
+            simulation_->forceField, nullptr, Benchmarks::kDt
+        );
+        benchmark::DoNotOptimize(simulation_->atomStorage.size());
+        benchmark::ClobberMemory();
+    }
+    setCounters(state);
+}
+
+BENCHMARK_DEFINE_F(SimulationFixture, ComputeForcesNeighborList)(benchmark::State& state) {
+    rebuildScene();
+    prepareNeighborList();
+
+    for (auto _ : state) {
+        StepOps::computeForces(
+            simulation_->atomStorage, simulation_->sim_box,
+            simulation_->forceField, &simulation_->neighborList, Benchmarks::kDt
         );
         benchmark::DoNotOptimize(simulation_->atomStorage.size());
         benchmark::ClobberMemory();
@@ -16,4 +31,7 @@ BENCHMARK_DEFINE_F(SimulationFixture, ComputeForces)(benchmark::State& state) {
 }
 
 BENCHMARK_REGISTER_F(SimulationFixture, ComputeForces)
+    ->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);
+
+BENCHMARK_REGISTER_F(SimulationFixture, ComputeForcesNeighborList)
     ->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);

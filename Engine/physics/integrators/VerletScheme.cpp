@@ -3,11 +3,11 @@
 #include "StepOps.h"
 #include "../AtomData.h"
 
-void VerletScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, float dt) const {
+void VerletScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) const {
     // Расчет новых позиций
     StepOps::predictAndSync(atomStorage, box, dt, &predict);
     // Расчет сил
-    StepOps::computeForces(atomStorage, box, forceField, dt);
+    StepOps::computeForces(atomStorage, box, forceField, neighborList, dt);
     // Корректировка скоростей
     for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
         if (!atomStorage.isAtomFixed(atomIndex))
