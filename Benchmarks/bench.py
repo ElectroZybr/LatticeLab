@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 bench.py — запускалка бенчмарков для Chemical Simulator.
 
@@ -61,7 +62,11 @@ def list_available_filters() -> list[str]:
     return list(groups.keys())
 
 
-def run_benchmark(filter_regex: str | None, repetitions: int = 3) -> dict:
+def run_benchmark(
+    filter_regex: str | None,
+    repetitions: int = 3,
+    min_time: str | None = None,
+) -> dict:
     if not BINARY.exists():
         die(f"Бинарник не найден: {BINARY}")
 
@@ -70,13 +75,15 @@ def run_benchmark(filter_regex: str | None, repetitions: int = 3) -> dict:
         "--benchmark_format=json",
         f"--benchmark_repetitions={repetitions}",
     ]
+    if min_time:
+        cmd += [f"--benchmark_min_time={min_time}"]
     if filter_regex:
         cmd += [f"--benchmark_filter={filter_regex}"]
 
     print(f"\033[90m$ {' '.join(cmd)}\033[0m\n")
 
     result = subprocess.run(cmd, capture_output=True, text=True)
-    print(result.stderr)  # прогресс идёт в stderr
+    print(result.stderr)
 
     if result.returncode != 0:
         die(f"Бенчмарк завершился с кодом {result.returncode}")
@@ -90,14 +97,20 @@ def run_benchmark(filter_regex: str | None, repetitions: int = 3) -> dict:
 def save_result(data: dict, filter_used: str | None) -> Path:
     ensure_results_dir()
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    suffix = f"_{filter_used.replace('/', '_')}" if filter_used else "_all"
+    if filter_used:
+        # Windows-safe filename suffix.
+        safe_filter = re.sub(r'[<>:"/\\|?*()\s]+', "_", filter_used)
+        safe_filter = re.sub(r"_+", "_", safe_filter).strip("._")
+        suffix = f"_{safe_filter}" if safe_filter else "_filtered"
+    else:
+        suffix = "_all"
     path = RESULTS_DIR / f"{timestamp}{suffix}.json"
-    path.write_text(json.dumps(data, indent=2))
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
     print(f"\033[32mСохранено: {path}\033[0m")
     return path
 
 
-def interactive_menu() -> tuple[str | None, int, bool]:
+def interactive_menu() -> tuple[str | None, int, bool, str | None]:
     print("\033[1m=== Chemical Simulator Benchmarks ===\033[0m\n")
 
     filters = list_available_filters()
@@ -122,7 +135,7 @@ def interactive_menu() -> tuple[str | None, int, bool]:
                 else:
                     die("Неверный номер")
             except ValueError:
-                selected = choice  # ввели regex напрямую
+                selected = choice
         else:
             if not all(token.isdigit() for token in tokens):
                 die("Для множественного выбора укажи только номера через пробел")
@@ -141,8 +154,12 @@ def interactive_menu() -> tuple[str | None, int, bool]:
     rep_input = input("Количество прогонов [3]: ").strip()
     repetitions = int(rep_input) if rep_input.isdigit() else 3
 
+    min_time = input("Минимальное время прогона [пусто = по умолчанию, пример: 5s]: ").strip()
+    if min_time == "":
+        min_time = None
+
     save = input("\nСохранить результат? [y/N]: ").strip().lower() == "y"
-    return selected, repetitions, save
+    return selected, repetitions, save, min_time
 
 
 def main() -> None:
@@ -150,12 +167,8 @@ def main() -> None:
         description="Запускалка бенчмарков для Chemical Simulator",
     )
     parser.add_argument("--filter", metavar="REGEX", help="Фильтр бенчмарков (regex)")
-    parser.add_argument(
-        "--save", action="store_true", help="Сохранить результат в results/"
-    )
-    parser.add_argument(
-        "--list", action="store_true", help="Показать сохранённые результаты"
-    )
+    parser.add_argument("--save", action="store_true", help="Сохранить результат в results/")
+    parser.add_argument("--list", action="store_true", help="Показать сохранённые результаты")
     parser.add_argument(
         "--repetitions",
         metavar="N",
@@ -164,8 +177,12 @@ def main() -> None:
         help="Количество прогонов (default: 3)",
     )
     parser.add_argument(
-        "--open", action="store_true", help="Открыть view.html в браузере"
+        "--min-time",
+        metavar="TIME",
+        default=None,
+        help="Минимальное время прогона benchmark (пример: 5s, 500ms)",
     )
+    parser.add_argument("--open", action="store_true", help="Открыть view.html в браузере")
     args = parser.parse_args()
 
     if args.list:
@@ -185,28 +202,23 @@ def main() -> None:
         return
 
     repetitions = args.repetitions
+    min_time = args.min_time
     if args.filter or args.save:
         filter_regex = args.filter
         save_flag = args.save
     else:
-        filter_regex, repetitions, save_flag = interactive_menu()
+        filter_regex, repetitions, save_flag, min_time = interactive_menu()
 
     print()
-    data = run_benchmark(filter_regex, repetitions)
+    data = run_benchmark(filter_regex, repetitions, min_time)
 
     if save_flag:
         save_result(data, filter_regex)
     else:
         ensure_results_dir()
         tmp = RESULTS_DIR / "last_run.json"
-        tmp.write_text(json.dumps(data, indent=2))
+        tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
         print(f"\033[90mВременный результат: {tmp}\033[0m")
-
-    if args.open:
-        if not VIEW_HTML.exists():
-            print(f"\033[33mview.html не найден рядом со скриптом\033[0m")
-        else:
-            webbrowser.open(VIEW_HTML.as_uri())
 
 
 if __name__ == "__main__":
