@@ -38,6 +38,11 @@ void NeighborList::clear() {
     refPosX_.clear();
     refPosY_.clear();
     refPosZ_.clear();
+    neighbors_.shrink_to_fit();
+    offsets_.shrink_to_fit();
+    refPosX_.shrink_to_fit();
+    refPosY_.shrink_to_fit();
+    refPosZ_.shrink_to_fit();
     valid_ = false;
 }
 
@@ -47,14 +52,21 @@ void NeighborList::build(const AtomStorage& atoms, const SimBox& box) {
     reserveListBuffers(atoms, grid);
 
     const std::size_t atomCount = atoms.size();
-    std::vector<std::size_t> counts(atomCount, 0);
+    std::vector<std::vector<std::size_t>> temp(atomCount); // временный буфер
+    const std::size_t estimatedCapacity = estimateNeighborCapacity(atoms, grid);
+    const std::size_t estimatedPerAtom = (atomCount > 0) ? (estimatedCapacity / atomCount) : 0;
+    for (std::size_t index = 0; index < atomCount; ++index) {
+        if (estimatedPerAtom > 0) {
+            temp[index].reserve(estimatedPerAtom);
+        }
+    }
 
     // расчет количества соседей у каждого атома
     for (std::size_t index = 0; index < atomCount; ++index) {
         forEachNeighbor(grid, atoms, index, [&](std::size_t neighborIndex) {
             if (index <= neighborIndex) return;
             if (distanceSqr(atoms, index, neighborIndex) <= listRadiusSqr_) {
-                ++counts[index];
+                temp[index].push_back(neighborIndex);
             }
         });
     }
@@ -62,20 +74,16 @@ void NeighborList::build(const AtomStorage& atoms, const SimBox& box) {
     // строим карту оффсетов по списку количества соседей
     offsets_[0] = 0;
     for (std::size_t index = 0; index < atomCount; ++index) {
-        offsets_[index + 1] = offsets_[index] + counts[index];
+        offsets_[index + 1] = offsets_[index] + temp[index].size();
     }
 
     neighbors_.resize(offsets_[atomCount]); // подгоняем под нужный размер
-    std::vector<std::size_t> writeOffsets = offsets_; // курсор для записи
 
     // записываем индексы соседей в ячейки
     for (std::size_t index = 0; index < atomCount; ++index) {
-        forEachNeighbor(grid, atoms, index, [&](std::size_t neighborIndex) {
-            if (index <= neighborIndex) return;
-            if (distanceSqr(atoms, index, neighborIndex) <= listRadiusSqr_) {
-                neighbors_[writeOffsets[index]++] = neighborIndex;
-            }
-        });
+        const std::size_t begin = offsets_[index];
+        const auto& atomNeighbors = temp[index];
+        std::copy(atomNeighbors.begin(), atomNeighbors.end(), neighbors_.begin() + begin);
     }
 
     // обновляем позиции последнего перестроения списка
@@ -178,3 +186,4 @@ void NeighborList::reserveListBuffers(const AtomStorage& atoms, const SpatialGri
 
     neighbors_.reserve(estimateNeighborCapacity(atoms, grid));
 }
+

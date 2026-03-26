@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
 #include "fixtures/SimulationFixture.h"
 
-BENCHMARK_DEFINE_F(SimulationFixture, ComputeForces)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SimulationFixture, ComputeForcesNoNeighborList)(benchmark::State& state) {
     rebuildScene();
 
     for (auto _ : state) {
@@ -15,7 +15,7 @@ BENCHMARK_DEFINE_F(SimulationFixture, ComputeForces)(benchmark::State& state) {
     setCounters(state);
 }
 
-BENCHMARK_DEFINE_F(SimulationFixture, ComputeForcesNeighborList)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SimulationFixture, ComputeForcesWithNeighborList)(benchmark::State& state) {
     rebuildScene();
     prepareNeighborList();
 
@@ -30,8 +30,8 @@ BENCHMARK_DEFINE_F(SimulationFixture, ComputeForcesNeighborList)(benchmark::Stat
     setCounters(state);
 }
 
-BENCHMARK_REGISTER_F(SimulationFixture, ComputeForces)
+BENCHMARK_REGISTER_F(SimulationFixture, ComputeForcesNoNeighborList)
     ->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);
 
-BENCHMARK_REGISTER_F(SimulationFixture, ComputeForcesNeighborList)
+BENCHMARK_REGISTER_F(SimulationFixture, ComputeForcesWithNeighborList)
     ->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);

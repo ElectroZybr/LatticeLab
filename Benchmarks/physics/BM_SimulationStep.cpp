@@ -1,8 +1,13 @@
 #include <benchmark/benchmark.h>
 #include "fixtures/SimulationFixture.h"
 
-BENCHMARK_DEFINE_F(SimulationFixture, FullStep)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(SimulationFixture, FullStepWithNeighborList)(benchmark::State& state) {
+    constexpr int kWarmupSteps = 128;
+
     rebuildScene();
+    for (int i = 0; i < kWarmupSteps; ++i) {
+        simulation_->update(Benchmarks::kDt);
+    }
     const std::size_t rebuildCountBefore = simulation_->neighborListRebuildCount();
 
     for (auto _ : state) {
@@ -27,8 +32,13 @@ BENCHMARK_DEFINE_F(SimulationFixture, FullStep)(benchmark::State& state) {
 }
 
 BENCHMARK_DEFINE_F(SimulationFixture, FullStepNoNeighborList)(benchmark::State& state) {
+    constexpr int kWarmupSteps = 128;
+
     rebuildScene();
     simulation_->setNeighborListEnabled(false);
+    for (int i = 0; i < kWarmupSteps; ++i) {
+        simulation_->update(Benchmarks::kDt);
+    }
 
     for (auto _ : state) {
         simulation_->update(Benchmarks::kDt);
@@ -44,7 +54,7 @@ BENCHMARK_DEFINE_F(SimulationFixture, FullStepNoNeighborList)(benchmark::State& 
     setCounters(state);
 }
 
-BENCHMARK_REGISTER_F(SimulationFixture, FullStep)
+BENCHMARK_REGISTER_F(SimulationFixture, FullStepWithNeighborList)
     ->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);
 
 BENCHMARK_REGISTER_F(SimulationFixture, FullStepNoNeighborList)

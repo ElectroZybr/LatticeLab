@@ -158,7 +158,7 @@ static DebugView* buildDebugNeighborView(DebugPanel& panel) {
         DebugValue("Skin", DebugDrawers::Float<3>),
         DebugValue("List radius", DebugDrawers::Float<3>),
         DebugValue("Ребилдов NL", DebugDrawers::Int),
-        DebugValue("Шагов между ребилдами (avg)", DebugDrawers::Float<2>),
+        DebugValue("Шагов между ребилдами (recent)", DebugDrawers::Float<2>),
     }));
 }
 
@@ -208,7 +208,7 @@ int main() {
     SimBox box(Vec3f(-25, -25, 0), Vec3f(25, 25, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    Scenes::crystal(simulation, 25, AtomData::Type::Z, false);
+    Scenes::crystal(simulation, 500, AtomData::Type::Z, false);
 
     // Рендер
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
@@ -381,7 +381,7 @@ int main() {
             debugNeighbor->add_data("Skin", simulation.neighborList.skin());
             debugNeighbor->add_data("List radius", simulation.neighborList.listRadius());
             debugNeighbor->add_data("Ребилдов NL", simulation.neighborListRebuildCount());
-            debugNeighbor->add_data("Шагов между ребилдами (avg)", simulation.averageStepsPerNeighborListRebuild());
+            debugNeighbor->add_data("Шагов между ребилдами (recent)", simulation.recentAverageStepsPerNeighborListRebuild());
 
             physicsCounter.flush(LOG_INTERVAL);
             renderCounter.flush(LOG_INTERVAL);

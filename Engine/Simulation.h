@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <SFML/Graphics.hpp>
 
 #include "physics/AtomData.h"
@@ -35,6 +36,7 @@ public:
     bool isNeighborListEnabled() const { return useNeighborList_; }
     std::size_t neighborListRebuildCount() const { return neighborListRebuildCount_; }
     float averageStepsPerNeighborListRebuild() const;
+    float recentAverageStepsPerNeighborListRebuild() const;
     int stepsSinceNeighborListRebuild() const;
 
     void setIntegrator(Integrator::Scheme scheme) { integrator.setScheme(scheme); }
@@ -55,9 +57,14 @@ private:
     std::size_t neighborListRebuildCount_ = 0;
     std::size_t neighborListRebuildIntervalsSum_ = 0;
     int lastNeighborListRebuildStep_ = -1;
+    static constexpr std::size_t kRecentRebuildWindow = 8;
+    std::array<std::size_t, kRecentRebuildWindow> recentRebuildIntervals_{};
+    std::size_t recentRebuildIntervalCount_ = 0;
+    std::size_t recentRebuildIntervalCursor_ = 0;
 
     bool checkNeighbor(Vec3f coords, float delta);
     void onNeighborListRebuild();
+    void resetNeighborListStats();
 };
 
 

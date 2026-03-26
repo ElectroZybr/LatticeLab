@@ -29,6 +29,7 @@ void Simulation::setNeighborListEnabled(bool enabled) {
     useNeighborList_ = enabled;
     if (!useNeighborList_) {
         neighborList.clear();
+        resetNeighborListStats();
     }
 }
 
@@ -297,9 +298,16 @@ void Simulation::clear() {
     sim_box.grid.resize(sim_box.grid.sizeX, sim_box.grid.sizeY, sim_box.grid.sizeZ, sim_box.grid.cellSize);
     neighborList.clear();
     sim_step = 0;
+    resetNeighborListStats();
+}
+
+void Simulation::resetNeighborListStats() {
     neighborListRebuildCount_ = 0;
     neighborListRebuildIntervalsSum_ = 0;
     lastNeighborListRebuildStep_ = -1;
+    recentRebuildIntervals_.fill(0);
+    recentRebuildIntervalCount_ = 0;
+    recentRebuildIntervalCursor_ = 0;
 }
 
 float Simulation::averageStepsPerNeighborListRebuild() const {
@@ -308,6 +316,19 @@ float Simulation::averageStepsPerNeighborListRebuild() const {
     }
     return static_cast<float>(neighborListRebuildIntervalsSum_) /
         static_cast<float>(neighborListRebuildCount_ - 1);
+}
+
+float Simulation::recentAverageStepsPerNeighborListRebuild() const {
+    if (recentRebuildIntervalCount_ == 0) {
+        return 0.0f;
+    }
+
+    std::size_t sum = 0;
+    for (std::size_t index = 0; index < recentRebuildIntervalCount_; ++index) {
+        sum += recentRebuildIntervals_[index];
+    }
+
+    return static_cast<float>(sum) / static_cast<float>(recentRebuildIntervalCount_);
 }
 
 int Simulation::stepsSinceNeighborListRebuild() const {
@@ -319,7 +340,14 @@ int Simulation::stepsSinceNeighborListRebuild() const {
 
 void Simulation::onNeighborListRebuild() {
     if (lastNeighborListRebuildStep_ >= 0 && sim_step >= lastNeighborListRebuildStep_) {
-        neighborListRebuildIntervalsSum_ += static_cast<std::size_t>(sim_step - lastNeighborListRebuildStep_);
+        const std::size_t interval = static_cast<std::size_t>(sim_step - lastNeighborListRebuildStep_);
+        neighborListRebuildIntervalsSum_ += interval;
+
+        recentRebuildIntervals_[recentRebuildIntervalCursor_] = interval;
+        recentRebuildIntervalCursor_ = (recentRebuildIntervalCursor_ + 1) % kRecentRebuildWindow;
+        if (recentRebuildIntervalCount_ < kRecentRebuildWindow) {
+            ++recentRebuildIntervalCount_;
+        }
     }
     lastNeighborListRebuildStep_ = sim_step;
     ++neighborListRebuildCount_;
