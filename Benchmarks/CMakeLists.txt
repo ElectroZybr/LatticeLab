@@ -1,4 +1,4 @@
-file(GLOB_RECURSE BENCHMARK_SOURCES
+file(GLOB_RECURSE BENCHMARK_SOURCES CONFIGURE_DEPENDS
     "physics/*.cpp"
     "rendering/*.cpp"
     "BenchmarkScenes.cpp"
