@@ -1,17 +1,11 @@
-#include <fstream>
 #include <cmath>
 #include <iostream>
-#include <sstream>
 #include <vector>
 
 #include "Simulation.h"
+#include "io/SimulationStateIO.h"
+#include "metrics/EnergyMetrics.h"
 #include "physics/Bond.h"
-
-namespace {
-float kineticEnergy(AtomData::Type type, const Vec3f& speed) {
-    return 0.5f * AtomData::getProps(type).mass * speed.sqrAbs();
-}
-}
 
 Simulation::Simulation(SimBox& box)
     : sim_box(box), integrator() {
@@ -29,14 +23,14 @@ void Simulation::setNeighborListEnabled(bool enabled) {
     useNeighborList_ = enabled;
     if (!useNeighborList_) {
         neighborList.clear();
-        resetNeighborListStats();
+        neighborListMetrics_.onDisable();
     }
 }
 
 void Simulation::update(float dt) {
     if (useNeighborList_ && neighborList.needsRebuild(atomStorage)) {
         neighborList.build(atomStorage, sim_box);
-        onNeighborListRebuild();
+        neighborListMetrics_.onRebuild(sim_step);
     }
     integrator.step(atomStorage, sim_box, forceField, useNeighborList_ ? &neighborList : nullptr, dt);
     ++sim_step;
@@ -158,138 +152,12 @@ void Simulation::addBond(std::size_t aIndex, std::size_t bIndex) {
     Bond::CreateBond(aIndex, bIndex, atomStorage);
 }
 
-float Simulation::averageKineticEnegry() const {
-    if (atomStorage.empty()) {
-        return 0.0;
-    }
-
-    double kineticEnergy = 0.0;
-    for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
-        kineticEnergy += ::kineticEnergy(atomStorage.type(atomIndex), atomStorage.vel(atomIndex));
-    }
-
-    return kineticEnergy / static_cast<double>(atomStorage.size());
-}
-
-float Simulation::averagePotentialEnergy() const {
-    if (atomStorage.empty()) {
-        return 0.0;
-    }
-
-    double potentialEnergy = 0.0;
-    for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
-        potentialEnergy += atomStorage.energy(atomIndex);
-    }
-
-    return potentialEnergy / static_cast<double>(atomStorage.size());
-}
-
-float Simulation::fullAverageEnergy() const {
-    return averageKineticEnegry() + averagePotentialEnergy();
-}
-
-void Simulation::logAtomPos() const {
-    for (std::size_t i = 0; i < atomStorage.size(); ++i) {
-        const Vec3f pos = atomStorage.pos(i);
-        std::cout << "<Pos> Atom (" << i
-                  << ") X " << pos.x
-                  << " | Y " << pos.y
-                  << " | Z " << pos.z
-                  << std::endl;
-    }
-}
-
-void Simulation::logBondList() const {
-    std::vector<int> bondCounts(atomStorage.size(), 0);
-    for (const Bond& bond : Bond::bonds_list) {
-        if (bond.aIndex < bondCounts.size()) {
-            ++bondCounts[bond.aIndex];
-        }
-        if (bond.bIndex < bondCounts.size()) {
-            ++bondCounts[bond.bIndex];
-        }
-    }
-
-    for (int count : bondCounts) {
-        if (count > 0) {
-            std::cout << count << std::endl;
-        }
-    }
-}
-
 void Simulation::save(std::string_view path) const {
-    std::ofstream file(path.data());
-    if (!file.is_open()) return;
-
-    file << "box "
-         << sim_box.start.x << " " << sim_box.start.y << " " << sim_box.start.z << " "
-         << sim_box.end.x   << " " << sim_box.end.y   << " " << sim_box.end.z   << "\n";
-
-    file << "step " << sim_step << "\n";
-
-    for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
-        const Vec3f pos = atomStorage.pos(atomIndex);
-        const Vec3f vel = atomStorage.vel(atomIndex);
-        file << "atom "
-             << pos.x << " " << pos.y << " " << pos.z << " "
-             << vel.x << " " << vel.y << " " << vel.z << " "
-             << static_cast<int>(atomStorage.type(atomIndex)) << " "
-             << atomStorage.isAtomFixed(atomIndex) << "\n";
-    }
+    SimulationStateIO::save(*this, path);
 }
 
 void Simulation::load(std::string_view path) {
-    std::ifstream file(path.data());
-    if (!file.is_open()) return;
-
-    clear();
-
-    struct LoadedAtomData {
-        Vec3f coords, speed;
-        int type;
-        bool fixed;
-    };
-    std::vector<LoadedAtomData> buffer;
-
-    Vec3f boxStart, boxEnd;
-    int cellSize = -1;
-
-    std::string tag;
-    while (file >> tag) {
-        if (tag == "box") {
-            file >> boxStart.x >> boxStart.y >> boxStart.z
-                 >> boxEnd.x   >> boxEnd.y   >> boxEnd.z;
-        }
-        else if (tag == "step") {
-            file >> sim_step;
-        }
-        else if (tag == "atom") {
-            LoadedAtomData d{Vec3f(0.f, 0.f, 0.f), Vec3f(0.f, 0.f, 0.f), 0, false};
-            std::string atomLine;
-            std::getline(file, atomLine);
-            std::istringstream atomStream(atomLine);
-
-            if (!(atomStream >> d.coords.x >> d.coords.y >> d.coords.z
-                             >> d.speed.x  >> d.speed.y  >> d.speed.z
-                             >> d.type)) {
-                continue;
-            }
-
-            std::vector<double> tail;
-            double value = 0.0;
-            while (atomStream >> value) {
-                tail.push_back(value);
-            }
-            d.fixed = !tail.empty() && (tail.back() != 0.0);
-            buffer.emplace_back(d);
-        }
-    }
-
-    setSizeBox(boxStart, boxEnd, cellSize);
-
-    for (const LoadedAtomData& d : buffer) {
-        createAtom(d.coords, d.speed, static_cast<AtomData::Type>(d.type), d.fixed);
-    }
+    SimulationStateIO::load(*this, path);
 }
 
 void Simulation::clear() {
@@ -298,58 +166,29 @@ void Simulation::clear() {
     sim_box.grid.resize(sim_box.grid.sizeX, sim_box.grid.sizeY, sim_box.grid.sizeZ, sim_box.grid.cellSize);
     neighborList.clear();
     sim_step = 0;
-    resetNeighborListStats();
+    neighborListMetrics_.reset();
 }
 
-void Simulation::resetNeighborListStats() {
-    neighborListRebuildCount_ = 0;
-    neighborListRebuildIntervalsSum_ = 0;
-    lastNeighborListRebuildStep_ = -1;
-    recentRebuildIntervals_.fill(0);
-    recentRebuildIntervalCount_ = 0;
-    recentRebuildIntervalCursor_ = 0;
+float Simulation::averageKineticEnegry() const {
+    return EnergyMetrics::averageKineticEnergy(atomStorage);
+}
+
+float Simulation::averagePotentialEnergy() const {
+    return EnergyMetrics::averagePotentialEnergy(atomStorage);
+}
+
+float Simulation::fullAverageEnergy() const {
+    return EnergyMetrics::fullAverageEnergy(atomStorage);
 }
 
 float Simulation::averageStepsPerNeighborListRebuild() const {
-    if (neighborListRebuildCount_ <= 1) {
-        return 0.0f;
-    }
-    return static_cast<float>(neighborListRebuildIntervalsSum_) /
-        static_cast<float>(neighborListRebuildCount_ - 1);
+    return neighborListMetrics_.averageStepsBetweenRebuilds();
 }
 
 float Simulation::recentAverageStepsPerNeighborListRebuild() const {
-    if (recentRebuildIntervalCount_ == 0) {
-        return 0.0f;
-    }
-
-    std::size_t sum = 0;
-    for (std::size_t index = 0; index < recentRebuildIntervalCount_; ++index) {
-        sum += recentRebuildIntervals_[index];
-    }
-
-    return static_cast<float>(sum) / static_cast<float>(recentRebuildIntervalCount_);
+    return neighborListMetrics_.recentAverageStepsBetweenRebuilds();
 }
 
 int Simulation::stepsSinceNeighborListRebuild() const {
-    if (lastNeighborListRebuildStep_ < 0) {
-        return sim_step;
-    }
-    return sim_step - lastNeighborListRebuildStep_;
+    return neighborListMetrics_.stepsSinceLastRebuild(sim_step);
 }
-
-void Simulation::onNeighborListRebuild() {
-    if (lastNeighborListRebuildStep_ >= 0 && sim_step >= lastNeighborListRebuildStep_) {
-        const std::size_t interval = static_cast<std::size_t>(sim_step - lastNeighborListRebuildStep_);
-        neighborListRebuildIntervalsSum_ += interval;
-
-        recentRebuildIntervals_[recentRebuildIntervalCursor_] = interval;
-        recentRebuildIntervalCursor_ = (recentRebuildIntervalCursor_ + 1) % kRecentRebuildWindow;
-        if (recentRebuildIntervalCount_ < kRecentRebuildWindow) {
-            ++recentRebuildIntervalCount_;
-        }
-    }
-    lastNeighborListRebuildStep_ = sim_step;
-    ++neighborListRebuildCount_;
-}
-
