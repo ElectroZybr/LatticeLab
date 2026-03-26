@@ -1,33 +1,27 @@
 #pragma once
-#include <algorithm>
 #include <any>
 #include <cmath>
-#include <format>
 #include "imgui.h"
 
 #include "Engine/math/Vec2f.h"
 #include "Engine/math/Vec3f.h"
 
 namespace DebugDrawers {
-    inline int clampPrecision(int precision) {
-        return std::clamp(precision, 0, 6);
-    }
-
     inline float toFloat(const std::any& a) {
         if (a.type() == typeid(float))  return std::any_cast<float>(a);
         if (a.type() == typeid(double)) return static_cast<float>(std::any_cast<double>(a));
         return 0.f;
     }
 
-    inline void Float(std::string_view label, const std::any& a, int precision) {
+    template <int precision>
+    inline void Float(std::string_view label, const std::any& a) {
         const float val = toFloat(a);
-        const int p = clampPrecision(precision);
         ImGui::TextDisabled("%s", label.data());
         ImGui::SameLine();
-        ImGui::Text("%s", std::format("{:.{}f}", val, p).data());
+        ImGui::Text("%.*f", precision, val);
     }
 
-    inline void Int(std::string_view label, const std::any& a, int /*precision*/) {
+    inline void Int(std::string_view label, const std::any& a) {
         ImGui::TextDisabled("%s", label.data());
         ImGui::SameLine();
 
@@ -38,7 +32,7 @@ namespace DebugDrawers {
         else if (a.type() == typeid(size_t))  ImGui::Text("%zu", std::any_cast<size_t>(a));
     }
 
-    inline void String(std::string_view label, const std::any& a, int /*precision*/) {
+    inline void String(std::string_view label, const std::any& a) {
         ImGui::TextDisabled("%s", label.data());
         ImGui::SameLine();
         if (a.type() == typeid(std::string))
@@ -47,19 +41,19 @@ namespace DebugDrawers {
             ImGui::Text("%s", std::any_cast<std::string_view>(a).data());
     }
 
-    inline void Vec2f(std::string_view label, const std::any& a, int precision) {
+    template <int precision>
+    inline void Vec2f(std::string_view label, const std::any& a) {
         const auto& v = std::any_cast<const ::Vec2f&>(a);
-        const int p = clampPrecision(precision);
         ImGui::TextDisabled("%s", label.data());
         ImGui::SameLine();
-        ImGui::Text("%s", std::format("{:+.{}f} {:+.{}f}", v.x, p, v.y, p).data());
+        ImGui::Text("%+.*f %+.*f", precision, v.x, precision, v.y);
     }
 
-    inline void Vec3f(std::string_view label, const std::any& a, int precision) {
+    template <int precision>
+    inline void Vec3f(std::string_view label, const std::any& a) {
         const auto& v = std::any_cast<const ::Vec3f&>(a);
-        const int p = clampPrecision(precision);
         ImGui::TextDisabled("%s", label.data());
         ImGui::SameLine();
-        ImGui::Text("%s", std::format("{:+.{}f} {:+.{}f} {:+.{}f}", v.x, p, v.y, p, v.z, p).data());
+        ImGui::Text("%+.*f %+.*f %+.*f", precision, v.x, precision, v.y, precision, v.z);
     }
 }

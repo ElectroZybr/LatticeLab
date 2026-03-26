@@ -111,26 +111,26 @@ static sf::RenderWindow createWindow() {
 
 static DebugView* buildDebugSimView(DebugPanel& panel) {
     return panel.addView(DebugView("Симуляция", {
-        DebugValue ("Память (МБ)", DebugDrawers::Float, 2),
-        DebugValue ("Рендер (мс)", DebugDrawers::Float, 4),
-        DebugValue ("Физика (мс)", DebugDrawers::Float, 4),
+        DebugValue ("Память (МБ)", DebugDrawers::Float<2>),
+        DebugValue ("Рендер (мс)", DebugDrawers::Float<4>),
+        DebugValue ("Физика (мс)", DebugDrawers::Float<4>),
         DebugValue ("Тип интегратора", DebugDrawers::String),
         DebugValue ("Шаги симуляции", DebugDrawers::Int),
-        DebugValue ("Шагов/с", DebugDrawers::Float, 2),
+        DebugValue ("Шагов/с", DebugDrawers::Float<2>),
         DebugValue ("Количество атомов", DebugDrawers::Int),
-        DebugSeries("Полная энергия", 3),
+        DebugSeries("Полная энергия"),
     }));
 }
 
 static DebugView* buildDebugAtomSingle(DebugPanel& panel) {
     return panel.addView(DebugView("Атом", {
-        DebugValue("Позиция", DebugDrawers::Vec3f, 3),
-        DebugValue("Скорость", DebugDrawers::Vec3f, 3),
-        DebugValue("Силы", DebugDrawers::Vec3f, 3),
-        DebugValue("Пред. силы", DebugDrawers::Vec3f, 3),
-        DebugValue("Потенциальная энергия", DebugDrawers::Float, 4),
-        DebugValue("Масса", DebugDrawers::Float, 3),
-        DebugValue("Радиус", DebugDrawers::Float, 3),
+        DebugValue("Позиция", DebugDrawers::Vec3f<3>),
+        DebugValue("Скорость", DebugDrawers::Vec3f<3>),
+        DebugValue("Силы", DebugDrawers::Vec3f<3>),
+        DebugValue("Пред. силы", DebugDrawers::Vec3f<3>),
+        DebugValue("Потенциальная энергия", DebugDrawers::Float<4>),
+        DebugValue("Масса", DebugDrawers::Float<3>),
+        DebugValue("Радиус", DebugDrawers::Float<3>),
         DebugValue("Тип", DebugDrawers::Int),
     }));
 }
@@ -173,8 +173,8 @@ struct RateCounter {
                 steps_per_second += alpha * (instant_rate - steps_per_second);
             }
         }
-        accumulated_ms   = 0.0;
-        steps_this_tick  = 0;
+        accumulated_ms  = 0.0;
+        steps_this_tick = 0;
     }
 };
 
