@@ -98,6 +98,13 @@ private:
     }
 
 public:
+    const float* xData() const { return x_; }
+    const float* yData() const { return y_; }
+    const float* zData() const { return z_; }
+
+    const AtomData::Type* atomTypeData() const { return atomType_.data(); }
+    const std::uint8_t* selectedData() const { return selected_.data(); }
+
     std::size_t size() const { return count_; }
     bool empty() const { return count_ == 0; }
 

@@ -25,16 +25,19 @@ protected:
     void initGridGL();
     void initBoxGL();
 
+    void uploadBuffer(GLuint vbo, GLsizeiptr size, const void* data);
     GLuint loadShader(GLenum type, std::string_view path);
     GLuint compileShader(GLenum type, std::string_view src);
     GLuint linkProgram(std::string_view vert, std::string_view frag,
                        std::string_view geom = "");
 
+    void drawAtoms(const AtomStorage& atoms, const SimBox& box);
     void drawBox(const SimBox& box);
     void drawBondsGL(const glm::vec3& boxOffset);
     void drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset);
 
     // общее состояние
+    std::size_t lastAtomCount = 0;
     glm::mat4 projection{1.f};
     glm::mat4 view{1.f};
 
@@ -44,12 +47,11 @@ protected:
     GLuint bondVao{0},    bondVbo{0},     bondShader{0};
     GLuint gridVao{0},    gridLineVbo{0}, gridInstVbo{0},  gridShader{0};
 
-    struct alignas(32) AtomInstance {
-        glm::vec3 pos;
-        glm::vec3 color;
-        float radius;
-        float isSelected;
-    };
+    // Атомы
+    GLuint atomVbo = 0;
+    GLsizeiptr atomVboSize = 0;
+    std::vector<float> radii;
+    std::vector<glm::vec3> colors;
 
     struct alignas(32) BondInstance {
         glm::vec3 posA;
@@ -63,7 +65,6 @@ protected:
         float atomCount;
     };
 
-    std::vector<AtomInstance> instanceData;
     std::vector<BondInstance> bondData;
     std::vector<GridInstance> gridData;
 

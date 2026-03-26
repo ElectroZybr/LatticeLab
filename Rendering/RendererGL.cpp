@@ -94,35 +94,11 @@ void RendererGL::initAtomGL() {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 
-    // instance VBO (location 1..4)
-    glGenBuffers(1, &instanceVbo);
-    glBindBuffer(GL_ARRAY_BUFFER, instanceVbo);
-
-    const GLsizei stride = sizeof(AtomInstance);
-
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride,
-                          (void*)offsetof(AtomInstance, pos));
-    glVertexAttribDivisor(1, 1);
-
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, stride,
-                          (void*)offsetof(AtomInstance, radius));
-    glVertexAttribDivisor(2, 1);
-
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, stride,
-                          (void*)offsetof(AtomInstance, color));
-    glVertexAttribDivisor(3, 1);
-
-    glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, stride,
-                          (void*)offsetof(AtomInstance, isSelected));
-    glVertexAttribDivisor(4, 1);
+    glGenBuffers(1, &atomVbo);
+    glBindBuffer(GL_ARRAY_BUFFER, atomVbo);
 
     glBindVertexArray(0);
 }
-
 
 void RendererGL::initBoxGL() {
     glGenVertexArrays(1, &boxVao);
@@ -231,9 +207,7 @@ GLuint RendererGL::compileShader(GLenum type, std::string_view src) {
     return shader;
 }
 
-GLuint RendererGL::linkProgram(std::string_view vert, std::string_view frag,
-                               std::string_view geom)
-{
+GLuint RendererGL::linkProgram(std::string_view vert, std::string_view frag, std::string_view geom) {
     GLuint v = loadShader(GL_VERTEX_SHADER,   vert);
     GLuint f = loadShader(GL_FRAGMENT_SHADER, frag);
 
@@ -266,20 +240,42 @@ GLuint RendererGL::linkProgram(std::string_view vert, std::string_view frag,
     return prog;
 }
 
+void RendererGL::uploadBuffer(GLuint vbo, GLsizeiptr size, const void* data)
+{
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, size, nullptr, GL_DYNAMIC_DRAW); // orphaning
+    glBufferData(GL_ARRAY_BUFFER, size, data, GL_DYNAMIC_DRAW);    // upload
+}
+
 // ------------------------------------------------------------------ draw ---
 
-void RendererGL::drawShot(const AtomStorage& atoms,
-                          const SimBox& box)
+void RendererGL::drawShot(const AtomStorage& atoms, const SimBox& box)
 {
     currentBox = &box;
     updateMatrices();
 
     const glm::vec3 boxOffset(box.start.x, box.start.y, box.start.z);
 
-    // --- собираем instance-данные атомов ---
-    instanceData.clear();
-    instanceData.reserve(atoms.size());
+    target.setActive(true);
 
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glClearColor(0.13f, 0.13f, 0.13f, 1.f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    if (drawBonds) drawBondsGL(boxOffset);
+    if (drawGrid)  drawGridGL(box.grid, boxOffset);
+    drawBox(box);
+
+    drawAtoms(atoms, box);
+
+    drawOverlay();
+}
+
+void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
+    const size_t atomCount = atoms.size();
+
+    // --- maxSpeedSqr ---
     float maxSpeedSqr = 1.f;
     if (speedGradient) {
         if (speedGradientMax > 0.0f) {
@@ -289,53 +285,35 @@ void RendererGL::drawShot(const AtomStorage& atoms,
                 maxSpeedSqr = std::max(maxSpeedSqr, static_cast<float>(atoms.vel(atomIndex).sqrAbs()));
             }
         }
-        if (maxSpeedSqr < 1e-6f) {
-            maxSpeedSqr = 1.f;
-        }
+        if (maxSpeedSqr < 1e-6f) maxSpeedSqr = 1.f;
     }
 
-    for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
-        const Vec3f pos = atoms.pos(atomIndex);
-        const Vec3f vel = atoms.vel(atomIndex);
-        const auto type = atoms.type(atomIndex);
-        const auto& props = AtomData::getProps(type);
+    radii.resize(atomCount);
+    colors.resize(atomCount);
+    for (std::size_t i = 0; i < atomCount; ++i) {
+        const auto& props = AtomData::getProps(atoms.type(i));
+        radii[i] = static_cast<float>(props.radius);
 
         sf::Color sfColor;
         if (speedGradient) {
-            const float t = std::clamp(
-                std::sqrt(static_cast<float>(vel.sqrAbs()) / maxSpeedSqr), 0.f, 1.f);
-            sfColor = speedGradientTurbo
-                ? turboColor(t)
-                : sf::Color(255 * t, 0, (1.f - t) * 255.f);
-        }
-        else {
+            const float vSqr = atoms.vel(i).sqrAbs();
+            const float t = std::clamp(std::sqrt(vSqr / maxSpeedSqr), 0.f, 1.f);
+            sfColor = speedGradientTurbo ? turboColor(t)
+                                         : sf::Color(255*t, 0, (1.f-t)*255.f);
+        } else {
             sfColor = props.color;
         }
 
-        glm::vec3 color = glm::vec3(sfColor.r / 255.f, sfColor.g / 255.f, sfColor.b / 255.f);
-
-        instanceData.emplace_back(
-            glm::vec3(pos.x, pos.y, pos.z) + boxOffset,
-            color,
-            static_cast<float>(props.radius),
-            atoms.isSelected(atomIndex) ? 1.0f : 0.0f
-        );
+        colors[i] = glm::vec3(sfColor.r / 255.f, sfColor.g / 255.f, sfColor.b / 255.f);
     }
 
-    // --- GL ---
-    target.setActive(true);
-
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
-    glClearColor(0.13f, 0.13f, 0.13f, 1.f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // --- атомы ---
     glUseProgram(shaderProgram);
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"),
                        1, GL_FALSE, glm::value_ptr(projection));
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"),
                        1, GL_FALSE, glm::value_ptr(view));
+    glUniform3f(glGetUniformLocation(shaderProgram, "boxStart"),
+                box.start.x, box.start.y, box.start.z);
 
     if (useLighting()) {
         const glm::vec3 light = getLightDir();
@@ -343,20 +321,61 @@ void RendererGL::drawShot(const AtomStorage& atoms,
                     light.x, light.y, light.z);
     }
 
-    glBindBuffer(GL_ARRAY_BUFFER, instanceVbo);
-    glBufferData(GL_ARRAY_BUFFER,
-                 instanceData.size() * sizeof(AtomInstance),
-                 instanceData.data(), GL_DYNAMIC_DRAW);
+    const GLsizeiptr floatN    = atomCount * sizeof(float);
+    const GLsizeiptr vec3N     = atomCount * sizeof(glm::vec3);
+    const GLsizeiptr uint8N    = atomCount * sizeof(uint8_t);
+    const GLsizeiptr totalSize = floatN * 4 + vec3N + uint8N;
+
+    const GLsizeiptr offX        = 0;
+    const GLsizeiptr offY        = offX        + floatN;
+    const GLsizeiptr offZ        = offY        + floatN;
+    const GLsizeiptr offRadius   = offZ        + floatN;
+    const GLsizeiptr offColor    = offRadius   + floatN;
+    const GLsizeiptr offSelected = offColor    + vec3N;
+
+    glBindBuffer(GL_ARRAY_BUFFER, atomVbo);
+    glBufferData(GL_ARRAY_BUFFER, totalSize, nullptr, GL_DYNAMIC_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, offX,        floatN, atoms.xData());
+    glBufferSubData(GL_ARRAY_BUFFER, offY,        floatN, atoms.yData());
+    glBufferSubData(GL_ARRAY_BUFFER, offZ,        floatN, atoms.zData());
+    glBufferSubData(GL_ARRAY_BUFFER, offRadius,   floatN, radii.data());
+    glBufferSubData(GL_ARRAY_BUFFER, offColor,    vec3N,  colors.data());
+    glBufferSubData(GL_ARRAY_BUFFER, offSelected, uint8N, atoms.selectedData());
 
     glBindVertexArray(vao);
-    glDrawArraysInstanced(GL_TRIANGLES, 0, 6,
-                          static_cast<GLsizei>(instanceData.size()));
-    glBindVertexArray(0);
 
-    if (drawBonds) drawBondsGL(boxOffset);
-    if (drawGrid)  drawGridGL(box.grid, boxOffset);
-    drawBox(box);
-    drawOverlay();
+    if (atomCount != lastAtomCount) {
+        glBindBuffer(GL_ARRAY_BUFFER, atomVbo);
+
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 0, (void*)offX);
+        glVertexAttribDivisor(1, 1);
+
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, 0, (void*)offY);
+        glVertexAttribDivisor(2, 1);
+
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 0, (void*)offZ);
+        glVertexAttribDivisor(3, 1);
+
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, 0, (void*)offRadius);
+        glVertexAttribDivisor(4, 1);
+
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, 0, (void*)offColor);
+        glVertexAttribDivisor(5, 1);
+
+        glEnableVertexAttribArray(6);
+        glVertexAttribIPointer(6, 1, GL_UNSIGNED_BYTE, 0, (void*)offSelected);
+        glVertexAttribDivisor(6, 1);
+
+        lastAtomCount = atomCount;
+    }
+
+    glDrawArraysInstanced(GL_TRIANGLES, 0, 6, static_cast<GLsizei>(atomCount));
+    glBindVertexArray(0);
 }
 
 void RendererGL::drawBox(const SimBox& box) {

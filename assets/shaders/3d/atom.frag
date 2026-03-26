@@ -3,7 +3,7 @@ in vec3 fragAtomPos;
 in float fragRadius;
 in vec3 fragColor;
 in vec2 fragQuadPos;
-in float vIsSelected;
+flat in int vIsSelected;
 
 uniform vec3 lightDir;
 uniform mat4 projection;
@@ -35,7 +35,7 @@ void main() {
 
     vec3 color = ambient + diffuse + specular;
 
-    if (vIsSelected > 0.5) {
+    if (vIsSelected != 0) {
         float rim = 1.0 - z;
         float ring = smoothstep(0.6, 0.7, rim);
         color = mix(color, vec3(0.95, 0.72, 0.28), ring);
