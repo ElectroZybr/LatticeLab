@@ -4,7 +4,7 @@
 Renderer3D::Renderer3D(sf::RenderTarget& t, sf::View& gv)
     : RendererGL(t, gv)
 {
-    camera.setOrbitMode(true);
+    camera.setMode(Camera::Mode::Orbit);
     camera.setZoom(4.f);
 
     shaderProgram = linkProgram("assets/shaders/3d/atom.vert",

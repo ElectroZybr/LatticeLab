@@ -297,7 +297,7 @@ void Tools::onFrame(float deltaTime) {
         const Vec3f selectedPos = atomStorage->pos(selectedMoveAtomIndex);
         const Vec2f delta = Vec2f(selectedPos.x, selectedPos.y) - world;
         constexpr float dragStiffness = 0.1f;
-        const Vec3f force = delta * dragStiffness;
+        const Vec3f force(delta * dragStiffness);
 
         if (!selected_atom_batch.empty()) {
             for (std::size_t atomIndex : selected_atom_batch) {
@@ -477,7 +477,7 @@ bool Tools::tryAddAtom(sf::Vector2i mousePos, AtomData::Type atomType) {
         }
     }
 
-    return atomCreator(spawnPos, Vec3f::Random() * 5.f, atomType, false);
+    return atomCreator(Vec3f(spawnPos, 0), Vec3f::Random() * 5.f, atomType, false);
 }
 
 bool Tools::tryRemoveAtom(sf::Vector2i mousePos) {

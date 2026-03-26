@@ -47,13 +47,13 @@ void Mouse::onEvent(const sf::Event& event) {
         const sf::Vector2i currentPixelPos = sf::Mouse::getPosition(*window);
         sf::Vector2i deltaPixel = currentPixelPos - rend->camera.dragStartPixelPos;
 
-        if (rend->camera.orbitMode) {
+        if (rend->camera.mode == Camera::Mode::Orbit) {
             rend->camera.orbitDrag(deltaPixel);
             rend->camera.dragStartPixelPos = currentPixelPos;
         }
         else {
-            sf::Vector2f deltaWorld = Tools::screenToWorld(rend->camera.dragStartPixelPos) 
-                                    - Tools::screenToWorld(currentPixelPos);
+            Vec2f deltaWorld = Tools::screenToWorld(rend->camera.dragStartPixelPos) 
+                             - Tools::screenToWorld(currentPixelPos);
             rend->camera.position = rend->camera.dragStartCameraPos + deltaWorld;
         }
     }

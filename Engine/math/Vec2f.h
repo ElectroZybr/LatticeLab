@@ -15,7 +15,7 @@ public:
     float x, y;
 
     Vec2f(const Vec2f& vec) : x(vec.x), y(vec.y) {}
-    explicit Vec2f(float x = 0.0f, float y = 0.0f) : x(x), y(y) {}
+    Vec2f(float x = 0.0f, float y = 0.0f) : x(x), y(y) {}
 
     operator sf::Vector2f() const { return sf::Vector2f(static_cast<float>(x), static_cast<float>(y)); }
 
@@ -26,6 +26,7 @@ public:
 
     [[nodiscard]] Vec2f operator+(const Vec2f& vec) const { return Vec2f(x + vec.x, y + vec.y); }
     [[nodiscard]] Vec2f operator-(const Vec2f& vec) const { return Vec2f(x - vec.x, y - vec.y); }
+    [[nodiscard]] Vec2f operator+(float num) const { return Vec2f(x + num, y + num); }
     [[nodiscard]] Vec2f operator-(float num) const { return Vec2f(x - num, y - num); }
 
     void operator+=(const Vec2f& vec) { x += vec.x; y += vec.y; }

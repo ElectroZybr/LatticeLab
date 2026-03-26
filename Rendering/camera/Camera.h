@@ -13,49 +13,25 @@ struct ScreenPoint {
 class Camera {
     friend class Mouse;
     friend class Keyboard;
-private:
-    sf::View* view;
-    sf::Vector2f position;
-    float zoom;
-    float speed;
-    float moveSpeed;
-    float zoomSpeed;
-
-    bool isDragging;
-    sf::Vector2f lastMousePos;
-
-    sf::Vector2i dragStartPixelPos;
-    sf::Vector2f dragStartCameraPos;
-
-    Mode mode = Mode::Mode2D;
-
-    // Orbit / Free
-    float azimuth   = 0.f;
-    float elevation = 0.f;
-
-    // Перспектива
-    static constexpr float FOV      = 45.f;
-    static constexpr float NEAR     = 0.1f;
-    static constexpr float FAR      = 10000.f;
-
 public:
+    enum class Mode {
+        Mode2D,
+        Orbit,
+        Free
+    };
+
     Camera(sf::View* view, float moveSpeed = 500.f, float zoomSpeed = 0.1f);
 
     void update(sf::RenderTarget& target);
 
-    void move(float offsetX, float offsetY);
+    void move(Vec2f offset) { position += offset; }
 
-    void setPosition(float x, float y);
+    void setPosition(Vec2f pos) { position = pos; };
 
-    void setMode(CameraMode newMode) { mode = newMode; }
-    CameraMode getMode() const { return mode; }
+    void setMode(Mode newMode) { mode = newMode; }
+    Mode getMode() const { return mode; }
 
-    // Обратная совместимость
-    void setOrbitMode(bool enabled) {
-        mode = enabled ? CameraMode::Orbit : CameraMode::Mode2D;
-    }
-
-    sf::Vector2f getPosition() const;
+    Vec2f getPosition() const { return position; };
 
     void orbitDrag(sf::Vector2i delta);
     void freeDrag(sf::Vector2i delta);  // для Free mode
@@ -75,9 +51,28 @@ public:
     Ray screenToRay(float screenX, float screenY, float screenWidth, float screenHeight) const;
     ScreenPoint worldToScreen(const Vec3f& worldPos, float screenWidth, float screenHeight) const;
 
-    enum class Mode {
-        Mode2D,
-        Orbit,
-        Free
-    };
+private:
+    sf::View* view;
+    Vec2f position;
+    float zoom;
+    float speed;
+    float moveSpeed;
+    float zoomSpeed;
+
+    bool isDragging;
+    Vec2f lastMousePos;
+
+    sf::Vector2i dragStartPixelPos;
+    Vec2f dragStartCameraPos;
+
+    Mode mode = Mode::Mode2D;
+
+    // Orbit / Free
+    float azimuth   = 0.f;
+    float elevation = 0.f;
+
+    // Перспектива
+    static constexpr float FOV      = 45.f;
+    static constexpr float NEAR     = 0.1f;
+    static constexpr float FAR      = 10000.f;
 };

@@ -14,8 +14,8 @@ public:
     float x, y, z;
 
     Vec3f(const Vec3f& vec) : x(vec.x), y(vec.y), z(vec.z) {}
-    explicit Vec3f(float x = 0.0f, float y = 0.0f, float z = 0.0f) : x(x), y(y), z(z) {}
-    Vec3f(const Vec2f& vec, float z = 0.0f) : x(vec.x), y(vec.y), z(z) {}
+    Vec3f(float x = 0.0f, float y = 0.0f, float z = 0.0f) : x(x), y(y), z(z) {}
+    explicit Vec3f(const Vec2f& vec, float z = 0.0f) : x(vec.x), y(vec.y), z(z) {}
 
     operator sf::Vector2f() const { return sf::Vector2f(static_cast<float>(x), static_cast<float>(y)); }
     operator sf::Vector3f() const { return sf::Vector3f(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)); }
