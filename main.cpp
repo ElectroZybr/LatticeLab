@@ -85,14 +85,14 @@ static sf::RenderWindow createWindow() {
     settings.minorVersion = 1;
     settings.attributeFlags = sf::ContextSettings::Attribute::Core;
 #endif
-    sf::RenderWindow window(
-        sf::VideoMode({1280, 720}),
-        "Chemical-simulator",
-        sf::State::Windowed,
-        settings
-    );
-    // sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator",
-    //                         sf::State::Fullscreen, settings);
+    // sf::RenderWindow window(
+    //     sf::VideoMode({1280, 720}),
+    //     "Chemical-simulator",
+    //     sf::State::Windowed,
+    //     settings
+    // );
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator",
+                            sf::State::Fullscreen, settings);
 #ifdef __APPLE__
     const sf::ContextSettings actualSettings = window.getSettings();
     const bool hasModernContext = actualSettings.majorVersion > 4
@@ -143,6 +143,21 @@ static DebugView* buildDebugAtomSingle(DebugPanel& panel) {
 static DebugView* buildDebugAtomBatch(DebugPanel& panel) {
     return panel.addView(DebugView("Атомы", {
         DebugValue("Выбрано атомов", DebugDrawers::Int),
+    }));
+}
+
+static DebugView* buildDebugNeighborView(DebugPanel& panel) {
+    return panel.addView(DebugView("NeighborList", {
+        DebugValue("Размер сетки", DebugDrawers::String),
+        DebugValue("Размер ячейки", DebugDrawers::Int),
+        DebugValue("NeighborList включен", DebugDrawers::String),
+        DebugValue("Память NL (МБ)", DebugDrawers::Float<3>),
+        DebugValue("Пар в NL", DebugDrawers::Int),
+        DebugValue("Cutoff", DebugDrawers::Float<3>),
+        DebugValue("Skin", DebugDrawers::Float<3>),
+        DebugValue("List radius", DebugDrawers::Float<3>),
+        DebugValue("Ребилдов NL", DebugDrawers::Int),
+        DebugValue("Шагов между ребилдами (avg)", DebugDrawers::Float<2>),
     }));
 }
 
@@ -217,6 +232,7 @@ int main() {
     DebugView* debugSim = buildDebugSimView(Interface::debugPanel);
     DebugView* debugAtomSingle = buildDebugAtomSingle(Interface::debugPanel);
     DebugView* debugAtomBatch = buildDebugAtomBatch(Interface::debugPanel);
+    DebugView* debugNeighbor = buildDebugNeighborView(Interface::debugPanel);
 
     // Главный цикл
     sf::Clock clock;
@@ -349,6 +365,23 @@ int main() {
             debugSim->add_data("Шаги симуляции", simulation.getSimStep());
             debugSim->add_data("Шагов/с", physicsCounter.steps_per_second);
             debugSim->add_data("Тип интегратора", schemeName(simulation.getIntegrator()));
+
+            const std::string gridSize = std::to_string(simulation.sim_box.grid.sizeX)
+                + " x " + std::to_string(simulation.sim_box.grid.sizeY)
+                + " x " + std::to_string(simulation.sim_box.grid.sizeZ);
+            debugNeighbor->add_data("Размер сетки", gridSize);
+            debugNeighbor->add_data("Размер ячейки", simulation.sim_box.grid.cellSize);
+            debugNeighbor->add_data("NeighborList включен",
+                simulation.isNeighborListEnabled() ? std::string("Да") : std::string("Нет"));
+            debugNeighbor->add_data("Память NL (МБ)",
+                static_cast<float>(simulation.neighborList.memoryBytes()) / 1024.0f / 1024.0f);
+            debugNeighbor->add_data("Пар в NL", simulation.neighborList.pairStorageSize());
+            debugNeighbor->add_data("Cutoff", simulation.neighborList.cutoff());
+            debugNeighbor->add_data("Skin", simulation.neighborList.skin());
+            debugNeighbor->add_data("List radius", simulation.neighborList.listRadius());
+            debugNeighbor->add_data("Ребилдов NL", simulation.neighborListRebuildCount());
+            debugNeighbor->add_data("Шагов между ребилдами (avg)",
+                simulation.averageStepsPerNeighborListRebuild());
 
             physicsCounter.flush(LOG_INTERVAL);
             renderCounter.flush(LOG_INTERVAL);

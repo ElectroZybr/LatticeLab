@@ -128,6 +128,14 @@ std::pair<std::size_t, std::size_t> NeighborList::rangeFor(std::size_t atomIndex
     return {offsets_[atomIndex], offsets_[atomIndex + 1]};
 }
 
+std::size_t NeighborList::memoryBytes() const {
+    return neighbors_.capacity() * sizeof(std::size_t)
+        + offsets_.capacity() * sizeof(std::size_t)
+        + refPosX_.capacity() * sizeof(float)
+        + refPosY_.capacity() * sizeof(float)
+        + refPosZ_.capacity() * sizeof(float);
+}
+
 const std::vector<std::size_t>* NeighborList::getCellAtomIndices(
     const SpatialGrid& grid, int x, int y, int z) const {
     return grid.atIndex(x, y, z);

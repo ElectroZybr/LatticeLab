@@ -32,6 +32,11 @@ public:
     void logBondList() const;
 
     int getSimStep() const { return sim_step; }
+    void setNeighborListEnabled(bool enabled);
+    bool isNeighborListEnabled() const { return useNeighborList_; }
+    std::size_t neighborListRebuildCount() const { return neighborListRebuildCount_; }
+    float averageStepsPerNeighborListRebuild() const;
+    int stepsSinceNeighborListRebuild() const;
 
     void setIntegrator(Integrator::Scheme scheme) { integrator.setScheme(scheme); }
     Integrator::Scheme getIntegrator() const { return integrator.getScheme(); }
@@ -47,8 +52,13 @@ public:
     NeighborList neighborList;
 private:
     int sim_step = 0;
+    bool useNeighborList_ = true;
+    std::size_t neighborListRebuildCount_ = 0;
+    std::size_t neighborListRebuildIntervalsSum_ = 0;
+    int lastNeighborListRebuildStep_ = -1;
 
     bool checkNeighbor(Vec3f coords, float delta);
+    void onNeighborListRebuild();
 };
 
 

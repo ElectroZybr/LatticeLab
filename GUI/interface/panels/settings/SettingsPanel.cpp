@@ -37,6 +37,10 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
         simulation.forceField.setGravity(gravity);
     }
 
+
+    bool neighborListEnabled = simulation.isNeighborListEnabled();
+    if (ImGui::Checkbox("NeighborList", &neighborListEnabled))
+        simulation.setNeighborListEnabled(neighborListEnabled);
     ImGui::SeparatorText("Рендер");
     ImGui::Checkbox("Сетка", &renderer->drawGrid);
     ImGui::Checkbox("Связи", &renderer->drawBonds);

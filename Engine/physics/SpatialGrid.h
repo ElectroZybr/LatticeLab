@@ -12,7 +12,7 @@ public:
     int sizeZ;
     int cellSize;
 
-    SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize = 3);
+    SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize = 6);
     void resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSize = -1);
 
     void insertIndex(int x, int y, int z, std::size_t atomIndex);
