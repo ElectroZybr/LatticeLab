@@ -12,7 +12,6 @@ public:
     virtual void drawShot(const AtomStorage& atoms,
                           const SimBox& box) = 0;
 
-    virtual void drawOverlay(const OverlayState& overlay) = 0;
     void setAtomStorage(const AtomStorage* storage) { atomStorage = storage; }
 
     bool drawGrid           = false;
@@ -20,7 +19,6 @@ public:
     bool speedGradient      = false;
     bool speedGradientTurbo = false;
     float speedGradientMax  = 5.0f; // 0.0f = auto
-    float drawBondsZoom     = 25.f;
     float alpha             = 0.05f;
 
     Camera camera;

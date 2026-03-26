@@ -2,7 +2,7 @@
 
 #include "GUI/io/mouse/Mouse.h"
 
-#include "Engine/Tools.h"
+#include "Engine/tools/Tools.h"
 #include "GUI/interface/interface.h"
 
 sf::RenderWindow*  Mouse::window = nullptr;
@@ -35,7 +35,7 @@ void Mouse::onEvent(const sf::Event& event) {
 
     if (const auto* e = event.getIf<sf::Event::MouseButtonReleased>()) {
         if (e->button == sf::Mouse::Button::Left) {
-            Tools::onLeftReleased();
+            Tools::onLeftReleased(mouse_pos);
         }
 
         if (e->button == sf::Mouse::Button::Right) {
@@ -66,7 +66,8 @@ void Mouse::onEvent(const sf::Event& event) {
 }
 
 void Mouse::onFrame(float deltaTime) {
-    Tools::onFrame(deltaTime);
+    const sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
+    Tools::onFrame(mouse_pos, deltaTime);
 }
 
 void Mouse::logMousePos() {

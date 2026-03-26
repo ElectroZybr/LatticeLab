@@ -104,6 +104,7 @@ public:
 
     const AtomData::Type* atomTypeData() const { return atomType_.data(); }
     const std::uint8_t* selectedData() const { return selected_.data(); }
+    std::uint8_t* selectedData() { return selected_.data(); }
 
     std::size_t size() const { return count_; }
     bool empty() const { return count_ == 0; }

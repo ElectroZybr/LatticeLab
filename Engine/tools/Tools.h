@@ -7,12 +7,13 @@
 #include <unordered_set>
 #include <vector>
 
-#include "math/Vec2f.h"
-#include "math/Vec3f.h"
-#include "physics/AtomData.h"
-#include "physics/AtomStorage.h"
-#include "physics/SpatialGrid.h"
+#include "Engine/math/Vec3f.h"
+#include "Engine/physics/AtomData.h"
+#include "Engine/physics/AtomStorage.h"
+#include "Engine/physics/SpatialGrid.h"
 #include "Rendering/BaseRenderer.h"
+
+#include "Engine/tools/picking_system/PickingSystem.h"
 
 class SimBox;
 
@@ -44,21 +45,18 @@ public:
     static sf::Vector2i boxToScreen(Vec3f pos);
 
     static void onLeftPressed(sf::Vector2i mousePos);
-    static void onLeftReleased();
-    static void onFrame(float deltaTime);
+    static void onLeftReleased(sf::Vector2i mousePos);
+    static void onFrame(sf::Vector2i mousePos, float deltaTime);
     static void resetInteractionState();
 
     static Mode currentMode();
     static bool isSelectionMode(Mode mode);
 
-    static std::unordered_set<std::size_t> selected_atom_batch;
+    static PickingSystem* pickingSystem;
 
 private:
     static constexpr std::size_t InvalidIndex = static_cast<std::size_t>(-1);
 
-    static void selectionFrame(sf::Vector2i startMousePos, sf::Vector2i mousePos);
-    static std::size_t pickAtom(sf::Vector2i mousePos);
-    static std::size_t pickSelectedAtomWithPadding(sf::Vector2i mousePos, float zoom);
     static bool tryAddAtom(sf::Vector2i mousePos, AtomData::Type atomType);
     static bool tryRemoveAtom(sf::Vector2i mousePos);
 
@@ -71,10 +69,8 @@ private:
     static AtomCreator atomCreator;
     static AtomRemover atomRemover;
 
+    static sf::Vector2i startMousePos;
+    static bool isInteracting;
+    static size_t selectedMoveAtomIndex;
     static bool atomMoveFlag;
-    static bool selectionFrameMoveFlag;
-    static bool lassoSelectionMoveFlag;
-    static std::size_t selectedMoveAtomIndex;
-    static sf::Vector2i start_mouse_pos;
-    static std::vector<sf::Vector2i> lassoPoints;
 };

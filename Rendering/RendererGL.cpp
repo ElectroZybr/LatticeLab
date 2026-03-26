@@ -268,8 +268,6 @@ void RendererGL::drawShot(const AtomStorage& atoms, const SimBox& box)
     drawBox(box);
 
     drawAtoms(atoms, box);
-
-    drawOverlay();
 }
 
 void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {

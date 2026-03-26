@@ -67,8 +67,8 @@ sf::Vector2i Camera::worldToScreen(Vec3f worldPos) const {
     if (mode == Mode::Mode2D) {
         const sf::Vector2f viewSize   = view->getSize();
         const sf::Vector2f viewCenter = view->getCenter();
-        const float sx = (worldPos.x - viewCenter.x) / (viewSize.x / screenSize.x) + screenSize.x * 0.5f;
-        const float sy = (worldPos.y - viewCenter.y) / (viewSize.y / screenSize.y) + screenSize.y * 0.5f;
+        const float sx = (worldPos.x - viewCenter.x) * (screenSize.x / viewSize.x) + screenSize.x * 0.5f;
+        const float sy = (worldPos.y - viewCenter.y) * (screenSize.y / viewSize.y) + screenSize.y * 0.5f;
         return sf::Vector2i(static_cast<int>(sx), static_cast<int>(sy));
     }
 
