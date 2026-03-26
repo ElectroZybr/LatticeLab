@@ -24,17 +24,13 @@ public:
     bool removeAtom(std::size_t atomIndex);
     void addBond(std::size_t aIndex, std::size_t bIndex);
 
-    float averageKineticEnegry() const;
-    float averagePotentialEnergy() const;
-    float fullAverageEnergy() const;
-
-    void logAtomPos() const;
-    void logBondList() const;
-
     void setIntegrator(Integrator::Scheme scheme) { integrator.setScheme(scheme); }
     Integrator::Scheme getIntegrator() const { return integrator.getScheme(); }
     
     // метрики
+    float averageKineticEnegry() const;
+    float averagePotentialEnergy() const;
+    float fullAverageEnergy() const;
     int getSimStep() const { return sim_step; }
     void setNeighborListEnabled(bool enabled);
     bool isNeighborListEnabled() const { return useNeighborList_; }
@@ -43,6 +39,7 @@ public:
     float recentAverageStepsPerNeighborListRebuild() const;
     int stepsSinceNeighborListRebuild() const;
 
+    // io
     void save(const std::string_view path) const;
     void load(const std::string_view path);
     void clear();
