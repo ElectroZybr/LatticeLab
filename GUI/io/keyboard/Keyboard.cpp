@@ -32,7 +32,24 @@ void Keyboard::onFrame(float deltaTime) {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) rend->camera.azimuth -= rotSpeed;
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) rend->camera.azimuth += rotSpeed;
     }
-    else {
+    else if (rend->camera.mode == Camera::Mode::Free) {
+        const glm::vec3 forward(
+            std::cos(rend->camera.elevation) * std::sin(rend->camera.azimuth),
+            std::sin(rend->camera.elevation),
+            std::cos(rend->camera.elevation) * std::cos(rend->camera.azimuth)
+        );
+        const glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.f, 1.f, 0.f)));
+        const float s = rend->camera.speed * deltaTime;
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) rend->camera.move3D(Vec3f( forward.x,  forward.y,  forward.z) * s);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) rend->camera.move3D(Vec3f(-forward.x, -forward.y, -forward.z) * s);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) rend->camera.move3D(Vec3f(-right.x,   -right.y,   -right.z)   * s);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) rend->camera.move3D(Vec3f( right.x,    right.y,    right.z)   * s);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) rend->camera.move3D(Vec3f(0.f, -s, 0.f));
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E)) rend->camera.move3D(Vec3f(0.f,  s, 0.f));
+
+    }
+    else if (rend->camera.mode == Camera::Mode::Mode2D) {
         float deltaSpeed = rend->camera.speed * deltaTime;
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) rend->camera.move({0,  deltaSpeed});
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) rend->camera.move({0, -deltaSpeed});

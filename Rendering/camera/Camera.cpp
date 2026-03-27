@@ -43,9 +43,9 @@ void Camera::orbitDrag(sf::Vector2i delta) {
 }
 
 void Camera::freeDrag(sf::Vector2i delta) {
-    constexpr float sensitivity = 0.005f;
+    constexpr float sensitivity = 0.003f;
     azimuth   -= delta.x * sensitivity;
-    elevation += delta.y * sensitivity;
+    elevation -= delta.y * sensitivity;
     elevation = std::clamp(elevation, -1.5f, 1.5f);
 }
 
@@ -88,6 +88,9 @@ sf::Vector2i Camera::worldToScreen(Vec3f worldPos) const {
 }
 
 glm::vec3 Camera::getEyePosition() const {
+    if (mode == Mode::Free)
+        return glm::vec3(freePosition.x, freePosition.y, freePosition.z);
+
     const float r = moveSpeed / zoom;
     return r * glm::vec3(
         std::cos(elevation) * std::sin(azimuth),
@@ -97,6 +100,16 @@ glm::vec3 Camera::getEyePosition() const {
 }
 
 glm::mat4 Camera::getViewMatrix() const {
+    if (mode == Mode::Free) {
+        const glm::vec3 forward(
+            std::cos(elevation) * std::sin(azimuth),
+            std::sin(elevation),
+            std::cos(elevation) * std::cos(azimuth)
+        );
+        const glm::vec3 eye(freePosition.x, freePosition.y, freePosition.z);
+        return glm::lookAt(eye, eye + forward, glm::vec3(0.f, 1.f, 0.f));
+    }
+
     // камера всегда смотрит в центр мира
     glm::vec3 eye = getEyePosition();
     return glm::lookAt(eye, glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f));

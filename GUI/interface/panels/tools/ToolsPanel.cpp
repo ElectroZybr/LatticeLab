@@ -6,9 +6,11 @@
 #include "GUI/interface/panels/settings/SettingsPanel.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 
-#define ICON_FA_FLASK   "\uf0c3"
-#define ICON_FA_COG     "\uf013"
-#define ICON_FA_BUG     "\uf188"
+#define ICON_FA_FLASK       "\uf0c3"
+#define ICON_FA_COG         "\uf013"
+#define ICON_FA_BUG         "\uf188"
+#define ICON_FA_SYNC_ALT    "\uf2f1"
+#define ICON_FA_STREET_VIEW "\uf21d"
 
 void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, FileDialogManager& fileDialog, SettingsPanel& settings)
 {
@@ -18,8 +20,8 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, 
     constexpr float baseButtonSize = 50.0f;
     constexpr float basePaddingX = 6.0f;
     constexpr float basePaddingY = 6.0f;
-    constexpr float buttonCount = 4.0f;
 
+    const float buttonCount = 4.0f + (is3D ? 1.f : 0.f);
     const float buttonSize = std::round(baseButtonSize * scale);
     const float spacingX = std::round(baseSpacing * scale);
     const float panelPaddingX = std::round(basePaddingX * scale);
@@ -61,7 +63,15 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, 
     if (ImGui::Button(is3D ? "3D" : "2D", ImVec2(buttonSize, buttonSize)))
     {
         is3D = !is3D;
+        if (!is3D) isFree = false;
         pendingResult = is3D ? ToolsCommand::ToggleRenderer3D : ToolsCommand::ToggleRenderer2D;
+    }
+    if (is3D) {
+        ImGui::SameLine();
+        if (ImGui::Button(isFree ? ICON_FA_STREET_VIEW : ICON_FA_SYNC_ALT, ImVec2(buttonSize, buttonSize))) {
+            isFree = !isFree;
+            pendingResult = isFree ? ToolsCommand::SetCameraFree : ToolsCommand::SetCameraOrbit;
+        }
     }
     ImGui::SameLine();
 

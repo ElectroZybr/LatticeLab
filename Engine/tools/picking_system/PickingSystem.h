@@ -7,7 +7,6 @@
 
 #include "Engine/selection/OverlayState.h"
 #include "Engine/physics/AtomStorage.h"
-#include "Rendering/camera/Camera.h"
 
 class IRenderer;
 class SimBox;

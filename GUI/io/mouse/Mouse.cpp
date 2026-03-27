@@ -51,6 +51,10 @@ void Mouse::onEvent(const sf::Event& event) {
             rend->camera.orbitDrag(deltaPixel);
             rend->camera.dragStartPixelPos = currentPixelPos;
         }
+        else if (rend->camera.mode == Camera::Mode::Free) {
+            rend->camera.freeDrag(deltaPixel);
+            rend->camera.dragStartPixelPos = currentPixelPos;
+        }
         else {
             Vec3f deltaWorld = Tools::screenToWorld(rend->camera.dragStartPixelPos) 
                              - Tools::screenToWorld(currentPixelPos);

@@ -20,6 +20,7 @@ public:
     void update(sf::RenderTarget& target);
 
     void move(Vec2f offset) { position += offset; }
+    void move3D(Vec3f offset) { freePosition += offset; }
 
     void setPosition(Vec2f pos) { position = pos; };
     Vec2f getPosition() const { return position; };
@@ -50,6 +51,7 @@ private:
     sf::Vector2f screenSize;
     sf::View* view;
     Vec2f position;
+    Vec3f freePosition{0.f, 0.f, -50.f};
     float zoom;
     float speed;
     float moveSpeed;

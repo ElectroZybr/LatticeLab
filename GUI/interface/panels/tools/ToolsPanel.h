@@ -6,7 +6,7 @@
 #include <SFML/Window.hpp>
 #include "imgui.h"
 
-enum class ToolsCommand : uint8_t { ToggleRenderer2D, ToggleRenderer3D, ClearSimulation };
+enum class ToolsCommand : uint8_t { ToggleRenderer2D, ToggleRenderer3D, ClearSimulation, SetCameraOrbit, SetCameraFree };
 
 class DebugPanel;
 class FileDialogManager;
@@ -26,5 +26,6 @@ public:
     std::optional<ToolsCommand> popResult();
 private:
     bool is3D = false;
+    bool isFree = false;
     std::optional<ToolsCommand> pendingResult;
 };
