@@ -49,10 +49,10 @@ Benchmarks/*.png
 *.cache
 *.recipe
 x64/
-Debug/
-Release/
-RelWithDebInfo/
-MinSizeRel/
+/Debug/
+/Release/
+/RelWithDebInfo/
+/MinSizeRel/
 
 # CLion / JetBrains
 .idea/

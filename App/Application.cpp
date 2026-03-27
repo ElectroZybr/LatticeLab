@@ -1,6 +1,6 @@
 ﻿#include "Application.h"
-#include "CreateDebugPanels.h"
-#include "UpdateDebugData.h"
+#include "debug/CreateDebugPanels.h"
+#include "debug/UpdateDebugData.h"
 #include <cmath>
 #include <cstdlib>
 #include <string_view>
@@ -19,6 +19,8 @@
 #include "Rendering/2d/Renderer2D.h"
 #include "Rendering/3d/Renderer3D.h"
 
+#include "Scenes.h"
+
 namespace {
 
 constexpr int FPS = 60;
@@ -34,31 +36,6 @@ std::string_view schemeName(Integrator::Scheme scheme) {
     }
     return "Unknown";
 }
-
-namespace Scenes {
-void crystal(Simulation& sim, int n, AtomData::Type type, bool is3d,
-             double padding = 3.0, double margin = 15.0) {
-    const double side = n * padding + padding + 2.0 * margin;
-    const double half = side / 2.0;
-
-    sim.setSizeBox(
-        Vec3f(-half, -half, is3d ? -half : sim.sim_box.start.z),
-        Vec3f(half, half, is3d ? half : sim.sim_box.end.z)
-    );
-
-    const Vec3f vecMargin(margin, margin, is3d ? margin : 0.0);
-    const int zMax = is3d ? n : 1;
-
-    for (int x = 1; x <= n; ++x) {
-        for (int y = 1; y <= n; ++y) {
-            for (int z = 1; z <= zMax; ++z) {
-                sim.createAtom(Vec3f(x, y, z) * padding + vecMargin,
-                               Vec3f::Random() * 0.5, type);
-            }
-        }
-    }
-}
-} // namespace Scenes
 
 sf::RenderWindow createWindow() {
     sf::ContextSettings settings;

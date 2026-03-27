@@ -3,10 +3,10 @@
 #include <string>
 
 #include "CreateDebugPanels.h"
+#include "Engine/metrics/MemoryMetrics.h"
 #include "Engine/Simulation.h"
 #include "Engine/tools/Tools.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
-#include "memory_monitor.h"
 
 void updateAtomSelectionDebug(const DebugViews& debugViews, const Simulation& simulation) {
     if (Tools::pickingSystem->getSelectedIndices().size() == 1)
@@ -37,7 +37,7 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
                            float renderMs, float physicsMs, float stepsPerSecond,
                            std::string_view integratorName) {
     debugViews.sim->add_data("Полная энергия", static_cast<float>(simulation.fullAverageEnergy()));
-    debugViews.sim->add_data("Память (МБ)", MemoryMonitor::getRSS() / 1024.f / 1024.f);
+    debugViews.sim->add_data("Память (МБ)", MemoryMetrics::getRSS() / 1024.f / 1024.f);
     debugViews.sim->add_data("Рендер (мс)", renderMs);
     debugViews.sim->add_data("Физика (мс)", physicsMs);
     debugViews.sim->add_data("Количество атомов", simulation.atomStorage.size());
