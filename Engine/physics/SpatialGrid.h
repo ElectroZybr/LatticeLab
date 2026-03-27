@@ -18,11 +18,20 @@ public:
     void insertIndex(int x, int y, int z, std::size_t atomIndex);
     void eraseIndex(int x, int y, int z, std::size_t atomIndex);
 
+    // c проверкой на границы
     [[nodiscard]] const std::vector<std::size_t>* atIndex(int x, int y, int z) const {
         return inBounds(x, y, z) ? &indexGrid[index(x, y, z)] : nullptr;
     }
     [[nodiscard]] std::vector<std::size_t>* atIndex(int x, int y, int z) {
         return inBounds(x, y, z) ? &indexGrid[index(x, y, z)] : nullptr;
+    }
+    
+    // (warning) без проверок на границы
+    [[nodiscard]] const std::vector<std::size_t>& atIndexUnchecked(int x, int y, int z) const noexcept {
+        return indexGrid[index(x, y, z)];
+    }
+    [[nodiscard]] std::vector<std::size_t>& atIndexUnchecked(int x, int y, int z) noexcept {
+        return indexGrid[index(x, y, z)];
     }
 
     int worldToCellX(float x) const  { return toCell(x, sizeX); };

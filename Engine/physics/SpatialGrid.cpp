@@ -4,11 +4,11 @@
 #include <stdexcept>
 
 SpatialGrid::SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize)
-    : sizeX(sizeX),
-      sizeY(sizeY),
-      sizeZ(sizeZ),
+    : sizeX(sizeX+2),
+      sizeY(sizeY+2),
+      sizeZ(sizeZ+2),
       cellSize(cellSize),
-      indexGrid(sizeX * sizeY * sizeZ) {
+      indexGrid((sizeX+2) * (sizeY+2) * (sizeZ+2)) {
     if (sizeX < 0 || sizeY < 0 || sizeZ < 0)
         throw std::invalid_argument("SpatialGrid::SpatialGrid: invalid arguments");
 }
@@ -18,9 +18,9 @@ void SpatialGrid::resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSi
         throw std::invalid_argument("SpatialGrid::resize: invalid arguments");
 
     if (newCellSize > 0) cellSize = newCellSize;
-    sizeX = newSizeX;
-    sizeY = newSizeY;
-    sizeZ = newSizeZ;
+    sizeX = newSizeX+2;
+    sizeY = newSizeY+2;
+    sizeZ = newSizeZ+2;
     indexGrid.assign(sizeX * sizeY * sizeZ, {});
 }
 

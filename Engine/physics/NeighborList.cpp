@@ -49,6 +49,7 @@ void NeighborList::clear() {
 }
 
 void NeighborList::build(const AtomStorage& atoms, const SimBox& box) {
+    // buildWitchPairs(atoms, box);
     buildCounter_.startStep();
     /* перестройка списка соседей */
     const SpatialGrid& grid = box.grid;
@@ -83,6 +84,56 @@ void NeighborList::build(const AtomStorage& atoms, const SimBox& box) {
                 neighbors_[writeIndex++] = j;
             }
         });
+    }
+
+    // обновляем позиции последнего перестроения списка
+    for (std::size_t index = 0; index < atomCount; ++index) {
+        refPosX_[index] = atoms.posX(index);
+        refPosY_[index] = atoms.posY(index);
+        refPosZ_[index] = atoms.posZ(index);
+    }
+
+    buildCounter_.finishStep();
+    valid_ = true;
+}
+
+void NeighborList::buildWitchPairs(const AtomStorage& atoms, const SimBox& box) {
+    buildCounter_.startStep();
+    /* перестройка списка соседей */
+
+    const SpatialGrid& grid = box.grid;
+    const std::size_t atomCount = atoms.size();
+    reserveListBuffers(atoms, grid);
+    std::vector<Pair> pairs; // вектор пар
+    pairs.reserve(estimateNeighborCapacity(atoms, grid));
+
+    // строим список пар
+    for (size_t i = 0; i < atomCount; ++i) {
+        forEachNeighbor(grid, atoms, i, [&](size_t j) {
+            if (j >= i) return;
+
+            if (distanceSqr(atoms, i, j) <= listRadiusSqr_) {
+                pairs.push_back({(uint32_t) i, (uint32_t) j});
+            }
+        });
+    }
+
+    // строим карту оффсетов
+    std::fill(offsets_.begin(), offsets_.end(), 0);
+    for (const auto& p : pairs) {
+        offsets_[p.i + 1]++;
+    }
+    for (size_t i = 0; i < atomCount; ++i) {
+        offsets_[i + 1] += offsets_[i];
+    }
+
+    neighbors_.resize(offsets_[atomCount]); // подгоняем под нужный размер
+
+    // записываем индексы соседей в ячейки
+    std::vector<size_t> writeOffsets = offsets_;
+
+    for (const auto& p : pairs) {
+        neighbors_[writeOffsets[p.i]++] = p.j;
     }
 
     // обновляем позиции последнего перестроения списка
@@ -148,11 +199,6 @@ std::size_t NeighborList::memoryBytes() const {
         + refPosX_.capacity() * sizeof(float)
         + refPosY_.capacity() * sizeof(float)
         + refPosZ_.capacity() * sizeof(float);
-}
-
-const std::vector<std::size_t>* NeighborList::getCellAtomIndices(
-    const SpatialGrid& grid, int x, int y, int z) const {
-    return grid.atIndex(x, y, z);
 }
 
 std::size_t NeighborList::estimateNeighborCapacity(
