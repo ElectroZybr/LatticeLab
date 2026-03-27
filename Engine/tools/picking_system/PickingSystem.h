@@ -9,6 +9,7 @@
 #include "Engine/physics/AtomStorage.h"
 #include "Rendering/camera/Camera.h"
 
+class IRenderer;
 class SimBox;
 
 struct AtomHit {
@@ -18,7 +19,7 @@ struct AtomHit {
 
 class PickingSystem {
 public:
-    PickingSystem(Camera& camera, AtomStorage& atomStorage, SimBox& box);
+    PickingSystem(AtomStorage& atomStorage, SimBox& box, std::unique_ptr<IRenderer>& renderer);
 
     void clearSelection();
 
@@ -34,7 +35,7 @@ public:
     const OverlayState& getOverlay() const { return overlay; }
     OverlayState&       getOverlay()       { return overlay; }
 private:
-    Camera&       camera;
+    std::unique_ptr<IRenderer>* renderer;
     AtomStorage&  atomStorage;
     SimBox& box;
     OverlayState  overlay;

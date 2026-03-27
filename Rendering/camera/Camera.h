@@ -9,7 +9,7 @@ class Camera {
     friend class Mouse;
     friend class Keyboard;
 public:
-    enum class Mode {
+    enum class Mode: uint8_t {
         Mode2D,
         Orbit,
         Free

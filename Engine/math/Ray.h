@@ -34,14 +34,15 @@ inline bool raySphereIntersect(const Ray& ray,
         ray.origin.z - center.z
     );
 
-    const float a = ray.dir.sqrAbs();
+    constexpr float a = 1.f; // ray.dir.sqrAbs(); ray.dir всегда нормализован
     const float b = 2.0 * oc.dot(ray.dir);
     const float c = oc.sqrAbs() - radius * radius;
     const float D = b*b - 4.0*a*c;
 
     if (D < 0.0) return false;
 
-    const float t = (-b - std::sqrt(D)) / (2.0 * a);
+    float t = (-b - std::sqrt(D)) / (2.0 * a);
+    if (t < 0.0) t = (-b + std::sqrt(D)) / (2.0 * a);
 
     if (t < 0.0) return false;
 

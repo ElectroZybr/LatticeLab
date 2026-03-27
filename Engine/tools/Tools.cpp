@@ -52,7 +52,7 @@ void Tools::init(sf::RenderWindow* w,
     atomCreator = std::move(createAtomFn);
     atomRemover = std::move(removeAtomFn);
 
-    pickingSystem = new PickingSystem(rend->camera, *atomStorage, *box);
+    pickingSystem = new PickingSystem(*atomStorage, *box, rend);
 }
 
 void Tools::resetInteractionState() {
@@ -154,12 +154,12 @@ void Tools::onFrame(sf::Vector2i mousePos, float deltaTime) {
 
     // 3. Физика перемещения (Drag & Drop)
     if (atomMoveFlag && selectedMoveAtomIndex != InvalidIndex) {
-        const Vec3f worldMouse = screenToBox(mousePos);
+        const Vec3f worldMouse = screenToWorld(mousePos);
         const auto& selectedIndices = pickingSystem->getSelectedIndices();
 
         // Позиция "захваченного" атома
-        const Vec3f selectedPos = atomStorage->pos(selectedMoveAtomIndex);
-        const Vec3f force = (worldMouse - selectedPos) * 0.5f; 
+        const Vec3f selectedWorldPos = boxToWorld(atomStorage->pos(selectedMoveAtomIndex));
+        const Vec3f force = (worldMouse - selectedWorldPos) * 0.05f; 
 
         auto applyRawForce = [&](std::size_t idx, const Vec3f& f) {
             atomStorage->forceX(idx) += f.x;
@@ -197,6 +197,14 @@ sf::Vector2i Tools::boxToScreen(Vec3f pos) {
     return worldToScreen(pos + box->start);
 }
 
+Vec3f Tools::worldToBox(Vec3f pos) {
+    return pos - box->start;
+}
+
+Vec3f Tools::boxToWorld(Vec3f pos) {
+    return pos + box->start;
+}
+
 Tools::Mode Tools::currentMode() {
     return mapPanelTool(Interface::sideToolsPanel.getSelectedTool());
 }
@@ -212,13 +220,13 @@ bool Tools::tryAddAtom(sf::Vector2i mousePos, AtomData::Type atomType) {
 
     const Vec3f worldPos = screenToWorld(mousePos);
 
-    if (!(box->start.x + 2 <= worldPos.x && worldPos.x <= box->end.x - 2 &&
-          box->start.y + 2 <= worldPos.y && worldPos.y <= box->end.y - 2 &&
-          box->start.z + 2 <= worldPos.z && worldPos.z <= box->end.z - 2)) {
+    if (!(box->start.x + 1 <= worldPos.x && worldPos.x <= box->end.x - 1 &&
+          box->start.y + 1 <= worldPos.y && worldPos.y <= box->end.y - 1 &&
+          box->start.z + 1 <= worldPos.z && worldPos.z <= box->end.z - 1)) {
         return false;
     }
 
-    const Vec3f spawnPos = screenToBox(mousePos);
+    const Vec3f spawnPos = worldToBox(worldPos);
     const float atomRadius = AtomData::getProps(atomType).radius;
 
     for (std::size_t atomIndex = 0; atomIndex < atomStorage->size(); ++atomIndex) {

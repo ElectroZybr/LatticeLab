@@ -1,11 +1,12 @@
 #include "PickingSystem.h"
 #include "Engine/math/Ray.h"
 #include "Engine/SimBox.h"
+#include "Rendering/BaseRenderer.h"
 
 #include <limits>
 
-PickingSystem::PickingSystem(Camera& camera, AtomStorage& atomStorage, SimBox& box)
-    : camera(camera), atomStorage(atomStorage), box(box)
+PickingSystem::PickingSystem(AtomStorage& atomStorage, SimBox& box, std::unique_ptr<IRenderer>& renderer)
+    : atomStorage(atomStorage), box(box), renderer(&renderer)
 {}
 
 void PickingSystem::clearSelection() {
@@ -15,17 +16,15 @@ void PickingSystem::clearSelection() {
 }
 
 void PickingSystem::processClick(sf::Vector2i screenPos, bool cumulative) {
-    const sf::Vector2f vSize = camera.getView().getSize();
-    const sf::Vector2f vCenter = camera.getView().getCenter();
+    IRenderer* rend = renderer->get();
+    const sf::Vector2f vSize = rend->camera.getView().getSize();
+    const sf::Vector2f vCenter = rend->camera.getView().getCenter();
     // Предположим, у тебя есть метод получения размера экрана в камере
     // Если нет, просто выведи то, что доступно внутри camera.worldToScreen
     AtomHit hit;
     bool found = pickAtom(screenPos, 10.0f, hit);
 
-
     if (found) {
-        if (!cumulative) clearSelection();
-
         // Если атом уже был выбран и зажат Ctrl — инвертируем (снимаем выделение)
         if (cumulative && selectedIndices.contains(hit.index)) {
             selectedIndices.erase(hit.index);
@@ -46,13 +45,14 @@ void PickingSystem::processClick(sf::Vector2i screenPos, bool cumulative) {
 
 void PickingSystem::processRect(sf::Vector2i start, sf::Vector2i end, bool cumulative) {
     if (!cumulative) clearSelection();
+    IRenderer* rend = renderer->get();
 
-    const sf::Vector2f vSize = camera.getView().getSize();
-    const sf::Vector2f vCenter = camera.getView().getCenter();
+    const sf::Vector2f vSize = rend->camera.getView().getSize();
+    const sf::Vector2f vCenter = rend->camera.getView().getCenter();
 
     for (std::size_t i = 0; i < atomStorage.size(); ++i) {
         const Vec3f worldPos = atomStorage.pos(i) + box.start;
-        const sf::Vector2i atomScreen = camera.worldToScreen(worldPos);
+        const sf::Vector2i atomScreen = rend->camera.worldToScreen(worldPos);
         if (pointInRect(atomScreen, start, end)) {
             selectedIndices.insert(i);
             atomStorage.setSelected(i, true);
@@ -63,10 +63,11 @@ void PickingSystem::processRect(sf::Vector2i start, sf::Vector2i end, bool cumul
 void PickingSystem::processLasso(std::span<sf::Vector2i> points, bool cumulative) {
     if (points.size() < 3) return;
     if (!cumulative) clearSelection();
+    IRenderer* rend = renderer->get();
 
     for (std::size_t i = 0; i < atomStorage.size(); ++i) {
         const Vec3f worldPos = atomStorage.pos(i) + box.start;
-        const sf::Vector2i screenPos = camera.worldToScreen(worldPos);
+        const sf::Vector2i screenPos = rend->camera.worldToScreen(worldPos);
         if (pointInPolygon(screenPos, points)) {
             selectedIndices.insert(i);
             atomStorage.setSelected(i, true);
@@ -88,7 +89,8 @@ void PickingSystem::handleAtomRemoval(std::size_t index) {
 }
 
 bool PickingSystem::pickAtom(sf::Vector2i screenPos, float tolerance, AtomHit& hit) const {
-    switch (camera.getMode()) {
+    IRenderer* rend = renderer->get();
+    switch (rend->camera.getMode()) {
         case Camera::Mode::Mode2D:
             return pickAtom2D(screenPos, tolerance, hit);
         case Camera::Mode::Orbit:
@@ -98,17 +100,18 @@ bool PickingSystem::pickAtom(sf::Vector2i screenPos, float tolerance, AtomHit& h
 }
 
 bool PickingSystem::pickAtom2D(sf::Vector2i screenPos, float tolerance, AtomHit& hit) const {
+    IRenderer* rend = renderer->get();
     float bestDistSqr = std::numeric_limits<float>::max();
     std::size_t bestIndex = static_cast<std::size_t>(-1);
 
     for (std::size_t i = 0; i < atomStorage.size(); ++i) {
         const Vec3f worldPos = atomStorage.pos(i) + box.start;
-        const sf::Vector2i atomScreen = camera.worldToScreen(worldPos);
+        const sf::Vector2i atomScreen = rend->camera.worldToScreen(worldPos);
         const float distSqr = (atomScreen - screenPos).lengthSquared();
 
         // радиус атома в экранных пикселях
         const float atomRadius = AtomData::getProps(atomStorage.type(i)).radius;
-        const float screenRadius = atomRadius * camera.getZoom() + tolerance;
+        const float screenRadius = atomRadius * rend->camera.getZoom() + tolerance;
 
         if (distSqr < screenRadius * screenRadius && distSqr < bestDistSqr) {
             bestDistSqr = distSqr;
@@ -125,7 +128,7 @@ bool PickingSystem::pickAtom2D(sf::Vector2i screenPos, float tolerance, AtomHit&
 
 // 3D: ray cast — ищем ближайший атом вдоль луча
 bool PickingSystem::pickAtom3D(sf::Vector2i screenPos, AtomHit& hit) const {
-    const Ray ray = camera.screenToRay(
+    const Ray ray = (*renderer)->camera.screenToRay(
         static_cast<float>(screenPos.x),
         static_cast<float>(screenPos.y)
     );
@@ -140,7 +143,7 @@ bool PickingSystem::pickAtom3D(sf::Vector2i screenPos, AtomHit& hit) const {
         RaySphereHit rayHit;
         if (raySphereIntersect(ray, worldPos, radius, rayHit)) {
             if (rayHit.t < bestT) {
-                bestT     = rayHit.t;
+                bestT = rayHit.t;
                 bestIndex = i;
             }
         }
