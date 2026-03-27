@@ -48,6 +48,7 @@ static DebugView* buildDebugNeighborView(DebugPanel& panel) {
         DebugValue("Память AtomStorage (МБ)", DebugDrawers::Float<3>),
         DebugValue("Память NeighborList (МБ)", DebugDrawers::Float<3>),
         DebugValue("Пар в NL", DebugDrawers::Int),
+        DebugValue("Ср. соседей на атом", DebugDrawers::Float<3>),
         DebugValue("Cutoff", DebugDrawers::Float<3>),
         DebugValue("Skin", DebugDrawers::Float<3>),
         DebugValue("List radius", DebugDrawers::Float<3>),

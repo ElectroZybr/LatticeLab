@@ -58,6 +58,11 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     debugViews.neighbor->add_data("Память AtomStorage (МБ)", static_cast<float>(simulation.atomStorage.memoryBytes()) / 1024.0f / 1024.0f);
     debugViews.neighbor->add_data("Память NeighborList (МБ)", static_cast<float>(simulation.neighborList.memoryBytes()) / 1024.0f / 1024.0f);
     debugViews.neighbor->add_data("Пар в NL", simulation.neighborList.pairStorageSize());
+    const float avgNeighborsPerAtom = simulation.neighborList.atomCount() > 0
+        ? (2.0f * static_cast<float>(simulation.neighborList.pairStorageSize()))
+            / static_cast<float>(simulation.neighborList.atomCount())
+        : 0.0f;
+    debugViews.neighbor->add_data("Ср. соседей на атом", avgNeighborsPerAtom);
     debugViews.neighbor->add_data("Cutoff", simulation.neighborList.cutoff());
     debugViews.neighbor->add_data("Skin", simulation.neighborList.skin());
     debugViews.neighbor->add_data("List radius", simulation.neighborList.listRadius());

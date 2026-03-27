@@ -118,10 +118,20 @@ public:
 
     void clear() {
         count_ = 0;
+
+        floatData_.clear();
+        floatData_.shrink_to_fit();
+        capacity_ = 0;
+        bindFloatViews();
+
         atomType_.clear();
+        atomType_.shrink_to_fit();
         valence_.clear();
+        valence_.shrink_to_fit();
         selected_.clear();
+        selected_.shrink_to_fit();
         isFixed_.clear();
+        isFixed_.shrink_to_fit();
     }
 
     void reserve(std::size_t count) {
