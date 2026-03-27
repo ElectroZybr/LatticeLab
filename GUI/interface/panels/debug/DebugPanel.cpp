@@ -2,7 +2,6 @@
 #include "imgui.h"
 
 DebugView* DebugPanel::addView(DebugView view) {
-    views.reserve(4); // NOTE: Скорее всего вкладок будет не больше 4
     views.emplace_back(std::move(view));
     return &views.back();
 }
