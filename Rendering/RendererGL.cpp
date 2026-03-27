@@ -472,16 +472,16 @@ void RendererGL::drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset)
     for (int z = 0; z < grid.sizeZ; ++z) {
         for (int y = 0; y < grid.sizeY; ++y) {
             for (int x = 0; x < grid.sizeX; ++x) {
-                auto cell = grid.atIndex(x, y, z);
-                if (!cell || cell->empty()) continue;
-                gridData.push_back({
+                auto countAtomsInCell = grid.countAtomsInCell(x, y, z);
+                if (countAtomsInCell == 0) continue;
+                gridData.emplace_back(
                     glm::vec3(x * grid.cellSize,
                             y * grid.cellSize,
                             z * grid.cellSize) + boxOffset,
                     static_cast<float>(grid.cellSize),
-                    static_cast<float>(cell->size())
-                });
-                maxCount = std::max(maxCount, (int)cell->size());
+                    static_cast<float>(countAtomsInCell)
+                );
+                maxCount = std::max(maxCount, countAtomsInCell);
             }
         }
     }

@@ -26,24 +26,22 @@ void Simulation::setNeighborListEnabled(bool enabled) {
 }
 
 void Simulation::update(float dt) {
+    integrator.step(atomStorage, sim_box, forceField, useNeighborList_ ? &neighborList : nullptr, dt);
     if (useNeighborList_ && neighborList.needsRebuild(atomStorage)) {
         neighborList.build(atomStorage, sim_box);
         neighborListMetrics_.onRebuild(sim_step, neighborList.buildCounter());
     }
-    integrator.step(atomStorage, sim_box, forceField, useNeighborList_ ? &neighborList : nullptr, dt);
     ++sim_step;
 }
 
 void Simulation::setSizeBox(Vec3f newStart, Vec3f newEnd, int cellSize) {
     if (sim_box.setSizeBox(newStart, newEnd, cellSize)) {
         forceField.updateBoxCache(sim_box);
-        for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
-            const Vec3f pos = atomStorage.pos(atomIndex);
-            const int cellX = sim_box.grid.worldToCellX(pos.x);
-            const int cellY = sim_box.grid.worldToCellY(pos.y);
-            const int cellZ = sim_box.grid.worldToCellZ(pos.z);
-            sim_box.grid.insertIndex(cellX, cellY, cellZ, atomIndex);
-        }
+        sim_box.grid.rebuild(
+            atomStorage.xDataSpan(),
+            atomStorage.yDataSpan(),
+            atomStorage.zDataSpan()
+        );
     }
 }
 
@@ -70,15 +68,14 @@ bool Simulation::checkNeighbor(Vec3f coords, float delta) {
     for (int i = -1; i <= 1; ++i) {
         for (int j = -1; j <= 1; ++j) {
             for (int k = -1; k <= 1; ++k) {
-                if (auto cell = sim_box.grid.atIndex(curr_x - i, curr_y - j, curr_z - k)) {
-                    for (std::size_t atomIndex : *cell) {
-                        if (atomIndex >= atomStorage.size()) {
-                            continue;
-                        }
+                auto cell = sim_box.grid.atomsInCell(curr_x - i, curr_y - j, curr_z - k);
+                for (std::size_t atomIndex : cell) {
+                    if (atomIndex >= atomStorage.size()) {
+                        continue;
+                    }
 
-                        if ((coords - atomStorage.pos(atomIndex)).sqrAbs() < deltaSqr) {
-                            return true;
-                        }
+                    if ((coords - atomStorage.pos(atomIndex)).sqrAbs() < deltaSqr) {
+                        return true;
                     }
                 }
             }
@@ -89,11 +86,7 @@ bool Simulation::checkNeighbor(Vec3f coords, float delta) {
 
 bool Simulation::createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Type type, bool fixed) {
     atomStorage.addAtom(start_coords, start_speed, type, fixed);
-    const std::size_t atomIndex = atomStorage.size() - 1;
-    const int cellX = sim_box.grid.worldToCellX(start_coords.x);
-    const int cellY = sim_box.grid.worldToCellY(start_coords.y);
-    const int cellZ = sim_box.grid.worldToCellZ(start_coords.z);
-    sim_box.grid.insertIndex(cellX, cellY, cellZ, atomIndex);
+    sim_box.grid.rebuild(atomStorage.xDataSpan(), atomStorage.yDataSpan(), atomStorage.zDataSpan());
     return true;
 }
 
@@ -130,14 +123,7 @@ bool Simulation::removeAtom(std::size_t atomIndex) {
 
     atomStorage.removeAtom(atomIndex);
 
-    sim_box.grid.clear();
-    for (std::size_t index = 0; index < atomStorage.size(); ++index) {
-        const Vec3f pos = atomStorage.pos(index);
-        const int cellX = sim_box.grid.worldToCellX(pos.x);
-        const int cellY = sim_box.grid.worldToCellY(pos.y);
-        const int cellZ = sim_box.grid.worldToCellZ(pos.z);
-        sim_box.grid.insertIndex(cellX, cellY, cellZ, index);
-    }
+    sim_box.grid.rebuild(atomStorage.xDataSpan(), atomStorage.yDataSpan(), atomStorage.zDataSpan());
 
     return true;
 }
@@ -161,7 +147,7 @@ void Simulation::load(std::string_view path) {
 void Simulation::clear() {
     atomStorage.clear();
     Bond::bonds_list.clear();
-    sim_box.grid.clear();
+    sim_box.grid.rebuild(atomStorage.xDataSpan(), atomStorage.yDataSpan(), atomStorage.zDataSpan());
     neighborList.clear();
     sim_step = 0;
     integrator.resetMetrics();

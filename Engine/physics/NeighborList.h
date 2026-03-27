@@ -1,6 +1,5 @@
 #pragma once
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <utility>
@@ -21,8 +20,7 @@ public:
     void setParams(float cutoff, float skin);
 
     void clear();
-    void build(const AtomStorage& atoms, const SimBox& box);
-    void buildWitchPairs(const AtomStorage& atoms, const SimBox& box);
+    void build(const AtomStorage& atoms, SimBox& box);
     bool needsRebuild(const AtomStorage& atoms) const;
 
     [[nodiscard]] std::size_t atomCount() const;
@@ -40,27 +38,6 @@ public:
     [[nodiscard]] const std::vector<std::size_t>& offsets() const { return offsets_; }
 
 private:
-    // пара атомов
-    struct Pair {
-        uint32_t i;
-        uint32_t j;
-    };
-
-    template<typename F>
-    /* helper функция, перебирает не пустые ячейки */
-    void forEachNonEmptyCell(const SpatialGrid& grid, F&& callback) const {
-        for (int z = 1; z < grid.sizeZ - 1; ++z) {
-            for (int y = 1; y < grid.sizeY - 1; ++y) {
-                for (int x = 1; x < grid.sizeX - 1; ++x) {
-                    const auto& cell = grid.atIndexUnchecked(x, y, z);
-                    if (!cell.empty()) {
-                        callback(cell);
-                    }
-                }
-            }
-        }
-    }
-
     template<typename F>
     /* helper функция, перебирает всех соседей атома */
     void forEachNeighbor(const SpatialGrid& grid, const AtomStorage& atoms, std::size_t atomIndex, F&& callback) const {
@@ -71,9 +48,8 @@ private:
         for (int iz = cz - 1; iz <= cz + 1; ++iz) {
             for (int iy = cy - 1; iy <= cy + 1; ++iy) {
                 for (int ix = cx - 1; ix <= cx + 1; ++ix) {
-                    const auto& cell = grid.atIndexUnchecked(ix, iy, iz);
-                    for (std::size_t neighborIndex : cell) {
-                        callback(neighborIndex);
+                    for (std::size_t neighbourIndex : grid.atomsInCell(ix, iy, iz)) {
+                        callback(neighbourIndex);
                     }
                 }
             }
@@ -87,8 +63,6 @@ private:
         return dx * dx + dy * dy + dz * dz;
     }
 
-    [[nodiscard]] std::size_t estimateNeighborCapacity(
-        const AtomStorage& atoms, const SpatialGrid& grid) const;
     void reserveListBuffers(const AtomStorage& atoms, const SpatialGrid& grid);
 
     std::vector<std::size_t> neighbors_;

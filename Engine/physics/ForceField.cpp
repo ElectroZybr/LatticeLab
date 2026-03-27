@@ -182,11 +182,10 @@ void ForceField::ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox
         for (int ix = x0; ix <= x1; ++ix) {
             for (int iy = y0; iy <= y1; ++iy) {
                 for (int iz = z0; iz <= z1; ++iz) {
-                    if (const auto* cell = box.grid.atIndex(ix, iy, iz)) {
-                        for (std::size_t neighbourIndex : *cell) {
-                            if (atomIndex <= neighbourIndex) continue;
-                            pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
-                        }
+                    const auto cell = box.grid.atomsInCell(ix, iy, iz);
+                    for (std::size_t neighbourIndex : cell) {
+                        if (atomIndex <= neighbourIndex) continue;
+                        pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
                     }
                 }
             }

@@ -51,27 +51,8 @@ inline void computeForces(AtomStorage& atomStorage, SimBox& box, ForceField& for
 template<typename StepFn>
 requires AtomStepFunc<StepFn>
 inline void predictAndSync(AtomStorage& atomStorage, SimBox& box, float dt, StepFn predictFn) {
-    static std::vector<int> oldCellsX, oldCellsY, oldCellsZ;
-    const size_t n = atomStorage.mobileCount();
-    oldCellsX.resize(n); oldCellsY.resize(n); oldCellsZ.resize(n);
-    for (size_t i = 0; i < n; ++i) {
-        oldCellsX[i] = box.grid.worldToCellX(atomStorage.posX(i));
-        oldCellsY[i] = box.grid.worldToCellY(atomStorage.posY(i));
-        oldCellsZ[i] = box.grid.worldToCellZ(atomStorage.posZ(i));
-    }
-
     predictFn(atomStorage, dt);
     confineToBox(atomStorage, box);
-
-    for (size_t i = 0; i < n; ++i) {
-        const int currX = box.grid.worldToCellX(atomStorage.posX(i));
-        const int currY = box.grid.worldToCellY(atomStorage.posY(i));
-        const int currZ = box.grid.worldToCellZ(atomStorage.posZ(i));
-        if (oldCellsX[i] != currX || oldCellsY[i] != currY || oldCellsZ[i] != currZ) {
-            box.grid.eraseIndex(oldCellsX[i], oldCellsY[i], oldCellsZ[i], i);
-            box.grid.insertIndex(currX, currY, currZ, i);
-        }
-    }
 
     atomStorage.swapPrevCurrentForces();
     std::fill_n(atomStorage.fxData(), atomStorage.size(), 0.0f);

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <utility>
 #include <vector>
+#include <span>
 #include "Engine/math/Vec3f.h"
 
 #include "AtomData.h"
@@ -120,6 +121,10 @@ public:
 
     float* energyData() { return pe_; }
     float* invMassData() { return invMass_; }
+
+    std::span<float> xDataSpan() const { return {x_, count_}; }
+    std::span<float> yDataSpan() const { return {y_, count_}; }
+    std::span<float> zDataSpan() const { return {z_, count_}; }
 
     AtomStorage() = default;
     AtomStorage(const AtomStorage&) = delete;

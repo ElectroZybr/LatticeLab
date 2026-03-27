@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <span>
 #include <cmath>
 #include <cstddef>
 
@@ -13,34 +14,28 @@ public:
     int cellSize;
 
     SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize = 6);
+
+    void rebuild(std::span<const float> posX, std::span<const float> posY, std::span<const float> posZ);
+
     void resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSize = -1);
-    void clear() noexcept;
 
-    void insertIndex(int x, int y, int z, std::size_t atomIndex);
-    void eraseIndex(int x, int y, int z, std::size_t atomIndex);
-
-    // c проверкой на границы
-    [[nodiscard]] const std::vector<std::size_t>* atIndex(int x, int y, int z) const {
-        return inBounds(x, y, z) ? &indexGrid[index(x, y, z)] : nullptr;
-    }
-    [[nodiscard]] std::vector<std::size_t>* atIndex(int x, int y, int z) {
-        return inBounds(x, y, z) ? &indexGrid[index(x, y, z)] : nullptr;
-    }
-    
-    // (warning) без проверок на границы
-    [[nodiscard]] const std::vector<std::size_t>& atIndexUnchecked(int x, int y, int z) const noexcept {
-        return indexGrid[index(x, y, z)];
-    }
-    [[nodiscard]] std::vector<std::size_t>& atIndexUnchecked(int x, int y, int z) noexcept {
-        return indexGrid[index(x, y, z)];
+    [[nodiscard]] std::span<const std::size_t> atomsInCell(int x, int y, int z) const noexcept {
+        const int idx = index(x, y, z);
+        return std::span{atomsSorted}.subspan(cellStart[idx], cellCount[idx]);
     }
 
     int worldToCellX(float x) const  { return toCell(x, sizeX); };
     int worldToCellY(float y) const  { return toCell(y, sizeY); };
     int worldToCellZ(float z) const  { return toCell(z, sizeZ); };
+
+    [[nodiscard]] int countAtomsInCell(int cx, int cy, int cz) const { return cellCount[index(cx, cy, cz)]; }
 private:
-    std::vector<std::vector<std::size_t>> indexGrid;
+    std::vector<int>         cellCount;
+    std::vector<int>         cellStart;
+    std::vector<std::size_t> atomsSorted; // атомы подряд сгруппированные по ячейкам
+
     static constexpr int kBorderCells = 2; // запас + 1 клетка с каждой стороны от бокса
+
 
     [[nodiscard]] int index(int x, int y, int z) const noexcept {
         return z * sizeY * sizeX + y * sizeX + x;
