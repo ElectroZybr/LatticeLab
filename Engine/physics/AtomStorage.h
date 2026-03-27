@@ -10,7 +10,7 @@
 
 class AtomStorage {
 private:
-    static constexpr std::size_t kFloatFieldCount = 13;
+    static constexpr std::size_t kFloatFieldCount = 14;
 
     std::size_t count_ = 0;
     std::size_t capacity_ = 0;
@@ -24,6 +24,7 @@ private:
     float* vx_ = nullptr;
     float* vy_ = nullptr;
     float* vz_ = nullptr;
+    float* invMass_ = nullptr;
     float* fx_ = nullptr;
     float* fy_ = nullptr;
     float* fz_ = nullptr;
@@ -42,24 +43,25 @@ private:
             vx_ = vy_ = vz_ = nullptr;
             fx_ = fy_ = fz_ = nullptr;
             pfx_ = pfy_ = pfz_ = nullptr;
-            pe_ = nullptr;
+            pe_ = invMass_ = nullptr;
             return;
         }
 
         float* base = floatData_.data();
-        x_   = base +  0 * capacity_;
-        y_   = base +  1 * capacity_;
-        z_   = base +  2 * capacity_;
-        vx_  = base +  3 * capacity_;
-        vy_  = base +  4 * capacity_;
-        vz_  = base +  5 * capacity_;
-        fx_  = base +  6 * capacity_;
-        fy_  = base +  7 * capacity_;
-        fz_  = base +  8 * capacity_;
-        pfx_ = base +  9 * capacity_;
-        pfy_ = base + 10 * capacity_;
-        pfz_ = base + 11 * capacity_;
-        pe_  = base + 12 * capacity_;
+        x_       = base +  0 * capacity_;
+        y_       = base +  1 * capacity_;
+        z_       = base +  2 * capacity_;
+        vx_      = base +  3 * capacity_;
+        vy_      = base +  4 * capacity_;
+        vz_      = base +  5 * capacity_;
+        invMass_ = base +  6 * capacity_;
+        fx_      = base +  7 * capacity_;
+        fy_      = base +  8 * capacity_;
+        fz_      = base +  9 * capacity_;
+        pfx_     = base + 10 * capacity_;
+        pfy_     = base + 11 * capacity_;
+        pfz_     = base + 12 * capacity_;
+        pe_      = base + 13 * capacity_;
     }
 
     void ensureCapacity(std::size_t requiredCount) {
@@ -85,13 +87,14 @@ private:
             newField(3)[i]  = vx_[i];
             newField(4)[i]  = vy_[i];
             newField(5)[i]  = vz_[i];
-            newField(6)[i]  = fx_[i];
-            newField(7)[i]  = fy_[i];
-            newField(8)[i]  = fz_[i];
-            newField(9)[i]  = pfx_[i];
-            newField(10)[i] = pfy_[i];
-            newField(11)[i] = pfz_[i];
-            newField(12)[i] = pe_[i];
+            newField(6)[i]  = invMass_[i];
+            newField(7)[i]  = fx_[i];
+            newField(8)[i]  = fy_[i];
+            newField(9)[i]  = fz_[i];
+            newField(10)[i] = pfx_[i];
+            newField(11)[i] = pfy_[i];
+            newField(12)[i] = pfz_[i];
+            newField(13)[i] = pe_[i];
         }
 
         floatData_ = std::move(newFloatData);
@@ -117,6 +120,7 @@ public:
     float* pfzData() { return pfz_; }
 
     float* energyData() { return pe_; }
+    float* invMassData() { return invMass_; }
 
     AtomStorage() = default;
     AtomStorage(const AtomStorage&) = delete;
@@ -196,6 +200,8 @@ public:
         vy_[count_] = static_cast<float>(speed.y);
         vz_[count_] = static_cast<float>(speed.z);
 
+        invMass_[count_] = 1.0f / AtomData::getProps(type).mass;
+
         fx_[count_] = 0.0f;
         fy_[count_] = 0.0f;
         fz_[count_] = 0.0f;
@@ -230,6 +236,8 @@ public:
         std::swap(vx_[aIndex], vx_[bIndex]);
         std::swap(vy_[aIndex], vy_[bIndex]);
         std::swap(vz_[aIndex], vz_[bIndex]);
+
+        std::swap(invMass_[aIndex], invMass_[bIndex]);
 
         std::swap(fx_[aIndex], fx_[bIndex]);
         std::swap(fy_[aIndex], fy_[bIndex]);
@@ -279,6 +287,9 @@ public:
     const float& velX(std::size_t i) const { return vx_[i]; }
     const float& velY(std::size_t i) const { return vy_[i]; }
     const float& velZ(std::size_t i) const { return vz_[i]; }
+
+    float& invMass(std::size_t i) { return invMass_[i]; }
+    const float& invMass(std::size_t i) const { return invMass_[i]; }
 
     float& forceX(std::size_t i) { return fx_[i]; }
     float& forceY(std::size_t i) { return fy_[i]; }

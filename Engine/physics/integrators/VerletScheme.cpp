@@ -1,15 +1,6 @@
 #include "VerletScheme.h"
 
 #include "StepOps.h"
-#include "../AtomData.h"
-
-#if defined(_MSC_VER)
-    #define RESTRICT __restrict
-#elif defined(__GNUC__) || defined(__clang__)
-    #define RESTRICT __restrict__
-#else
-    #define RESTRICT
-#endif
 
 void VerletScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) const {
     // Расчет новых позиций
@@ -21,8 +12,6 @@ void VerletScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& f
 }
 
 void VerletScheme::predict(AtomStorage& atomStorage, float dt) {
-    const AtomData::Type* RESTRICT types = atomStorage.atomTypeData();
-
     float* RESTRICT x = atomStorage.xData();
     float* RESTRICT y = atomStorage.yData();
     float* RESTRICT z = atomStorage.zData();
@@ -35,19 +24,19 @@ void VerletScheme::predict(AtomStorage& atomStorage, float dt) {
     const float* RESTRICT vy = atomStorage.vyData();
     const float* RESTRICT vz = atomStorage.vzData();
 
+    const float* RESTRICT invMass = atomStorage.invMassData();
+
+    #pragma GCC ivdep
     for (std::size_t i = 0; i < atomStorage.mobileCount(); ++i) {
-        const float invMass = 1.0f / AtomData::getProps(types[i]).mass;
         constexpr float damping = 0.6f;
 
-        x[i] += (vx[i] * damping + fx[i] * invMass * 0.5f * dt) * dt;
-        y[i] += (vy[i] * damping + fy[i] * invMass * 0.5f * dt) * dt;
-        z[i] += (vz[i] * damping + fz[i] * invMass * 0.5f * dt) * dt;
+        x[i] += (vx[i] * damping + fx[i] * invMass[i] * 0.5f * dt) * dt;
+        y[i] += (vy[i] * damping + fy[i] * invMass[i] * 0.5f * dt) * dt;
+        z[i] += (vz[i] * damping + fz[i] * invMass[i] * 0.5f * dt) * dt;
     }
 }
 
 void VerletScheme::correct(AtomStorage& atomStorage, float dt) {
-    const AtomData::Type* RESTRICT types = atomStorage.atomTypeData();
-
     const float* RESTRICT fx  = atomStorage.fxData();
     const float* RESTRICT fy  = atomStorage.fyData();
     const float* RESTRICT fz  = atomStorage.fzData();
@@ -60,9 +49,11 @@ void VerletScheme::correct(AtomStorage& atomStorage, float dt) {
     float* RESTRICT vy = atomStorage.vyData();
     float* RESTRICT vz = atomStorage.vzData();
 
+    const float* RESTRICT invMass = atomStorage.invMassData();
+
+    #pragma GCC ivdep
     for (std::size_t i = 0; i < atomStorage.mobileCount(); ++i) {
-        const float invMass = 1.0f / AtomData::getProps(types[i]).mass;
-        const float halfDtInvMass = 0.5f * dt * invMass;
+        const float halfDtInvMass = 0.5f * dt * invMass[i];
 
         vx[i] += (pfx[i] + fx[i]) * halfDtInvMass;
         vy[i] += (pfy[i] + fy[i]) * halfDtInvMass;
