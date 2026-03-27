@@ -48,52 +48,32 @@ void NeighborList::clear() {
 }
 
 void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
-    box.grid.rebuild(
-        atoms.xDataSpan(),
-        atoms.yDataSpan(),
-        atoms.zDataSpan()
-    );
+    box.grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
 
-    // buildWitchPairs(atoms, box);
     buildCounter_.startStep();
-    /* перестройка списка соседей */
     const SpatialGrid& grid = box.grid;
+    const std::size_t atomCount = atoms.size();
+
     reserveListBuffers(atoms, grid);
 
-    const std::size_t atomCount = atoms.size();
+    std::vector<std::size_t> tmp;
+    tmp.reserve(neighbors_.capacity());
+
     offsets_[0] = 0;
-
-    // строим карту оффсетов списка соседей
-    for (std::size_t index = 0; index < atomCount; ++index) {
-        forEachNeighbor(grid, atoms, index, [&](std::size_t neighborIndex) {
-            if (index <= neighborIndex) return;
-            if (distanceSqr(atoms, index, neighborIndex) <= listRadiusSqr_) {
-                offsets_[index + 1]++;
-            }
+    for (std::size_t i = 0; i < atomCount; ++i) {
+        forEachNeighbor(grid, atoms, i, [&](std::size_t j) {
+            if (j >= i) return;
+            if (distanceSqr(atoms, i, j) <= listRadiusSqr_)
+                tmp.emplace_back(j);
         });
+        offsets_[i + 1] = tmp.size();
+
+        refPosX_[i] = atoms.posX(i);
+        refPosY_[i] = atoms.posY(i);
+        refPosZ_[i] = atoms.posZ(i);
     }
 
-    for (std::size_t index = 0; index < atomCount; ++index) {
-        offsets_[index + 1] += offsets_[index];
-    }
-
-    neighbors_.resize(offsets_[atomCount]); // подгоняем под нужный размер
-
-    // заполняем список и обновляем позиции атомов последнего перестроения списка
-    std::vector<std::size_t> currentPositions = offsets_;
-    for (std::size_t index = 0; index < atomCount; ++index) {
-        forEachNeighbor(grid, atoms, index, [&](std::size_t neighborIndex) {
-            if (index <= neighborIndex) return;
-            if (distanceSqr(atoms, index, neighborIndex) <= listRadiusSqr_) {
-                std::size_t pos = currentPositions[index]++;
-                neighbors_[pos] = neighborIndex;
-            }
-        });
-
-        refPosX_[index] = atoms.posX(index);
-        refPosY_[index] = atoms.posY(index);
-        refPosZ_[index] = atoms.posZ(index);
-    }
+    neighbors_ = std::move(tmp);
 
     buildCounter_.finishStep();
     valid_ = true;
@@ -101,30 +81,24 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
 
 bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
     needsRebuildCounter_.startStep();
-    const auto finishAndReturn = [&](bool value) {
+
+    if (!valid_ || atoms.size() != refPosX_.size()) {
         needsRebuildCounter_.finishStep();
-        return value;
-    };
-
-    /* проверка на необходимость перестройки списка */
-    if (!valid_) return finishAndReturn(true);
-    if (atoms.size() != refPosX_.size()) return finishAndReturn(true);
-
-    const float maxDisp = 0.5f * skin_;
-    const float maxDispSqr = maxDisp * maxDisp;
-
-    // если атом сместился более 0.5*skin, перестраиваем список
-    for (std::size_t index = 0; index < atoms.size(); ++index) {
-        const float dx = atoms.posX(index) - refPosX_[index];
-        const float dy = atoms.posY(index) - refPosY_[index];
-        const float dz = atoms.posZ(index) - refPosZ_[index];
-        const float dispSqr = dx * dx + dy * dy + dz * dz;
-        if (dispSqr > maxDispSqr) {
-            return finishAndReturn(true);
-        }
+        return true;
     }
 
-    return finishAndReturn(false);
+    const float maxDispSqr = (0.5f * skin_) * (0.5f * skin_);
+
+    bool rebuild = false;
+    for (std::size_t i = 0; i < atoms.size(); ++i) {
+        const float dx = atoms.posX(i) - refPosX_[i];
+        const float dy = atoms.posY(i) - refPosY_[i];
+        const float dz = atoms.posZ(i) - refPosZ_[i];
+        rebuild |= (dx*dx + dy*dy + dz*dz) > maxDispSqr;
+    }
+
+    needsRebuildCounter_.finishStep();
+    return rebuild;
 }
 
 std::size_t NeighborList::atomCount() const {
