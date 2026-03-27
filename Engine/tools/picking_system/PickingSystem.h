@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <unordered_set>
+#include <span>
 
 #include <SFML/System/Vector2.hpp>
 

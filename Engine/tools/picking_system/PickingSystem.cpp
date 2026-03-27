@@ -1,9 +1,9 @@
+#include <limits>
+
 #include "PickingSystem.h"
 #include "Engine/math/Ray.h"
 #include "Engine/SimBox.h"
 #include "Rendering/BaseRenderer.h"
-
-#include <limits>
 
 PickingSystem::PickingSystem(AtomStorage& atomStorage, SimBox& box, std::unique_ptr<IRenderer>& renderer)
     : atomStorage(atomStorage), box(box), renderer(&renderer)
