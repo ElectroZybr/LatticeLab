@@ -1,6 +1,4 @@
 #include <cmath>
-#include <iostream>
-#include <vector>
 
 #include "Simulation.h"
 #include "io/SimulationStateIO.h"

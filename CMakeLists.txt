@@ -114,7 +114,7 @@ list(FILTER CORE_SOURCES EXCLUDE REGEX "build/.*")
 add_library(chemical_simulator_lib STATIC ${CORE_SOURCES})
 
 if(OPTIMIZE_FOR_NATIVE)
-    target_compile_options(chemical_simulator_lib PRIVATE -O3 -march=native)
+    target_compile_options(chemical_simulator_lib PRIVATE -O3 -march=native -fopt-info-vec-missed=vec_missed.txt)
     else()
     target_compile_options(chemical_simulator_lib PRIVATE -O3)
 endif()

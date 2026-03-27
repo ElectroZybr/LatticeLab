@@ -37,17 +37,14 @@ inline void computeForces(AtomStorage& atomStorage, SimBox& box, ForceField& for
 
 inline void predictAndSync(AtomStorage& atomStorage, SimBox& box, float dt, AtomStorageStepFn predictFn) {
     auto& grid = box.grid;
-    const std::size_t atomCount = atomStorage.size();
 
-    for (std::size_t atomIndex = 0; atomIndex < atomCount; ++atomIndex) {
+    for (std::size_t atomIndex = 0; atomIndex < atomStorage.mobileCount(); ++atomIndex) {
         const int prevX = grid.worldToCellX(atomStorage.posX(atomIndex));
         const int prevY = grid.worldToCellY(atomStorage.posY(atomIndex));
         const int prevZ = grid.worldToCellZ(atomStorage.posZ(atomIndex));
 
-        if (!atomStorage.isAtomFixed(atomIndex)) {
-            predictFn(atomStorage, atomIndex, dt);
-            confineToBox(atomStorage, box, atomIndex);
-        }
+        predictFn(atomStorage, atomIndex, dt);
+        confineToBox(atomStorage, box, atomIndex);
 
         const int currX = grid.worldToCellX(atomStorage.posX(atomIndex));
         const int currY = grid.worldToCellY(atomStorage.posY(atomIndex));

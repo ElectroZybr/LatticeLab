@@ -58,5 +58,3 @@ private:
 
     bool checkNeighbor(Vec3f coords, float delta);
 };
-
-
