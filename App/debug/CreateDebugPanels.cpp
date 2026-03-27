@@ -10,9 +10,6 @@ static DebugView* buildDebugSimView(DebugPanel& panel) {
         DebugValue ("Память (МБ)", DebugDrawers::Float<2>),
         DebugValue ("Рендер (мс)", DebugDrawers::Float<4>),
         DebugValue ("Физика (мс)", DebugDrawers::Float<4>),
-        DebugValue ("Интегратор (last, мс)", DebugDrawers::Float<4>),
-        DebugValue ("Интегратор (avg, мс)", DebugDrawers::Float<4>),
-        DebugValue ("Интегратор (max, мс)", DebugDrawers::Float<4>),
         DebugValue ("Тип интегратора", DebugDrawers::String),
         DebugValue ("Шаги симуляции", DebugDrawers::Int),
         DebugValue ("Шагов/с", DebugDrawers::Float<2>),
@@ -41,7 +38,7 @@ static DebugView* buildDebugAtomBatch(DebugPanel& panel) {
 }
 
 static DebugView* buildDebugNeighborView(DebugPanel& panel) {
-    return panel.addView(DebugView("NeighborList", {
+    return panel.addView(DebugView("NL", {
         DebugValue("Размер сетки", DebugDrawers::String),
         DebugValue("Размер ячейки", DebugDrawers::Int),
         DebugValue("NeighborList включен", DebugDrawers::String),
@@ -54,12 +51,25 @@ static DebugView* buildDebugNeighborView(DebugPanel& panel) {
         DebugValue("List radius", DebugDrawers::Float<3>),
         DebugValue("Ребилдов NL", DebugDrawers::Int),
         DebugValue("Шагов между ребилдами (recent)", DebugDrawers::Float<2>),
-        DebugValue("Время ребилда NL (last, мс)", DebugDrawers::Float<4>),
-        DebugValue("Время ребилда NL (avg, мс)", DebugDrawers::Float<4>),
-        DebugValue("Время ребилда NL (max, мс)", DebugDrawers::Float<4>),
-        DebugValue("Время needsRebuild (last, мс)", DebugDrawers::Float<4>),
-        DebugValue("Время needsRebuild (avg, мс)", DebugDrawers::Float<4>),
-        DebugValue("Время needsRebuild (max, мс)", DebugDrawers::Float<4>),
+        DebugValue("Время ребилда NL (мс)", DebugDrawers::Float<4>),
+        DebugValue("Время needsRebuild (мс)", DebugDrawers::Float<4>),
+    }));
+}
+
+static DebugView* buildDebugTimersView(DebugPanel& panel) {
+    return panel.addView(DebugView("Timers", {
+        DebugValue("Интегратор step (last, мс)", DebugDrawers::Float<4>),
+        DebugValue("Интегратор step (avg, мс)", DebugDrawers::Float<4>),
+        DebugValue("Интегратор step (max, мс)", DebugDrawers::Float<4>),
+        DebugSeries("Интегратор step (last, график)"),
+        DebugValue("NL build (last, мс)", DebugDrawers::Float<4>),
+        DebugValue("NL build (avg, мс)", DebugDrawers::Float<4>),
+        DebugValue("NL build (max, мс)", DebugDrawers::Float<4>),
+        DebugSeries("NL build (last, график)"),
+        DebugValue("NL needsRebuild (last, мс)", DebugDrawers::Float<4>),
+        DebugValue("NL needsRebuild (avg, мс)", DebugDrawers::Float<4>),
+        DebugValue("NL needsRebuild (max, мс)", DebugDrawers::Float<4>),
+        DebugSeries("NL needsRebuild (last, график)"),
     }));
 }
 } // namespace
@@ -70,6 +80,7 @@ DebugViews createDebugViews(DebugPanel& panel) {
         buildDebugAtomSingle(panel),
         buildDebugAtomBatch(panel),
         buildDebugNeighborView(panel),
+        buildDebugTimersView(panel),
     };
 }
 

@@ -8,6 +8,7 @@ struct DebugViews {
     DebugView* atomSingle = nullptr;
     DebugView* atomBatch = nullptr;
     DebugView* neighbor = nullptr;
+    DebugView* timers = nullptr;
 };
 
 DebugViews createDebugViews(DebugPanel& panel);

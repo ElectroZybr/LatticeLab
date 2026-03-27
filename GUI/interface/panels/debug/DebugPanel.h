@@ -1,12 +1,12 @@
 #pragma once
-#include <vector>
+#include <deque>
 
 #include <SFML/Graphics.hpp>
 
 #include "view/DebugView.h"
 
 class DebugPanel {
-    std::vector<DebugView> views;
+    std::deque<DebugView> views;
     bool visible = false;
     float animProgress = 0.f;
 public:
