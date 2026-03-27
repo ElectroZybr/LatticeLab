@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <utility>
 #include <vector>
+#include "Engine/math/Vec3f.h"
 
 #include "AtomData.h"
 

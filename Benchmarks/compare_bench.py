@@ -110,7 +110,9 @@ def extract_user_counters(entry: dict) -> dict[str, float]:
     return counters
 
 
-def extract_group_points(data: dict, group_name: str) -> tuple[dict[int, float], dict[int, dict[str, float]]]:
+def extract_group_points(
+    data: dict, group_name: str
+) -> tuple[dict[int, float], dict[int, dict[str, float]]]:
     points: dict[int, float] = {}
     counters_by_size: dict[int, dict[str, float]] = {}
     prefix = group_name + "/"
@@ -145,7 +147,9 @@ def print_counter_comparison(
 
     all_keys: list[str] = []
     for size in common_sizes:
-        keys = set(base_counters.get(size, {}).keys()) | set(cand_counters.get(size, {}).keys())
+        keys = set(base_counters.get(size, {}).keys()) | set(
+            cand_counters.get(size, {}).keys()
+        )
         all_keys.extend(keys)
     keys_ordered = sorted(set(all_keys))
     if not keys_ordered:
@@ -167,7 +171,9 @@ def print_counter_comparison(
             print(f"    {key}: base={b_str}, candidate={c_str}")
 
 
-def print_comparison(base_name: str, cand_name: str, base: dict[int, float], cand: dict[int, float]) -> None:
+def print_comparison(
+    base_name: str, cand_name: str, base: dict[int, float], cand: dict[int, float]
+) -> None:
     common_sizes = sorted(set(base.keys()) & set(cand.keys()))
     if not common_sizes:
         die("No overlapping sizes between baseline and candidate.")
@@ -176,7 +182,9 @@ def print_comparison(base_name: str, cand_name: str, base: dict[int, float], can
     print(f"Baseline : {base_name}")
     print(f"Candidate: {cand_name}")
     print()
-    print(f"{'Size':>8} | {'Base (ns)':>12} | {'Cand (ns)':>12} | {'Delta %':>9} | {'Speedup':>8}")
+    print(
+        f"{'Size':>8} | {'Base (ns)':>12} | {'Cand (ns)':>12} | {'Delta %':>9} | {'Speedup':>8}"
+    )
     print("-" * 64)
 
     for size in common_sizes:
@@ -197,7 +205,9 @@ def print_comparison(base_name: str, cand_name: str, base: dict[int, float], can
             speedup_text = colorize(speedup_text, YELLOW)
         print(f"{size:>8} | {b:>12.1f} | {c:>12.1f} | {delta_text} | {speedup_text}")
 
-    avg_delta = sum(((cand[s] - base[s]) / base[s]) * 100.0 for s in common_sizes if base[s] != 0) / len(common_sizes)
+    avg_delta = sum(
+        ((cand[s] - base[s]) / base[s]) * 100.0 for s in common_sizes if base[s] != 0
+    ) / len(common_sizes)
     print("-" * 64)
     verdict = "better" if avg_delta < 0 else "worse"
     avg_text = f"{avg_delta:+.2f}%"
@@ -214,10 +224,20 @@ def print_comparison(base_name: str, cand_name: str, base: dict[int, float], can
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Compare two benchmark groups in console")
-    parser.add_argument("--base", help="Baseline benchmark group, e.g. SimulationFixture/ComputeForcesNoNeighborList")
-    parser.add_argument("--candidate", help="Candidate benchmark group, e.g. SimulationFixture/ComputeForcesWithNeighborList")
-    parser.add_argument("--repetitions", type=int, default=3, help="Benchmark repetitions (default: 3)")
+    parser = argparse.ArgumentParser(
+        description="Compare two benchmark groups in console"
+    )
+    parser.add_argument(
+        "--base",
+        help="Baseline benchmark group, e.g. SimulationFixture/ComputeForcesNoNeighborList",
+    )
+    parser.add_argument(
+        "--candidate",
+        help="Candidate benchmark group, e.g. SimulationFixture/ComputeForcesWithNeighborList",
+    )
+    parser.add_argument(
+        "--repetitions", type=int, default=3, help="Benchmark repetitions (default: 3)"
+    )
     args = parser.parse_args()
 
     if args.base and args.candidate:
@@ -228,7 +248,9 @@ def main() -> None:
         print("Interactive compare mode")
         base_group, candidate_group = choose_groups_pair(groups)
 
-    filter_regex = "(" + "|".join(re.escape(x) for x in (base_group, candidate_group)) + ")"
+    filter_regex = (
+        "(" + "|".join(re.escape(x) for x in (base_group, candidate_group)) + ")"
+    )
     data = run_json(filter_regex, args.repetitions)
 
     base_points, base_counters = extract_group_points(data, base_group)
