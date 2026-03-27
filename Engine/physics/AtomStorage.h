@@ -99,9 +99,9 @@ private:
     }
 
 public:
-    const float* xData() const { return x_; }
-    const float* yData() const { return y_; }
-    const float* zData() const { return z_; }
+    float* xData() const { return x_; }
+    float* yData() const { return y_; }
+    float* zData() const { return z_; }
 
     float* vxData() { return vx_; }
     float* vyData() { return vy_; }
@@ -114,6 +114,8 @@ public:
     float* pfxData() { return pfx_; }
     float* pfyData() { return pfy_; }
     float* pfzData() { return pfz_; }
+
+    float* energyData() { return pe_; }
 
     AtomStorage() = default;
     AtomStorage(const AtomStorage&) = delete;
@@ -344,5 +346,11 @@ public:
         pfx_[i] = static_cast<float>(prevForce.x);
         pfy_[i] = static_cast<float>(prevForce.y);
         pfz_[i] = static_cast<float>(prevForce.z);
+    }
+
+    void swapPrevCurrentForces() {
+        std::swap(pfx_, fx_);
+        std::swap(pfy_, fy_);
+        std::swap(pfz_, fz_);
     }
 };

@@ -27,9 +27,11 @@ void KDKScheme::halfKick(AtomStorage& atomStorage, std::size_t atomIndex, float 
     atomStorage.velZ(atomIndex) += static_cast<float>(0.5 * atomStorage.forceZ(atomIndex) * invMass * dt);
 }
 
-void KDKScheme::drift(AtomStorage& atomStorage, std::size_t atomIndex, float dt) {
-    atomStorage.posX(atomIndex) += static_cast<float>(atomStorage.velX(atomIndex) * dt);
-    atomStorage.posY(atomIndex) += static_cast<float>(atomStorage.velY(atomIndex) * dt);
-    atomStorage.posZ(atomIndex) += static_cast<float>(atomStorage.velZ(atomIndex) * dt);
+void KDKScheme::drift(AtomStorage& atomStorage, float dt) {
+    for (std::size_t atomIndex = 0; atomIndex < atomStorage.mobileCount(); ++atomIndex) {
+        atomStorage.posX(atomIndex) += static_cast<float>(atomStorage.velX(atomIndex) * dt);
+        atomStorage.posY(atomIndex) += static_cast<float>(atomStorage.velY(atomIndex) * dt);
+        atomStorage.posZ(atomIndex) += static_cast<float>(atomStorage.velZ(atomIndex) * dt);
+    }
 }
 
