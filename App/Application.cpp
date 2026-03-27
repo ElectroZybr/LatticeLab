@@ -13,6 +13,7 @@
 #include "Engine/Simulation.h"
 #include "Engine/tools/Tools.h"
 #include "Engine/utils/Timer.h"
+#include "Engine/utils/RateCounter.h"
 #include "GUI/interface/interface.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
@@ -69,42 +70,6 @@ sf::RenderWindow createWindow() {
 
     return window;
 }
-
-
-struct RateCounter {
-    Timer timer;
-    double accumulatedMs = 0.0;
-    int stepsThisTick = 0;
-    float stepsPerSecond = 0.0f;
-    bool hasRateSample = false;
-
-    void startStep() { timer.start(); }
-
-    void finishStep() {
-        timer.stop();
-        accumulatedMs += timer.elapsedMilliseconds();
-        ++stepsThisTick;
-    }
-
-    float avgMs() const {
-        return stepsThisTick > 0 ? static_cast<float>(accumulatedMs / stepsThisTick) : 0.0f;
-    }
-
-    void flush(double elapsedSeconds) {
-        if (elapsedSeconds > 0.0) {
-            const float instantRate = static_cast<float>(stepsThisTick / elapsedSeconds);
-            const float alpha = static_cast<float>(1.0 - std::exp(-elapsedSeconds / 0.5));
-            if (!hasRateSample) {
-                stepsPerSecond = instantRate;
-                hasRateSample = true;
-            } else {
-                stepsPerSecond += alpha * (instantRate - stepsPerSecond);
-            }
-        }
-        accumulatedMs = 0.0;
-        stepsThisTick = 0;
-    }
-};
 
 void processFileDialog(Simulation& simulation) {
     if (auto result = Interface::fileDialog.popResult()) {
@@ -167,7 +132,7 @@ int Application::run() {
     SimBox box(Vec3f(-25, -25, -3), Vec3f(25, 25, 3));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    Scenes::crystal(simulation, 20, AtomData::Type::Z, false);
+    Scenes::crystal(simulation, 250, AtomData::Type::Z, false);
 
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
     renderer->setAtomStorage(&simulation.atomStorage);

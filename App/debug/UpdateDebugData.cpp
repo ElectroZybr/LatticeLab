@@ -60,4 +60,7 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     debugViews.neighbor->add_data("List radius", simulation.neighborList.listRadius());
     debugViews.neighbor->add_data("Ребилдов NL", simulation.neighborListRebuildCount());
     debugViews.neighbor->add_data("Шагов между ребилдами (recent)", simulation.recentAverageStepsPerNeighborListRebuild());
+    debugViews.neighbor->add_data("Время ребилда NL (last, мс)", simulation.lastNeighborListRebuildTimeMs());
+    debugViews.neighbor->add_data("Время ребилда NL (avg, мс)", simulation.averageNeighborListRebuildTimeMs());
+    debugViews.neighbor->add_data("Время ребилда NL (max, мс)", simulation.maxNeighborListRebuildTimeMs());
 }

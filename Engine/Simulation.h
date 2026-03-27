@@ -38,6 +38,9 @@ public:
     float averageStepsPerNeighborListRebuild() const;
     float recentAverageStepsPerNeighborListRebuild() const;
     int stepsSinceNeighborListRebuild() const;
+    float lastNeighborListRebuildTimeMs() const;
+    float averageNeighborListRebuildTimeMs() const;
+    float maxNeighborListRebuildTimeMs() const;
 
     // io
     void save(const std::string_view path) const;

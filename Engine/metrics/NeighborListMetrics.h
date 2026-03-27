@@ -2,12 +2,16 @@
 
 #include <array>
 #include <cstddef>
+#include "../utils/RateCounter.h"
 
 struct NeighborListMetricsSnapshot {
     std::size_t rebuildCount = 0;
     float averageStepsBetweenRebuilds = 0.0f;
     float recentAverageStepsBetweenRebuilds = 0.0f;
     int stepsSinceLastRebuild = 0;
+    float lastRebuildTimeMs = 0.0f;
+    float averageRebuildTimeMs = 0.0f;
+    float maxRebuildTimeMs = 0.0f;
 };
 
 class NeighborListMetrics {
@@ -21,13 +25,20 @@ public:
         recentIntervals_.fill(0);
         recentCount_ = 0;
         recentCursor_ = 0;
+        lastRebuildTimeMs_ = 0.0f;
+        averageRebuildTimeMs_ = 0.0f;
+        maxRebuildTimeMs_ = 0.0f;
     }
 
     void onDisable() {
         reset();
     }
 
-    void onRebuild(int currentStep) {
+    void onRebuild(int currentStep, const RateCounter& rebuildCounter) {
+        onRebuild(currentStep, rebuildCounter.lastMs());
+    }
+
+    void onRebuild(int currentStep, float rebuildTimeMs) {
         if (lastRebuildStep_ >= 0 && currentStep >= lastRebuildStep_) {
             const std::size_t interval = static_cast<std::size_t>(currentStep - lastRebuildStep_);
             rebuildIntervalsSum_ += interval;
@@ -37,6 +48,17 @@ public:
             if (recentCount_ < kRecentWindow) {
                 ++recentCount_;
             }
+        }
+
+        lastRebuildTimeMs_ = rebuildTimeMs;
+        if (rebuildTimeMs > maxRebuildTimeMs_) {
+            maxRebuildTimeMs_ = rebuildTimeMs;
+        }
+        if (rebuildCount_ == 0) {
+            averageRebuildTimeMs_ = rebuildTimeMs;
+        } else {
+            averageRebuildTimeMs_ += (rebuildTimeMs - averageRebuildTimeMs_) /
+                static_cast<float>(rebuildCount_ + 1);
         }
 
         lastRebuildStep_ = currentStep;
@@ -67,6 +89,18 @@ public:
         return static_cast<float>(sum) / static_cast<float>(recentCount_);
     }
 
+    [[nodiscard]] float lastRebuildTimeMs() const {
+        return lastRebuildTimeMs_;
+    }
+
+    [[nodiscard]] float averageRebuildTimeMs() const {
+        return averageRebuildTimeMs_;
+    }
+
+    [[nodiscard]] float maxRebuildTimeMs() const {
+        return maxRebuildTimeMs_;
+    }
+
     [[nodiscard]] int stepsSinceLastRebuild(int currentStep) const {
         if (lastRebuildStep_ < 0) {
             return currentStep;
@@ -80,6 +114,9 @@ public:
         result.averageStepsBetweenRebuilds = averageStepsBetweenRebuilds();
         result.recentAverageStepsBetweenRebuilds = recentAverageStepsBetweenRebuilds();
         result.stepsSinceLastRebuild = stepsSinceLastRebuild(currentStep);
+        result.lastRebuildTimeMs = lastRebuildTimeMs();
+        result.averageRebuildTimeMs = averageRebuildTimeMs();
+        result.maxRebuildTimeMs = maxRebuildTimeMs();
         return result;
     }
 
@@ -91,5 +128,8 @@ private:
     std::array<std::size_t, kRecentWindow> recentIntervals_{};
     std::size_t recentCount_ = 0;
     std::size_t recentCursor_ = 0;
-};
 
+    float lastRebuildTimeMs_ = 0.0f;
+    float averageRebuildTimeMs_ = 0.0f;
+    float maxRebuildTimeMs_ = 0.0f;
+};

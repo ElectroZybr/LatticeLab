@@ -7,6 +7,7 @@
 
 #include "AtomStorage.h"
 #include "SpatialGrid.h"
+#include "../utils/RateCounter.h"
 
 class SimBox;
 
@@ -26,6 +27,7 @@ public:
     [[nodiscard]] std::size_t pairStorageSize() const;
     [[nodiscard]] std::pair<std::size_t, std::size_t> rangeFor(std::size_t atomIndex) const;
     [[nodiscard]] std::size_t memoryBytes() const;
+    [[nodiscard]] const RateCounter& buildCounter() const { return buildCounter_; }
     [[nodiscard]] float cutoff() const { return cutoff_; }
     [[nodiscard]] float skin() const { return skin_; }
     [[nodiscard]] float listRadius() const { return listRadius_; }
@@ -102,4 +104,7 @@ private:
     float listRadius_ = 0.0f;    // общий радиус отсечки cutoff + skin
     float listRadiusSqr_ = 0.0f; // квадрат общего радиуса отсечки
     bool valid_ = false;         // действителен ли список
+
+    // дебаг таймеры
+    RateCounter buildCounter_;
 };

@@ -43,10 +43,12 @@ void NeighborList::clear() {
     refPosX_.shrink_to_fit();
     refPosY_.shrink_to_fit();
     refPosZ_.shrink_to_fit();
+    buildCounter_.reset();
     valid_ = false;
 }
 
 void NeighborList::build(const AtomStorage& atoms, const SimBox& box) {
+    buildCounter_.startStep();
     /* перестройка списка соседей */
     const SpatialGrid& grid = box.grid;
     reserveListBuffers(atoms, grid);
@@ -93,6 +95,7 @@ void NeighborList::build(const AtomStorage& atoms, const SimBox& box) {
         refPosZ_[index] = atoms.posZ(index);
     }
 
+    buildCounter_.finishStep();
     valid_ = true;
 }
 
@@ -186,4 +189,3 @@ void NeighborList::reserveListBuffers(const AtomStorage& atoms, const SpatialGri
 
     neighbors_.reserve(estimateNeighborCapacity(atoms, grid));
 }
-

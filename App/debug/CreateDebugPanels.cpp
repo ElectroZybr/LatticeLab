@@ -50,6 +50,9 @@ static DebugView* buildDebugNeighborView(DebugPanel& panel) {
         DebugValue("List radius", DebugDrawers::Float<3>),
         DebugValue("Ребилдов NL", DebugDrawers::Int),
         DebugValue("Шагов между ребилдами (recent)", DebugDrawers::Float<2>),
+        DebugValue("Время ребилда NL (last, мс)", DebugDrawers::Float<4>),
+        DebugValue("Время ребилда NL (avg, мс)", DebugDrawers::Float<4>),
+        DebugValue("Время ребилда NL (max, мс)", DebugDrawers::Float<4>),
     }));
 }
 } // namespace

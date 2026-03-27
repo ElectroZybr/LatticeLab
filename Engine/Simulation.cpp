@@ -30,7 +30,7 @@ void Simulation::setNeighborListEnabled(bool enabled) {
 void Simulation::update(float dt) {
     if (useNeighborList_ && neighborList.needsRebuild(atomStorage)) {
         neighborList.build(atomStorage, sim_box);
-        neighborListMetrics_.onRebuild(sim_step);
+        neighborListMetrics_.onRebuild(sim_step, neighborList.buildCounter());
     }
     integrator.step(atomStorage, sim_box, forceField, useNeighborList_ ? &neighborList : nullptr, dt);
     ++sim_step;
@@ -191,4 +191,16 @@ float Simulation::recentAverageStepsPerNeighborListRebuild() const {
 
 int Simulation::stepsSinceNeighborListRebuild() const {
     return neighborListMetrics_.stepsSinceLastRebuild(sim_step);
+}
+
+float Simulation::lastNeighborListRebuildTimeMs() const {
+    return neighborListMetrics_.lastRebuildTimeMs();
+}
+
+float Simulation::averageNeighborListRebuildTimeMs() const {
+    return neighborListMetrics_.averageRebuildTimeMs();
+}
+
+float Simulation::maxNeighborListRebuildTimeMs() const {
+    return neighborListMetrics_.maxRebuildTimeMs();
 }

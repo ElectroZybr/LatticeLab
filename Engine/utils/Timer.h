@@ -1,24 +1,33 @@
-#ifndef SHOOTER_TIMER_H
-#define SHOOTER_TIMER_H
+#pragma once
 
-#include <iostream>
 #include <chrono>
-#include <ctime>
-#include <cmath>
+#include <cstddef>
 
 class Timer {
 private:
-    std::chrono::high_resolution_clock::time_point _startTime;
-    std::chrono::high_resolution_clock::time_point _endTime;
-    bool _isRunning = false;
+    using Clock = std::chrono::high_resolution_clock;
+
+    Clock::time_point startTime_{};
+    Clock::time_point endTime_{};
+    bool isRunning_ = false;
 
 public:
-    void start();
-    void stop();
+    inline void start() {
+        startTime_ = Clock::now();
+        isRunning_ = true;
+    }
 
-    [[nodiscard]] double elapsedMilliseconds() const;
-    [[nodiscard]] double elapsedSeconds() const;
+    inline void stop() {
+        endTime_ = Clock::now();
+        isRunning_ = false;
+    }
+
+    [[nodiscard]] inline double elapsedMilliseconds() const {
+        return elapsedSeconds() * 1000.0;
+    }
+
+    [[nodiscard]] inline double elapsedSeconds() const {
+        const Clock::time_point now = isRunning_ ? Clock::now() : endTime_;
+        return std::chrono::duration<double>(now - startTime_).count();
+    }
 };
-
-
-#endif
