@@ -51,6 +51,7 @@ protected:
     GLuint atomVbo = 0;
     GLsizeiptr atomVboSize = 0;
     std::vector<float> radii;
+    std::vector<uint8_t> selectedDataBuffer;
     std::vector<glm::vec3> colors;
 
     struct alignas(32) BondInstance {

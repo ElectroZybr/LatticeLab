@@ -7,6 +7,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <SFML/Window/Context.hpp>
+#include <Engine/tools/Tools.h>
 
 #include "Engine/physics/Bond.h"
 #include "RendererGL.h"
@@ -331,6 +332,15 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
     const GLsizeiptr offColor    = offRadius   + floatN;
     const GLsizeiptr offSelected = offColor    + vec3N;
 
+    if (selectedDataBuffer.size() < atomCount) {
+        selectedDataBuffer.resize(atomCount);
+    }
+    std::fill_n(selectedDataBuffer.data(), selectedDataBuffer.size(), 0);
+    const auto& selectedIndices = Tools::pickingSystem->getSelectedIndices();
+    for (const std::size_t idx : selectedIndices) {
+        selectedDataBuffer[idx] = 1;
+    }
+
     glBindBuffer(GL_ARRAY_BUFFER, atomVbo);
     glBufferData(GL_ARRAY_BUFFER, totalSize, nullptr, GL_DYNAMIC_DRAW);
     glBufferSubData(GL_ARRAY_BUFFER, offX,        floatN, atoms.xData());
@@ -338,7 +348,7 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
     glBufferSubData(GL_ARRAY_BUFFER, offZ,        floatN, atoms.zData());
     glBufferSubData(GL_ARRAY_BUFFER, offRadius,   floatN, radii.data());
     glBufferSubData(GL_ARRAY_BUFFER, offColor,    vec3N,  colors.data());
-    glBufferSubData(GL_ARRAY_BUFFER, offSelected, uint8N, atoms.selectedData());
+    glBufferSubData(GL_ARRAY_BUFFER, offSelected, uint8N, selectedDataBuffer.data());
 
     glBindVertexArray(vao);
 

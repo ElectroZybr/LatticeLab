@@ -35,7 +35,6 @@ private:
 
     std::vector<AtomData::Type> atomType_;
     std::vector<std::uint8_t> valence_;
-    std::vector<std::uint8_t> selected_;
 
     void bindFloatViews() {
         if (capacity_ == 0 || floatData_.empty()) {
@@ -133,7 +132,6 @@ public:
         , floatData_(std::move(other.floatData_))
         , atomType_(std::move(other.atomType_))
         , valence_(std::move(other.valence_))
-        , selected_(std::move(other.selected_))
     {
         bindFloatViews();
         other.count_ = 0;
@@ -149,7 +147,6 @@ public:
         floatData_ = std::move(other.floatData_);
         atomType_ = std::move(other.atomType_);
         valence_ = std::move(other.valence_);
-        selected_ = std::move(other.selected_);
         bindFloatViews();
         other.count_ = 0;
         other.capacity_ = 0;
@@ -159,8 +156,6 @@ public:
     }
 
     const AtomData::Type* atomTypeData() const { return atomType_.data(); }
-    const std::uint8_t* selectedData() const { return selected_.data(); }
-    std::uint8_t* selectedData() { return selected_.data(); }
 
     std::size_t size() const { return count_; }
     std::size_t mobileCount() const { return mobileCount_; }
@@ -168,8 +163,7 @@ public:
     std::size_t memoryBytes() const {
         return floatData_.capacity() * sizeof(float)
             + atomType_.capacity() * sizeof(AtomData::Type)
-            + valence_.capacity() * sizeof(std::uint8_t)
-            + selected_.capacity() * sizeof(std::uint8_t);
+            + valence_.capacity() * sizeof(std::uint8_t);
     }
 
     void clear() {
@@ -177,7 +171,6 @@ public:
         mobileCount_ = 0;
         atomType_.clear();
         valence_.clear();
-        selected_.clear();
         // floatData_.clear(); TODO разобраться почему если убрать то бенчмарки падают с segfault
         // bindFloatViews();
     }
@@ -186,7 +179,6 @@ public:
         ensureCapacity(count);
         atomType_.reserve(count);
         valence_.reserve(count);
-        selected_.reserve(count);
     }
 
     void addAtom(const Vec3f& coords, const Vec3f& speed, AtomData::Type type, bool fixed = false) {
@@ -213,7 +205,6 @@ public:
 
         atomType_.emplace_back(type);
         valence_.emplace_back(AtomData::getProps(type).maxValence);
-        selected_.emplace_back(0);
 
         ++count_;
 
@@ -250,7 +241,6 @@ public:
 
         std::swap(atomType_[aIndex], atomType_[bIndex]);
         std::swap(valence_[aIndex], valence_[bIndex]);
-        std::swap(selected_[aIndex], selected_[bIndex]);
     }
 
     void removeAtom(std::size_t index) {
@@ -270,7 +260,6 @@ public:
 
         atomType_.pop_back();
         valence_.pop_back();
-        selected_.pop_back();
         --count_;
     }
 
@@ -313,9 +302,6 @@ public:
 
     std::uint8_t& valenceCount(std::size_t i) { return valence_[i]; }
     const std::uint8_t& valenceCount(std::size_t i) const { return valence_[i]; }
-
-    bool isSelected(std::size_t i) const { return selected_[i] != 0; }
-    void setSelected(std::size_t i, bool value) { selected_[i] = value ? 1 : 0; }
 
     bool isAtomFixed(std::size_t i) const { return i >= mobileCount_; }
     void setFixed(std::size_t i, bool fixed) {
