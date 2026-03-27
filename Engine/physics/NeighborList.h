@@ -49,9 +49,9 @@ private:
     template<typename F>
     /* helper функция, перебирает не пустые ячейки */
     void forEachNonEmptyCell(const SpatialGrid& grid, F&& callback) const {
-        for (int z = 0; z < grid.sizeZ; ++z) {
-            for (int y = 0; y < grid.sizeY; ++y) {
-                for (int x = 0; x < grid.sizeX; ++x) {
+        for (int z = 1; z < grid.sizeZ - 1; ++z) {
+            for (int y = 1; y < grid.sizeY - 1; ++y) {
+                for (int x = 1; x < grid.sizeX - 1; ++x) {
                     const auto& cell = grid.atIndexUnchecked(x, y, z);
                     if (!cell.empty()) {
                         callback(cell);
@@ -68,16 +68,9 @@ private:
         const int cy = grid.worldToCellY(atoms.posY(atomIndex));
         const int cz = grid.worldToCellZ(atoms.posZ(atomIndex));
 
-        const int x0 = std::max(cx - 1, 0);
-        const int x1 = std::min(cx + 1, grid.sizeX - 1);
-        const int y0 = std::max(cy - 1, 0);
-        const int y1 = std::min(cy + 1, grid.sizeY - 1);
-        const int z0 = std::max(cz - 1, 0);
-        const int z1 = std::min(cz + 1, grid.sizeZ - 1);
-
-        for (int iz = z0; iz <= z1; ++iz) {
-            for (int iy = y0; iy <= y1; ++iy) {
-                for (int ix = x0; ix <= x1; ++ix) {
+        for (int iz = cz - 1; iz <= cz + 1; ++iz) {
+            for (int iy = cy - 1; iy <= cy + 1; ++iy) {
+                for (int ix = cx - 1; ix <= cx + 1; ++ix) {
                     const auto& cell = grid.atIndexUnchecked(ix, iy, iz);
                     for (std::size_t neighborIndex : cell) {
                         callback(neighborIndex);
