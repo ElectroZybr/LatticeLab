@@ -13,6 +13,8 @@ private:
 
     std::size_t count_ = 0;
     std::size_t capacity_ = 0;
+    std::size_t mobileCount_ = 0;
+
     std::vector<float> floatData_;
 
     float* x_ = nullptr;
@@ -32,7 +34,6 @@ private:
     std::vector<AtomData::Type> atomType_;
     std::vector<std::uint8_t> valence_;
     std::vector<std::uint8_t> selected_;
-    std::vector<std::uint8_t> isFixed_;
 
     void bindFloatViews() {
         if (capacity_ == 0 || floatData_.empty()) {
@@ -102,26 +103,76 @@ public:
     const float* yData() const { return y_; }
     const float* zData() const { return z_; }
 
+    float* vxData() { return vx_; }
+    float* vyData() { return vy_; }
+    float* vzData() { return vz_; }
+
+    float* fxData() { return fx_; }
+    float* fyData() { return fy_; }
+    float* fzData() { return fz_; }
+
+    float* pfxData() { return pfx_; }
+    float* pfyData() { return pfy_; }
+    float* pfzData() { return pfz_; }
+
+    AtomStorage() = default;
+    AtomStorage(const AtomStorage&) = delete;
+    AtomStorage& operator=(const AtomStorage&) = delete;
+
+    AtomStorage(AtomStorage&& other) noexcept
+        : count_(other.count_)
+        , capacity_(other.capacity_)
+        , mobileCount_(other.mobileCount_)
+        , floatData_(std::move(other.floatData_))
+        , atomType_(std::move(other.atomType_))
+        , valence_(std::move(other.valence_))
+        , selected_(std::move(other.selected_))
+    {
+        bindFloatViews();
+        other.count_ = 0;
+        other.capacity_ = 0;
+        other.mobileCount_ = 0;
+        other.bindFloatViews();
+    }
+    AtomStorage& operator=(AtomStorage&& other) noexcept {
+        if (this == &other) return *this;
+        count_ = other.count_;
+        capacity_ = other.capacity_;
+        mobileCount_ = other.mobileCount_;
+        floatData_ = std::move(other.floatData_);
+        atomType_ = std::move(other.atomType_);
+        valence_ = std::move(other.valence_);
+        selected_ = std::move(other.selected_);
+        bindFloatViews();
+        other.count_ = 0;
+        other.capacity_ = 0;
+        other.mobileCount_ = 0;
+        other.bindFloatViews();
+        return *this;
+    }
+
     const AtomData::Type* atomTypeData() const { return atomType_.data(); }
     const std::uint8_t* selectedData() const { return selected_.data(); }
     std::uint8_t* selectedData() { return selected_.data(); }
 
     std::size_t size() const { return count_; }
+    std::size_t mobileCount() const { return mobileCount_; }
     bool empty() const { return count_ == 0; }
     std::size_t memoryBytes() const {
         return floatData_.capacity() * sizeof(float)
             + atomType_.capacity() * sizeof(AtomData::Type)
             + valence_.capacity() * sizeof(std::uint8_t)
-            + selected_.capacity() * sizeof(std::uint8_t)
-            + isFixed_.capacity() * sizeof(std::uint8_t);
+            + selected_.capacity() * sizeof(std::uint8_t);
     }
 
     void clear() {
         count_ = 0;
+        mobileCount_ = 0;
         atomType_.clear();
         valence_.clear();
         selected_.clear();
-        isFixed_.clear();
+        // floatData_.clear(); TODO разобраться почему если убрать то бенчмарки падают с segfault
+        // bindFloatViews();
     }
 
     void reserve(std::size_t count) {
@@ -129,7 +180,6 @@ public:
         atomType_.reserve(count);
         valence_.reserve(count);
         selected_.reserve(count);
-        isFixed_.reserve(count);
     }
 
     void addAtom(const Vec3f& coords, const Vec3f& speed, AtomData::Type type, bool fixed = false) {
@@ -152,12 +202,17 @@ public:
         pfz_[count_] = 0.0f;
         pe_[count_]  = 0.0f;
 
-        atomType_.push_back(type);
-        valence_.push_back(AtomData::getProps(type).maxValence);
-        selected_.push_back(0);
-        isFixed_.push_back(fixed ? 1 : 0);
+        atomType_.emplace_back(type);
+        valence_.emplace_back(AtomData::getProps(type).maxValence);
+        selected_.emplace_back(0);
 
         ++count_;
+
+        if (!fixed) {
+            // Если не фиксирован то заменяем с 1 фиксированным атомов для сохранения инварианта
+            swapAtoms(count_ - 1, mobileCount_);
+            ++mobileCount_;
+        }
     }
 
     void swapAtoms(std::size_t aIndex, std::size_t bIndex) {
@@ -185,23 +240,26 @@ public:
         std::swap(atomType_[aIndex], atomType_[bIndex]);
         std::swap(valence_[aIndex], valence_[bIndex]);
         std::swap(selected_[aIndex], selected_[bIndex]);
-        std::swap(isFixed_[aIndex], isFixed_[bIndex]);
     }
 
     void removeAtom(std::size_t index) {
-        if (index >= size()) {
-            return;
-        }
+        if (index >= count_) return;
 
-        const std::size_t lastIndex = size() - 1;
-        if (index != lastIndex) {
-            swapAtoms(index, lastIndex);
+        const std::size_t lastIndex = count_ - 1;
+        if (index < mobileCount_) {
+            swapAtoms(index, mobileCount_ - 1);
+            --mobileCount_;
+            swapAtoms(mobileCount_, lastIndex);
+        }
+        else {
+            if (index != lastIndex) {
+                swapAtoms(index, lastIndex);
+            }
         }
 
         atomType_.pop_back();
         valence_.pop_back();
         selected_.pop_back();
-        isFixed_.pop_back();
         --count_;
     }
 
@@ -245,9 +303,19 @@ public:
     bool isSelected(std::size_t i) const { return selected_[i] != 0; }
     void setSelected(std::size_t i, bool value) { selected_[i] = value ? 1 : 0; }
 
-    bool isAtomFixed(std::size_t i) { return isFixed_[i] != 0; }
-    bool isAtomFixed(std::size_t i) const { return isFixed_[i] != 0; }
-    void setFixed(std::size_t i, bool fixed) { isFixed_[i] = fixed ? 1 : 0; }
+    bool isAtomFixed(std::size_t i) const { return i >= mobileCount_; }
+    void setFixed(std::size_t i, bool fixed) {
+        if (fixed) {
+            if (i >= mobileCount_) return;
+            --mobileCount_;
+            swapAtoms(i, mobileCount_); // последний мобильный встаёт на место i
+        }
+        else {
+            if (i < mobileCount_) return;
+            swapAtoms(i, mobileCount_); // первый фиксированный встаёт на место i
+            ++mobileCount_;
+        }
+    }
 
     Vec3f pos(std::size_t i) const { return Vec3f(x_[i], y_[i], z_[i]); }
     Vec3f vel(std::size_t i) const { return Vec3f(vx_[i], vy_[i], vz_[i]); }
