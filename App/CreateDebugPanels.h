@@ -11,4 +11,3 @@ struct DebugViews {
 };
 
 DebugViews createDebugViews(DebugPanel& panel);
-

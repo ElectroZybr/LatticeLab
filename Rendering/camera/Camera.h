@@ -51,7 +51,7 @@ private:
     sf::Vector2f screenSize;
     sf::View* view;
     Vec2f position;
-    Vec3f freePosition{0.f, 0.f, -50.f};
+    Vec3f freePosition{0.f, 0.f, -100.f};
     float zoom;
     float speed;
     float moveSpeed;

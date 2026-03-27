@@ -4,16 +4,16 @@
 
 #include "CreateDebugPanels.h"
 #include "Engine/Simulation.h"
-#include "Engine/Tools.h"
+#include "Engine/tools/Tools.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
 #include "memory_monitor.h"
 
 void updateAtomSelectionDebug(const DebugViews& debugViews, const Simulation& simulation) {
-    if (Tools::selected_atom_batch.size() == 1)
+    if (Tools::pickingSystem->getSelectedIndices().size() == 1)
     {
         debugViews.atomSingle->visible = true;
         debugViews.atomBatch->visible = false;
-        const std::size_t selectedIndex = *Tools::selected_atom_batch.begin();
+        const std::size_t selectedIndex = *Tools::pickingSystem->getSelectedIndices().begin();
         if (selectedIndex < simulation.atomStorage.size()) {
             debugViews.atomSingle->add_data("Позиция", simulation.atomStorage.pos(selectedIndex));
             debugViews.atomSingle->add_data("Скорость", simulation.atomStorage.vel(selectedIndex));
@@ -29,7 +29,7 @@ void updateAtomSelectionDebug(const DebugViews& debugViews, const Simulation& si
     else {
         debugViews.atomBatch->visible = true;
         debugViews.atomSingle->visible = false;
-        debugViews.atomBatch->add_data("Выбрано атомов", Tools::selected_atom_batch.size());
+        debugViews.atomBatch->add_data("Выбрано атомов", Tools::pickingSystem->getSelectedIndices().size());
     }
 }
 

@@ -3,7 +3,6 @@
 #include "UpdateDebugData.h"
 #include <cmath>
 #include <cstdlib>
-#include <iostream>
 #include <string_view>
 
 #include <SFML/Graphics.hpp>
@@ -12,14 +11,13 @@
 #include "imgui-SFML.h"
 
 #include "Engine/Simulation.h"
-#include "Engine/Tools.h"
+#include "Engine/tools/Tools.h"
 #include "Engine/utils/Timer.h"
 #include "GUI/interface/interface.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
 #include "Rendering/2d/Renderer2D.h"
 #include "Rendering/3d/Renderer3D.h"
-#include "memory_monitor.h"
 
 namespace {
 
@@ -148,12 +146,6 @@ void processFileDialog(Simulation& simulation) {
 void processToolsPanel(std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window,
                        sf::View& gameView, Simulation& simulation) {
     if (auto result = Interface::toolsPanel.popResult()) {
-        if (result.value() == ToolsCommand::ClearSimulation) {
-            simulation.clear();
-            Tools::resetInteractionState();
-            return;
-        }
-
         std::unique_ptr<IRenderer> newRenderer;
         switch (result.value()) {
             case ToolsCommand::ToggleRenderer2D:
@@ -163,6 +155,14 @@ void processToolsPanel(std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& w
                 newRenderer = std::make_unique<Renderer3D>(window, gameView);
                 break;
             case ToolsCommand::ClearSimulation:
+                simulation.clear();
+                Tools::resetInteractionState();
+                break;
+            case ToolsCommand::SetCameraOrbit:
+                renderer->camera.setMode(Camera::Mode::Orbit);
+                break;
+                case ToolsCommand::SetCameraFree:
+                renderer->camera.setMode(Camera::Mode::Free);
                 break;
         }
 
@@ -187,10 +187,10 @@ int Application::run() {
     }
     sf::View& gameView = const_cast<sf::View&>(window.getView());
 
-    SimBox box(Vec3f(-25, -25, 0), Vec3f(25, 25, 6));
+    SimBox box(Vec3f(-25, -25, -3), Vec3f(25, 25, 3));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    Scenes::crystal(simulation, 500, AtomData::Type::Z, false);
+    Scenes::crystal(simulation, 20, AtomData::Type::Z, false);
 
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
     renderer->setAtomStorage(&simulation.atomStorage);
@@ -227,6 +227,7 @@ int Application::run() {
         renderAccum += deltaTime;
         logAccum += deltaTime;
 
+        renderer->camera.update(window);
         EventManager::poll();
         EventManager::frame(deltaTime);
 
@@ -259,10 +260,9 @@ int Application::run() {
             processFileDialog(simulation);
             processToolsPanel(renderer, window, gameView, simulation);
 
-            renderer->camera.update(window);
-
             renderCounter.startStep();
             renderer->drawShot(simulation.atomStorage, simulation.sim_box);
+            Tools::pickingSystem->getOverlay().draw(window);
             ImGui::SFML::Render(window);
             window.display();
             renderCounter.finishStep();

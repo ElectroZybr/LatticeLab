@@ -107,7 +107,7 @@ file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
     "Engine/*.cpp"
     "GUI/*.cpp"
     "Rendering/*.cpp"
-    "app/*.cpp"
+    "App/*.cpp"
 )
 list(FILTER CORE_SOURCES EXCLUDE REGEX "build/.*")
 
