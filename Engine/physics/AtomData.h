@@ -5,8 +5,6 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "../math/Vec3f.h"
-
 struct StaticAtomicData {
     const float mass;
     const float radius;
@@ -47,7 +45,7 @@ public:
     };
 
 private:
-    static const std::array<StaticAtomicData, static_cast<std::size_t>(Type::COUNT)> properties;
+static const std::array<StaticAtomicData, static_cast<std::size_t>(Type::COUNT)> properties;
 public:
     static const StaticAtomicData& getProps(Type type) {
         return properties.at(static_cast<int>(type));

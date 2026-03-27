@@ -59,35 +59,32 @@ void NeighborList::build(const AtomStorage& atoms, const SimBox& box) {
     offsets_[0] = 0;
 
     // строим карту оффсетов списка соседей
-    for (size_t i = 0; i < atomCount; ++i) {
-        size_t count = 0;
-
-        forEachNeighbor(grid, atoms, i, [&](size_t j) {
-            if (i <= j) return;
-            if (distanceSqr(atoms, i, j) <= listRadiusSqr_) {
-                count++;
+    for (std::size_t index = 0; index < atomCount; ++index) {
+        forEachNeighbor(grid, atoms, index, [&](std::size_t neighborIndex) {
+            if (index <= neighborIndex) return;
+            if (distanceSqr(atoms, index, neighborIndex) <= listRadiusSqr_) {
+                offsets_[index + 1]++;
             }
         });
+    }
 
-        offsets_[i + 1] = offsets_[i] + count;
+    for (std::size_t index = 0; index < atomCount; ++index) {
+        offsets_[index + 1] += offsets_[index];
     }
 
     neighbors_.resize(offsets_[atomCount]); // подгоняем под нужный размер
 
-    // записываем индексы соседей в ячейки
-    for (size_t i = 0; i < atomCount; ++i) {
-        size_t writeIndex = offsets_[i];
-
-        forEachNeighbor(grid, atoms, i, [&](size_t j) {
-            if (i <= j) return;
-            if (distanceSqr(atoms, i, j) <= listRadiusSqr_) {
-                neighbors_[writeIndex++] = j;
+    // заполняем список и обновляем позиции атомов последнего перестроения списка
+    std::vector<std::size_t> currentPositions = offsets_;
+    for (std::size_t index = 0; index < atomCount; ++index) {
+        forEachNeighbor(grid, atoms, index, [&](std::size_t neighborIndex) {
+            if (index <= neighborIndex) return;
+            if (distanceSqr(atoms, index, neighborIndex) <= listRadiusSqr_) {
+                std::size_t pos = currentPositions[index]++;
+                neighbors_[pos] = neighborIndex;
             }
         });
-    }
 
-    // обновляем позиции последнего перестроения списка
-    for (std::size_t index = 0; index < atomCount; ++index) {
         refPosX_[index] = atoms.posX(index);
         refPosY_[index] = atoms.posY(index);
         refPosZ_[index] = atoms.posZ(index);
@@ -158,7 +155,7 @@ bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
     if (!valid_) return finishAndReturn(true);
     if (atoms.size() != refPosX_.size()) return finishAndReturn(true);
 
-    const float maxDisp = 0.5f * skin_; 
+    const float maxDisp = 0.5f * skin_;
     const float maxDispSqr = maxDisp * maxDisp;
 
     // если атом сместился более 0.5*skin, перестраиваем список
@@ -238,3 +235,4 @@ void NeighborList::reserveListBuffers(const AtomStorage& atoms, const SpatialGri
 
     neighbors_.reserve(estimateNeighborCapacity(atoms, grid));
 }
+

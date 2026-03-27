@@ -4,15 +4,18 @@
 #include <cstdint>
 #include <utility>
 #include <vector>
+#include "Engine/math/Vec3f.h"
 
 #include "AtomData.h"
 
 class AtomStorage {
 private:
-    static constexpr std::size_t kFloatFieldCount = 13;
+    static constexpr std::size_t kFloatFieldCount = 14;
 
     std::size_t count_ = 0;
     std::size_t capacity_ = 0;
+    std::size_t mobileCount_ = 0;
+
     std::vector<float> floatData_;
 
     float* x_ = nullptr;
@@ -21,6 +24,7 @@ private:
     float* vx_ = nullptr;
     float* vy_ = nullptr;
     float* vz_ = nullptr;
+    float* invMass_ = nullptr;
     float* fx_ = nullptr;
     float* fy_ = nullptr;
     float* fz_ = nullptr;
@@ -31,8 +35,6 @@ private:
 
     std::vector<AtomData::Type> atomType_;
     std::vector<std::uint8_t> valence_;
-    std::vector<std::uint8_t> selected_;
-    std::vector<std::uint8_t> isFixed_;
 
     void bindFloatViews() {
         if (capacity_ == 0 || floatData_.empty()) {
@@ -40,24 +42,25 @@ private:
             vx_ = vy_ = vz_ = nullptr;
             fx_ = fy_ = fz_ = nullptr;
             pfx_ = pfy_ = pfz_ = nullptr;
-            pe_ = nullptr;
+            pe_ = invMass_ = nullptr;
             return;
         }
 
         float* base = floatData_.data();
-        x_   = base +  0 * capacity_;
-        y_   = base +  1 * capacity_;
-        z_   = base +  2 * capacity_;
-        vx_  = base +  3 * capacity_;
-        vy_  = base +  4 * capacity_;
-        vz_  = base +  5 * capacity_;
-        fx_  = base +  6 * capacity_;
-        fy_  = base +  7 * capacity_;
-        fz_  = base +  8 * capacity_;
-        pfx_ = base +  9 * capacity_;
-        pfy_ = base + 10 * capacity_;
-        pfz_ = base + 11 * capacity_;
-        pe_  = base + 12 * capacity_;
+        x_       = base +  0 * capacity_;
+        y_       = base +  1 * capacity_;
+        z_       = base +  2 * capacity_;
+        vx_      = base +  3 * capacity_;
+        vy_      = base +  4 * capacity_;
+        vz_      = base +  5 * capacity_;
+        invMass_ = base +  6 * capacity_;
+        fx_      = base +  7 * capacity_;
+        fy_      = base +  8 * capacity_;
+        fz_      = base +  9 * capacity_;
+        pfx_     = base + 10 * capacity_;
+        pfy_     = base + 11 * capacity_;
+        pfz_     = base + 12 * capacity_;
+        pe_      = base + 13 * capacity_;
     }
 
     void ensureCapacity(std::size_t requiredCount) {
@@ -83,13 +86,14 @@ private:
             newField(3)[i]  = vx_[i];
             newField(4)[i]  = vy_[i];
             newField(5)[i]  = vz_[i];
-            newField(6)[i]  = fx_[i];
-            newField(7)[i]  = fy_[i];
-            newField(8)[i]  = fz_[i];
-            newField(9)[i]  = pfx_[i];
-            newField(10)[i] = pfy_[i];
-            newField(11)[i] = pfz_[i];
-            newField(12)[i] = pe_[i];
+            newField(6)[i]  = invMass_[i];
+            newField(7)[i]  = fx_[i];
+            newField(8)[i]  = fy_[i];
+            newField(9)[i]  = fz_[i];
+            newField(10)[i] = pfx_[i];
+            newField(11)[i] = pfy_[i];
+            newField(12)[i] = pfz_[i];
+            newField(13)[i] = pe_[i];
         }
 
         floatData_ = std::move(newFloatData);
@@ -98,22 +102,68 @@ private:
     }
 
 public:
-    const float* xData() const { return x_; }
-    const float* yData() const { return y_; }
-    const float* zData() const { return z_; }
+    float* xData() const { return x_; }
+    float* yData() const { return y_; }
+    float* zData() const { return z_; }
+
+    float* vxData() { return vx_; }
+    float* vyData() { return vy_; }
+    float* vzData() { return vz_; }
+
+    float* fxData() { return fx_; }
+    float* fyData() { return fy_; }
+    float* fzData() { return fz_; }
+
+    float* pfxData() { return pfx_; }
+    float* pfyData() { return pfy_; }
+    float* pfzData() { return pfz_; }
+
+    float* energyData() { return pe_; }
+    float* invMassData() { return invMass_; }
+
+    AtomStorage() = default;
+    AtomStorage(const AtomStorage&) = delete;
+    AtomStorage& operator=(const AtomStorage&) = delete;
+
+    AtomStorage(AtomStorage&& other) noexcept
+        : count_(other.count_)
+        , capacity_(other.capacity_)
+        , mobileCount_(other.mobileCount_)
+        , floatData_(std::move(other.floatData_))
+        , atomType_(std::move(other.atomType_))
+        , valence_(std::move(other.valence_))
+    {
+        bindFloatViews();
+        other.count_ = 0;
+        other.capacity_ = 0;
+        other.mobileCount_ = 0;
+        other.bindFloatViews();
+    }
+    AtomStorage& operator=(AtomStorage&& other) noexcept {
+        if (this == &other) return *this;
+        count_ = other.count_;
+        capacity_ = other.capacity_;
+        mobileCount_ = other.mobileCount_;
+        floatData_ = std::move(other.floatData_);
+        atomType_ = std::move(other.atomType_);
+        valence_ = std::move(other.valence_);
+        bindFloatViews();
+        other.count_ = 0;
+        other.capacity_ = 0;
+        other.mobileCount_ = 0;
+        other.bindFloatViews();
+        return *this;
+    }
 
     const AtomData::Type* atomTypeData() const { return atomType_.data(); }
-    const std::uint8_t* selectedData() const { return selected_.data(); }
-    std::uint8_t* selectedData() { return selected_.data(); }
 
     std::size_t size() const { return count_; }
+    std::size_t mobileCount() const { return mobileCount_; }
     bool empty() const { return count_ == 0; }
     std::size_t memoryBytes() const {
         return floatData_.capacity() * sizeof(float)
             + atomType_.capacity() * sizeof(AtomData::Type)
-            + valence_.capacity() * sizeof(std::uint8_t)
-            + selected_.capacity() * sizeof(std::uint8_t)
-            + isFixed_.capacity() * sizeof(std::uint8_t);
+            + valence_.capacity() * sizeof(std::uint8_t);
     }
 
     void clear() {
@@ -124,22 +174,19 @@ public:
         capacity_ = 0;
         bindFloatViews();
 
+        mobileCount_ = 0;
         atomType_.clear();
         atomType_.shrink_to_fit();
         valence_.clear();
         valence_.shrink_to_fit();
-        selected_.clear();
-        selected_.shrink_to_fit();
-        isFixed_.clear();
-        isFixed_.shrink_to_fit();
+        // floatData_.clear(); TODO разобраться почему если убрать то бенчмарки падают с segfault
+        // bindFloatViews();
     }
 
     void reserve(std::size_t count) {
         ensureCapacity(count);
         atomType_.reserve(count);
         valence_.reserve(count);
-        selected_.reserve(count);
-        isFixed_.reserve(count);
     }
 
     void addAtom(const Vec3f& coords, const Vec3f& speed, AtomData::Type type, bool fixed = false) {
@@ -153,6 +200,8 @@ public:
         vy_[count_] = static_cast<float>(speed.y);
         vz_[count_] = static_cast<float>(speed.z);
 
+        invMass_[count_] = 1.0f / AtomData::getProps(type).mass;
+
         fx_[count_] = 0.0f;
         fy_[count_] = 0.0f;
         fz_[count_] = 0.0f;
@@ -162,12 +211,16 @@ public:
         pfz_[count_] = 0.0f;
         pe_[count_]  = 0.0f;
 
-        atomType_.push_back(type);
-        valence_.push_back(AtomData::getProps(type).maxValence);
-        selected_.push_back(0);
-        isFixed_.push_back(fixed ? 1 : 0);
+        atomType_.emplace_back(type);
+        valence_.emplace_back(AtomData::getProps(type).maxValence);
 
         ++count_;
+
+        if (!fixed) {
+            // Если не фиксирован то заменяем с 1 фиксированным атомов для сохранения инварианта
+            swapAtoms(count_ - 1, mobileCount_);
+            ++mobileCount_;
+        }
     }
 
     void swapAtoms(std::size_t aIndex, std::size_t bIndex) {
@@ -183,6 +236,8 @@ public:
         std::swap(vy_[aIndex], vy_[bIndex]);
         std::swap(vz_[aIndex], vz_[bIndex]);
 
+        std::swap(invMass_[aIndex], invMass_[bIndex]);
+
         std::swap(fx_[aIndex], fx_[bIndex]);
         std::swap(fy_[aIndex], fy_[bIndex]);
         std::swap(fz_[aIndex], fz_[bIndex]);
@@ -194,24 +249,25 @@ public:
 
         std::swap(atomType_[aIndex], atomType_[bIndex]);
         std::swap(valence_[aIndex], valence_[bIndex]);
-        std::swap(selected_[aIndex], selected_[bIndex]);
-        std::swap(isFixed_[aIndex], isFixed_[bIndex]);
     }
 
     void removeAtom(std::size_t index) {
-        if (index >= size()) {
-            return;
-        }
+        if (index >= count_) return;
 
-        const std::size_t lastIndex = size() - 1;
-        if (index != lastIndex) {
-            swapAtoms(index, lastIndex);
+        const std::size_t lastIndex = count_ - 1;
+        if (index < mobileCount_) {
+            swapAtoms(index, mobileCount_ - 1);
+            --mobileCount_;
+            swapAtoms(mobileCount_, lastIndex);
+        }
+        else {
+            if (index != lastIndex) {
+                swapAtoms(index, lastIndex);
+            }
         }
 
         atomType_.pop_back();
         valence_.pop_back();
-        selected_.pop_back();
-        isFixed_.pop_back();
         --count_;
     }
 
@@ -228,6 +284,9 @@ public:
     const float& velX(std::size_t i) const { return vx_[i]; }
     const float& velY(std::size_t i) const { return vy_[i]; }
     const float& velZ(std::size_t i) const { return vz_[i]; }
+
+    float& invMass(std::size_t i) { return invMass_[i]; }
+    const float& invMass(std::size_t i) const { return invMass_[i]; }
 
     float& forceX(std::size_t i) { return fx_[i]; }
     float& forceY(std::size_t i) { return fy_[i]; }
@@ -252,12 +311,19 @@ public:
     std::uint8_t& valenceCount(std::size_t i) { return valence_[i]; }
     const std::uint8_t& valenceCount(std::size_t i) const { return valence_[i]; }
 
-    bool isSelected(std::size_t i) const { return selected_[i] != 0; }
-    void setSelected(std::size_t i, bool value) { selected_[i] = value ? 1 : 0; }
-
-    bool isAtomFixed(std::size_t i) { return isFixed_[i] != 0; }
-    bool isAtomFixed(std::size_t i) const { return isFixed_[i] != 0; }
-    void setFixed(std::size_t i, bool fixed) { isFixed_[i] = fixed ? 1 : 0; }
+    bool isAtomFixed(std::size_t i) const { return i >= mobileCount_; }
+    void setFixed(std::size_t i, bool fixed) {
+        if (fixed) {
+            if (i >= mobileCount_) return;
+            --mobileCount_;
+            swapAtoms(i, mobileCount_); // последний мобильный встаёт на место i
+        }
+        else {
+            if (i < mobileCount_) return;
+            swapAtoms(i, mobileCount_); // первый фиксированный встаёт на место i
+            ++mobileCount_;
+        }
+    }
 
     Vec3f pos(std::size_t i) const { return Vec3f(x_[i], y_[i], z_[i]); }
     Vec3f vel(std::size_t i) const { return Vec3f(vx_[i], vy_[i], vz_[i]); }
@@ -286,5 +352,11 @@ public:
         pfx_[i] = static_cast<float>(prevForce.x);
         pfy_[i] = static_cast<float>(prevForce.y);
         pfz_[i] = static_cast<float>(prevForce.z);
+    }
+
+    void swapPrevCurrentForces() {
+        std::swap(pfx_, fx_);
+        std::swap(pfy_, fy_);
+        std::swap(pfz_, fz_);
     }
 };

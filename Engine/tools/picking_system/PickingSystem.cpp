@@ -12,7 +12,6 @@ PickingSystem::PickingSystem(AtomStorage& atomStorage, SimBox& box, std::unique_
 void PickingSystem::clearSelection() {
     overlay.reset();
     selectedIndices.clear();
-    std::fill_n(atomStorage.selectedData(), atomStorage.size(), 0);
 }
 
 void PickingSystem::processClick(sf::Vector2i screenPos, bool cumulative) {
@@ -28,12 +27,10 @@ void PickingSystem::processClick(sf::Vector2i screenPos, bool cumulative) {
         // Если атом уже был выбран и зажат Ctrl — инвертируем (снимаем выделение)
         if (cumulative && selectedIndices.contains(hit.index)) {
             selectedIndices.erase(hit.index);
-            atomStorage.setSelected(hit.index, false);
         } 
         else {
             // Иначе — добавляем в набор
             selectedIndices.insert(hit.index);
-            atomStorage.setSelected(hit.index, true);
         }
     }
     else {
@@ -55,7 +52,6 @@ void PickingSystem::processRect(sf::Vector2i start, sf::Vector2i end, bool cumul
         const sf::Vector2i atomScreen = rend->camera.worldToScreen(worldPos);
         if (pointInRect(atomScreen, start, end)) {
             selectedIndices.insert(i);
-            atomStorage.setSelected(i, true);
         }
     }
 }
@@ -70,7 +66,6 @@ void PickingSystem::processLasso(std::span<sf::Vector2i> points, bool cumulative
         const sf::Vector2i screenPos = rend->camera.worldToScreen(worldPos);
         if (pointInPolygon(screenPos, points)) {
             selectedIndices.insert(i);
-            atomStorage.setSelected(i, true);
         }
     }
 }
@@ -83,7 +78,6 @@ void PickingSystem::handleAtomRemoval(std::size_t index) {
     if (index < movedFrom) {
         if (selectedIndices.erase(movedFrom) > 0) {
             selectedIndices.insert(index);
-            atomStorage.setSelected(index, true);
         }
     }
 }

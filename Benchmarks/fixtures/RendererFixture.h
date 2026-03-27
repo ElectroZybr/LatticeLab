@@ -9,6 +9,7 @@
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/SimBox.h"
+#include "Engine/tools/Tools.h"
 
 template <typename TRenderer>
 class RendererFixture : public benchmark::Fixture {
@@ -22,6 +23,7 @@ public:
 
         view_ = renderTexture_->getView();;
         renderer_ = std::make_unique<TRenderer>(*renderTexture_, view_);
+        Tools::init(nullptr, &view_, nullptr, nullptr, renderer_);
 
         atomStorage_ = makeGridAtoms(static_cast<int>(state.range(0)));
         renderer_->setAtomStorage(&atomStorage_);
@@ -39,7 +41,7 @@ protected:
     }
 
     std::unique_ptr<sf::RenderTexture> renderTexture_;
-    std::unique_ptr<TRenderer> renderer_;
+    std::unique_ptr<IRenderer> renderer_;
     sf::View view_;
     AtomStorage atomStorage_;
     SimBox box_{ Vec3f(0, 0, 0), Vec3f(300, 300, 300) };

@@ -1,14 +1,25 @@
 #pragma once
 
 #include "../ForceField.h"
-#include "../../SimBox.h"
+#include "Engine/SimBox.h"
+
+#if defined(_MSC_VER)
+    #define RESTRICT __restrict
+#elif defined(__GNUC__) || defined(__clang__)
+    #define RESTRICT __restrict__
+#else
+    #define RESTRICT
+#endif
 
 class NeighborList;
 
 namespace StepOps {
-using AtomStorageStepFn = void (*)(AtomStorage& atomStorage, std::size_t atomIndex, float dt);
+template<typename T>
+concept AtomStepFunc = requires(T fn, AtomStorage& storage, float dt) {
+    { fn(storage, dt) } -> std::same_as<void>;
+};
 
-inline void confineToBox(AtomStorage& atomStorage, SimBox& box, std::size_t atomIndex) {
+inline void confineToBox(AtomStorage& atomStorage, SimBox& box) {
     constexpr float restitution = 0.8f;
     const Vec3f max = box.end - box.start - Vec3f(1.0, 1.0, 1.0);
 
@@ -26,46 +37,46 @@ inline void confineToBox(AtomStorage& atomStorage, SimBox& box, std::size_t atom
         }
     };
 
-    confineAxis(atomStorage.posX(atomIndex), atomStorage.velX(atomIndex), static_cast<float>(max.x));
-    confineAxis(atomStorage.posY(atomIndex), atomStorage.velY(atomIndex), static_cast<float>(max.y));
-    confineAxis(atomStorage.posZ(atomIndex), atomStorage.velZ(atomIndex), static_cast<float>(max.z));
+    for (std::size_t atomIndex = 0; atomIndex < atomStorage.mobileCount(); ++atomIndex) {
+        confineAxis(atomStorage.posX(atomIndex), atomStorage.velX(atomIndex), static_cast<float>(max.x));
+        confineAxis(atomStorage.posY(atomIndex), atomStorage.velY(atomIndex), static_cast<float>(max.y));
+        confineAxis(atomStorage.posZ(atomIndex), atomStorage.velZ(atomIndex), static_cast<float>(max.z));
+    }
 }
 
 inline void computeForces(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) {
     forceField.compute(atomStorage, box, neighborList, dt);
 }
 
-inline void predictAndSync(AtomStorage& atomStorage, SimBox& box, float dt, AtomStorageStepFn predictFn) {
-    auto& grid = box.grid;
-    const std::size_t atomCount = atomStorage.size();
-
-    for (std::size_t atomIndex = 0; atomIndex < atomCount; ++atomIndex) {
-        const int prevX = grid.worldToCellX(atomStorage.posX(atomIndex));
-        const int prevY = grid.worldToCellY(atomStorage.posY(atomIndex));
-        const int prevZ = grid.worldToCellZ(atomStorage.posZ(atomIndex));
-
-        if (!atomStorage.isAtomFixed(atomIndex)) {
-            predictFn(atomStorage, atomIndex, dt);
-            confineToBox(atomStorage, box, atomIndex);
-        }
-
-        const int currX = grid.worldToCellX(atomStorage.posX(atomIndex));
-        const int currY = grid.worldToCellY(atomStorage.posY(atomIndex));
-        const int currZ = grid.worldToCellZ(atomStorage.posZ(atomIndex));
-
-        if (prevX != currX || prevY != currY || prevZ != currZ) {
-            grid.eraseIndex(prevX, prevY, prevZ, atomIndex);
-            grid.insertIndex(currX, currY, currZ, atomIndex);
-        }
-
-        atomStorage.prevForceX(atomIndex) = atomStorage.forceX(atomIndex);
-        atomStorage.prevForceY(atomIndex) = atomStorage.forceY(atomIndex);
-        atomStorage.prevForceZ(atomIndex) = atomStorage.forceZ(atomIndex);
-
-        atomStorage.forceX(atomIndex) = 0.0f;
-        atomStorage.forceY(atomIndex) = 0.0f;
-        atomStorage.forceZ(atomIndex) = 0.0f;
-        atomStorage.energy(atomIndex) = 0.0f;
+template<typename StepFn>
+requires AtomStepFunc<StepFn>
+inline void predictAndSync(AtomStorage& atomStorage, SimBox& box, float dt, StepFn predictFn) {
+    static std::vector<int> oldCellsX, oldCellsY, oldCellsZ;
+    const size_t n = atomStorage.mobileCount();
+    oldCellsX.resize(n); oldCellsY.resize(n); oldCellsZ.resize(n);
+    for (size_t i = 0; i < n; ++i) {
+        oldCellsX[i] = box.grid.worldToCellX(atomStorage.posX(i));
+        oldCellsY[i] = box.grid.worldToCellY(atomStorage.posY(i));
+        oldCellsZ[i] = box.grid.worldToCellZ(atomStorage.posZ(i));
     }
+
+    predictFn(atomStorage, dt);
+    confineToBox(atomStorage, box);
+
+    for (size_t i = 0; i < n; ++i) {
+        const int currX = box.grid.worldToCellX(atomStorage.posX(i));
+        const int currY = box.grid.worldToCellY(atomStorage.posY(i));
+        const int currZ = box.grid.worldToCellZ(atomStorage.posZ(i));
+        if (oldCellsX[i] != currX || oldCellsY[i] != currY || oldCellsZ[i] != currZ) {
+            box.grid.eraseIndex(oldCellsX[i], oldCellsY[i], oldCellsZ[i], i);
+            box.grid.insertIndex(currX, currY, currZ, i);
+        }
+    }
+
+    atomStorage.swapPrevCurrentForces();
+    std::fill_n(atomStorage.fxData(), atomStorage.size(), 0.0f);
+    std::fill_n(atomStorage.fyData(), atomStorage.size(), 0.0f);
+    std::fill_n(atomStorage.fzData(), atomStorage.size(), 0.0f);
+    std::fill_n(atomStorage.energyData(), atomStorage.size(), 0.0f);
 }
 }

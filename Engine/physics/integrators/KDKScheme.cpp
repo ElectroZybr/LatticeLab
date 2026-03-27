@@ -1,37 +1,50 @@
 #include "KDKScheme.h"
 
 #include "StepOps.h"
-#include "../AtomData.h"
 
 void KDKScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) const {
     // Kick: половина шага
-    for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
-        if (!atomStorage.isAtomFixed(atomIndex))
-            halfKick(atomStorage, atomIndex, dt);
-    }
+    halfKick(atomStorage, dt);
     // Расчет новых позиций
     StepOps::predictAndSync(atomStorage, box, dt, &drift);
     // Расчет сил
     StepOps::computeForces(atomStorage, box, forceField, neighborList, dt);
     // Kick: вторая половина шага
-    for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
-        if (!atomStorage.isAtomFixed(atomIndex))
-            halfKick(atomStorage, atomIndex, dt);
+    halfKick(atomStorage,  dt);
+}
+
+void KDKScheme::halfKick(AtomStorage& atomStorage, float dt) {
+    const float* RESTRICT fx  = atomStorage.fxData();
+    const float* RESTRICT fy  = atomStorage.fyData();
+    const float* RESTRICT fz  = atomStorage.fzData();
+        
+    float* RESTRICT vx = atomStorage.vxData();
+    float* RESTRICT vy = atomStorage.vyData();
+    float* RESTRICT vz = atomStorage.vzData();
+
+    const float* RESTRICT invMass = atomStorage.invMassData();
+
+    for (std::size_t i = 0; i < atomStorage.mobileCount(); ++i) {
+
+        vx[i] += 0.5f * fx[i] * invMass[i] * dt;
+        vy[i] += 0.5f * fy[i] * invMass[i] * dt;
+        vz[i] += 0.5f * fz[i] * invMass[i] * dt;
     }
 }
 
-void KDKScheme::halfKick(AtomStorage& atomStorage, std::size_t atomIndex, float dt) {
-    const auto props = AtomData::getProps(atomStorage.type(atomIndex));
-    const float invMass = 1.0f / props.mass;
+void KDKScheme::drift(AtomStorage& atomStorage, float dt) {
+    float* RESTRICT x = atomStorage.xData();
+    float* RESTRICT y = atomStorage.yData();
+    float* RESTRICT z = atomStorage.zData();
 
-    atomStorage.velX(atomIndex) += static_cast<float>(0.5 * atomStorage.forceX(atomIndex) * invMass * dt);
-    atomStorage.velY(atomIndex) += static_cast<float>(0.5 * atomStorage.forceY(atomIndex) * invMass * dt);
-    atomStorage.velZ(atomIndex) += static_cast<float>(0.5 * atomStorage.forceZ(atomIndex) * invMass * dt);
-}
+    const float* RESTRICT vx = atomStorage.vxData();
+    const float* RESTRICT vy = atomStorage.vyData();
+    const float* RESTRICT vz = atomStorage.vzData();
 
-void KDKScheme::drift(AtomStorage& atomStorage, std::size_t atomIndex, float dt) {
-    atomStorage.posX(atomIndex) += static_cast<float>(atomStorage.velX(atomIndex) * dt);
-    atomStorage.posY(atomIndex) += static_cast<float>(atomStorage.velY(atomIndex) * dt);
-    atomStorage.posZ(atomIndex) += static_cast<float>(atomStorage.velZ(atomIndex) * dt);
+    for (std::size_t i = 0; i < atomStorage.mobileCount(); ++i) {
+        x[i] += vx[i] * dt;
+        y[i] += vy[i] * dt;
+        z[i] += vz[i] * dt;
+    }
 }
 

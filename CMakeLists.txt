@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
+cmake_policy(SET CMP0069 NEW)
 project(Chemical-simulator)
 option(OPTIMIZE_FOR_NATIVE "Enable -march=native optimization" ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -11,6 +12,17 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT lto_supported OUTPUT lto_error)
+if(lto_supported AND NOT MINGW)
+    message(STATUS "LTO (IPO) is supported and enabled")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+elseif(lto_supported AND MINGW)
+    message(STATUS "LTO (IPO) is disabled for MinGW due to linker/LTO instability")
+else()
+    message(WARNING "LTO is not supported: ${lto_error}")
+endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 

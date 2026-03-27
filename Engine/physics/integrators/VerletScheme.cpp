@@ -1,7 +1,6 @@
 #include "VerletScheme.h"
 
 #include "StepOps.h"
-#include "../AtomData.h"
 
 void VerletScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) const {
     // Расчет новых позиций
@@ -9,39 +8,55 @@ void VerletScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& f
     // Расчет сил
     StepOps::computeForces(atomStorage, box, forceField, neighborList, dt);
     // Корректировка скоростей
-    for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
-        if (!atomStorage.isAtomFixed(atomIndex))
-            correct(atomStorage, atomIndex, dt);
+    correct(atomStorage, dt);
+}
+
+void VerletScheme::predict(AtomStorage& atomStorage, float dt) {
+    float* RESTRICT x = atomStorage.xData();
+    float* RESTRICT y = atomStorage.yData();
+    float* RESTRICT z = atomStorage.zData();
+
+    const float* RESTRICT fx  = atomStorage.fxData();
+    const float* RESTRICT fy  = atomStorage.fyData();
+    const float* RESTRICT fz  = atomStorage.fzData();
+        
+    const float* RESTRICT vx = atomStorage.vxData();
+    const float* RESTRICT vy = atomStorage.vyData();
+    const float* RESTRICT vz = atomStorage.vzData();
+
+    const float* RESTRICT invMass = atomStorage.invMassData();
+
+    #pragma GCC ivdep
+    for (std::size_t i = 0; i < atomStorage.mobileCount(); ++i) {
+        constexpr float damping = 0.6f;
+
+        x[i] += (vx[i] * damping + fx[i] * invMass[i] * 0.5f * dt) * dt;
+        y[i] += (vy[i] * damping + fy[i] * invMass[i] * 0.5f * dt) * dt;
+        z[i] += (vz[i] * damping + fz[i] * invMass[i] * 0.5f * dt) * dt;
     }
 }
 
-void VerletScheme::predict(AtomStorage& atomStorage, std::size_t atomIndex, float dt) {
-    const auto props = AtomData::getProps(atomStorage.type(atomIndex));
-    const float invMass = 1.0f / props.mass;
-    constexpr float damping = 0.6f;
+void VerletScheme::correct(AtomStorage& atomStorage, float dt) {
+    const float* RESTRICT fx  = atomStorage.fxData();
+    const float* RESTRICT fy  = atomStorage.fyData();
+    const float* RESTRICT fz  = atomStorage.fzData();
 
-    const float accX = atomStorage.forceX(atomIndex) * invMass;
-    const float accY = atomStorage.forceY(atomIndex) * invMass;
-    const float accZ = atomStorage.forceZ(atomIndex) * invMass;
+    const float* RESTRICT pfx = atomStorage.pfxData();    
+    const float* RESTRICT pfy = atomStorage.pfyData();
+    const float* RESTRICT pfz = atomStorage.pfzData();
+    
+    float* RESTRICT vx = atomStorage.vxData();
+    float* RESTRICT vy = atomStorage.vyData();
+    float* RESTRICT vz = atomStorage.vzData();
 
-    atomStorage.posX(atomIndex) += (atomStorage.velX(atomIndex) * damping + accX * 0.5f * dt) * dt;
-    atomStorage.posY(atomIndex) += (atomStorage.velY(atomIndex) * damping + accY * 0.5f * dt) * dt;
-    atomStorage.posZ(atomIndex) += (atomStorage.velZ(atomIndex) * damping + accZ * 0.5f * dt) * dt;
-}
+    const float* RESTRICT invMass = atomStorage.invMassData();
 
-void VerletScheme::correct(AtomStorage& atomStorage, std::size_t atomIndex, float dt) {
-    const auto props = AtomData::getProps(atomStorage.type(atomIndex));
-    const float invMass = 1.0f / props.mass;
+    #pragma GCC ivdep
+    for (std::size_t i = 0; i < atomStorage.mobileCount(); ++i) {
+        const float halfDtInvMass = 0.5f * dt * invMass[i];
 
-    const float accX = atomStorage.forceX(atomIndex) * invMass;
-    const float accY = atomStorage.forceY(atomIndex) * invMass;
-    const float accZ = atomStorage.forceZ(atomIndex) * invMass;
-
-    const float prevAccX = atomStorage.prevForceX(atomIndex) * invMass;
-    const float prevAccY = atomStorage.prevForceY(atomIndex) * invMass;
-    const float prevAccZ = atomStorage.prevForceZ(atomIndex) * invMass;
-
-    atomStorage.velX(atomIndex) += (prevAccX + accX) * 0.5f * dt;
-    atomStorage.velY(atomIndex) += (prevAccY + accY) * 0.5f * dt;
-    atomStorage.velZ(atomIndex) += (prevAccZ + accZ) * 0.5f * dt;
+        vx[i] += (pfx[i] + fx[i]) * halfDtInvMass;
+        vy[i] += (pfy[i] + fy[i]) * halfDtInvMass;
+        vz[i] += (pfz[i] + fz[i]) * halfDtInvMass;
+    }
 }
