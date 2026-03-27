@@ -44,6 +44,7 @@ void NeighborList::clear() {
     refPosY_.shrink_to_fit();
     refPosZ_.shrink_to_fit();
     buildCounter_.reset();
+    needsRebuildCounter_.reset();
     valid_ = false;
 }
 
@@ -100,9 +101,15 @@ void NeighborList::build(const AtomStorage& atoms, const SimBox& box) {
 }
 
 bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
+    needsRebuildCounter_.startStep();
+    const auto finishAndReturn = [&](bool value) {
+        needsRebuildCounter_.finishStep();
+        return value;
+    };
+
     /* проверка на необходимость перестройки списка */
-    if (!valid_) return true;
-    if (atoms.size() != refPosX_.size()) return true;
+    if (!valid_) return finishAndReturn(true);
+    if (atoms.size() != refPosX_.size()) return finishAndReturn(true);
 
     const float maxDisp = 0.5f * skin_; 
     const float maxDispSqr = maxDisp * maxDisp;
@@ -114,11 +121,11 @@ bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
         const float dz = atoms.posZ(index) - refPosZ_[index];
         const float dispSqr = dx * dx + dy * dy + dz * dz;
         if (dispSqr > maxDispSqr) {
-            return true;
+            return finishAndReturn(true);
         }
     }
 
-    return false;
+    return finishAndReturn(false);
 }
 
 std::size_t NeighborList::atomCount() const {

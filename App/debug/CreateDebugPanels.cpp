@@ -10,6 +10,9 @@ static DebugView* buildDebugSimView(DebugPanel& panel) {
         DebugValue ("Память (МБ)", DebugDrawers::Float<2>),
         DebugValue ("Рендер (мс)", DebugDrawers::Float<4>),
         DebugValue ("Физика (мс)", DebugDrawers::Float<4>),
+        DebugValue ("Интегратор (last, мс)", DebugDrawers::Float<4>),
+        DebugValue ("Интегратор (avg, мс)", DebugDrawers::Float<4>),
+        DebugValue ("Интегратор (max, мс)", DebugDrawers::Float<4>),
         DebugValue ("Тип интегратора", DebugDrawers::String),
         DebugValue ("Шаги симуляции", DebugDrawers::Int),
         DebugValue ("Шагов/с", DebugDrawers::Float<2>),
@@ -53,6 +56,9 @@ static DebugView* buildDebugNeighborView(DebugPanel& panel) {
         DebugValue("Время ребилда NL (last, мс)", DebugDrawers::Float<4>),
         DebugValue("Время ребилда NL (avg, мс)", DebugDrawers::Float<4>),
         DebugValue("Время ребилда NL (max, мс)", DebugDrawers::Float<4>),
+        DebugValue("Время needsRebuild (last, мс)", DebugDrawers::Float<4>),
+        DebugValue("Время needsRebuild (avg, мс)", DebugDrawers::Float<4>),
+        DebugValue("Время needsRebuild (max, мс)", DebugDrawers::Float<4>),
     }));
 }
 } // namespace

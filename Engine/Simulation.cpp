@@ -166,6 +166,7 @@ void Simulation::clear() {
     sim_box.grid.resize(sim_box.grid.sizeX, sim_box.grid.sizeY, sim_box.grid.sizeZ, sim_box.grid.cellSize);
     neighborList.clear();
     sim_step = 0;
+    integrator.resetMetrics();
     neighborListMetrics_.reset();
 }
 

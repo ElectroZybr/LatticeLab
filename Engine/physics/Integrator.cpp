@@ -11,10 +11,12 @@ void Integrator::setScheme(Scheme scheme) {
     scheme_impl = makeSchemeImpl(scheme);
 }
 
-void Integrator::step(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) const {
+void Integrator::step(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) {
+    metrics_.onStepStart();
     std::visit([&](const auto& scheme) {
         scheme.pipeline(atomStorage, box, forceField, neighborList, dt);
     }, scheme_impl);
+    metrics_.onStepFinish();
 }
 
 Integrator::SchemeVariant Integrator::makeSchemeImpl(Scheme scheme) {

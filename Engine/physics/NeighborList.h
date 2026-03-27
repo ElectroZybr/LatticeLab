@@ -28,6 +28,7 @@ public:
     [[nodiscard]] std::pair<std::size_t, std::size_t> rangeFor(std::size_t atomIndex) const;
     [[nodiscard]] std::size_t memoryBytes() const;
     [[nodiscard]] const RateCounter& buildCounter() const { return buildCounter_; }
+    [[nodiscard]] const RateCounter& needsRebuildCounter() const { return needsRebuildCounter_; }
     [[nodiscard]] float cutoff() const { return cutoff_; }
     [[nodiscard]] float skin() const { return skin_; }
     [[nodiscard]] float listRadius() const { return listRadius_; }
@@ -107,4 +108,5 @@ private:
 
     // дебаг таймеры
     RateCounter buildCounter_;
+    mutable RateCounter needsRebuildCounter_;
 };

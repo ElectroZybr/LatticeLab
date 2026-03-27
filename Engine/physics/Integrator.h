@@ -1,7 +1,9 @@
 #pragma once
 
-#include <variant>
 #include <cstdint>
+#include <variant>
+
+#include "../metrics/IntegratorMetrics.h"
 
 class AtomStorage;
 class ForceField;
@@ -26,8 +28,10 @@ public:
 
     void setScheme(Scheme scheme);
     Scheme getScheme() const { return integrator_type; }
+    const IntegratorMetrics& metrics() const { return metrics_; }
+    void resetMetrics() { metrics_.reset(); }
 
-    void step(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) const;
+    void step(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt);
 
 private:
     using SchemeVariant = std::variant<VerletScheme, KDKScheme, RK4Scheme, LangevinScheme>;
@@ -36,4 +40,5 @@ private:
 
     Scheme integrator_type = Scheme::Verlet;
     SchemeVariant scheme_impl;
+    IntegratorMetrics metrics_;
 };
