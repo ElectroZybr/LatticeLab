@@ -132,7 +132,7 @@ bool Simulation::removeAtom(std::size_t atomIndex) {
 
     atomStorage.removeAtom(atomIndex);
 
-    sim_box.grid.resize(sim_box.grid.sizeX, sim_box.grid.sizeY, sim_box.grid.sizeZ, sim_box.grid.cellSize);
+    sim_box.grid.clear();
     for (std::size_t index = 0; index < atomStorage.size(); ++index) {
         const Vec3f pos = atomStorage.pos(index);
         const int cellX = sim_box.grid.worldToCellX(pos.x);
@@ -163,7 +163,7 @@ void Simulation::load(std::string_view path) {
 void Simulation::clear() {
     atomStorage.clear();
     Bond::bonds_list.clear();
-    sim_box.grid.resize(sim_box.grid.sizeX, sim_box.grid.sizeY, sim_box.grid.sizeZ, sim_box.grid.cellSize);
+    sim_box.grid.clear();
     neighborList.clear();
     sim_step = 0;
     integrator.resetMetrics();

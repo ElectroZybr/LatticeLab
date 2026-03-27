@@ -4,11 +4,11 @@
 #include <stdexcept>
 
 SpatialGrid::SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize)
-    : sizeX(sizeX+2),
-      sizeY(sizeY+2),
-      sizeZ(sizeZ+2),
+    : sizeX(sizeX + kBorderCells),
+      sizeY(sizeY + kBorderCells),
+      sizeZ(sizeZ + kBorderCells),
       cellSize(cellSize),
-      indexGrid((sizeX+2) * (sizeY+2) * (sizeZ+2)) {
+      indexGrid((sizeX + kBorderCells) * (sizeY + kBorderCells) * (sizeZ + kBorderCells)) {
     if (sizeX < 0 || sizeY < 0 || sizeZ < 0)
         throw std::invalid_argument("SpatialGrid::SpatialGrid: invalid arguments");
 }
@@ -18,10 +18,16 @@ void SpatialGrid::resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSi
         throw std::invalid_argument("SpatialGrid::resize: invalid arguments");
 
     if (newCellSize > 0) cellSize = newCellSize;
-    sizeX = newSizeX+2;
-    sizeY = newSizeY+2;
-    sizeZ = newSizeZ+2;
+    sizeX = newSizeX + kBorderCells;
+    sizeY = newSizeY + kBorderCells;
+    sizeZ = newSizeZ + kBorderCells;
     indexGrid.assign(sizeX * sizeY * sizeZ, {});
+}
+
+void SpatialGrid::clear() noexcept {
+    for (auto& cell : indexGrid) {
+        cell.clear();
+    }
 }
 
 void SpatialGrid::insertIndex(int x, int y, int z, std::size_t atomIndex) {
