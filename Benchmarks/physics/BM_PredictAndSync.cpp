@@ -1,6 +1,7 @@
 #include <benchmark/benchmark.h>
 #include "fixtures/SimulationFixture.h"
 
+// @bench_meta {"id":"SimulationFixture/PredictAndSync","ru":"Predict + Sync","group":"Симуляция/Интегратор"}
 BENCHMARK_DEFINE_F(SimulationFixture, PredictAndSync)(benchmark::State& state) {
     prepareForPredict();
 

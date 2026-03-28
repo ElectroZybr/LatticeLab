@@ -1,6 +1,7 @@
 #include <benchmark/benchmark.h>
 #include "fixtures/SimulationFixture.h"
 
+// @bench_meta {"id":"SimulationFixture/FullStepWithNeighborList","ru":"Полный шаг с NeighborList","group":"Симуляция/Шаг симуляции"}
 BENCHMARK_DEFINE_F(SimulationFixture, FullStepWithNeighborList)(benchmark::State& state) {
     constexpr int kWarmupSteps = 128;
 
@@ -31,6 +32,7 @@ BENCHMARK_DEFINE_F(SimulationFixture, FullStepWithNeighborList)(benchmark::State
     setCounters(state);
 }
 
+// @bench_meta {"id":"SimulationFixture/FullStepNoNeighborList","ru":"Полный шаг без NeighborList","group":"Симуляция/Шаг симуляции"}
 BENCHMARK_DEFINE_F(SimulationFixture, FullStepNoNeighborList)(benchmark::State& state) {
     constexpr int kWarmupSteps = 128;
 
