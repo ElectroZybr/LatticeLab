@@ -35,4 +35,10 @@ BENCHMARK_DEFINE_F(SimulationFixture, ForEachNeighbor)(benchmark::State& state) 
 }
 
 BENCHMARK_REGISTER_F(SimulationFixture, ForEachNeighbor)
-    ->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);
+    ->Args({125})   // 5^3
+    ->Args({216})   // 6^3
+    ->Args({343})   // 7^3
+    ->Args({512})   // 8^3
+    ->Args({729})   // 9^3
+    ->Args({1000})  // 10^3
+    ->Args({1728}); // 12^3

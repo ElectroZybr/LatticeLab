@@ -434,7 +434,6 @@ def print_results_table(data: dict, metadata: dict[str, dict[str, str]]) -> None
             str(idx),
             ru_name,
             bench_arg(run_name),
-            fmt_time_ns(curr_time_val),           # type: ignore[arg-type]
             fmt_cv(metrics.get("real_cv")),       # type: ignore[arg-type]
             fmt_ips(metrics.get("ips")),          # type: ignore[arg-type]
         ]
@@ -450,14 +449,19 @@ def print_results_table(data: dict, metadata: dict[str, dict[str, str]]) -> None
                 base_median_val = base_time_val
             delta_text, _ = compare_status(curr_median_val, base_median_val)
             row.extend([
+                fmt_time_ns(curr_time_val),  # type: ignore[arg-type]
                 fmt_time_ns(base_time_val),  # type: ignore[arg-type]
                 delta_text,
             ])
+        else:
+            row.append(fmt_time_ns(curr_time_val))  # type: ignore[arg-type]
         table_data.append(row)
 
-    headers = ["#", "Тест", "N", "time", "cv(%)", "items/s"]
+    headers = ["#", "Тест", "N", "cv(%)", "items/s"]
     if has_baseline:
-        headers.extend(["baseline", "d (%)"])
+        headers.extend(["time", "baseline", "d (%)"])
+    else:
+        headers.append("time")
     widths = [len(h) for h in headers]
     for row in table_data:
         for i, cell in enumerate(row):
@@ -485,8 +489,8 @@ def print_results_table(data: dict, metadata: dict[str, dict[str, str]]) -> None
         rendered = [row[i].ljust(widths[i]) for i in range(len(headers))]
         rendered[col["#"]] = paint(rendered[col["#"]], COLOR_INDEX_LIGHT_BLUE)
         rendered[col["N"]] = paint_n_gradient(rendered[col["N"]], min_n, max_n)
-        rendered[col["time"]] = paint_time_cell(rendered[col["time"]])
         rendered[col["cv(%)"]] = paint_numeric(rendered[col["cv(%)"]], cv_mode=True)
+        rendered[col["time"]] = paint_time_cell(rendered[col["time"]])
         if has_baseline:
             rendered[col["baseline"]] = paint_time_cell(rendered[col["baseline"]])
             rendered[col["d (%)"]] = paint_delta(rendered[col["d (%)"]])
@@ -773,7 +777,15 @@ def run_benchmark(
     try:
         if not tmp_json.exists():
             die(f"JSON-файл результата не создан: {tmp_json}")
-        return json.loads(tmp_json.read_text(encoding="utf-8"))
+        data = json.loads(tmp_json.read_text(encoding="utf-8"))
+        # Каноничный "последний запуск" всегда обновляем после успешного прогона.
+        last_run = RESULTS_DIR / "last_run.json"
+        last_run.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        try:
+            tmp_json.unlink()
+        except OSError:
+            pass
+        return data
     except json.JSONDecodeError as e:
         preview = tmp_json.read_text(encoding="utf-8", errors="replace")[:300] if tmp_json.exists() else ""
         die(f"Не удалось распарсить JSON: {e}\n{preview}")
@@ -964,15 +976,10 @@ def main() -> None:
     metadata = load_bench_metadata()
     print_results_table(data, metadata)
 
-    baseline_saved = maybe_save_baseline(data)
+    maybe_save_baseline(data)
 
     if save_flag:
         save_result(data, filter_regex)
-    elif not baseline_saved:
-        ensure_results_dir()
-        tmp = RESULTS_DIR / "last_run.json"
-        tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        print(paint(f"Временный результат: {tmp}", COLOR_HINT))
 
 
 if __name__ == "__main__":
