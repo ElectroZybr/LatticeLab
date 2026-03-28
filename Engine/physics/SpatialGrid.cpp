@@ -11,7 +11,7 @@ SpatialGrid::SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize)
     if (sizeX < 0 || sizeY < 0 || sizeZ < 0) {
         throw std::invalid_argument("SpatialGrid::SpatialGrid: invalid arguments");
     }
-    countCells = sizeX * sizeY * sizeZ;
+    countCells = this->sizeX * this->sizeY * this->sizeZ;
     offsets.assign(countCells + 1, 0);
     atomsInCells.clear();
 }
