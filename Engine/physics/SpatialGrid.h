@@ -45,6 +45,10 @@ private:
     // CSR хранение данных
     std::vector<std::size_t> offsets;      // массив оффсетов (каждый оффсет - начало новой ячейки)
     std::vector<std::size_t> atomsInCells; // атомы подряд сгруппированные по ячейкам
+    
+    // рабочие буферы rebuild — переиспользуются между вызовами
+    std::vector<std::size_t> cellIndices_;
+    std::vector<std::size_t> counts_;
 
     static constexpr int kBorderCells = 2; // запас + 1 клетка с каждой стороны от бокса
 
