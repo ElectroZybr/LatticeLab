@@ -473,15 +473,16 @@ void RendererGL::drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset)
 
     int maxCount = 1;
 
-    for (int z = 0; z < grid.sizeZ; ++z) {
-        for (int y = 0; y < grid.sizeY; ++y) {
-            for (int x = 0; x < grid.sizeX; ++x) {
-                auto countAtomsInCell = grid.countAtomsInCell(x, y, z);
+    // Grid has a 1-cell border on each side; draw only interior cells in world coordinates.
+    for (int z = 1; z < grid.sizeZ - 1; ++z) {
+        for (int y = 1; y < grid.sizeY - 1; ++y) {
+            for (int x = 1; x < grid.sizeX - 1; ++x) {
+                const int countAtomsInCell = grid.countAtomsInCell(x, y, z);
                 if (countAtomsInCell == 0) continue;
                 gridData.emplace_back(
-                    glm::vec3(x * grid.cellSize,
-                            y * grid.cellSize,
-                            z * grid.cellSize) + boxOffset,
+                    glm::vec3((x - 1) * grid.cellSize,
+                              (y - 1) * grid.cellSize,
+                              (z - 1) * grid.cellSize) + boxOffset,
                     static_cast<float>(grid.cellSize),
                     static_cast<float>(countAtomsInCell)
                 );
