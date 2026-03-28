@@ -14,7 +14,9 @@ SpatialGrid::SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize)
     }
     countCells = this->sizeX * this->sizeY * this->sizeZ;
     offsets.assign(countCells + 1, 0);
-    atomsInCells.clear();
+    counts_.assign(countCells, 0);
+    cellIndices_.reserve(1024);
+    atomsInCells.reserve(1024);
 }
 
 void SpatialGrid::rebuild(std::span<const float> posX,
@@ -38,29 +40,29 @@ void SpatialGrid::rebuild(std::span<const float> posX,
     cellIndices_.resize(n);
     counts_.assign(countCells, 0);
 
+    std::size_t maxAtomsPerCell = 0;
     for (std::size_t i = 0; i < n; ++i) {
         const std::size_t cell = static_cast<std::size_t>(
             index(worldToCellX(posX[i]), worldToCellY(posY[i]), worldToCellZ(posZ[i]))
         );
         cellIndices_[i] = cell;
         ++counts_[cell];
+        maxAtomsPerCell = std::max(counts_[cell], maxAtomsPerCell);
     }
 
     offsets.resize(countCells + 1);
     offsets[0] = 0;
     std::size_t nonEmptyCellCount = 0;
-    std::size_t maxAtomsPerCell = 0;
     for (std::size_t cell = 0; cell < countCells; ++cell) {
         nonEmptyCellCount += static_cast<std::size_t>(counts_[cell] > 0);
-        maxAtomsPerCell = std::max(maxAtomsPerCell, counts_[cell]);
         offsets[cell + 1] = offsets[cell] + counts_[cell];
     }
 
-    counts_.assign(countCells, 0);
+    std::copy(offsets.begin(), offsets.begin() + countCells, counts_.begin());
     atomsInCells.resize(n);
     for (std::size_t i = 0; i < n; ++i) {
         const std::size_t cell = cellIndices_[i];
-        atomsInCells[offsets[cell] + counts_[cell]++] = i;
+        atomsInCells[counts_[cell]++] = i;
     }
 
     rebuildCounter_.finishStep();
