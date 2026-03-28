@@ -31,15 +31,33 @@ COLOR_TITLE = "\033[1;97m"
 COLOR_GROUP = "\033[1;36m"
 COLOR_SUBGROUP = "\033[35m"
 COLOR_INDEX = "\033[33m"
+COLOR_INDEX_LIGHT_BLUE = "\033[96m"
 COLOR_HINT = "\033[90m"
 COLOR_ERROR = "\033[31m"
 COLOR_OK = "\033[32m"
+COLOR_WARN = "\033[33m"
+COLOR_BAD = "\033[31m"
 
 
 def paint(text: str, color: str) -> str:
     if not sys.stdout.isatty():
         return text
     return f"{color}{text}{COLOR_RESET}"
+
+
+def paint_256(text: str, color_code: int) -> str:
+    if not sys.stdout.isatty():
+        return text
+    return f"\033[38;5;{color_code}m{text}{COLOR_RESET}"
+
+
+def paint_rgb(text: str, r: int, g: int, b: int) -> str:
+    if not sys.stdout.isatty():
+        return text
+    r = max(0, min(255, r))
+    g = max(0, min(255, g))
+    b = max(0, min(255, b))
+    return f"\033[38;2;{r};{g};{b}m{text}{COLOR_RESET}"
 
 
 def short_bench_id(full_name: str) -> str:
@@ -71,11 +89,53 @@ def fmt_ips(value: float | None) -> str:
     return f"{value:.2f}"
 
 
-def print_results_table(data: dict, metadata: dict[str, dict[str, str]]) -> None:
-    benchmarks = data.get("benchmarks", [])
-    if not benchmarks:
-        return
+def paint_numeric(cell: str, cv_mode: bool = False) -> str:
+    if cell.strip() == "-":
+        return cell
+    if cv_mode:
+        try:
+            cv = float(cell.strip())
+        except ValueError:
+            return paint(cell, COLOR_INDEX)
+        if cv < 2.0:
+            return paint(cell, COLOR_OK)
+        if cv < 5.0:
+            return paint(cell, COLOR_WARN)
+        return paint(cell, COLOR_BAD)
+    return paint(cell, COLOR_INDEX)
 
+def paint_delta(cell: str, neutral_threshold: float = 2.5) -> str:
+    value = cell.strip()
+    if value == "-" or not value:
+        return cell
+    try:
+        delta = float(value.replace("%", ""))
+    except ValueError:
+        return cell
+    if delta <= -neutral_threshold:
+        return paint(cell, COLOR_OK)    # быстрее / лучше
+    if delta >= neutral_threshold:
+        return paint(cell, COLOR_BAD)   # медленнее / хуже
+    return paint(cell, COLOR_HINT)      # нейтрально
+
+
+def paint_n_gradient(cell: str, min_n: int, max_n: int) -> str:
+    raw = cell.strip()
+    if not raw.isdigit():
+        return cell
+    n = int(raw)
+    if max_n <= min_n:
+        return paint_256(cell, 81)
+    t = (n - min_n) / float(max_n - min_n)
+    # Мягкий монотонный градиент: голубой -> лавандовый.
+    r = int(120 + (170 - 120) * t)
+    g = int(200 + (165 - 200) * t)
+    b = int(255 + (245 - 255) * t)
+    return paint_rgb(cell, r, g, b)
+
+
+def parse_benchmark_rows(data: dict) -> dict[str, dict[str, float | str]]:
+    benchmarks = data.get("benchmarks", [])
     rows: dict[str, dict[str, float | str]] = {}
 
     for item in benchmarks:
@@ -106,8 +166,45 @@ def print_results_table(data: dict, metadata: dict[str, dict[str, str]]) -> None
             if "ips" not in row and "items_per_second" in item:
                 row["ips"] = float(item.get("items_per_second", 0.0))
 
+    return rows
+
+
+def find_baseline_file() -> Path | None:
+    baseline = RESULTS_DIR / "baseline.json"
+    return baseline if baseline.exists() else None
+
+
+def load_baseline_rows() -> tuple[dict[str, dict[str, float | str]], Path | None]:
+    baseline_file = find_baseline_file()
+    if baseline_file is None:
+        return {}, None
+    try:
+        data = json.loads(baseline_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}, None
+    return parse_benchmark_rows(data), baseline_file
+
+
+def compare_status(curr_median: float | None, base_median: float | None) -> tuple[str, str]:
+    if curr_median is None or base_median is None or base_median <= 0.0:
+        return "-", ""
+
+    delta_pct = (curr_median - base_median) / base_median * 100.0
+    delta_text = f"{delta_pct:+.1f}%"
+    if delta_pct <= -2.5:
+        return delta_text, paint("лучше", COLOR_OK)
+    if delta_pct >= 2.5:
+        return delta_text, paint("хуже", COLOR_BAD)
+    return delta_text, paint("~", COLOR_HINT)
+
+
+def print_results_table(data: dict, metadata: dict[str, dict[str, str]]) -> None:
+    rows = parse_benchmark_rows(data)
     if not rows:
         return
+
+    baseline_rows, baseline_file = load_baseline_rows()
+    has_baseline = baseline_file is not None
 
     def sort_key(item: tuple[str, dict[str, float | str]]) -> tuple[str, int, str]:
         run_name = item[0]
@@ -122,30 +219,69 @@ def print_results_table(data: dict, metadata: dict[str, dict[str, str]]) -> None
     for idx, (run_name, metrics) in enumerate(ordered, 1):
         base_id = short_bench_id(run_name)
         ru_name = metadata.get(base_id, {}).get("ru", base_id)
-        table_data.append([
+        curr_time_val = metrics.get("real_median")
+        if not isinstance(curr_time_val, float):
+            curr_time_val = metrics.get("real_mean")
+
+        row = [
             str(idx),
             ru_name,
             bench_arg(run_name),
-            fmt_num(metrics.get("real_median")),  # type: ignore[arg-type]
-            fmt_num(metrics.get("real_mean")),    # type: ignore[arg-type]
+            fmt_num(curr_time_val),               # type: ignore[arg-type]
             fmt_num(metrics.get("real_cv")),      # type: ignore[arg-type]
             fmt_ips(metrics.get("ips")),          # type: ignore[arg-type]
-        ])
+        ]
+        if has_baseline:
+            baseline_metrics = baseline_rows.get(run_name, {})
+            base_time_val = baseline_metrics.get("real_median")
+            if not isinstance(base_time_val, float):
+                base_time_val = baseline_metrics.get("real_mean")
 
-    headers = ["#", "Тест", "N", "median(ns)", "mean(ns)", "cv(%)", "items/s"]
+            curr_median_val = curr_time_val if isinstance(curr_time_val, float) else None
+            base_median_val = baseline_metrics.get("real_median") if isinstance(baseline_metrics.get("real_median"), float) else None
+            if base_median_val is None and isinstance(base_time_val, float):
+                base_median_val = base_time_val
+            delta_text, _ = compare_status(curr_median_val, base_median_val)
+            row.extend([
+                fmt_num(base_time_val),  # type: ignore[arg-type]
+                delta_text,
+            ])
+        table_data.append(row)
+
+    headers = ["#", "Тест", "N", "time(ns)", "cv(%)", "items/s"]
+    if has_baseline:
+        headers.extend(["baseline(ns)", "Δ (%)"])
     widths = [len(h) for h in headers]
     for row in table_data:
         for i, cell in enumerate(row):
             widths[i] = max(widths[i], len(cell))
 
     print()
+    if has_baseline:
+        print(paint("baseline найден", COLOR_OK))
+    else:
+        print(paint("baseline не найден", COLOR_ERROR))
     print(paint("Итоговая таблица:", COLOR_TITLE))
     header_line = "  " + " | ".join(headers[i].ljust(widths[i]) for i in range(len(headers)))
     sep_line = "  " + "-+-".join("-" * widths[i] for i in range(len(headers)))
     print(header_line)
     print(sep_line)
+    col = {name: idx for idx, name in enumerate(headers)}
+    n_values = [
+        int(row[col["N"]])
+        for row in table_data
+        if row[col["N"]].isdigit()
+    ]
+    min_n = min(n_values) if n_values else 0
+    max_n = max(n_values) if n_values else 0
     for row in table_data:
-        print("  " + " | ".join(row[i].ljust(widths[i]) for i in range(len(headers))))
+        rendered = [row[i].ljust(widths[i]) for i in range(len(headers))]
+        rendered[col["#"]] = paint(rendered[col["#"]], COLOR_INDEX_LIGHT_BLUE)
+        rendered[col["N"]] = paint_n_gradient(rendered[col["N"]], min_n, max_n)
+        rendered[col["cv(%)"]] = paint_numeric(rendered[col["cv(%)"]], cv_mode=True)
+        if has_baseline:
+            rendered[col["Δ (%)"]] = paint_delta(rendered[col["Δ (%)"]])
+        print("  " + " | ".join(rendered))
 
 
 def load_bench_metadata() -> dict[str, dict[str, str]]:
