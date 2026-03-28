@@ -91,6 +91,7 @@ bool PickingSystem::pickAtom(sf::Vector2i screenPos, float tolerance, AtomHit& h
         case Camera::Mode::Free:
             return pickAtom3D(screenPos, hit);
     }
+    return false;
 }
 
 bool PickingSystem::pickAtom2D(sf::Vector2i screenPos, float tolerance, AtomHit& hit) const {
