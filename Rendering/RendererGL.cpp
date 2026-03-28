@@ -12,6 +12,10 @@
 #include "Engine/physics/Bond.h"
 #include "RendererGL.h"
 
+#ifdef __APPLE__
+#include <iostream>
+#endif
+
 namespace {
 void ensureGlFunction(bool available, const char* name) {
     if (!available) {

@@ -4,6 +4,9 @@
 #include <cmath>
 #include <cstdlib>
 #include <string_view>
+#ifdef __APPLE__
+#include <iostream>
+#endif
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window/WindowHandle.hpp>
@@ -12,7 +15,6 @@
 
 #include "Engine/Simulation.h"
 #include "Engine/tools/Tools.h"
-#include "Engine/utils/Timer.h"
 #include "Engine/utils/RateCounter.h"
 #include "GUI/interface/interface.h"
 #include "GUI/io/keyboard/Keyboard.h"
