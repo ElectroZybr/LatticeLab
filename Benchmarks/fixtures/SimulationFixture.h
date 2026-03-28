@@ -1,7 +1,9 @@
 #pragma once
 
 #include <benchmark/benchmark.h>
+#include <cstdlib>
 #include <memory>
+#include <string>
 
 #include "BenchmarkCase.h"
 #include "BenchmarkScenes.h"
@@ -14,15 +16,36 @@ namespace Benchmarks {
     constexpr int    kAtomMin = 125;   // 5^3
     constexpr int    kAtomMax = 1000;  // 10^3
 
-    inline BenchmarkCase makeCrystal3DCase(int atomCount) {
-        return BenchmarkCase{
-            .scene      = SceneKind::Crystal3D,
+    inline SceneKind sceneFromEnv() {
+        const char* raw = std::getenv("CHEM_BENCH_SCENE");
+        if (raw == nullptr) {
+            return SceneKind::Crystal3D;
+        }
+        const std::string value(raw);
+        if (value == "crystal2d") {
+            return SceneKind::Crystal2D;
+        }
+        if (value == "random_gas2d") {
+            return SceneKind::RandomGas2D;
+        }
+        return SceneKind::Crystal3D;
+    }
+
+    inline BenchmarkCase makeCaseForSelectedScene(int atomCount) {
+        BenchmarkCase benchmarkCase{
+            .scene      = sceneFromEnv(),
             .integrator = Integrator::Scheme::Verlet,
             .atomCount  = atomCount,
             .boxStart   = Vec3f(-80.0, -80.0, -80.0),
-            .boxEnd     = Vec3f( 80.0,  80.0,  80.0),
+            .boxEnd     = Vec3f(80.0, 80.0, 80.0),
             .cellSize   = 5
         };
+
+        if (benchmarkCase.scene == SceneKind::Crystal2D || benchmarkCase.scene == SceneKind::RandomGas2D) {
+            benchmarkCase.boxStart = Vec3f(-80.0, -80.0, 0.0);
+            benchmarkCase.boxEnd = Vec3f(80.0, 80.0, 6.0);
+        }
+        return benchmarkCase;
     }
 }
 
@@ -42,7 +65,7 @@ protected:
     void rebuildScene() {
         Benchmarks::BenchmarkScenes::build(
             *simulation_,
-            Benchmarks::makeCrystal3DCase(atomCount_)
+            Benchmarks::makeCaseForSelectedScene(atomCount_)
         );
     }
 

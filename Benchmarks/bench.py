@@ -11,9 +11,16 @@ bench.py — запускалка бенчмарков для Chemical Simulator
   ./bench.py --open                   — открыть view.html в браузере
 """
 
+SCENES: list[tuple[str, str]] = [
+    ("crystal3d", "Кристалл 3D"),
+    ("crystal2d", "Кристалл 2D"),
+    ("random_gas2d", "Случайный газ 2D"),
+]
+
 import argparse
 import json
 import math
+import os
 import re
 import subprocess
 import sys
@@ -48,7 +55,6 @@ COLOR_PROGRESS_BAR = "\033[36m"
 COLOR_PROGRESS_COUNT = "\033[33m"
 COLOR_PROGRESS_CASE = "\033[95m"
 COLOR_PROGRESS_TIME = "\033[92m"
-
 
 def paint(text: str, color: str) -> str:
     if not sys.stdout.isatty():
@@ -259,6 +265,21 @@ def parse_benchmark_rows(data: dict) -> dict[str, dict[str, float | str]]:
     return rows
 
 
+def extract_scene_meta(data: dict) -> tuple[str | None, str | None]:
+    context = data.get("context")
+    if not isinstance(context, dict):
+        return None, None
+    bench_py = context.get("bench_py")
+    if not isinstance(bench_py, dict):
+        return None, None
+    scene_key = bench_py.get("scene_key")
+    scene_name = bench_py.get("scene_name")
+    return (
+        scene_key if isinstance(scene_key, str) else None,
+        scene_name if isinstance(scene_name, str) else None,
+    )
+
+
 def find_baseline_file() -> Path | None:
     baseline = RESULTS_DIR / "baseline.json"
     return baseline if baseline.exists() else None
@@ -405,13 +426,23 @@ def print_complexity_estimate(rows: dict[str, dict[str, float | str]],
         print("  " + " | ".join(rendered))
 
 
-def print_results_table(data: dict, metadata: dict[str, dict[str, str]]) -> None:
+def print_results_table(data: dict, metadata: dict[str, dict[str, str]], scene_name: str | None = None) -> None:
     rows = parse_benchmark_rows(data)
     if not rows:
         return
 
     baseline_rows, baseline_file = load_baseline_rows()
     has_baseline = baseline_file is not None
+    current_scene_key, _ = extract_scene_meta(data)
+    baseline_scene_key = None
+    baseline_scene_name = None
+    if baseline_file is not None:
+        try:
+            baseline_data = json.loads(baseline_file.read_text(encoding="utf-8"))
+            baseline_scene_key, baseline_scene_name = extract_scene_meta(baseline_data)
+        except (OSError, json.JSONDecodeError):
+            baseline_scene_key = None
+            baseline_scene_name = None
 
     def sort_key(item: tuple[str, dict[str, float | str]]) -> tuple[str, int, str]:
         run_name = item[0]
@@ -469,9 +500,17 @@ def print_results_table(data: dict, metadata: dict[str, dict[str, str]]) -> None
 
     print()
     if has_baseline:
-        print(paint("baseline найден", COLOR_OK))
+        baseline_text = paint("baseline найден", COLOR_OK)
+        if baseline_scene_name:
+            baseline_scene_text = paint(f"Сцена: {baseline_scene_name}", COLOR_INDEX_LIGHT_BLUE)
+            print(f"{baseline_text} | {baseline_scene_text}")
+        else:
+            print(baseline_text)
     else:
         print(paint("baseline не найден", COLOR_ERROR))
+    if has_baseline and current_scene_key and baseline_scene_key and current_scene_key != baseline_scene_key:
+        print(paint("Внимание: baseline снят на другой сцене, сравнение может быть некорректным", COLOR_WARN))
+        print()
     print(paint("Итоговая таблица:", COLOR_TITLE))
     header_line = "  " + " | ".join(headers[i].ljust(widths[i]) for i in range(len(headers)))
     sep_line = "  " + "-+-".join("-" * widths[i] for i in range(len(headers)))
@@ -631,6 +670,15 @@ def format_eta(seconds: float | None) -> str:
     return f"{m:02d}:{s:02d}"
 
 
+def scene_label(scene_key: str | None) -> str:
+    if scene_key is None:
+        return "-"
+    for key, label in SCENES:
+        if key == scene_key:
+            return label
+    return scene_key
+
+
 def print_progress(done: int, total: int, current_case: str = "", start_ts: float | None = None, tick: int = 0) -> None:
     if not sys.stdout.isatty() or total <= 0:
         return
@@ -712,6 +760,7 @@ def run_benchmark(
     filter_regex: str | None,
     repetitions: int = 3,
     min_time: str | None = None,
+    scene_key: str | None = None,
 ) -> dict:
     if not BINARY.exists():
         die(f"Бинарник не найден: {BINARY}")
@@ -737,12 +786,17 @@ def run_benchmark(
     tick = 0
     print_progress(0, total_cases, current_case, start_ts, tick)
 
+    process_env = os.environ.copy()
+    if scene_key:
+        process_env["CHEM_BENCH_SCENE"] = scene_key
+
     process = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,
+        env=process_env,
     )
 
     assert process.stdout is not None
@@ -778,6 +832,14 @@ def run_benchmark(
         if not tmp_json.exists():
             die(f"JSON-файл результата не создан: {tmp_json}")
         data = json.loads(tmp_json.read_text(encoding="utf-8"))
+        context = data.get("context")
+        if not isinstance(context, dict):
+            context = {}
+            data["context"] = context
+        context["bench_py"] = {
+            "scene_key": scene_key or "crystal3d",
+            "scene_name": scene_label(scene_key or "crystal3d"),
+        }
         # Каноничный "последний запуск" всегда обновляем после успешного прогона.
         last_run = RESULTS_DIR / "last_run.json"
         last_run.write_text(json.dumps(data, indent=2), encoding="utf-8")
@@ -822,7 +884,7 @@ def maybe_save_baseline(data: dict) -> bool:
     return True
 
 
-def interactive_menu() -> tuple[str | None, int, bool, str | None]:
+def interactive_menu() -> tuple[str | None, int, bool, str | None, str]:
     print(f"{paint('=== Chemical Simulator Benchmarks ===', COLOR_TITLE)}\n")
 
     filters = list_available_filters()
@@ -921,7 +983,28 @@ def interactive_menu() -> tuple[str | None, int, bool, str | None]:
     min_time = input("Минимальное время прогона [пусто = по умолчанию, пример: 5s]: ").strip()
     if min_time == "":
         min_time = None
-    return selected, repetitions, False, min_time
+
+    print()
+    print(paint("Выбор сцены (для SimulationFixture):", COLOR_TITLE))
+    default_scene_id = "crystal3d"
+    default_scene_name = scene_label(default_scene_id)
+    print(f"  {paint('0)', COLOR_INDEX)} {default_scene_name} (по умолчанию)")
+
+    scene_options = [(sid, name) for sid, name in SCENES if sid != default_scene_id]
+    for i, (_, ru_name) in enumerate(scene_options, 1):
+        print(f"  {paint(f'{i})', COLOR_INDEX)} {ru_name}")
+
+    scene_choice = input("Сцена [0]: ").strip()
+    selected_scene = default_scene_id
+    if scene_choice and scene_choice != "0":
+        if not scene_choice.isdigit():
+            die("Неверный номер сцены")
+        scene_index = int(scene_choice) - 1
+        if not (0 <= scene_index < len(scene_options)):
+            die("Неверный номер сцены")
+        selected_scene = scene_options[scene_index][0]
+
+    return selected, repetitions, False, min_time, selected_scene
 
 
 def main() -> None:
@@ -944,6 +1027,13 @@ def main() -> None:
         default=None,
         help="Минимальное время прогона benchmark (пример: 5s, 500ms)",
     )
+    parser.add_argument(
+        "--scene",
+        metavar="SCENE",
+        choices=[scene_id for scene_id, _ in SCENES],
+        default="crystal3d",
+        help="Сцена для SimulationFixture: crystal3d | crystal2d | random_gas2d",
+    )
     parser.add_argument("--open", action="store_true", help="Открыть view.html в браузере")
     args = parser.parse_args()
 
@@ -965,16 +1055,19 @@ def main() -> None:
 
     repetitions = args.repetitions
     min_time = args.min_time
+    selected_scene = args.scene
     if args.filter or args.save:
         filter_regex = args.filter
         save_flag = args.save
     else:
-        filter_regex, repetitions, save_flag, min_time = interactive_menu()
+        filter_regex, repetitions, save_flag, min_time, selected_scene = interactive_menu()
 
     print()
-    data = run_benchmark(filter_regex, repetitions, min_time)
+    print(paint(f"Выбрана сцена: {scene_label(selected_scene)}", COLOR_INDEX_LIGHT_BLUE))
+    print()
+    data = run_benchmark(filter_regex, repetitions, min_time, selected_scene)
     metadata = load_bench_metadata()
-    print_results_table(data, metadata)
+    print_results_table(data, metadata, scene_label(selected_scene))
 
     maybe_save_baseline(data)
 
