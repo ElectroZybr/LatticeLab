@@ -58,24 +58,26 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
 
     reserveListBuffers(atoms, grid);
 
-    std::vector<std::size_t> tmp;
-    tmp.reserve(neighbors_.capacity());
-
     offsets_[0] = 0;
     for (std::size_t i = 0; i < atomCount; ++i) {
-        forEachNeighbor(grid, atoms, i, [&](std::size_t j) {
+        const float xi = atoms.posX(i);
+        const float yi = atoms.posY(i);
+        const float zi = atoms.posZ(i);
+
+        forEachNeighbor(grid, atoms, xi, yi, zi, [&](std::size_t j) {
             if (j >= i) return;
-            if (distanceSqr(atoms, i, j) <= listRadiusSqr_)
-                tmp.emplace_back(j);
+            const float dx = atoms.posX(j) - xi;
+            const float dy = atoms.posY(j) - yi;
+            const float dz = atoms.posZ(j) - zi;
+            if (dx*dx + dy*dy + dz*dz <= listRadiusSqr_)
+                neighbors_.emplace_back(j);
         });
-        offsets_[i + 1] = tmp.size();
+        offsets_[i + 1] = neighbors_.size();
 
-        refPosX_[i] = atoms.posX(i);
-        refPosY_[i] = atoms.posY(i);
-        refPosZ_[i] = atoms.posZ(i);
+        refPosX_[i] = xi;
+        refPosY_[i] = yi;
+        refPosZ_[i] = zi;
     }
-
-    neighbors_ = std::move(tmp);
 
     buildCounter_.finishStep();
     valid_ = true;

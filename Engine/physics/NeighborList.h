@@ -41,6 +41,7 @@ public:
     };
     [[nodiscard]] const std::vector<std::size_t>& neighbors() const { return neighbors_; }
     [[nodiscard]] const std::vector<std::size_t>& offsets() const { return offsets_; }
+
     template<typename F>
     /* helper функция, перебирает всех соседей атома */
     void forEachNeighbor(const SpatialGrid& grid, const AtomStorage& atoms, std::size_t atomIndex, F&& callback) const {
@@ -59,14 +60,25 @@ public:
         }
     }
 
-private:
-    static inline float distanceSqr(const AtomStorage& atoms, std::size_t aIndex, std::size_t bIndex) {
-        const float dx = atoms.posX(bIndex) - atoms.posX(aIndex);
-        const float dy = atoms.posY(bIndex) - atoms.posY(aIndex);
-        const float dz = atoms.posZ(bIndex) - atoms.posZ(aIndex);
-        return dx * dx + dy * dy + dz * dz;
+    template<typename F>
+    /* helper функция, перебирает всех соседей атома */
+    void forEachNeighbor(const SpatialGrid& grid, const AtomStorage& atoms, float x, float y, float z, F&& callback) const {
+        const int cx = grid.worldToCellX(x);
+        const int cy = grid.worldToCellY(y);
+        const int cz = grid.worldToCellZ(z);
+
+        for (int iz = cz - 1; iz <= cz + 1; ++iz) {
+            for (int iy = cy - 1; iy <= cy + 1; ++iy) {
+                for (int ix = cx - 1; ix <= cx + 1; ++ix) {
+                    for (std::size_t neighbourIndex : grid.atomsInCell(ix, iy, iz)) {
+                        callback(neighbourIndex);
+                    }
+                }
+            }
+        }
     }
 
+private:
     void reserveListBuffers(const AtomStorage& atoms, const SpatialGrid& grid);
 
     std::vector<std::size_t> neighbors_;
