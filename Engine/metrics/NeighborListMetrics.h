@@ -89,17 +89,9 @@ public:
         return static_cast<float>(sum) / static_cast<float>(recentCount_);
     }
 
-    [[nodiscard]] float lastRebuildTimeMs() const {
-        return lastRebuildTimeMs_;
-    }
-
-    [[nodiscard]] float averageRebuildTimeMs() const {
-        return averageRebuildTimeMs_;
-    }
-
-    [[nodiscard]] float maxRebuildTimeMs() const {
-        return maxRebuildTimeMs_;
-    }
+    [[nodiscard]] float lastRebuildTimeMs() const { return lastRebuildTimeMs_; }
+    [[nodiscard]] float averageRebuildTimeMs() const { return averageRebuildTimeMs_; }
+    [[nodiscard]] float maxRebuildTimeMs() const { return maxRebuildTimeMs_; }
 
     [[nodiscard]] int stepsSinceLastRebuild(int currentStep) const {
         if (lastRebuildStep_ < 0) {

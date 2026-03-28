@@ -53,23 +53,26 @@ static DebugView* buildDebugNeighborView(DebugPanel& panel) {
         DebugValue("Шагов между ребилдами (recent)", DebugDrawers::Float<2>),
         DebugValue("Время ребилда NL (мс)", DebugDrawers::Float<4>),
         DebugValue("Время needsRebuild (мс)", DebugDrawers::Float<4>),
+        DebugValue("SG заполненных ячеек", DebugDrawers::Int),
+        DebugValue("SG макс атомов в ячейке", DebugDrawers::Int),
+        DebugValue("SG ср. атомов/ячейку", DebugDrawers::Float<3>),
     }));
 }
 
 static DebugView* buildDebugTimersView(DebugPanel& panel) {
     return panel.addView(DebugView("Timers", {
-        DebugValue("Интегратор step (last, мс)", DebugDrawers::Float<4>),
         DebugValue("Интегратор step (avg, мс)", DebugDrawers::Float<4>),
         DebugValue("Интегратор step (max, мс)", DebugDrawers::Float<4>),
         DebugSeries("Интегратор step (last, график)"),
-        DebugValue("NL build (last, мс)", DebugDrawers::Float<4>),
         DebugValue("NL build (avg, мс)", DebugDrawers::Float<4>),
         DebugValue("NL build (max, мс)", DebugDrawers::Float<4>),
         DebugSeries("NL build (last, график)"),
-        DebugValue("NL needsRebuild (last, мс)", DebugDrawers::Float<4>),
         DebugValue("NL needsRebuild (avg, мс)", DebugDrawers::Float<4>),
         DebugValue("NL needsRebuild (max, мс)", DebugDrawers::Float<4>),
         DebugSeries("NL needsRebuild (last, график)"),
+        DebugValue("SG rebuild (avg, мс)", DebugDrawers::Float<4>),
+        DebugValue("SG rebuild (max, мс)", DebugDrawers::Float<4>),
+        DebugSeries("SG rebuild (last, график)"),
     }));
 }
 } // namespace
