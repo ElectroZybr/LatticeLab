@@ -41,7 +41,6 @@ public:
     };
     [[nodiscard]] const std::vector<std::size_t>& neighbors() const { return neighbors_; }
     [[nodiscard]] const std::vector<std::size_t>& offsets() const { return offsets_; }
-private:
     template<typename F>
     /* helper функция, перебирает всех соседей атома */
     void forEachNeighbor(const SpatialGrid& grid, const AtomStorage& atoms, std::size_t atomIndex, F&& callback) const {
@@ -60,6 +59,7 @@ private:
         }
     }
 
+private:
     static inline float distanceSqr(const AtomStorage& atoms, std::size_t aIndex, std::size_t bIndex) {
         const float dx = atoms.posX(bIndex) - atoms.posX(aIndex);
         const float dy = atoms.posY(bIndex) - atoms.posY(aIndex);
