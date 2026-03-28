@@ -24,10 +24,167 @@ BINARY_NAME = "benchmarks" if sys.platform != "win32" else "benchmarks.exe"
 BINARY = Path(__file__).parent.parent / BINARY_NAME
 RESULTS_DIR = Path(__file__).parent / "results"
 VIEW_HTML = Path(__file__).parent / "view.html"
+BENCHMARKS_ROOT = Path(__file__).parent
+
+COLOR_RESET = "\033[0m"
+COLOR_TITLE = "\033[1;97m"
+COLOR_GROUP = "\033[1;36m"
+COLOR_SUBGROUP = "\033[35m"
+COLOR_INDEX = "\033[33m"
+COLOR_HINT = "\033[90m"
+COLOR_ERROR = "\033[31m"
+COLOR_OK = "\033[32m"
+
+
+def paint(text: str, color: str) -> str:
+    if not sys.stdout.isatty():
+        return text
+    return f"{color}{text}{COLOR_RESET}"
+
+
+def short_bench_id(full_name: str) -> str:
+    parts = full_name.split("/")
+    return "/".join(parts[:2]) if len(parts) >= 2 else full_name
+
+
+def bench_arg(full_name: str) -> str:
+    parts = full_name.split("/")
+    return parts[2] if len(parts) >= 3 else "-"
+
+
+def fmt_num(value: float | None, digits: int = 2) -> str:
+    if value is None:
+        return "-"
+    return f"{value:.{digits}f}"
+
+
+def fmt_ips(value: float | None) -> str:
+    if value is None:
+        return "-"
+    abs_v = abs(value)
+    if abs_v >= 1_000_000_000:
+        return f"{value / 1_000_000_000:.2f}G"
+    if abs_v >= 1_000_000:
+        return f"{value / 1_000_000:.2f}M"
+    if abs_v >= 1_000:
+        return f"{value / 1_000:.2f}k"
+    return f"{value:.2f}"
+
+
+def print_results_table(data: dict, metadata: dict[str, dict[str, str]]) -> None:
+    benchmarks = data.get("benchmarks", [])
+    if not benchmarks:
+        return
+
+    rows: dict[str, dict[str, float | str]] = {}
+
+    for item in benchmarks:
+        run_name = item.get("run_name") or item.get("name")
+        if not isinstance(run_name, str):
+            continue
+        row = rows.setdefault(run_name, {})
+        run_type = item.get("run_type")
+
+        if run_type == "aggregate":
+            agg = item.get("aggregate_name")
+            if agg == "median":
+                row["real_median"] = float(item.get("real_time", 0.0))
+                row["cpu_median"] = float(item.get("cpu_time", 0.0))
+                if "items_per_second" in item:
+                    row["ips"] = float(item.get("items_per_second", 0.0))
+            elif agg == "mean":
+                row["real_mean"] = float(item.get("real_time", 0.0))
+                if "items_per_second" in item and "ips" not in row:
+                    row["ips"] = float(item.get("items_per_second", 0.0))
+            elif agg == "cv":
+                row["real_cv"] = float(item.get("real_time", 0.0)) * 100.0
+        elif run_type == "iteration":
+            if "real_median" not in row:
+                row["real_median"] = float(item.get("real_time", 0.0))
+            if "cpu_median" not in row:
+                row["cpu_median"] = float(item.get("cpu_time", 0.0))
+            if "ips" not in row and "items_per_second" in item:
+                row["ips"] = float(item.get("items_per_second", 0.0))
+
+    if not rows:
+        return
+
+    def sort_key(item: tuple[str, dict[str, float | str]]) -> tuple[str, int, str]:
+        run_name = item[0]
+        base = short_bench_id(run_name)
+        arg = bench_arg(run_name)
+        if arg.isdigit():
+            return base, int(arg), ""
+        return base, 10**9, arg
+
+    ordered = sorted(rows.items(), key=sort_key)
+    table_data: list[list[str]] = []
+    for idx, (run_name, metrics) in enumerate(ordered, 1):
+        base_id = short_bench_id(run_name)
+        ru_name = metadata.get(base_id, {}).get("ru", base_id)
+        table_data.append([
+            str(idx),
+            ru_name,
+            bench_arg(run_name),
+            fmt_num(metrics.get("real_median")),  # type: ignore[arg-type]
+            fmt_num(metrics.get("real_mean")),    # type: ignore[arg-type]
+            fmt_num(metrics.get("real_cv")),      # type: ignore[arg-type]
+            fmt_ips(metrics.get("ips")),          # type: ignore[arg-type]
+        ])
+
+    headers = ["#", "Тест", "N", "median(ns)", "mean(ns)", "cv(%)", "items/s"]
+    widths = [len(h) for h in headers]
+    for row in table_data:
+        for i, cell in enumerate(row):
+            widths[i] = max(widths[i], len(cell))
+
+    print()
+    print(paint("Итоговая таблица:", COLOR_TITLE))
+    header_line = "  " + " | ".join(headers[i].ljust(widths[i]) for i in range(len(headers)))
+    sep_line = "  " + "-+-".join("-" * widths[i] for i in range(len(headers)))
+    print(header_line)
+    print(sep_line)
+    for row in table_data:
+        print("  " + " | ".join(row[i].ljust(widths[i]) for i in range(len(headers))))
+
+
+def load_bench_metadata() -> dict[str, dict[str, str]]:
+    """
+    Читает метаданные бенчмарков из комментариев формата:
+    // @bench_meta {"id":"Fixture/Test","ru":"...","group":"Симуляция/Силы"}
+    """
+    meta: dict[str, dict[str, str]] = {}
+    pattern = re.compile(r"@bench_meta\s+(\{.*\})")
+
+    for cpp in BENCHMARKS_ROOT.rglob("*.cpp"):
+        if "build" in cpp.parts:
+            continue
+        try:
+            text = cpp.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            text = cpp.read_text(encoding="utf-8", errors="ignore")
+
+        for line in text.splitlines():
+            m = pattern.search(line)
+            if not m:
+                continue
+            try:
+                obj = json.loads(m.group(1))
+            except json.JSONDecodeError:
+                continue
+            bench_id = obj.get("id")
+            if not bench_id:
+                continue
+            meta[bench_id] = {
+                "ru": str(obj.get("ru", bench_id)),
+                "group": str(obj.get("group", "Прочее")),
+            }
+
+    return meta
 
 
 def die(msg: str) -> None:
-    print(f"\033[31mОшибка: {msg}\033[0m", file=sys.stderr)
+    print(f"{COLOR_ERROR}Ошибка: {msg}{COLOR_RESET}", file=sys.stderr)
     sys.exit(1)
 
 
@@ -61,6 +218,46 @@ def list_available_filters() -> list[str]:
         groups[group] = None
     return list(groups.keys())
 
+def classify_filter_group(filter_name: str) -> str:
+    if filter_name.startswith("RendererFixture"):
+        return "Рендер"
+    if filter_name.startswith("SimulationFixture"):
+        return "Симуляция"
+    return "Прочее"
+
+def pretty_filter_name(filter_name: str, metadata: dict[str, dict[str, str]]) -> str:
+    if filter_name in metadata:
+        return metadata[filter_name].get("ru", filter_name)
+
+    parts = filter_name.split("/")
+    if len(parts) < 2:
+        return filter_name
+
+    fixture, test_name = parts[0], parts[1]
+    if fixture.startswith("RendererFixture<Renderer3D>"):
+        return f"3D: {test_name}"
+    if fixture.startswith("RendererFixture<Renderer2D>"):
+        return f"2D: {test_name}"
+    if fixture.startswith("SimulationFixture"):
+        return re.sub(r"([a-z])([A-Z])", r"\1 \2", test_name)
+    return test_name
+
+def classify_by_metadata(filter_name: str, metadata: dict[str, dict[str, str]]) -> tuple[str, str | None]:
+    """
+    Возвращает (главная_группа, подгруппа_или_None).
+    group в metadata может быть:
+      "Симуляция/Силы"
+      "Рендер/2D"
+      "Симуляция"
+    """
+    if filter_name in metadata:
+        raw_group = metadata[filter_name].get("group", "Прочее")
+        parts = [p.strip() for p in raw_group.split("/", 1)]
+        main = parts[0] if parts and parts[0] else "Прочее"
+        sub = parts[1] if len(parts) > 1 and parts[1] else None
+        return main, sub
+    return classify_filter_group(filter_name), None
+
 
 def run_benchmark(
     filter_regex: str | None,
@@ -70,9 +267,13 @@ def run_benchmark(
     if not BINARY.exists():
         die(f"Бинарник не найден: {BINARY}")
 
+    ensure_results_dir()
+    tmp_json = RESULTS_DIR / "_tmp_run.json"
     cmd = [
         str(BINARY),
-        "--benchmark_format=json",
+        "--benchmark_format=console",
+        f"--benchmark_out={tmp_json}",
+        "--benchmark_out_format=json",
         f"--benchmark_repetitions={repetitions}",
     ]
     if min_time:
@@ -80,18 +281,20 @@ def run_benchmark(
     if filter_regex:
         cmd += [f"--benchmark_filter={filter_regex}"]
 
-    print(f"\033[90m$ {' '.join(cmd)}\033[0m\n")
+    print(f"{paint('$ ' + ' '.join(cmd), COLOR_HINT)}\n", flush=True)
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    print(result.stderr)
+    result = subprocess.run(cmd, text=True)
 
     if result.returncode != 0:
         die(f"Бенчмарк завершился с кодом {result.returncode}")
 
     try:
-        return json.loads(result.stdout)
+        if not tmp_json.exists():
+            die(f"JSON-файл результата не создан: {tmp_json}")
+        return json.loads(tmp_json.read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
-        die(f"Не удалось распарсить JSON: {e}\n{result.stdout[:300]}")
+        preview = tmp_json.read_text(encoding="utf-8", errors="replace")[:300] if tmp_json.exists() else ""
+        die(f"Не удалось распарсить JSON: {e}\n{preview}")
 
 
 def save_result(data: dict, filter_used: str | None) -> Path:
@@ -106,18 +309,67 @@ def save_result(data: dict, filter_used: str | None) -> Path:
         suffix = "_all"
     path = RESULTS_DIR / f"{timestamp}{suffix}.json"
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    print(f"\033[32mСохранено: {path}\033[0m")
+    print(paint(f"Сохранено: {path}", COLOR_OK))
     return path
 
 
 def interactive_menu() -> tuple[str | None, int, bool, str | None]:
-    print("\033[1m=== Chemical Simulator Benchmarks ===\033[0m\n")
+    print(f"{paint('=== Chemical Simulator Benchmarks ===', COLOR_TITLE)}\n")
 
     filters = list_available_filters()
-    print("Доступные бенчмарки:\n")
-    print("  0) Все")
-    for i, f in enumerate(filters, 1):
-        print(f"  {i}) {f}")
+    metadata = load_bench_metadata()
+    grouped: dict[str, list[tuple[str, str]]] = {
+        "Рендер": [],
+        "Симуляция": [],
+        "Прочее": [],
+    }
+    subgrouped: dict[str, dict[str, list[tuple[str, str]]]] = {}
+    for f in filters:
+        main_group, sub_group = classify_by_metadata(f, metadata)
+        if main_group not in grouped:
+            grouped[main_group] = []
+        if sub_group:
+            if main_group not in subgrouped:
+                subgrouped[main_group] = {}
+            subgrouped[main_group].setdefault(sub_group, []).append((f, pretty_filter_name(f, metadata)))
+        else:
+            grouped[main_group].append((f, pretty_filter_name(f, metadata)))
+
+    menu_filters: list[str] = []
+    print(f"{paint('Доступные бенчмарки:', COLOR_TITLE)}\n")
+
+    menu_index = 1
+    ordered_main_groups = []
+    for default_group in ("Рендер", "Симуляция", "Прочее"):
+        if default_group in grouped:
+            ordered_main_groups.append(default_group)
+    for extra_group in grouped.keys():
+        if extra_group not in ordered_main_groups:
+            ordered_main_groups.append(extra_group)
+
+    for group_name in ordered_main_groups:
+        entries = grouped.get(group_name, [])
+        sub_entries_map = subgrouped.get(group_name, {})
+        if not entries:
+            has_sub = any(sub_entries_map.values())
+            if not has_sub:
+                continue
+        print(f"\n  {paint(f'--- {group_name} ---', COLOR_GROUP)}")
+
+        # Сначала подгруппы из metadata, затем элементы без подгруппы.
+        for sub_name in sub_entries_map.keys():
+            print(f"  {paint(f'[{sub_name}]', COLOR_SUBGROUP)}")
+            for raw, pretty in sub_entries_map[sub_name]:
+                print(f"      {paint(f'{menu_index})', COLOR_INDEX)} {pretty}")
+                menu_filters.append(raw)
+                menu_index += 1
+
+        for raw, pretty in entries:
+            print(f"      {paint(f'{menu_index})', COLOR_INDEX)} {pretty}")
+            menu_filters.append(raw)
+            menu_index += 1
+
+    print(f"\n  {paint('0)', COLOR_INDEX)} Все")
 
     print()
     choice = input("Выбери номер(а) через пробел (Enter = все): ").strip()
@@ -130,8 +382,8 @@ def interactive_menu() -> tuple[str | None, int, bool, str | None]:
         if len(tokens) == 1:
             try:
                 idx = int(tokens[0]) - 1
-                if 0 <= idx < len(filters):
-                    selected = filters[idx]
+                if 0 <= idx < len(menu_filters):
+                    selected = menu_filters[idx]
                 else:
                     die("Неверный номер")
             except ValueError:
@@ -143,8 +395,8 @@ def interactive_menu() -> tuple[str | None, int, bool, str | None]:
             selected_filters: list[str] = []
             for token in tokens:
                 idx = int(token) - 1
-                if 0 <= idx < len(filters):
-                    selected_filters.append(filters[idx])
+                if 0 <= idx < len(menu_filters):
+                    selected_filters.append(menu_filters[idx])
                 else:
                     die("Неверный номер")
 
@@ -211,6 +463,8 @@ def main() -> None:
 
     print()
     data = run_benchmark(filter_regex, repetitions, min_time)
+    metadata = load_bench_metadata()
+    print_results_table(data, metadata)
 
     if save_flag:
         save_result(data, filter_regex)
@@ -218,7 +472,7 @@ def main() -> None:
         ensure_results_dir()
         tmp = RESULTS_DIR / "last_run.json"
         tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        print(f"\033[90mВременный результат: {tmp}\033[0m")
+        print(paint(f"Временный результат: {tmp}", COLOR_HINT))
 
 
 if __name__ == "__main__":

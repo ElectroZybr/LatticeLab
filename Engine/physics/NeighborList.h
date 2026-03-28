@@ -41,7 +41,6 @@ public:
     };
     [[nodiscard]] const std::vector<std::size_t>& neighbors() const { return neighbors_; }
     [[nodiscard]] const std::vector<std::size_t>& offsets() const { return offsets_; }
-
 private:
     template<typename F>
     /* helper функция, перебирает всех соседей атома */

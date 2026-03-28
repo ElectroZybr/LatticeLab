@@ -1,6 +1,7 @@
 #include <benchmark/benchmark.h>
 #include "fixtures/SimulationFixture.h"
 
+// @bench_meta {"id":"SimulationFixture/Correct","ru":"Correct","group":"Симуляция/Интегратор"}
 BENCHMARK_DEFINE_F(SimulationFixture, Correct)(benchmark::State& state) {
     prepareForCorrect();
 

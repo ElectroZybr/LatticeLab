@@ -1,6 +1,7 @@
 #include <benchmark/benchmark.h>
 #include "fixtures/SimulationFixture.h"
 
+// @bench_meta {"id":"SimulationFixture/ComputeForcesNoNeighborList","ru":"Расчет сил без NeighborList","group":"Симуляция/Силы"}
 BENCHMARK_DEFINE_F(SimulationFixture, ComputeForcesNoNeighborList)(benchmark::State& state) {
     rebuildScene();
 
@@ -15,6 +16,7 @@ BENCHMARK_DEFINE_F(SimulationFixture, ComputeForcesNoNeighborList)(benchmark::St
     setCounters(state);
 }
 
+// @bench_meta {"id":"SimulationFixture/ComputeForcesWithNeighborList","ru":"Расчет сил с NeighborList","group":"Симуляция/Силы"}
 BENCHMARK_DEFINE_F(SimulationFixture, ComputeForcesWithNeighborList)(benchmark::State& state) {
     rebuildScene();
     prepareNeighborList();

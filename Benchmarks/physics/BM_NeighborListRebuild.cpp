@@ -2,6 +2,7 @@
 
 #include "fixtures/SimulationFixture.h"
 
+// @bench_meta {"id":"SimulationFixture/NeighborListRebuild","ru":"Перестройка NeighborList","group":"Симуляция/Сетка и соседи"}
 BENCHMARK_DEFINE_F(SimulationFixture, NeighborListRebuild)(benchmark::State& state) {
     rebuildScene();
 
