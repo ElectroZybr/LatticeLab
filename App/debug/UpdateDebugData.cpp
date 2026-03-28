@@ -67,25 +67,33 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     debugViews.neighbor->add_data("Шагов между ребилдами (recent)", simulation.recentAverageStepsPerNeighborListRebuild());
     debugViews.neighbor->add_data("Время ребилда NL (мс)", simulation.lastNeighborListRebuildTimeMs());
     debugViews.neighbor->add_data("Время needsRebuild (мс)", simulation.neighborList.needsRebuildCounter().lastMs());
+    debugViews.neighbor->add_data("SG заполненных ячеек",
+        static_cast<int>(simulation.sim_box.grid.metrics().lastNonEmptyCellCount()));
+    debugViews.neighbor->add_data("SG макс атомов в ячейке",
+        static_cast<int>(simulation.sim_box.grid.metrics().lastMaxAtomsPerCell()));
+    debugViews.neighbor->add_data("SG ср. атомов/ячейку",
+        simulation.sim_box.grid.metrics().lastAverageAtomsPerNonEmptyCell());
 
     if (debugViews.timers != nullptr) {
         const float integratorLastMs = simulation.integrator.metrics().stepCounter().lastMs();
         const float nlBuildLastMs = simulation.neighborList.buildCounter().lastMs();
         const float nlNeedsRebuildLastMs = simulation.neighborList.needsRebuildCounter().lastMs();
+        const float sgRebuildLastMs = simulation.sim_box.grid.metrics().lastRebuildTimeMs();
 
-        debugViews.timers->add_data("Интегратор step (last, мс)", integratorLastMs);
         debugViews.timers->add_data("Интегратор step (avg, мс)", simulation.integrator.metrics().stepCounter().totalAvgMs());
         debugViews.timers->add_data("Интегратор step (max, мс)", simulation.integrator.metrics().stepCounter().maxMs());
         debugViews.timers->add_data("Интегратор step (last, график)", integratorLastMs);
 
-        debugViews.timers->add_data("NL build (last, мс)", nlBuildLastMs);
         debugViews.timers->add_data("NL build (avg, мс)", simulation.neighborList.buildCounter().totalAvgMs());
         debugViews.timers->add_data("NL build (max, мс)", simulation.neighborList.buildCounter().maxMs());
         debugViews.timers->add_data("NL build (last, график)", nlBuildLastMs);
 
-        debugViews.timers->add_data("NL needsRebuild (last, мс)", nlNeedsRebuildLastMs);
         debugViews.timers->add_data("NL needsRebuild (avg, мс)", simulation.neighborList.needsRebuildCounter().totalAvgMs());
         debugViews.timers->add_data("NL needsRebuild (max, мс)", simulation.neighborList.needsRebuildCounter().maxMs());
         debugViews.timers->add_data("NL needsRebuild (last, график)", nlNeedsRebuildLastMs);
+
+        debugViews.timers->add_data("SG rebuild (avg, мс)", simulation.sim_box.grid.metrics().averageRebuildTimeMs());
+        debugViews.timers->add_data("SG rebuild (max, мс)", simulation.sim_box.grid.metrics().maxRebuildTimeMs());
+        debugViews.timers->add_data("SG rebuild (last, график)", sgRebuildLastMs);
     }
 }

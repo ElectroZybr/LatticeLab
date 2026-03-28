@@ -46,7 +46,6 @@ requires AtomStepFunc<StepFn>
 inline void predictAndSync(AtomStorage& atomStorage, SimBox& box, float dt, StepFn predictFn) {
     predictFn(atomStorage, dt);
     confineToBox(atomStorage, box);
-    box.grid.rebuild(atomStorage.xDataSpan(), atomStorage.yDataSpan(), atomStorage.zDataSpan());
 
     atomStorage.swapPrevCurrentForces();
     std::fill_n(atomStorage.fxData(), atomStorage.size(), 0.0f);

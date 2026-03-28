@@ -1,5 +1,6 @@
 #include "SpatialGrid.h"
 
+#include <algorithm>
 #include <stdexcept>
 #include <vector>
 
@@ -19,17 +20,38 @@ SpatialGrid::SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize)
 void SpatialGrid::rebuild(std::span<const float> posX,
                           std::span<const float> posY,
                           std::span<const float> posZ) {
+    rebuildCounter_.startStep();
+
     const std::size_t n = posX.size();
     if (n != posY.size() || n != posZ.size()) {
         throw std::invalid_argument("SpatialGrid::rebuild: inconsistent coordinate span sizes");
     }
 
+    if (n == 0) {
+        atomsInCells.clear();
+        std::fill(offsets.begin(), offsets.end(), 0);
+        rebuildCounter_.finishStep();
+        metrics_.onRebuild(rebuildCounter_.lastMs(), 0, 0, 0);
+        return;
+    }
+
     std::vector<std::size_t> counts(countCells, 0);
+    std::size_t nonEmptyCellCount = 0;
+    std::size_t maxAtomsPerCell = 0;
+
     for (std::size_t i = 0; i < n; ++i) {
         const int cx = worldToCellX(posX[i]);
         const int cy = worldToCellY(posY[i]);
         const int cz = worldToCellZ(posZ[i]);
-        ++counts[static_cast<std::size_t>(index(cx, cy, cz))];
+        const std::size_t cellIndex = static_cast<std::size_t>(index(cx, cy, cz));
+        std::size_t& counter = counts[cellIndex];
+        ++counter;
+        if (counter == 1) {
+            ++nonEmptyCellCount;
+        }
+        if (counter > maxAtomsPerCell) {
+            maxAtomsPerCell = counter;
+        }
     }
 
     offsets.resize(countCells + 1);
@@ -47,6 +69,9 @@ void SpatialGrid::rebuild(std::span<const float> posX,
         const std::size_t cell = static_cast<std::size_t>(index(cx, cy, cz));
         atomsInCells[writePtr[cell]++] = i;
     }
+
+    rebuildCounter_.finishStep();
+    metrics_.onRebuild(rebuildCounter_.lastMs(), n, nonEmptyCellCount, maxAtomsPerCell);
 }
 
 void SpatialGrid::resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSize) {
@@ -62,4 +87,6 @@ void SpatialGrid::resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSi
     countCells = sizeX * sizeY * sizeZ;
     offsets.assign(countCells + 1, 0);
     atomsInCells.clear();
+    rebuildCounter_.reset();
+    metrics_.reset();
 }

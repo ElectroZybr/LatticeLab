@@ -59,6 +59,9 @@ ForceField::LJPairTable ForceField::buildLJPairTable() {
 }
 
 void ForceField::compute(AtomStorage& atoms, SimBox& box, NeighborList* neighborList, float dt) const {
+    if (!neighborList && !atoms.empty()) {
+        box.grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
+    }
     // расчет нековалентных сил для каждого атома
     for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
         ComputeForces(atoms, atomIndex, box, neighborList);

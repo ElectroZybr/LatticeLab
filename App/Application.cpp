@@ -134,7 +134,7 @@ int Application::run() {
     SimBox box(Vec3f(-25, -25, -3), Vec3f(25, 25, 3));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    Scenes::crystal(simulation, 500, AtomData::Type::Z, false);
+    Scenes::crystal(simulation, 25, AtomData::Type::Z, true);
 
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
     renderer->setAtomStorage(&simulation.atomStorage);
