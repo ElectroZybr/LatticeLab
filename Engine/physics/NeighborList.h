@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <utility>
 #include <vector>
 
@@ -34,6 +35,10 @@ public:
     [[nodiscard]] float listRadius() const { return listRadius_; }
     [[nodiscard]] bool isValid() const { return valid_; }
 
+    [[nodiscard]] std::span<const std::size_t> neighborsIndices(std::size_t atomIndex) const { 
+        auto r = rangeFor(atomIndex);
+        return std::span(neighbors_).subspan(r.first, r.second - r.first); 
+    };
     [[nodiscard]] const std::vector<std::size_t>& neighbors() const { return neighbors_; }
     [[nodiscard]] const std::vector<std::size_t>& offsets() const { return offsets_; }
 

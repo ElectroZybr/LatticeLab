@@ -12,6 +12,8 @@ void VerletScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& f
 }
 
 void VerletScheme::predict(AtomStorage& atomStorage, float dt) {
+    const std::size_t n = atomStorage.mobileCount();
+
     float* RESTRICT x = atomStorage.xData();
     float* RESTRICT y = atomStorage.yData();
     float* RESTRICT z = atomStorage.zData();
@@ -27,7 +29,7 @@ void VerletScheme::predict(AtomStorage& atomStorage, float dt) {
     const float* RESTRICT invMass = atomStorage.invMassData();
 
     #pragma GCC ivdep
-    for (std::size_t i = 0; i < atomStorage.mobileCount(); ++i) {
+    for (std::size_t i = 0; i < n; ++i) {
         constexpr float damping = 0.6f;
 
         x[i] += (vx[i] * damping + fx[i] * invMass[i] * 0.5f * dt) * dt;
@@ -37,6 +39,8 @@ void VerletScheme::predict(AtomStorage& atomStorage, float dt) {
 }
 
 void VerletScheme::correct(AtomStorage& atomStorage, float dt) {
+    const std::size_t n = atomStorage.mobileCount();
+
     const float* RESTRICT fx  = atomStorage.fxData();
     const float* RESTRICT fy  = atomStorage.fyData();
     const float* RESTRICT fz  = atomStorage.fzData();
@@ -52,7 +56,7 @@ void VerletScheme::correct(AtomStorage& atomStorage, float dt) {
     const float* RESTRICT invMass = atomStorage.invMassData();
 
     #pragma GCC ivdep
-    for (std::size_t i = 0; i < atomStorage.mobileCount(); ++i) {
+    for (std::size_t i = 0; i < n; ++i) {
         const float halfDtInvMass = 0.5f * dt * invMass[i];
 
         vx[i] += (pfx[i] + fx[i]) * halfDtInvMass;

@@ -192,17 +192,8 @@ void ForceField::ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox
         }
     } else {
         // используем список соседей
-        if (atomIndex < neighborList->atomCount()) {
-            const auto [begin, end] = neighborList->rangeFor(atomIndex);
-            const auto& neighborIndices = neighborList->neighbors();
-
-            for (std::size_t cursor = begin; cursor < end; ++cursor) {
-                const std::size_t neighbourIndex = neighborIndices[cursor];
-                if (neighbourIndex >= atoms.size() || atomIndex <= neighbourIndex) {
-                    continue;
-                }
-                pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
-            }
+        for (std::size_t neighbourIndex : neighborList->neighborsIndices(atomIndex)) {
+            pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
         }
     }
 
