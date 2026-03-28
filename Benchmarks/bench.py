@@ -449,6 +449,21 @@ def save_result(data: dict, filter_used: str | None) -> Path:
     return path
 
 
+def maybe_save_baseline(data: dict) -> bool:
+    if not sys.stdin.isatty():
+        return False
+
+    answer = input("\nСохранить как baseline? [y/N]: ").strip().lower()
+    if answer != "y":
+        return False
+
+    ensure_results_dir()
+    baseline_path = RESULTS_DIR / "baseline.json"
+    baseline_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    print(paint(f"Baseline сохранен: {baseline_path}", COLOR_OK))
+    return True
+
+
 def interactive_menu() -> tuple[str | None, int, bool, str | None]:
     print(f"{paint('=== Chemical Simulator Benchmarks ===', COLOR_TITLE)}\n")
 
@@ -602,9 +617,11 @@ def main() -> None:
     metadata = load_bench_metadata()
     print_results_table(data, metadata)
 
+    baseline_saved = maybe_save_baseline(data)
+
     if save_flag:
         save_result(data, filter_regex)
-    else:
+    elif not baseline_saved:
         ensure_results_dir()
         tmp = RESULTS_DIR / "last_run.json"
         tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
