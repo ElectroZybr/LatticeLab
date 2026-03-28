@@ -13,9 +13,11 @@ bench.py — запускалка бенчмарков для Chemical Simulator
 
 import argparse
 import json
+import math
 import re
 import subprocess
 import sys
+import time
 import webbrowser
 from datetime import datetime
 from pathlib import Path
@@ -28,8 +30,9 @@ BENCHMARKS_ROOT = Path(__file__).parent
 
 COLOR_RESET = "\033[0m"
 COLOR_TITLE = "\033[1;97m"
-COLOR_GROUP = "\033[1;36m"
-COLOR_SUBGROUP = "\033[35m"
+COLOR_GROUP = "\033[92m"
+COLOR_SUBGROUP = "\033[95m"
+COLOR_SUBGROUP_BRACKET = "\033[90m"
 COLOR_INDEX = "\033[33m"
 COLOR_INDEX_LIGHT_BLUE = "\033[96m"
 COLOR_HINT = "\033[90m"
@@ -37,12 +40,30 @@ COLOR_ERROR = "\033[31m"
 COLOR_OK = "\033[32m"
 COLOR_WARN = "\033[33m"
 COLOR_BAD = "\033[31m"
+COLOR_UNIT_NS = "\033[90m"
+COLOR_UNIT_US = "\033[36m"
+COLOR_UNIT_MS = "\033[35m"
+COLOR_PROGRESS_SPINNER = "\033[96m"
+COLOR_PROGRESS_BAR = "\033[36m"
+COLOR_PROGRESS_COUNT = "\033[33m"
+COLOR_PROGRESS_CASE = "\033[95m"
+COLOR_PROGRESS_TIME = "\033[92m"
 
 
 def paint(text: str, color: str) -> str:
     if not sys.stdout.isatty():
         return text
     return f"{color}{text}{COLOR_RESET}"
+
+
+def paint_subgroup_label(text: str) -> str:
+    if not sys.stdout.isatty():
+        return f"[{text}]"
+    return (
+        f"{COLOR_SUBGROUP_BRACKET}[{COLOR_RESET}"
+        f"{COLOR_SUBGROUP}{text}{COLOR_RESET}"
+        f"{COLOR_SUBGROUP_BRACKET}]{COLOR_RESET}"
+    )
 
 
 def paint_256(text: str, color_code: int) -> str:
@@ -75,6 +96,25 @@ def fmt_num(value: float | None, digits: int = 2) -> str:
         return "-"
     return f"{value:.{digits}f}"
 
+def fmt_cv(value: float | None) -> str:
+    if value is None:
+        return "-"
+    text = f"{value:.2f}"
+    if value >= 5.0:
+        return f"{text} !"
+    return text
+
+
+def fmt_time_ns(value: float | None) -> str:
+    if value is None:
+        return "-"
+    abs_v = abs(value)
+    if abs_v >= 1_000_000.0:
+        return f"{value / 1_000_000.0:.2f} ms"
+    if abs_v >= 1_000.0:
+        return f"{value / 1_000.0:.2f} us"
+    return f"{value:.2f} ns"
+
 
 def fmt_ips(value: float | None) -> str:
     if value is None:
@@ -94,7 +134,10 @@ def paint_numeric(cell: str, cv_mode: bool = False) -> str:
         return cell
     if cv_mode:
         try:
-            cv = float(cell.strip())
+            m = re.search(r"[-+]?\d*\.?\d+", cell.strip())
+            if not m:
+                return paint(cell, COLOR_INDEX)
+            cv = float(m.group(0))
         except ValueError:
             return paint(cell, COLOR_INDEX)
         if cv < 2.0:
@@ -132,6 +175,53 @@ def paint_n_gradient(cell: str, min_n: int, max_n: int) -> str:
     g = int(200 + (165 - 200) * t)
     b = int(255 + (245 - 255) * t)
     return paint_rgb(cell, r, g, b)
+
+
+def paint_time_cell(cell: str) -> str:
+    if not sys.stdout.isatty():
+        return cell
+
+    value = cell.rstrip()
+    tail_spaces = cell[len(value):]
+    if value == "-":
+        return cell
+
+    if value.endswith(" ns"):
+        return value[:-3] + " " + paint("ns", COLOR_UNIT_NS) + tail_spaces
+    if value.endswith(" us"):
+        return value[:-3] + " " + paint("us", COLOR_UNIT_US) + tail_spaces
+    if value.endswith(" ms"):
+        return value[:-3] + " " + paint("ms", COLOR_UNIT_MS) + tail_spaces
+    return cell
+
+
+def paint_complexity_label(label_cell: str) -> str:
+    raw = label_cell.strip()
+    if raw == "O(1)":
+        return paint(label_cell, COLOR_OK)
+    if raw == "O(N)":
+        return paint(label_cell, "\033[34m")
+    if raw == "O(log N)":
+        return paint(label_cell, COLOR_INDEX_LIGHT_BLUE)
+    if raw == "O(N log N)":
+        return paint(label_cell, COLOR_WARN)
+    if raw.startswith("O(N^") or raw == "O(N^k)":
+        return paint(label_cell, COLOR_BAD)
+    return label_cell
+
+
+def paint_points_count(points_cell: str) -> str:
+    raw = points_cell.strip()
+    if not raw.isdigit():
+        return points_cell
+    count = int(raw)
+    # 3 точки: минимально допустимо, но ненадежно.
+    if count <= 3:
+        marked = points_cell.rstrip() + " (!)"
+        return paint(marked, COLOR_BAD)
+    if count <= 5:
+        return paint(points_cell, COLOR_WARN)
+    return paint(points_cell, COLOR_OK)
 
 
 def parse_benchmark_rows(data: dict) -> dict[str, dict[str, float | str]]:
@@ -197,6 +287,123 @@ def compare_status(curr_median: float | None, base_median: float | None) -> tupl
         return delta_text, paint("хуже", COLOR_BAD)
     return delta_text, paint("~", COLOR_HINT)
 
+def estimate_complexity_label(alpha: float) -> str:
+    if alpha < 0.25:
+        return "O(1)"
+    if alpha < 0.75:
+        return "O(log N)"
+    if alpha < 1.35:
+        return "O(N)"
+    if alpha < 1.75:
+        return "O(N log N)"
+    if alpha < 2.35:
+        return "O(N^2)"
+    if alpha < 2.85:
+        return "O(N^3)"
+    return "O(N^k)"
+
+
+def linear_fit(xs: list[float], ys: list[float]) -> tuple[float, float, float]:
+    """
+    Возвращает (slope, intercept, r2) для y = slope*x + intercept.
+    """
+    n = len(xs)
+    if n < 2:
+        return 0.0, 0.0, 0.0
+
+    mean_x = sum(xs) / n
+    mean_y = sum(ys) / n
+
+    ss_xx = sum((x - mean_x) ** 2 for x in xs)
+    if ss_xx <= 0.0:
+        return 0.0, mean_y, 0.0
+
+    ss_xy = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys))
+    slope = ss_xy / ss_xx
+    intercept = mean_y - slope * mean_x
+
+    ss_tot = sum((y - mean_y) ** 2 for y in ys)
+    ss_res = sum((y - (slope * x + intercept)) ** 2 for x, y in zip(xs, ys))
+    r2 = 1.0 - (ss_res / ss_tot) if ss_tot > 0.0 else 1.0
+    return slope, intercept, r2
+
+
+def print_complexity_estimate(rows: dict[str, dict[str, float | str]],
+                              metadata: dict[str, dict[str, str]]) -> None:
+    grouped: dict[str, list[tuple[int, float]]] = {}
+
+    for run_name, metrics in rows.items():
+        n_str = bench_arg(run_name)
+        if not n_str.isdigit():
+            continue
+        n = int(n_str)
+
+        time_val = metrics.get("real_median")
+        if not isinstance(time_val, float):
+            time_val = metrics.get("real_mean")
+        if not isinstance(time_val, float):
+            continue
+        if n <= 0 or time_val <= 0.0:
+            continue
+
+        grouped.setdefault(short_bench_id(run_name), []).append((n, time_val))
+
+    if not grouped:
+        return
+
+    results: list[tuple[str, str, float, float, int]] = []
+    for bench_id, points in grouped.items():
+        uniq: dict[int, float] = {}
+        for n, t in points:
+            uniq[n] = t
+        sorted_points = sorted(uniq.items(), key=lambda p: p[0])
+        if len(sorted_points) < 3:
+            continue
+
+        xs = [math.log(float(n)) for n, _ in sorted_points]
+        ys = [math.log(float(t)) for _, t in sorted_points]
+        alpha, _, r2 = linear_fit(xs, ys)
+        ru_name = metadata.get(bench_id, {}).get("ru", bench_id)
+        results.append((bench_id, ru_name, alpha, r2, len(sorted_points)))
+
+    if not results:
+        return
+
+    table_rows: list[list[str]] = []
+    for bench_id, ru_name, alpha, r2, count in sorted(results, key=lambda r: r[0]):
+        table_rows.append([
+            ru_name,
+            f"{alpha:.2f}",
+            estimate_complexity_label(alpha),
+            f"{r2:.3f}",
+            str(count),
+        ])
+
+    headers = ["Тест", "alpha", "Сложность", "R2", "Точек"]
+    widths = [len(h) for h in headers]
+    for row in table_rows:
+        for i, cell in enumerate(row):
+            widths[i] = max(widths[i], len(cell))
+
+    print()
+    print(paint("Оценка сложности:", COLOR_TITLE))
+    header_line = "  " + " | ".join(headers[i].ljust(widths[i]) for i in range(len(headers)))
+    sep_line = "  " + "-+-".join("-" * widths[i] for i in range(len(headers)))
+    print(header_line)
+    print(sep_line)
+    for row in table_rows:
+        rendered = [row[i].ljust(widths[i]) for i in range(len(headers))]
+        rendered[2] = paint_complexity_label(rendered[2])
+        r2_value = float(row[3])
+        if r2_value >= 0.95:
+            rendered[3] = paint(rendered[3], COLOR_OK)
+        elif r2_value >= 0.85:
+            rendered[3] = paint(rendered[3], COLOR_WARN)
+        else:
+            rendered[3] = paint(rendered[3], COLOR_BAD)
+        rendered[4] = paint_points_count(rendered[4])
+        print("  " + " | ".join(rendered))
+
 
 def print_results_table(data: dict, metadata: dict[str, dict[str, str]]) -> None:
     rows = parse_benchmark_rows(data)
@@ -227,8 +434,8 @@ def print_results_table(data: dict, metadata: dict[str, dict[str, str]]) -> None
             str(idx),
             ru_name,
             bench_arg(run_name),
-            fmt_num(curr_time_val),               # type: ignore[arg-type]
-            fmt_num(metrics.get("real_cv")),      # type: ignore[arg-type]
+            fmt_time_ns(curr_time_val),           # type: ignore[arg-type]
+            fmt_cv(metrics.get("real_cv")),       # type: ignore[arg-type]
             fmt_ips(metrics.get("ips")),          # type: ignore[arg-type]
         ]
         if has_baseline:
@@ -243,14 +450,14 @@ def print_results_table(data: dict, metadata: dict[str, dict[str, str]]) -> None
                 base_median_val = base_time_val
             delta_text, _ = compare_status(curr_median_val, base_median_val)
             row.extend([
-                fmt_num(base_time_val),  # type: ignore[arg-type]
+                fmt_time_ns(base_time_val),  # type: ignore[arg-type]
                 delta_text,
             ])
         table_data.append(row)
 
-    headers = ["#", "Тест", "N", "time(ns)", "cv(%)", "items/s"]
+    headers = ["#", "Тест", "N", "time", "cv(%)", "items/s"]
     if has_baseline:
-        headers.extend(["baseline(ns)", "Δ (%)"])
+        headers.extend(["baseline", "d (%)"])
     widths = [len(h) for h in headers]
     for row in table_data:
         for i, cell in enumerate(row):
@@ -278,10 +485,14 @@ def print_results_table(data: dict, metadata: dict[str, dict[str, str]]) -> None
         rendered = [row[i].ljust(widths[i]) for i in range(len(headers))]
         rendered[col["#"]] = paint(rendered[col["#"]], COLOR_INDEX_LIGHT_BLUE)
         rendered[col["N"]] = paint_n_gradient(rendered[col["N"]], min_n, max_n)
+        rendered[col["time"]] = paint_time_cell(rendered[col["time"]])
         rendered[col["cv(%)"]] = paint_numeric(rendered[col["cv(%)"]], cv_mode=True)
         if has_baseline:
-            rendered[col["Δ (%)"]] = paint_delta(rendered[col["Δ (%)"]])
+            rendered[col["baseline"]] = paint_time_cell(rendered[col["baseline"]])
+            rendered[col["d (%)"]] = paint_delta(rendered[col["d (%)"]])
         print("  " + " | ".join(rendered))
+
+    print_complexity_estimate(rows, metadata)
 
 
 def load_bench_metadata() -> dict[str, dict[str, str]]:
@@ -354,6 +565,104 @@ def list_available_filters() -> list[str]:
         groups[group] = None
     return list(groups.keys())
 
+
+def list_benchmark_cases(filter_regex: str | None = None) -> list[str]:
+    if not BINARY.exists():
+        die(f"Бинарник не найден: {BINARY}\nСобери проект перед запуском.")
+
+    result = subprocess.run(
+        [str(BINARY), "--benchmark_list_tests=true"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return []
+
+    names = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if not filter_regex:
+        return names
+
+    try:
+        rx = re.compile(filter_regex)
+    except re.error:
+        return names
+    return [name for name in names if rx.search(name)]
+
+
+def normalize_benchmark_case(name: str) -> str:
+    for suffix in ("_mean", "_median", "_stddev", "_cv"):
+        if name.endswith(suffix):
+            return name[: -len(suffix)]
+    return name
+
+
+def is_benchmark_result_line(line: str) -> bool:
+    s = line.strip()
+    if not s:
+        return False
+    token = s.split()[0]
+    if "/" not in token:
+        return False
+    banned_prefixes = (
+        "Benchmark",
+        "Run",
+        "CPU",
+        "L1",
+        "L2",
+        "L3",
+        "***WARNING***",
+        "202",
+    )
+    return not token.startswith(banned_prefixes)
+
+
+def format_eta(seconds: float | None) -> str:
+    if seconds is None or seconds < 0 or math.isinf(seconds) or math.isnan(seconds):
+        return "--:--"
+    s = int(round(seconds))
+    m, s = divmod(s, 60)
+    h, m = divmod(m, 60)
+    if h > 0:
+        return f"{h:02d}:{m:02d}:{s:02d}"
+    return f"{m:02d}:{s:02d}"
+
+
+def print_progress(done: int, total: int, current_case: str = "", start_ts: float | None = None, tick: int = 0) -> None:
+    if not sys.stdout.isatty() or total <= 0:
+        return
+
+    spinner_frames = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
+    spin = spinner_frames[tick % len(spinner_frames)]
+    width = 24
+    ratio = min(1.0, max(0.0, done / float(total)))
+    fill = int(width * ratio)
+    bar = "█" * fill + "░" * (width - fill)
+
+    eta_seconds: float | None = None
+    elapsed_seconds: float | None = None
+    if start_ts is not None and done > 0:
+        elapsed = time.monotonic() - start_ts
+        elapsed_seconds = elapsed
+        per_test = elapsed / float(done)
+        eta_seconds = per_test * float(max(0, total - done))
+    elif start_ts is not None:
+        elapsed_seconds = time.monotonic() - start_ts
+
+    case_text = current_case if current_case else "-"
+    if len(case_text) > 64:
+        case_text = case_text[:61] + "..."
+
+    spin_col = paint(spin, COLOR_PROGRESS_SPINNER)
+    bar_col = paint(bar, COLOR_PROGRESS_BAR)
+    count_col = paint(f"[{done}/{total}]", COLOR_PROGRESS_COUNT)
+    case_col = paint(case_text, COLOR_PROGRESS_CASE)
+    eta_col = paint(format_eta(eta_seconds), COLOR_PROGRESS_TIME)
+    elapsed_col = paint(format_eta(elapsed_seconds), COLOR_PROGRESS_TIME)
+    text = f"{spin_col} [{bar_col}] {count_col} | {case_col} | Elapsed {elapsed_col} | ETA {eta_col}"
+    # Clear the whole current line before redrawing.
+    sys.stdout.write("\r\033[2K" + paint(text, COLOR_HINT))
+    sys.stdout.flush()
+
 def classify_filter_group(filter_name: str) -> str:
     if filter_name.startswith("RendererFixture"):
         return "Рендер"
@@ -417,12 +726,49 @@ def run_benchmark(
     if filter_regex:
         cmd += [f"--benchmark_filter={filter_regex}"]
 
-    print(f"{paint('$ ' + ' '.join(cmd), COLOR_HINT)}\n", flush=True)
+    total_cases = len(list_benchmark_cases(filter_regex))
+    seen_cases: set[str] = set()
+    current_case = ""
+    start_ts = time.monotonic()
+    tick = 0
+    print_progress(0, total_cases, current_case, start_ts, tick)
 
-    result = subprocess.run(cmd, text=True)
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
 
-    if result.returncode != 0:
-        die(f"Бенчмарк завершился с кодом {result.returncode}")
+    assert process.stdout is not None
+    tail_lines: list[str] = []
+    for raw_line in process.stdout:
+        line = raw_line.rstrip("\n")
+        if line.strip():
+            tail_lines.append(line)
+            if len(tail_lines) > 20:
+                tail_lines.pop(0)
+        if is_benchmark_result_line(line):
+            token = line.strip().split()[0]
+            case = normalize_benchmark_case(token)
+            current_case = case
+            if case not in seen_cases:
+                seen_cases.add(case)
+            tick += 1
+            print_progress(len(seen_cases), total_cases, current_case, start_ts, tick)
+
+    return_code = process.wait()
+    final_total = total_cases if total_cases > 0 else len(seen_cases)
+    print_progress(final_total, final_total, current_case, start_ts, tick + 1)
+    if sys.stdout.isatty():
+        sys.stdout.write("\n\n")
+        sys.stdout.flush()
+
+    if return_code != 0:
+        if tail_lines:
+            print("\n".join(tail_lines), file=sys.stderr)
+        die(f"Бенчмарк завершился с кодом {return_code}")
 
     try:
         if not tmp_json.exists():
@@ -477,6 +823,9 @@ def interactive_menu() -> tuple[str | None, int, bool, str | None]:
     subgrouped: dict[str, dict[str, list[tuple[str, str]]]] = {}
     for f in filters:
         main_group, sub_group = classify_by_metadata(f, metadata)
+        if main_group == "Рендер":
+            # Для UX держим рендер в одной группе без подкатегорий 2D/3D.
+            sub_group = None
         if main_group not in grouped:
             grouped[main_group] = []
         if sub_group:
@@ -509,14 +858,14 @@ def interactive_menu() -> tuple[str | None, int, bool, str | None]:
 
         # Сначала подгруппы из metadata, затем элементы без подгруппы.
         for sub_name in sub_entries_map.keys():
-            print(f"  {paint(f'[{sub_name}]', COLOR_SUBGROUP)}")
+            print(f"  {paint_subgroup_label(sub_name)}")
             for raw, pretty in sub_entries_map[sub_name]:
-                print(f"      {paint(f'{menu_index})', COLOR_INDEX)} {pretty}")
+                print(f"  {paint(f'{menu_index})', COLOR_INDEX)} {pretty}")
                 menu_filters.append(raw)
                 menu_index += 1
 
         for raw, pretty in entries:
-            print(f"      {paint(f'{menu_index})', COLOR_INDEX)} {pretty}")
+            print(f"  {paint(f'{menu_index})', COLOR_INDEX)} {pretty}")
             menu_filters.append(raw)
             menu_index += 1
 
@@ -560,9 +909,7 @@ def interactive_menu() -> tuple[str | None, int, bool, str | None]:
     min_time = input("Минимальное время прогона [пусто = по умолчанию, пример: 5s]: ").strip()
     if min_time == "":
         min_time = None
-
-    save = input("\nСохранить результат? [y/N]: ").strip().lower() == "y"
-    return selected, repetitions, save, min_time
+    return selected, repetitions, False, min_time
 
 
 def main() -> None:
