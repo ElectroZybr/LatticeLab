@@ -23,6 +23,7 @@ void Keyboard::onEvent(const sf::Event& event) {
 
 void Keyboard::onFrame(float deltaTime) {
     std::unique_ptr<IRenderer>& rend = *render;
+    constexpr float kFreeMoveSpeedScale = 0.8f;
     if (rend->camera.mode == Camera::Mode::Orbit) {
         float rotSpeed = 1.5f * deltaTime;
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W))
@@ -39,7 +40,7 @@ void Keyboard::onFrame(float deltaTime) {
             std::cos(rend->camera.elevation) * std::cos(rend->camera.azimuth)
         );
         const glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.f, 1.f, 0.f)));
-        const float s = rend->camera.speed * deltaTime;
+        const float s = rend->camera.speed * deltaTime * kFreeMoveSpeedScale;
 
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) rend->camera.move3D(Vec3f( forward.x,  forward.y,  forward.z) * s);
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) rend->camera.move3D(Vec3f(-forward.x, -forward.y, -forward.z) * s);

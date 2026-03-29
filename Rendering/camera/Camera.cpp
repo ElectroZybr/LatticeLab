@@ -117,8 +117,9 @@ glm::mat4 Camera::getViewMatrix() const {
 }
 
 glm::mat4 Camera::getProjectionMatrix() const {
+    const float fov = (mode == Mode::Free) ? FOV_FREE : FOV_ORBIT;
     return glm::perspective(
-        glm::radians(FOV),
+        glm::radians(fov),
         screenSize.x / screenSize.y,
         NEAR,
         FAR
