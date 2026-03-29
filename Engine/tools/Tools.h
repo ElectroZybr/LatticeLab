@@ -10,7 +10,7 @@
 #include "Engine/math/Vec3f.h"
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
-#include "Engine/physics/SpatialGrid.h"
+#include "Engine/NeighborSearch/SpatialGrid.h"
 #include "Rendering/BaseRenderer.h"
 
 #include "Engine/tools/picking_system/PickingSystem.h"

@@ -9,7 +9,7 @@
 #include "Bond.h"
 #include "../SimBox.h"
 #include "../math/Consts.h"
-#include "NeighborList.h"
+#include "../NeighborSearch/NeighborList.h"
 
 ForceField::ForceField() : ljPairTable(buildLJPairTable()) {}
 
