@@ -40,6 +40,7 @@ BENCHMARKS_ROOT = Path(__file__).parent
 
 COLOR_RESET = "\033[0m"
 COLOR_TITLE = "\033[1;97m"
+COLOR_LABEL_WHITE = "\033[37m"
 COLOR_GROUP = "\033[92m"
 COLOR_SUBGROUP = "\033[95m"
 COLOR_SUBGROUP_BRACKET = "\033[90m"
@@ -281,6 +282,18 @@ def parse_benchmark_rows(data: dict) -> dict[str, dict[str, float | str]]:
             if "ips" not in row and "items_per_second" in item:
                 row["ips"] = float(item.get("items_per_second", 0.0))
 
+        # HWC метрики, если присутствуют в JSON.
+        if "hwc_cache_misses" in item:
+            try:
+                row["hwc_cache_misses"] = float(item.get("hwc_cache_misses", 0.0))
+            except (TypeError, ValueError):
+                pass
+        if "hwc_cache_miss_rate_pct" in item:
+            try:
+                row["hwc_cache_miss_rate_pct"] = float(item.get("hwc_cache_miss_rate_pct", 0.0))
+            except (TypeError, ValueError):
+                pass
+
     return rows
 
 
@@ -494,6 +507,16 @@ def print_results_table(
             fmt_ips(metrics.get("ips")),          # type: ignore[arg-type]
         ]
         hwc = (hwc_rows or {}).get(run_name, {})
+        curr_cache_misses = hwc.get("cache_misses")
+        curr_miss_pct = hwc.get("cache_miss_rate_pct")
+        if curr_cache_misses is None:
+            v = metrics.get("hwc_cache_misses")
+            if isinstance(v, float):
+                curr_cache_misses = v
+        if curr_miss_pct is None:
+            v = metrics.get("hwc_cache_miss_rate_pct")
+            if isinstance(v, float):
+                curr_miss_pct = v
         if has_baseline:
             baseline_metrics = baseline_rows.get(run_name, {})
             base_time_val = baseline_metrics.get("real_median")
@@ -513,10 +536,24 @@ def print_results_table(
         else:
             row.append(fmt_time_ns(curr_time_val))  # type: ignore[arg-type]
         if hwc_backend != "none":
+            base_miss_pct: float | None = None
+            miss_delta_text = "-"
+            if has_baseline:
+                base_val = baseline_metrics.get("hwc_cache_miss_rate_pct") if isinstance(baseline_metrics, dict) else None
+                if isinstance(base_val, float):
+                    base_miss_pct = base_val
+                if curr_miss_pct is not None and base_miss_pct is not None and base_miss_pct > 0.0:
+                    miss_delta = (curr_miss_pct - base_miss_pct) / base_miss_pct * 100.0
+                    miss_delta_text = f"{miss_delta:+.1f}%"
             row.extend([
-                fmt_compact_number(hwc.get("cache_misses")),
-                fmt_num(hwc.get("cache_miss_rate_pct"), 2),
+                fmt_compact_number(curr_cache_misses),
+                fmt_num(curr_miss_pct, 2),
             ])
+            if has_baseline:
+                row.extend([
+                    fmt_num(base_miss_pct, 2),
+                    miss_delta_text,
+                ])
         table_data.append(row)
 
     headers = ["#", "Тест", "N", "cv(%)", "items/s"]
@@ -526,6 +563,8 @@ def print_results_table(
         headers.append("time")
     if hwc_backend != "none":
         headers.extend(["cache-miss", "miss%"])
+        if has_baseline:
+            headers.extend(["base miss%", "miss d%"])
     widths = [len(h) for h in headers]
     for row in table_data:
         for i, cell in enumerate(row):
@@ -544,8 +583,6 @@ def print_results_table(
     if has_baseline and current_scene_key and baseline_scene_key and current_scene_key != baseline_scene_key:
         print(paint("Внимание: baseline снят на другой сцене, сравнение может быть некорректным", COLOR_WARN))
         print()
-    if hwc_backend != "none":
-        print(paint(f"HWC backend: {hwc_backend}", COLOR_HINT))
     print(paint("Итоговая таблица:", COLOR_TITLE))
     header_line = "  " + " | ".join(headers[i].ljust(widths[i]) for i in range(len(headers)))
     sep_line = "  " + "-+-".join("-" * widths[i] for i in range(len(headers)))
@@ -570,6 +607,8 @@ def print_results_table(
             rendered[col["d (%)"]] = paint_delta(rendered[col["d (%)"]])
         if hwc_backend != "none":
             rendered[col["miss%"]] = paint_numeric(rendered[col["miss%"]], cv_mode=False)
+            if has_baseline:
+                rendered[col["miss d%"]] = paint_delta(rendered[col["miss d%"]], neutral_threshold=2.5)
         print("  " + " | ".join(rendered))
 
     print_complexity_estimate(rows, metadata)
@@ -711,6 +750,57 @@ def format_eta(seconds: float | None) -> str:
     if h > 0:
         return f"{h:02d}:{m:02d}:{s:02d}"
     return f"{m:02d}:{s:02d}"
+
+
+def parse_duration_to_seconds(value: str | None) -> float | None:
+    if not value:
+        return None
+    s = value.strip().lower()
+    m = re.fullmatch(r"(\d+(?:\.\d+)?)(ms|us|ns|s|m)?", s)
+    if not m:
+        return None
+    num = float(m.group(1))
+    unit = m.group(2) or "s"
+    if unit == "m":
+        return num * 60.0
+    if unit == "s":
+        return num
+    if unit == "ms":
+        return num / 1000.0
+    if unit == "us":
+        return num / 1_000_000.0
+    if unit == "ns":
+        return num / 1_000_000_000.0
+    return None
+
+
+def compute_case_timeout_seconds(
+    active_hwc_backend: str,
+    repetitions: int,
+    min_time: str | None,
+    fallback_plain: bool = False,
+) -> int:
+    # Для обычного запуска держим короткий таймаут.
+    timeout = 60
+
+    # Если задан benchmark_min_time, расширяем запас.
+    min_time_sec = parse_duration_to_seconds(min_time)
+    if min_time_sec is not None and min_time_sec > 0.0:
+        timeout = max(timeout, int(min_time_sec * max(1, repetitions) * 4.0 + 30.0))
+
+    # Для HWC нужны более длинные окна: инициализация профайлера + сбор счетчиков.
+    if active_hwc_backend != "none":
+        timeout = max(timeout, 240)
+        if active_hwc_backend == "windows-amd-uprof":
+            timeout = max(timeout, 420)
+        elif active_hwc_backend == "windows-pcm":
+            timeout = max(timeout, 300)
+
+    # Повторный plain-запуск после HWC-ошибки не должен висеть слишком долго.
+    if fallback_plain:
+        timeout = min(timeout, 120)
+
+    return timeout
 
 
 def scene_label(scene_key: str | None) -> str:
@@ -1281,6 +1371,42 @@ def apply_process_tuning(pid: int, pin_cpu: str | None, priority: str) -> list[s
     return warnings
 
 
+def is_windows_admin() -> bool:
+    if sys.platform != "win32":
+        return False
+    try:
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except Exception:
+        return False
+
+
+def backend_requires_admin(backend: str) -> bool:
+    return backend in ("windows-amd-uprof", "windows-pcm")
+
+
+def kill_process_tree(proc: subprocess.Popen) -> None:
+    if proc.poll() is not None:
+        return
+    if sys.platform == "win32":
+        try:
+            subprocess.run(
+                ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except OSError:
+            try:
+                proc.kill()
+            except OSError:
+                pass
+        return
+    try:
+        proc.kill()
+    except OSError:
+        pass
+
+
 def print_progress(done: int, total: int, current_case: str = "", start_ts: float | None = None, tick: int = 0) -> None:
     if not sys.stdout.isatty() or total <= 0:
         return
@@ -1367,103 +1493,332 @@ def run_benchmark(
     priority: str = "normal",
     hwc_mode: str = "auto",
     hwc_backend: str = "none",
-) -> dict:
+    hwc_debug: bool = False,
+) -> tuple[dict, dict[str, dict[str, float]]]:
     if not BINARY.exists():
         die(f"Бинарник не найден: {BINARY}")
 
     ensure_results_dir()
-    tmp_json = RESULTS_DIR / "_tmp_run.json"
-    cmd = [
-        str(BINARY),
-        "--benchmark_format=console",
-        f"--benchmark_out={tmp_json}",
-        "--benchmark_out_format=json",
-        f"--benchmark_repetitions={repetitions}",
-    ]
-    if min_time:
-        cmd += [f"--benchmark_min_time={min_time}"]
-    if filter_regex:
-        cmd += [f"--benchmark_filter={filter_regex}"]
+    total_cases_list = list_benchmark_cases(filter_regex)
+    case_list = sorted({normalize_benchmark_case(name) for name in total_cases_list})
+    if not case_list:
+        die("Нет бенчмарков для запуска по выбранному фильтру.")
 
-    total_cases = len(list_benchmark_cases(filter_regex))
-    seen_cases: set[str] = set()
-    current_case = ""
+    total_cases = len(case_list)
     start_ts = time.monotonic()
     tick = 0
+    current_case = ""
     print_progress(0, total_cases, current_case, start_ts, tick)
 
     process_env = os.environ.copy()
     if scene_key:
         process_env["CHEM_BENCH_SCENE"] = scene_key
 
-    process = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1,
-        env=process_env,
-    )
-    tuning_warnings = apply_process_tuning(process.pid, pin_cpu, priority)
-    for warning in tuning_warnings:
-        print(paint(f"Предупреждение: {warning}", COLOR_WARN))
+    merged: dict = {"context": {}, "benchmarks": []}
+    hwc_rows: dict[str, dict[str, float]] = {}
+    active_hwc_backend = hwc_backend
 
-    assert process.stdout is not None
-    tail_lines: list[str] = []
-    for raw_line in process.stdout:
-        line = raw_line.rstrip("\n")
-        if line.strip():
-            tail_lines.append(line)
-            if len(tail_lines) > 20:
-                tail_lines.pop(0)
-        if is_benchmark_result_line(line):
-            token = line.strip().split()[0]
-            case = normalize_benchmark_case(token)
-            current_case = case
-            if case not in seen_cases:
-                seen_cases.add(case)
-            tick += 1
-            print_progress(len(seen_cases), total_cases, current_case, start_ts, tick)
+    for idx, case in enumerate(case_list, 1):
+        current_case = case
+        tick += 1
+        print_progress(idx - 1, total_cases, current_case, start_ts, tick)
 
-    return_code = process.wait()
-    final_total = total_cases if total_cases > 0 else len(seen_cases)
-    print_progress(final_total, final_total, current_case, start_ts, tick + 1)
+        case_json = RESULTS_DIR / "_tmp_case_run.json"
+        if case_json.exists():
+            try:
+                case_json.unlink()
+            except OSError:
+                pass
+
+        bench_cmd = [
+            str(BINARY),
+            "--benchmark_format=console",
+            f"--benchmark_out={case_json}",
+            "--benchmark_out_format=json",
+            f"--benchmark_repetitions={repetitions}",
+            f"--benchmark_filter=^{re.escape(case)}$",
+        ]
+        if min_time:
+            bench_cmd.append(f"--benchmark_min_time={min_time}")
+
+        run_cmd = list(bench_cmd)
+        hwc_csv_path: Path | None = None
+
+        if active_hwc_backend == "linux-perf":
+            run_cmd = [
+                "perf", "stat", "-x", ";",
+                "-e", "cache-misses,cache-references,instructions,cycles",
+                *bench_cmd,
+            ]
+        elif active_hwc_backend == "windows-amd-uprof":
+            exe = find_amd_uprof_exe()
+            if exe:
+                stem = safe_file_part(case)
+                hwc_csv_path = (RESULTS_DIR / f"hwc_amd_{stem}.csv") if hwc_debug else (RESULTS_DIR / "_tmp_hwc_amd.csv")
+                if hwc_csv_path.exists():
+                    try:
+                        hwc_csv_path.unlink()
+                    except OSError:
+                        pass
+                run_cmd = [exe, "-m", "cache_miss,l1,l2,ipc", "-C", "-a", "-d", "1", "-o", str(hwc_csv_path), "--", *bench_cmd]
+        elif active_hwc_backend == "windows-pcm":
+            exe = find_intel_pcm_exe()
+            if exe:
+                stem = safe_file_part(case)
+                hwc_csv_path = (RESULTS_DIR / f"hwc_pcm_{stem}.csv") if hwc_debug else (RESULTS_DIR / "_tmp_hwc_pcm.csv")
+                if hwc_csv_path.exists():
+                    try:
+                        hwc_csv_path.unlink()
+                    except OSError:
+                        pass
+                run_cmd = [exe, "1", f"-csv={hwc_csv_path}", "--", *bench_cmd]
+
+        proc = subprocess.Popen(
+            run_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            env=process_env,
+        )
+        tuning_warnings = apply_process_tuning(proc.pid, pin_cpu, priority)
+        for warning in tuning_warnings:
+            print(paint(f"Предупреждение: {warning}", COLOR_WARN))
+
+        hwc_case_timeout = compute_case_timeout_seconds(
+            active_hwc_backend=active_hwc_backend,
+            repetitions=repetitions,
+            min_time=min_time,
+        )
+        timed_out = False
+        try:
+            stdout_data, stderr_data = proc.communicate(timeout=hwc_case_timeout)
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            kill_process_tree(proc)
+            try:
+                stdout_data, stderr_data = proc.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                stdout_data, stderr_data = "", ""
+        return_code = proc.returncode
+
+        if hwc_debug:
+            stem = safe_file_part(case)
+            prefix = "hwc_none"
+            if active_hwc_backend == "linux-perf":
+                prefix = "hwc_perf"
+            elif active_hwc_backend == "windows-amd-uprof":
+                prefix = "hwc_amd"
+            elif active_hwc_backend == "windows-pcm":
+                prefix = "hwc_pcm"
+            (RESULTS_DIR / f"{prefix}_{stem}.stdout.txt").write_text(stdout_data or "", encoding="utf-8")
+            (RESULTS_DIR / f"{prefix}_{stem}.stderr.txt").write_text(stderr_data or "", encoding="utf-8")
+
+        if timed_out:
+            if active_hwc_backend != "none":
+                print()
+                print(paint(
+                    f"Предупреждение: HWC timeout на кейсе '{case}', переключаюсь на режим без HWC",
+                    COLOR_WARN,
+                ))
+                active_hwc_backend = "none"
+
+                # Повторяем тот же кейс обычным запуском (без HWC), чтобы не терять результат.
+                proc_plain = subprocess.Popen(
+                    bench_cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,
+                    env=process_env,
+                )
+                tuning_warnings = apply_process_tuning(proc_plain.pid, pin_cpu, priority)
+                for warning in tuning_warnings:
+                    print(paint(f"Предупреждение: {warning}", COLOR_WARN))
+
+                plain_timed_out = False
+                plain_timeout = compute_case_timeout_seconds(
+                    active_hwc_backend="none",
+                    repetitions=repetitions,
+                    min_time=min_time,
+                    fallback_plain=True,
+                )
+                try:
+                    stdout_data, stderr_data = proc_plain.communicate(timeout=plain_timeout)
+                except subprocess.TimeoutExpired:
+                    plain_timed_out = True
+                    kill_process_tree(proc_plain)
+                    try:
+                        stdout_data, stderr_data = proc_plain.communicate(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        stdout_data, stderr_data = "", ""
+                return_code = proc_plain.returncode
+
+                if plain_timed_out:
+                    print()
+                    print(paint(f"Предупреждение: кейс '{case}' пропущен (timeout {plain_timeout}s)", COLOR_WARN))
+                    if case_json.exists():
+                        try:
+                            case_json.unlink()
+                        except OSError:
+                            pass
+                    print_progress(idx, total_cases, current_case, start_ts, tick)
+                    continue
+            else:
+                print()
+                print(paint(f"Предупреждение: кейс '{case}' пропущен (timeout {hwc_case_timeout}s)", COLOR_WARN))
+                if hwc_csv_path is not None and (not hwc_debug) and hwc_csv_path.exists():
+                    try:
+                        hwc_csv_path.unlink()
+                    except OSError:
+                        pass
+                if case_json.exists():
+                    try:
+                        case_json.unlink()
+                    except OSError:
+                        pass
+                print_progress(idx, total_cases, current_case, start_ts, tick)
+                continue
+
+        if return_code != 0:
+            hwc_wrapper_failed = (
+                active_hwc_backend != "none" and run_cmd != bench_cmd
+            )
+            if hwc_wrapper_failed:
+                print()
+                print(paint(f"Предупреждение: HWC backend '{active_hwc_backend}' недоступен, перехожу на обычный режим без HWC", COLOR_WARN))
+                active_hwc_backend = "none"
+                hwc_csv_path = None
+
+                proc_plain = subprocess.Popen(
+                    bench_cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,
+                    env=process_env,
+                )
+                tuning_warnings = apply_process_tuning(proc_plain.pid, pin_cpu, priority)
+                for warning in tuning_warnings:
+                    print(paint(f"Предупреждение: {warning}", COLOR_WARN))
+
+                plain_timed_out = False
+                plain_timeout = compute_case_timeout_seconds(
+                    active_hwc_backend="none",
+                    repetitions=repetitions,
+                    min_time=min_time,
+                    fallback_plain=True,
+                )
+                try:
+                    stdout_data, stderr_data = proc_plain.communicate(timeout=plain_timeout)
+                except subprocess.TimeoutExpired:
+                    plain_timed_out = True
+                    kill_process_tree(proc_plain)
+                    try:
+                        stdout_data, stderr_data = proc_plain.communicate(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        stdout_data, stderr_data = "", ""
+                return_code = proc_plain.returncode
+
+                if plain_timed_out:
+                    print()
+                    print(paint(f"Предупреждение: кейс '{case}' пропущен (timeout {plain_timeout}s)", COLOR_WARN))
+                    if case_json.exists():
+                        try:
+                            case_json.unlink()
+                        except OSError:
+                            pass
+                    print_progress(idx, total_cases, current_case, start_ts, tick)
+                    continue
+
+            tail = []
+            for line in (stdout_data + "\n" + stderr_data).splitlines():
+                if line.strip():
+                    tail.append(line)
+            if return_code != 0:
+                if tail:
+                    print("\n".join(tail[-20:]), file=sys.stderr)
+                die(f"Бенчмарк '{case}' завершился с кодом {return_code}")
+
+        if not case_json.exists():
+            die(f"JSON-файл результата кейса не создан: {case_json}")
+        try:
+            case_data = json.loads(case_json.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            preview = case_json.read_text(encoding="utf-8", errors="replace")[:300]
+            die(f"Не удалось распарсить JSON кейса '{case}': {e}\n{preview}")
+
+        if not merged["context"]:
+            merged["context"] = case_data.get("context", {})
+        merged["benchmarks"].extend(case_data.get("benchmarks", []))
+
+        parsed_hwc: dict[str, float] = {}
+        if active_hwc_backend == "linux-perf":
+            parsed_hwc = parse_perf_stat(stderr_data or "")
+        elif active_hwc_backend == "windows-amd-uprof" and hwc_csv_path is not None:
+            parsed_hwc = parse_amd_uprof_csv(hwc_csv_path)
+            if (not hwc_debug) and hwc_csv_path.exists():
+                try:
+                    hwc_csv_path.unlink()
+                except OSError:
+                    pass
+        elif active_hwc_backend == "windows-pcm" and hwc_csv_path is not None:
+            parsed_hwc = parse_intel_pcm_csv(hwc_csv_path)
+            if (not hwc_debug) and hwc_csv_path.exists():
+                try:
+                    hwc_csv_path.unlink()
+                except OSError:
+                    pass
+        if parsed_hwc:
+            hwc_rows[case] = parsed_hwc
+
+        try:
+            case_json.unlink()
+        except OSError:
+            pass
+
+        print_progress(idx, total_cases, current_case, start_ts, tick)
+
+    print_progress(total_cases, total_cases, current_case, start_ts, tick + 1)
     if sys.stdout.isatty():
         sys.stdout.write("\n\n")
         sys.stdout.flush()
 
-    if return_code != 0:
-        if tail_lines:
-            print("\n".join(tail_lines), file=sys.stderr)
-        die(f"Бенчмарк завершился с кодом {return_code}")
+    context = merged.get("context")
+    if not isinstance(context, dict):
+        context = {}
+        merged["context"] = context
 
-    try:
-        if not tmp_json.exists():
-            die(f"JSON-файл результата не создан: {tmp_json}")
-        data = json.loads(tmp_json.read_text(encoding="utf-8"))
-        context = data.get("context")
-        if not isinstance(context, dict):
-            context = {}
-            data["context"] = context
-        context["bench_py"] = {
-            "scene_key": scene_key or "crystal3d",
-            "scene_name": scene_label(scene_key or "crystal3d"),
-            "pin_cpu": pin_cpu or "",
-            "priority": priority,
-            "hwc_mode": hwc_mode,
-            "hwc_backend": hwc_backend,
-        }
-        # Каноничный "последний запуск" всегда обновляем после успешного прогона.
-        last_run = RESULTS_DIR / "last_run.json"
-        last_run.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        try:
-            tmp_json.unlink()
-        except OSError:
-            pass
-        return data
-    except json.JSONDecodeError as e:
-        preview = tmp_json.read_text(encoding="utf-8", errors="replace")[:300] if tmp_json.exists() else ""
-        die(f"Не удалось распарсить JSON: {e}\n{preview}")
+    # Сохраняем HWC в JSON на уровне каждой benchmark-записи,
+    # чтобы baseline мог сравнивать не только time, но и miss%.
+    if hwc_rows:
+        for item in merged.get("benchmarks", []):
+            if not isinstance(item, dict):
+                continue
+            run_name = item.get("run_name") or item.get("name")
+            if not isinstance(run_name, str):
+                continue
+            case_name = normalize_benchmark_case(run_name)
+            hwc = hwc_rows.get(case_name)
+            if not hwc:
+                continue
+            if "cache_misses" in hwc:
+                item["hwc_cache_misses"] = float(hwc["cache_misses"])
+            if "cache_miss_rate_pct" in hwc:
+                item["hwc_cache_miss_rate_pct"] = float(hwc["cache_miss_rate_pct"])
+
+    context["bench_py"] = {
+        "scene_key": scene_key or "crystal3d",
+        "scene_name": scene_label(scene_key or "crystal3d"),
+        "pin_cpu": pin_cpu or "",
+        "priority": priority,
+        "hwc_mode": hwc_mode,
+        "hwc_backend": hwc_backend,
+    }
+
+    last_run = RESULTS_DIR / "last_run.json"
+    last_run.write_text(json.dumps(merged, indent=2), encoding="utf-8")
+    return merged, hwc_rows
 
 
 def save_result(data: dict, filter_used: str | None) -> Path:
@@ -1626,14 +1981,10 @@ def interactive_menu() -> tuple[str | None, int, bool, str | None, str, str | No
     if priority not in SUPPORTED_PRIORITIES:
         die("Неверный приоритет")
 
-    hwc_mode = input("HWC [none|auto|linux-perf|windows-pcm|windows-amd-uprof] (по умолчанию auto): ").strip().lower()
-    if hwc_mode == "":
-        hwc_mode = "auto"
-    if hwc_mode not in SUPPORTED_HWC:
-        die("Неверный режим HWC")
-
-    hwc_debug_raw = input("Сохранять сырые HWC логи/CSV? [y/N]: ").strip().lower()
-    hwc_debug = hwc_debug_raw in ("y", "yes", "1")
+    # В интерактивном режиме используем дефолтные HWC-настройки,
+    # чтобы не перегружать меню лишними вопросами.
+    hwc_mode = "auto"
+    hwc_debug = False
 
     return selected, repetitions, False, min_time, selected_scene, pin_cpu, priority, hwc_mode, hwc_debug
 
@@ -1725,11 +2076,18 @@ def main() -> None:
     print()
     print(paint(f"Выбрана сцена: {scene_label(selected_scene)}", COLOR_INDEX_LIGHT_BLUE))
     cpu_profile = pin_cpu if pin_cpu else "без pin"
-    print(paint(f"CPU профиль: {cpu_profile} | priority: {priority}", COLOR_HINT))
+    print(paint(f"CPU профиль: {cpu_profile} | priority: {priority}", COLOR_LABEL_WHITE))
     effective_hwc = detect_hwc_backend(hwc_mode)
-    print(paint(f"HWC режим: {hwc_mode} -> {effective_hwc}", COLOR_HINT))
+    if sys.platform == "win32" and backend_requires_admin(effective_hwc) and not is_windows_admin():
+        print(paint("Запуск без прав администратора. HWC метрики отключены", COLOR_WARN))
+        effective_hwc = "none"
+    hwc_line = (
+        f"{paint('HWC режим:', COLOR_LABEL_WHITE)} {paint(hwc_mode, COLOR_INDEX_LIGHT_BLUE)} "
+        f"{paint('->', COLOR_LABEL_WHITE)} {paint(effective_hwc, COLOR_INDEX_LIGHT_BLUE)}"
+    )
+    print(hwc_line)
     print()
-    data = run_benchmark(
+    data, hwc_rows = run_benchmark(
         filter_regex,
         repetitions,
         min_time,
@@ -1738,19 +2096,16 @@ def main() -> None:
         priority,
         hwc_mode,
         effective_hwc,
+        hwc_debug,
     )
     metadata = load_bench_metadata()
-    hwc_rows: dict[str, dict[str, float]] = {}
-    if effective_hwc != "none":
-        base_cases = sorted({normalize_benchmark_case(name) for name in list_benchmark_cases(filter_regex)})
-        hwc_rows = collect_hwc_for_cases(base_cases, effective_hwc, selected_scene, min_time, hwc_debug)
-        if not hwc_rows:
-            if effective_hwc == "windows-amd-uprof":
-                print(paint("Предупреждение: HWC метрики не собраны. Для AMDuProf на Windows обычно нужен запуск от администратора и доступ к драйверу PMU.", COLOR_WARN))
-            else:
-                print(paint("Предупреждение: HWC метрики не собраны (проверь права/инструмент)", COLOR_WARN))
-        elif hwc_debug:
-            print(paint(f"HWC debug: сырые файлы сохранены в {RESULTS_DIR}", COLOR_HINT))
+    if effective_hwc != "none" and not hwc_rows:
+        if effective_hwc == "windows-amd-uprof":
+            print(paint("Предупреждение: HWC метрики не собраны. Для AMDuProf на Windows обычно нужен запуск от администратора и доступ к драйверу PMU.", COLOR_WARN))
+        else:
+            print(paint("Предупреждение: HWC метрики не собраны (проверь права/инструмент)", COLOR_WARN))
+    elif effective_hwc != "none" and hwc_debug:
+        print(paint(f"HWC debug: сырые файлы сохранены в {RESULTS_DIR}", COLOR_HINT))
     print_results_table(data, metadata, scene_label(selected_scene), hwc_rows, effective_hwc)
 
     maybe_save_baseline(data)
