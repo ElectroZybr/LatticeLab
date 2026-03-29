@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "Rendering/camera/Camera.h"
 #include "Engine/selection/OverlayState.h"
 #include "Engine/physics/AtomStorage.h"
@@ -7,6 +9,12 @@
 
 class IRenderer {
 public:
+    enum class SpeedColorMode : uint8_t {
+        AtomColor = 0,
+        GradientClassic = 1,
+        GradientTurbo = 2,
+    };
+
     virtual ~IRenderer() = default;
 
     virtual void drawShot(const AtomStorage& atoms,
@@ -16,9 +24,7 @@ public:
 
     bool drawGrid           = false;
     bool drawBonds          = false;
-    bool speedGradient      = false;
-    bool speedGradientTurbo = false;
-    // Internal convention: value <= 0 means auto mode (controlled by the UI checkbox).
+    SpeedColorMode speedColorMode = SpeedColorMode::AtomColor;
     float speedGradientMax  = 5.0f;
     float alpha             = 0.05f;
 

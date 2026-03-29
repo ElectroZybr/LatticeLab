@@ -2,6 +2,7 @@
 #include "imgui.h"
 
 #include "Engine/Simulation.h"
+#include "GUI/interface/style/ComboStyle.h"
 #include "Rendering/BaseRenderer.h"
 
 namespace {
@@ -13,6 +14,15 @@ const char* integratorName(Integrator::Scheme scheme) {
         case Integrator::Scheme::Langevin: return "Langevin";
     }
     return "Unknown";
+}
+
+const char* speedColorModeName(IRenderer::SpeedColorMode mode) {
+    switch (mode) {
+        case IRenderer::SpeedColorMode::AtomColor: return "Обычная раскраска";
+        case IRenderer::SpeedColorMode::GradientClassic: return "Градиент скорости";
+        case IRenderer::SpeedColorMode::GradientTurbo: return "Турбо градиент";
+    }
+    return "Обычная раскраска";
 }
 } // namespace
 
@@ -55,7 +65,7 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
     }
 
     Integrator::Scheme currentIntegrator = simulation.getIntegrator();
-    if (ImGui::BeginCombo("Integrator", integratorName(currentIntegrator))) {
+    if (ComboStyle::beginCombo("Integrator", integratorName(currentIntegrator), 0.0f, uiScale)) {
         const Integrator::Scheme schemes[] = {
             Integrator::Scheme::Verlet,
             Integrator::Scheme::KDK,
@@ -75,30 +85,56 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
         }
         ImGui::EndCombo();
     }
+    
 
     ImGui::SeparatorText("Рендер");
     ImGui::Checkbox("Сетка", &renderer->drawGrid);
     ImGui::Checkbox("Связи", &renderer->drawBonds);
-    ImGui::Checkbox("Градиент скорости", &renderer->speedGradient);
-    ImGui::Checkbox("Турбо градиент скорости", &renderer->speedGradientTurbo);
+
+    ImGui::TextUnformatted("Цветовая схема");
+    IRenderer::SpeedColorMode speedMode = renderer->speedColorMode;
+    if (ComboStyle::beginCombo("##speed_color_mode", speedColorModeName(speedMode), 220.0f * uiScale, uiScale, ImGuiComboFlags_HeightLargest)) {
+        const IRenderer::SpeedColorMode modes[] = {
+            IRenderer::SpeedColorMode::AtomColor,
+            IRenderer::SpeedColorMode::GradientClassic,
+            IRenderer::SpeedColorMode::GradientTurbo,
+        };
+
+        for (IRenderer::SpeedColorMode mode : modes) {
+            const bool isSelected = (mode == speedMode);
+            if (ImGui::Selectable(speedColorModeName(mode), isSelected)) {
+                speedMode = mode;
+            }
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    
+    renderer->speedColorMode = speedMode;
+
     ImGui::TextUnformatted("Макс. скорость градиента");
 
     static float manualSpeedGradientMax = 5.0f;
     bool autoSpeedGradient = renderer->speedGradientMax <= 0.0f;
+    const bool gradientModeEnabled = renderer->speedColorMode != IRenderer::SpeedColorMode::AtomColor;
     if (!autoSpeedGradient) {
         manualSpeedGradientMax = renderer->speedGradientMax;
     }
 
     ImGui::PushItemWidth(180.0f * uiScale);
-    ImGui::BeginDisabled(autoSpeedGradient);
+    ImGui::BeginDisabled(autoSpeedGradient || !gradientModeEnabled);
     if (ImGui::SliderFloat("##speed_gradient_max", &manualSpeedGradientMax, 0.1f, 10.0f, "%.2f")) {
         renderer->speedGradientMax = manualSpeedGradientMax;
     }
     ImGui::EndDisabled();
     ImGui::SameLine();
+    ImGui::BeginDisabled(!gradientModeEnabled);
     if (ImGui::Checkbox("Авто##speed_gradient_auto", &autoSpeedGradient)) {
         renderer->speedGradientMax = autoSpeedGradient ? 0.0f : manualSpeedGradientMax;
     }
+    ImGui::EndDisabled();
     ImGui::PopItemWidth();
 
     ImGui::SeparatorText("Список соседей");
