@@ -45,45 +45,6 @@ void Simulation::setSizeBox(Vec3f newStart, Vec3f newEnd, int cellSize) {
     }
 }
 
-void Simulation::createRandomAtoms(AtomData::Type type, int quantity) {
-    const double z_mid = (sim_box.end.z - sim_box.start.z) * 0.5;
-    for (int i = 0; i < quantity; ++i) {
-        for (int j = 0; j < 10; ++j) {
-            double r_x = std::rand() % int(sim_box.end.x - sim_box.start.x - 4);
-            double r_y = std::rand() % int(sim_box.end.y - sim_box.start.y - 4);
-            Vec3f coords(r_x + 2, r_y + 2, z_mid);
-            if (!checkNeighbor(coords, 4)) {
-                createAtom(coords, Vec3f::Random() * 5.0, type);
-                break;
-            }
-        }
-    }
-}
-
-bool Simulation::checkNeighbor(Vec3f coords, float delta) {
-    int curr_x = sim_box.grid.worldToCellX(coords.x);
-    int curr_y = sim_box.grid.worldToCellY(coords.y);
-    int curr_z = sim_box.grid.worldToCellZ(coords.z);
-    const float deltaSqr = delta * delta;
-    for (int i = -1; i <= 1; ++i) {
-        for (int j = -1; j <= 1; ++j) {
-            for (int k = -1; k <= 1; ++k) {
-                auto cell = sim_box.grid.atomsInCell(curr_x - i, curr_y - j, curr_z - k);
-                for (std::size_t atomIndex : cell) {
-                    if (atomIndex >= atomStorage.size()) {
-                        continue;
-                    }
-
-                    if ((coords - atomStorage.pos(atomIndex)).sqrAbs() < deltaSqr) {
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-    return false;
-}
-
 bool Simulation::createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Type type, bool fixed) {
     atomStorage.addAtom(start_coords, start_speed, type, fixed);
     sim_box.grid.rebuild(atomStorage.xDataSpan(), atomStorage.yDataSpan(), atomStorage.zDataSpan());
