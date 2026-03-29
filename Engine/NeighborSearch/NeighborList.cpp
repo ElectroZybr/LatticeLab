@@ -63,15 +63,15 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
         const float xi = atoms.posX(i);
         const float yi = atoms.posY(i);
         const float zi = atoms.posZ(i);
-
-        forEachNeighbor(grid, atoms, xi, yi, zi, [&](std::size_t j) {
-            if (j >= i) return;
-            const float dx = atoms.posX(j) - xi;
-            const float dy = atoms.posY(j) - yi;
-            const float dz = atoms.posZ(j) - zi;
-            if (dx*dx + dy*dy + dz*dz <= listRadiusSqr_)
-                neighbors_.emplace_back(j);
-        });
+        writeAtomNeighbors(grid, atoms, i, neighbors_);
+        // forEachNeighbor(grid, atoms, xi, yi, zi, [&](std::size_t j) {
+        //     if (j >= i) return;
+        //     const float dx = atoms.posX(j) - xi;
+        //     const float dy = atoms.posY(j) - yi;
+        //     const float dz = atoms.posZ(j) - zi;
+        //     if (dx*dx + dy*dy + dz*dz <= listRadiusSqr_)
+        //         neighbors_.emplace_back(j);
+        // });
         offsets_[i + 1] = neighbors_.size();
 
         refPosX_[i] = xi;

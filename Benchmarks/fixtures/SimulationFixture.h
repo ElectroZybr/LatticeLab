@@ -94,8 +94,11 @@ protected:
     }
 
     void setCounters(benchmark::State& state) const {
+        const int64_t processedAtoms = simulation_
+            ? static_cast<int64_t>(simulation_->atomStorage.size())
+            : static_cast<int64_t>(atomCount_);
         state.SetItemsProcessed(
-            state.iterations() * static_cast<int64_t>(atomCount_)
+            state.iterations() * processedAtoms
         );
     }
 

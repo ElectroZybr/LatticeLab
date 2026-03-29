@@ -1,4 +1,5 @@
 ﻿#include "UpdateDebugData.h"
+#include <algorithm>
 
 #include <string>
 
@@ -45,15 +46,16 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     debugViews.sim->add_data("Шагов/с", stepsPerSecond);
     debugViews.sim->add_data("Тип интегратора", integratorName);
 
-    const std::string gridSize = std::to_string(static_cast<int>(simulation.sim_box.grid.sizeX/simulation.sim_box.grid.cellSize))
-        + " x " + std::to_string(static_cast<int>(simulation.sim_box.grid.sizeY/simulation.sim_box.grid.cellSize))
-        + " x " + std::to_string(static_cast<int>(simulation.sim_box.grid.sizeZ/simulation.sim_box.grid.cellSize));
+    const std::string gridSize = std::to_string(std::max(0, simulation.sim_box.grid.sizeX - 2))
+        + " x " + std::to_string(std::max(0, simulation.sim_box.grid.sizeY - 2))
+        + " x " + std::to_string(std::max(0, simulation.sim_box.grid.sizeZ - 2));
     debugViews.neighbor->add_data("Размер сетки", gridSize);
     debugViews.neighbor->add_data("Размер ячейки", simulation.sim_box.grid.cellSize);
     debugViews.neighbor->add_data("NeighborList включен",
         simulation.isNeighborListEnabled() ? std::string("Да") : std::string("Нет"));
     debugViews.neighbor->add_data("Память AtomStorage (МБ)", static_cast<float>(simulation.atomStorage.memoryBytes()) / 1024.0f / 1024.0f);
     debugViews.neighbor->add_data("Память NeighborList (МБ)", static_cast<float>(simulation.neighborList.memoryBytes()) / 1024.0f / 1024.0f);
+    debugViews.neighbor->add_data("Память SpatialGrid (МБ)", static_cast<float>(simulation.sim_box.grid.memoryBytes()) / 1024.0f / 1024.0f);
     debugViews.neighbor->add_data("Пар в NL", simulation.neighborList.pairStorageSize());
     const float avgNeighborsPerAtom = simulation.neighborList.atomCount() > 0
         ? (2.0f * static_cast<float>(simulation.neighborList.pairStorageSize()))
@@ -97,3 +99,5 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
         debugViews.timers->add_data("SG rebuild (last, график)", sgRebuildLastMs);
     }
 }
+
+
