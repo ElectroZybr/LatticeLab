@@ -18,7 +18,8 @@ public:
     bool drawBonds          = false;
     bool speedGradient      = false;
     bool speedGradientTurbo = false;
-    float speedGradientMax  = 5.0f; // 0.0f = auto
+    // Internal convention: value <= 0 means auto mode (controlled by the UI checkbox).
+    float speedGradientMax  = 5.0f;
     float alpha             = 0.05f;
 
     Camera camera;
@@ -33,10 +34,13 @@ protected:
         const float r = 34.61f + t * (1172.33f + t * (-10793.56f + t * (33300.12f + t * (-38394.49f + t * 14825.05f))));
         const float g = 23.31f + t * (557.33f + t * (1225.33f + t * (-3574.96f + t * (1073.77f + t * 707.56f))));
         const float b = 27.20f + t * (3211.10f + t * (-15327.97f + t * (27814.00f + t * (-22569.18f + t * 6838.66f))));;
+        const auto toU8 = [](float v) -> uint8_t {
+            return static_cast<uint8_t>(std::clamp(v, 0.0f, 255.0f));
+        };
         return sf::Color(
-            std::clamp<uint8_t>(r, 0, 255),
-            std::clamp<uint8_t>(g, 0, 255),
-            std::clamp<uint8_t>(b, 0, 255))
+            toU8(r),
+            toU8(g),
+            toU8(b))
         ;
     }
 };

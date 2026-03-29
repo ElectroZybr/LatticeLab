@@ -149,6 +149,16 @@ void processIOPanel(Simulation& simulation) {
     }
 }
 
+void processSettingsPanel(sf::RenderWindow& window) {
+    if (auto result = Interface::settingsPanel.popResult()) {
+        switch (result.value()) {
+            case SettingsCommand::ExitApplication:
+                window.close();
+                break;
+        }
+    }
+}
+
 } // namespace
 
 int Application::run() {
@@ -161,7 +171,7 @@ int Application::run() {
     SimBox box(Vec3f(-25, -25, -3), Vec3f(25, 25, 3));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    Scenes::crystal(simulation, 46, AtomData::Type::Z, true);
+    Scenes::crystal(simulation, 25, AtomData::Type::Z, false);
 
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
     renderer->setAtomStorage(&simulation.atomStorage);
@@ -231,6 +241,7 @@ int Application::run() {
             processFileDialog(simulation);
             processToolsPanel(renderer, window, gameView, simulation);
             processIOPanel(simulation);
+            processSettingsPanel(window);
 
             renderCounter.startStep();
             renderer->drawShot(simulation.atomStorage, simulation.sim_box);

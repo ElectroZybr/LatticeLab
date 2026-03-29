@@ -4,6 +4,18 @@
 #include "Engine/Simulation.h"
 #include "Rendering/BaseRenderer.h"
 
+namespace {
+const char* integratorName(Integrator::Scheme scheme) {
+    switch (scheme) {
+        case Integrator::Scheme::Verlet: return "Velocity Verlet";
+        case Integrator::Scheme::KDK: return "KDK";
+        case Integrator::Scheme::RK4: return "Runge-Kutta 4";
+        case Integrator::Scheme::Langevin: return "Langevin";
+    }
+    return "Unknown";
+}
+} // namespace
+
 void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
     float target = visible ? 1.f : 0.f;
     float step = ImGui::GetIO().DeltaTime * 12.f;
@@ -42,14 +54,51 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
         simulation.forceField.setGravity(Vec3f(gx, gy, gz));
     }
 
+    Integrator::Scheme currentIntegrator = simulation.getIntegrator();
+    if (ImGui::BeginCombo("Integrator", integratorName(currentIntegrator))) {
+        const Integrator::Scheme schemes[] = {
+            Integrator::Scheme::Verlet,
+            Integrator::Scheme::KDK,
+            Integrator::Scheme::RK4,
+            Integrator::Scheme::Langevin,
+        };
+
+        for (Integrator::Scheme scheme : schemes) {
+            const bool isSelected = (scheme == currentIntegrator);
+            if (ImGui::Selectable(integratorName(scheme), isSelected)) {
+                simulation.setIntegrator(scheme);
+                currentIntegrator = scheme;
+            }
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
     ImGui::SeparatorText("Рендер");
     ImGui::Checkbox("Сетка", &renderer->drawGrid);
     ImGui::Checkbox("Связи", &renderer->drawBonds);
     ImGui::Checkbox("Градиент скорости", &renderer->speedGradient);
     ImGui::Checkbox("Турбо градиент скорости", &renderer->speedGradientTurbo);
     ImGui::TextUnformatted("Макс. скорость градиента");
-    ImGui::PushItemWidth(220.0f * uiScale);
-    ImGui::SliderFloat("##speed_gradient_max", &renderer->speedGradientMax, 0.0f, 10.0f, "%.2f");
+
+    static float manualSpeedGradientMax = 5.0f;
+    bool autoSpeedGradient = renderer->speedGradientMax <= 0.0f;
+    if (!autoSpeedGradient) {
+        manualSpeedGradientMax = renderer->speedGradientMax;
+    }
+
+    ImGui::PushItemWidth(180.0f * uiScale);
+    ImGui::BeginDisabled(autoSpeedGradient);
+    if (ImGui::SliderFloat("##speed_gradient_max", &manualSpeedGradientMax, 0.1f, 10.0f, "%.2f")) {
+        renderer->speedGradientMax = manualSpeedGradientMax;
+    }
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    if (ImGui::Checkbox("Авто##speed_gradient_auto", &autoSpeedGradient)) {
+        renderer->speedGradientMax = autoSpeedGradient ? 0.0f : manualSpeedGradientMax;
+    }
     ImGui::PopItemWidth();
 
     ImGui::SeparatorText("Список соседей");
@@ -74,5 +123,21 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
         }
     }
 
+    const float exitButtonWidth = 90.0f * uiScale;
+    const float footerHeight = ImGui::GetFrameHeightWithSpacing();
+    const float remaining = ImGui::GetContentRegionAvail().y - footerHeight;
+    if (remaining > 0.0f) {
+        ImGui::Dummy(ImVec2(0.0f, remaining));
+    }
+    if (ImGui::Button("Exit", ImVec2(exitButtonWidth, 0.0f))) {
+        pendingResult_ = SettingsCommand::ExitApplication;
+    }
+
     ImGui::End();
+}
+
+std::optional<SettingsCommand> SettingsPanel::popResult() {
+    auto result = pendingResult_;
+    pendingResult_ = std::nullopt;
+    return result;
 }

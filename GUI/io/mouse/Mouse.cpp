@@ -63,7 +63,7 @@ void Mouse::onEvent(const sf::Event& event) {
     }
 
     if (const auto* e = event.getIf<sf::Event::MouseWheelScrolled>()) {
-        if (e->wheel == sf::Mouse::Wheel::Vertical) {
+        if (e->wheel == sf::Mouse::Wheel::Vertical && !Interface::cursorHovered) {
             rend->camera.zoomAt(e->delta, sf::Vector2f(e->position), *window);
         }
     }
