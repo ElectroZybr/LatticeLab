@@ -105,7 +105,7 @@ void processToolsPanel(std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& w
             case ToolsCommand::SetCameraOrbit:
                 renderer->camera.setMode(Camera::Mode::Orbit);
                 break;
-                case ToolsCommand::SetCameraFree:
+            case ToolsCommand::SetCameraFree:
                 renderer->camera.setMode(Camera::Mode::Free);
                 break;
         }
@@ -118,6 +118,22 @@ void processToolsPanel(std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& w
             newRenderer->speedGradientMax = renderer->speedGradientMax;
             newRenderer->setAtomStorage(&simulation.atomStorage);
             renderer = std::move(newRenderer);
+        }
+    }
+}
+
+void processIOPanel(Simulation& simulation) {
+    if (auto result = Interface::ioPanel.popResult()) {
+        switch (result.value()) {
+            case IOCommand::CreateCrystal:
+                simulation.clear();
+                Scenes::crystal(simulation, Interface::ioPanel.sceneAxisCount(), AtomData::Type::Z, Interface::ioPanel.sceneIs3D());
+                Tools::resetInteractionState();
+                break;
+            case IOCommand::ClearSimulation:
+                simulation.clear();
+                Tools::resetInteractionState();
+                break;
         }
     }
 }
@@ -203,6 +219,7 @@ int Application::run() {
 
             processFileDialog(simulation);
             processToolsPanel(renderer, window, gameView, simulation);
+            processIOPanel(simulation);
 
             renderCounter.startStep();
             renderer->drawShot(simulation.atomStorage, simulation.sim_box);

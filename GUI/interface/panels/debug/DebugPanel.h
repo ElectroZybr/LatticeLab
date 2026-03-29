@@ -15,5 +15,6 @@ public:
     void draw(float uiScale, sf::Vector2u windowSize);
 
     void toggle() { visible = !visible; }
+    void close() { visible = false; }
     bool isVisible() const { return visible; }
 };
