@@ -60,17 +60,13 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
     tmp.reserve(neighbors_.capacity());
 
     offsets_[0] = 0;
-    for (std::size_t i = 0; i < atomCount; ++i) {
-        forEachNeighbor(grid, atoms, i, [&](std::size_t j) {
-            if (j >= i) return;
-            if (distanceSqr(atoms, i, j) <= listRadiusSqr_)
-                tmp.emplace_back(j);
-        });
-        offsets_[i + 1] = tmp.size();
+    for (std::size_t index = 0; index < atomCount; ++index) {
+        writeAtomNeighbors(grid, atoms, index, tmp);
+        offsets_[index + 1] = tmp.size();
 
-        refPosX_[i] = atoms.posX(i);
-        refPosY_[i] = atoms.posY(i);
-        refPosZ_[i] = atoms.posZ(i);
+        refPosX_[index] = atoms.posX(index);
+        refPosY_[index] = atoms.posY(index);
+        refPosZ_[index] = atoms.posZ(index);
     }
 
     neighbors_ = std::move(tmp);

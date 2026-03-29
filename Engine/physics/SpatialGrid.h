@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <array>
 #include <span>
 #include <vector>
 
@@ -32,6 +33,13 @@ public:
         return std::span<const std::size_t>(atomsInCells.data() + begin, offsets[idx + 1] - begin);
     }
 
+    // (warning) нет проверки выхода за границы
+    [[nodiscard]] std::span<const std::size_t> atomsInCellByLinearIndex(int linearIndex) const noexcept {
+        const std::size_t idx = static_cast<std::size_t>(linearIndex);
+        const std::size_t begin = offsets[idx];
+        return std::span<const std::size_t>(atomsInCells.data() + begin, offsets[idx + 1] - begin);
+    }
+
     int worldToCellX(float x) const { return toCell(x, sizeX); }
     int worldToCellY(float y) const { return toCell(y, sizeY); }
     int worldToCellZ(float z) const { return toCell(z, sizeZ); }
@@ -41,10 +49,14 @@ public:
         return static_cast<int>(offsets[idx + 1] - offsets[idx]);
     }
 
+    [[nodiscard]] int linearIndex(int x, int y, int z) const noexcept { return index(x, y, z); }
+    [[nodiscard]] const std::array<int, 27>& neighborOffsets27() const noexcept { return neighborOffsets27_; }
+
 private:
     // CSR хранение данных
     std::vector<std::size_t> offsets;      // массив оффсетов (каждый оффсет - начало новой ячейки)
     std::vector<std::size_t> atomsInCells; // атомы подряд сгруппированные по ячейкам
+    std::array<int, 27> neighborOffsets27_{};
 
     static constexpr int kBorderCells = 2; // запас + 1 клетка с каждой стороны от бокса
 
@@ -54,6 +66,8 @@ private:
     [[nodiscard]] int index(int x, int y, int z) const noexcept {
         return z * sizeY * sizeX + y * sizeX + x;
     }
+
+    void rebuildNeighborOffsets() noexcept;
 
     [[nodiscard]] bool inBounds(int x, int y, int z) const noexcept {
         return x >= 0 && x < sizeX && y >= 0 && y < sizeY && z >= 0 && z < sizeZ;

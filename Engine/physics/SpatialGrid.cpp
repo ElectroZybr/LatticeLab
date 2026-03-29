@@ -15,6 +15,7 @@ SpatialGrid::SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize)
     countCells = this->sizeX * this->sizeY * this->sizeZ;
     offsets.assign(countCells + 1, 0);
     atomsInCells.clear();
+    rebuildNeighborOffsets();
 }
 
 void SpatialGrid::rebuild(std::span<const float> posX,
@@ -87,6 +88,23 @@ void SpatialGrid::resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSi
     countCells = sizeX * sizeY * sizeZ;
     offsets.assign(countCells + 1, 0);
     atomsInCells.clear();
+    rebuildNeighborOffsets();
     rebuildCounter_.reset();
     metrics_.reset();
+}
+
+void SpatialGrid::rebuildNeighborOffsets() noexcept {
+    /* построение массива смещений для 27 соседей */
+    const int strideX = 1;
+    const int strideY = sizeX;
+    const int strideZ = sizeX * sizeY;
+
+    int k = 0;
+    for (int dz = -1; dz <= 1; ++dz) {
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dx = -1; dx <= 1; ++dx) {
+                neighborOffsets27_[k++] = dx * strideX + dy * strideY + dz * strideZ;
+            }
+        }
+    }
 }
