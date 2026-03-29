@@ -19,10 +19,12 @@ SCENES: list[tuple[str, str]] = [
 
 import argparse
 import ctypes
+import csv
 import json
 import math
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -58,6 +60,7 @@ COLOR_PROGRESS_CASE = "\033[95m"
 COLOR_PROGRESS_TIME = "\033[92m"
 
 SUPPORTED_PRIORITIES = ("normal", "above_normal", "high")
+SUPPORTED_HWC = ("none", "auto", "linux-perf", "windows-pcm", "windows-amd-uprof")
 
 def paint(text: str, color: str) -> str:
     if not sys.stdout.isatty():
@@ -136,6 +139,19 @@ def fmt_ips(value: float | None) -> str:
     if abs_v >= 1_000:
         return f"{value / 1_000:.2f}k"
     return f"{value:.2f}"
+
+
+def fmt_compact_number(value: float | None) -> str:
+    if value is None:
+        return "-"
+    abs_v = abs(value)
+    if abs_v >= 1_000_000_000:
+        return f"{value / 1_000_000_000:.2f}G"
+    if abs_v >= 1_000_000:
+        return f"{value / 1_000_000:.2f}M"
+    if abs_v >= 1_000:
+        return f"{value / 1_000:.2f}k"
+    return f"{value:.0f}"
 
 
 def paint_numeric(cell: str, cv_mode: bool = False) -> str:
@@ -429,7 +445,13 @@ def print_complexity_estimate(rows: dict[str, dict[str, float | str]],
         print("  " + " | ".join(rendered))
 
 
-def print_results_table(data: dict, metadata: dict[str, dict[str, str]], scene_name: str | None = None) -> None:
+def print_results_table(
+    data: dict,
+    metadata: dict[str, dict[str, str]],
+    scene_name: str | None = None,
+    hwc_rows: dict[str, dict[str, float]] | None = None,
+    hwc_backend: str = "none",
+) -> None:
     rows = parse_benchmark_rows(data)
     if not rows:
         return
@@ -471,6 +493,7 @@ def print_results_table(data: dict, metadata: dict[str, dict[str, str]], scene_n
             fmt_cv(metrics.get("real_cv")),       # type: ignore[arg-type]
             fmt_ips(metrics.get("ips")),          # type: ignore[arg-type]
         ]
+        hwc = (hwc_rows or {}).get(run_name, {})
         if has_baseline:
             baseline_metrics = baseline_rows.get(run_name, {})
             base_time_val = baseline_metrics.get("real_median")
@@ -489,6 +512,11 @@ def print_results_table(data: dict, metadata: dict[str, dict[str, str]], scene_n
             ])
         else:
             row.append(fmt_time_ns(curr_time_val))  # type: ignore[arg-type]
+        if hwc_backend != "none":
+            row.extend([
+                fmt_compact_number(hwc.get("cache_misses")),
+                fmt_num(hwc.get("cache_miss_rate_pct"), 2),
+            ])
         table_data.append(row)
 
     headers = ["#", "Тест", "N", "cv(%)", "items/s"]
@@ -496,6 +524,8 @@ def print_results_table(data: dict, metadata: dict[str, dict[str, str]], scene_n
         headers.extend(["time", "baseline", "d (%)"])
     else:
         headers.append("time")
+    if hwc_backend != "none":
+        headers.extend(["cache-miss", "miss%"])
     widths = [len(h) for h in headers]
     for row in table_data:
         for i, cell in enumerate(row):
@@ -514,6 +544,8 @@ def print_results_table(data: dict, metadata: dict[str, dict[str, str]], scene_n
     if has_baseline and current_scene_key and baseline_scene_key and current_scene_key != baseline_scene_key:
         print(paint("Внимание: baseline снят на другой сцене, сравнение может быть некорректным", COLOR_WARN))
         print()
+    if hwc_backend != "none":
+        print(paint(f"HWC backend: {hwc_backend}", COLOR_HINT))
     print(paint("Итоговая таблица:", COLOR_TITLE))
     header_line = "  " + " | ".join(headers[i].ljust(widths[i]) for i in range(len(headers)))
     sep_line = "  " + "-+-".join("-" * widths[i] for i in range(len(headers)))
@@ -536,6 +568,8 @@ def print_results_table(data: dict, metadata: dict[str, dict[str, str]], scene_n
         if has_baseline:
             rendered[col["baseline"]] = paint_time_cell(rendered[col["baseline"]])
             rendered[col["d (%)"]] = paint_delta(rendered[col["d (%)"]])
+        if hwc_backend != "none":
+            rendered[col["miss%"]] = paint_numeric(rendered[col["miss%"]], cv_mode=False)
         print("  " + " | ".join(rendered))
 
     print_complexity_estimate(rows, metadata)
@@ -593,6 +627,12 @@ def saved_results() -> list[Path]:
 
 def format_timestamp(path: Path) -> str:
     return path.stem.replace("_", " ", 1).replace("-", ":", 2)
+
+
+def safe_file_part(text: str) -> str:
+    safe = re.sub(r'[<>:"/\\|?*()\s]+', "_", text)
+    safe = re.sub(r"_+", "_", safe).strip("._")
+    return safe or "case"
 
 
 def list_available_filters() -> list[str]:
@@ -680,6 +720,476 @@ def scene_label(scene_key: str | None) -> str:
         if key == scene_key:
             return label
     return scene_key
+
+
+def detect_hwc_backend(requested: str) -> str:
+    if requested == "none":
+        return "none"
+    if requested == "linux-perf":
+        return "linux-perf" if shutil.which("perf") else "none"
+    if requested == "windows-pcm":
+        return "windows-pcm" if find_intel_pcm_exe() else "none"
+    if requested == "windows-amd-uprof":
+        return "windows-amd-uprof" if find_amd_uprof_exe() else "none"
+
+    # auto
+    if sys.platform.startswith("linux") and shutil.which("perf"):
+        return "linux-perf"
+    if sys.platform == "win32" and find_amd_uprof_exe():
+        return "windows-amd-uprof"
+    if sys.platform == "win32" and find_intel_pcm_exe():
+        return "windows-pcm"
+    return "none"
+
+
+def find_amd_uprof_exe() -> str | None:
+    candidates = [
+        "AMDuProfPcm",
+        "AMDuProfPcm.exe",
+        "AMDuProfCLI",
+        "AMDuProfCLI.exe",
+    ]
+    for name in candidates:
+        found = shutil.which(name)
+        if found:
+            return found
+
+    common_paths = [
+        r"C:\Program Files\AMD\AMDuProf\bin\AMDuProfPcm.exe",
+        r"C:\Program Files\AMD\AMDuProf\bin\AMDuProfCLI.exe",
+        r"C:\Program Files\AMD\AMDuProf\AMDuProfPcm.exe",
+        r"C:\Program Files\AMD\AMDuProf\AMDuProfCLI.exe",
+    ]
+    for path in common_paths:
+        if Path(path).exists():
+            return path
+    return None
+
+
+def find_intel_pcm_exe() -> str | None:
+    candidates = [
+        "pcm",
+        "pcm.exe",
+        "pcm.x",
+    ]
+    for name in candidates:
+        found = shutil.which(name)
+        if found:
+            return found
+
+    common_paths = [
+        r"C:\Program Files\Intel\pcm\pcm.exe",
+        r"C:\Program Files\Intel\PCM\pcm.exe",
+        r"C:\Tools\pcm\pcm.exe",
+    ]
+    for path in common_paths:
+        if Path(path).exists():
+            return path
+    return None
+
+
+def parse_perf_stat(stderr_text: str) -> dict[str, float]:
+    out: dict[str, float] = {}
+    event_map = {
+        "cache-misses": "cache_misses",
+        "cache-references": "cache_references",
+        "instructions": "instructions",
+        "cycles": "cycles",
+    }
+    for raw in stderr_text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = [p.strip() for p in line.split(";")]
+        if len(parts) < 3:
+            continue
+        value_raw = parts[0].replace(" ", "")
+        event_raw = parts[2]
+        if event_raw not in event_map:
+            continue
+        if value_raw in ("<notcounted>", "<not supported>", "notcounted", "notsupported"):
+            continue
+        value_raw = value_raw.replace(",", "").replace(".", "").replace("\u202f", "").replace("\xa0", "")
+        try:
+            out[event_map[event_raw]] = float(value_raw)
+        except ValueError:
+            continue
+    misses = out.get("cache_misses")
+    refs = out.get("cache_references")
+    instr = out.get("instructions")
+    if misses is not None and refs and refs > 0:
+        out["cache_miss_rate_pct"] = (misses / refs) * 100.0
+    if misses is not None and instr and instr > 0:
+        out["mpki"] = (misses / instr) * 1000.0
+    return out
+
+
+def parse_amd_uprof_csv(csv_path: Path) -> dict[str, float]:
+    if not csv_path.exists():
+        return {}
+
+    def norm_key(k: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "", k.lower())
+
+    key_aliases = {
+        "cachemisses": "cache_misses",
+        "l3cachemisses": "cache_misses",
+        "dcachemisses": "cache_misses",
+        "cachereferences": "cache_references",
+        "cacheaccesses": "cache_references",
+        "instructions": "instructions",
+        "retiredinstructions": "instructions",
+        "cycles": "cycles",
+        "cpucycles": "cycles",
+    }
+
+    totals: dict[str, float] = {}
+    try:
+        text = csv_path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return {}
+
+    # Формат AMDuProfPcm часто выглядит как key,value отчет (не CSV-таблица).
+    # Сначала пробуем вытащить агрегированные CORE METRICS.
+    key_value: dict[str, float] = {}
+    in_core_metrics = False
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.upper() == "CORE METRICS":
+            in_core_metrics = True
+            continue
+        if in_core_metrics and line.startswith("Metric,"):
+            continue
+        if in_core_metrics and line.endswith("METRICS") and line.upper() != "CORE METRICS":
+            in_core_metrics = False
+            continue
+        if not in_core_metrics:
+            continue
+
+        parts = [p.strip() for p in line.split(",", 1)]
+        if len(parts) != 2:
+            continue
+        metric_name, value_raw = parts[0], parts[1]
+        value_clean = value_raw.replace("%", "").replace(" ", "").replace(",", "")
+        try:
+            value = float(value_clean)
+        except ValueError:
+            continue
+        key_value[metric_name] = value
+
+    # Предпочтительный путь: L2 access/miss в pti -> miss%.
+    l2_access_pti = key_value.get("L2 Access (pti)")
+    l2_miss_pti = key_value.get("L2 Miss (pti)")
+    gips = key_value.get("Giga Instructions Per Sec")
+
+    if l2_miss_pti is not None:
+        # Оценка абсолютных misses через GIPS и pti (предполагаем d=1s).
+        if gips is not None and gips > 0:
+            instructions = gips * 1_000_000_000.0
+            totals["instructions"] = instructions
+            totals["cache_misses"] = (l2_miss_pti / 1000.0) * instructions
+            if l2_access_pti is not None and l2_access_pti > 0:
+                totals["cache_references"] = (l2_access_pti / 1000.0) * instructions
+        else:
+            # fallback: оставляем в "условных единицах", чтобы хоть miss% считался.
+            totals["cache_misses"] = l2_miss_pti
+            if l2_access_pti is not None:
+                totals["cache_references"] = l2_access_pti
+
+    # Legacy fallback: попробуем CSV-таблицу (если версия uProf даёт иной формат).
+    if not totals:
+        try:
+            with csv_path.open("r", encoding="utf-8", errors="ignore", newline="") as f:
+                reader = csv.DictReader(f)
+                if reader.fieldnames is not None:
+                    mapped_cols: dict[str, str] = {}
+                    for col in reader.fieldnames:
+                        key = key_aliases.get(norm_key(col))
+                        if key:
+                            mapped_cols[col] = key
+                    for row in reader:
+                        for col, metric in mapped_cols.items():
+                            raw = (row.get(col) or "").strip()
+                            if not raw:
+                                continue
+                            raw = raw.replace(",", "").replace(" ", "")
+                            try:
+                                val = float(raw)
+                            except ValueError:
+                                continue
+                            totals[metric] = totals.get(metric, 0.0) + val
+        except OSError:
+            return {}
+
+    misses = totals.get("cache_misses")
+    refs = totals.get("cache_references")
+    instr = totals.get("instructions")
+    if misses is not None and refs is not None and refs > 0:
+        totals["cache_miss_rate_pct"] = (misses / refs) * 100.0
+    if misses is not None and instr is not None and instr > 0:
+        totals["mpki"] = (misses / instr) * 1000.0
+    return totals
+
+
+def parse_intel_pcm_csv(csv_path: Path) -> dict[str, float]:
+    if not csv_path.exists():
+        return {}
+
+    try:
+        lines = csv_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    except OSError:
+        return {}
+
+    # PCM чаще всего пишет с ';' и иногда с ','.
+    delimiter = ";" if any(";" in ln for ln in lines[:5]) else ","
+    rows = list(csv.reader(lines, delimiter=delimiter))
+    if len(rows) < 2:
+        return {}
+
+    header_idx = -1
+    for i, row in enumerate(rows):
+        lowered = " ".join(col.strip().lower() for col in row)
+        if "core" in lowered or "socket" in lowered or "system" in lowered:
+            if "inst" in lowered or "ipc" in lowered or "l3" in lowered or "l2" in lowered:
+                header_idx = i
+                break
+    if header_idx < 0 or header_idx + 1 >= len(rows):
+        return {}
+
+    headers = [h.strip() for h in rows[header_idx]]
+    data_rows = rows[header_idx + 1 :]
+
+    # Берем строку TOTAL/SYSTEM, иначе последнюю не-пустую.
+    chosen: list[str] | None = None
+    for row in data_rows:
+        if not row:
+            continue
+        first = (row[0].strip().lower() if row else "")
+        if first in ("total", "system", "sum"):
+            chosen = row
+            break
+    if chosen is None:
+        for row in reversed(data_rows):
+            if any(cell.strip() for cell in row):
+                chosen = row
+                break
+    if chosen is None:
+        return {}
+
+    def parse_num(raw: str) -> float | None:
+        s = raw.strip().replace(" ", "").replace("\u202f", "").replace("\xa0", "")
+        s = s.replace(",", "")
+        if s in ("", "-", "na", "nan"):
+            return None
+        try:
+            return float(s)
+        except ValueError:
+            return None
+
+    values: dict[str, float] = {}
+    for i, col in enumerate(headers):
+        if i >= len(chosen):
+            continue
+        num = parse_num(chosen[i])
+        if num is None:
+            continue
+        key = re.sub(r"[^a-z0-9]+", "", col.lower())
+        values[key] = num
+
+    out: dict[str, float] = {}
+    # Популярные варианты колонок PCM
+    miss_keys = ("l3miss", "l2miss", "cachemisses", "misses")
+    ref_keys = ("l3hit", "l2hit", "cachereferences", "references", "cacheaccesses")
+    instr_keys = ("inst", "instructions", "retiredinstructions")
+    cycle_keys = ("clocks", "cycles", "cpuclk", "cpucycles")
+
+    misses = next((values[k] for k in miss_keys if k in values), None)
+    refs = next((values[k] for k in ref_keys if k in values), None)
+    instr = next((values[k] for k in instr_keys if k in values), None)
+    cycles = next((values[k] for k in cycle_keys if k in values), None)
+
+    if misses is not None:
+        out["cache_misses"] = misses
+    if refs is not None:
+        out["cache_references"] = refs + misses if misses is not None else refs
+    if instr is not None:
+        out["instructions"] = instr
+    if cycles is not None:
+        out["cycles"] = cycles
+
+    if "cache_misses" in out and "cache_references" in out and out["cache_references"] > 0:
+        out["cache_miss_rate_pct"] = (out["cache_misses"] / out["cache_references"]) * 100.0
+    if "cache_misses" in out and "instructions" in out and out["instructions"] > 0:
+        out["mpki"] = (out["cache_misses"] / out["instructions"]) * 1000.0
+    return out
+
+
+def collect_hwc_for_cases(
+    cases: list[str],
+    backend: str,
+    scene_key: str | None,
+    min_time: str | None,
+    hwc_debug: bool = False,
+) -> dict[str, dict[str, float]]:
+    if backend == "none":
+        return {}
+
+    env = os.environ.copy()
+    if scene_key:
+        env["CHEM_BENCH_SCENE"] = scene_key
+
+    results: dict[str, dict[str, float]] = {}
+
+    if backend == "linux-perf":
+        for case in cases:
+            cmd = [
+                "perf", "stat", "-x", ";",
+                "-e", "cache-misses,cache-references,instructions,cycles",
+                str(BINARY),
+                "--benchmark_format=console",
+                "--benchmark_repetitions=1",
+                f"--benchmark_filter=^{re.escape(case)}$",
+            ]
+            if min_time:
+                cmd.append(f"--benchmark_min_time={min_time}")
+            run = subprocess.run(cmd, capture_output=True, text=True, env=env)
+            if hwc_debug:
+                stem = safe_file_part(case)
+                (RESULTS_DIR / f"hwc_perf_{stem}.stderr.txt").write_text(run.stderr or "", encoding="utf-8")
+                (RESULTS_DIR / f"hwc_perf_{stem}.stdout.txt").write_text(run.stdout or "", encoding="utf-8")
+            if run.returncode != 0:
+                continue
+            parsed = parse_perf_stat(run.stderr)
+            if parsed:
+                results[case] = parsed
+        return results
+
+    if backend == "windows-pcm":
+        exe = find_intel_pcm_exe()
+        if not exe:
+            return {}
+
+        for case in cases:
+            bench_cmd = [
+                str(BINARY),
+                "--benchmark_format=console",
+                "--benchmark_repetitions=1",
+                f"--benchmark_filter=^{re.escape(case)}$",
+            ]
+            if min_time:
+                bench_cmd.append(f"--benchmark_min_time={min_time}")
+
+            stem = safe_file_part(case)
+            if hwc_debug:
+                out_csv = RESULTS_DIR / f"hwc_pcm_{stem}.csv"
+                out_stderr = RESULTS_DIR / f"hwc_pcm_{stem}.stderr.txt"
+                out_stdout = RESULTS_DIR / f"hwc_pcm_{stem}.stdout.txt"
+            else:
+                out_csv = RESULTS_DIR / "_tmp_hwc_pcm.csv"
+                out_stderr = None
+                out_stdout = None
+
+            if out_csv.exists():
+                try:
+                    out_csv.unlink()
+                except OSError:
+                    pass
+
+            # Варианты для разных сборок Intel PCM.
+            command_variants = [
+                [exe, "1", f"-csv={out_csv}", "--", *bench_cmd],
+                [exe, f"-csv={out_csv}", "--", *bench_cmd],
+            ]
+
+            parsed: dict[str, float] = {}
+            for cmd in command_variants:
+                run = subprocess.run(cmd, capture_output=True, text=True, env=env)
+                if out_stderr is not None:
+                    out_stderr.write_text(run.stderr or "", encoding="utf-8")
+                if out_stdout is not None:
+                    out_stdout.write_text(run.stdout or "", encoding="utf-8")
+                if run.returncode == 0 and out_csv.exists():
+                    parsed = parse_intel_pcm_csv(out_csv)
+                    if parsed:
+                        break
+            if parsed:
+                results[case] = parsed
+
+            if (not hwc_debug) and out_csv.exists():
+                try:
+                    out_csv.unlink()
+                except OSError:
+                    pass
+        return results
+
+    if backend == "windows-amd-uprof":
+        exe = find_amd_uprof_exe()
+        if not exe:
+            return {}
+
+        for case in cases:
+            bench_cmd = [
+                str(BINARY),
+                "--benchmark_format=console",
+                "--benchmark_repetitions=1",
+                f"--benchmark_filter=^{re.escape(case)}$",
+            ]
+            if min_time:
+                bench_cmd.append(f"--benchmark_min_time={min_time}")
+
+            if hwc_debug:
+                stem = safe_file_part(case)
+                out_csv = RESULTS_DIR / f"hwc_amd_{stem}.csv"
+                out_stderr = RESULTS_DIR / f"hwc_amd_{stem}.stderr.txt"
+                out_stdout = RESULTS_DIR / f"hwc_amd_{stem}.stdout.txt"
+            else:
+                out_csv = RESULTS_DIR / "_tmp_hwc_amd.csv"
+                out_stderr = None
+                out_stdout = None
+            if out_csv.exists():
+                try:
+                    out_csv.unlink()
+                except OSError:
+                    pass
+
+            # Для Ryzen используем AMDuProfPcm в совместимом режиме.
+            # Важно: некоторые версии требуют запуск с правами администратора
+            # и загруженным драйвером AMDuProf.
+            command_variants = [
+                [exe, "-m", "cache_miss,l1,l2,ipc", "-C", "-a", "-d", "1", "-o", str(out_csv), "--", *bench_cmd],
+            ]
+
+            parsed: dict[str, float] = {}
+            had_permission_error = False
+            for cmd in command_variants:
+                run = subprocess.run(cmd, capture_output=True, text=True, env=env)
+                if out_stderr is not None:
+                    out_stderr.write_text(run.stderr or "", encoding="utf-8")
+                if out_stdout is not None:
+                    out_stdout.write_text(run.stdout or "", encoding="utf-8")
+                stderr_low = (run.stderr or "").lower()
+                if "createfile failed : 5" in stderr_low or "access is denied" in stderr_low:
+                    had_permission_error = True
+                if run.returncode == 0 and out_csv.exists():
+                    parsed = parse_amd_uprof_csv(out_csv)
+                    if parsed:
+                        break
+            if parsed:
+                results[case] = parsed
+            elif had_permission_error:
+                # Ранняя остановка: без прав дальше все кейсы тоже провалятся.
+                return {}
+
+            if (not hwc_debug) and out_csv.exists():
+                try:
+                    out_csv.unlink()
+                except OSError:
+                    pass
+        return results
+
+    return {}
 
 
 def parse_cpu_list(spec: str, cpu_total: int | None) -> list[int]:
@@ -855,6 +1365,8 @@ def run_benchmark(
     scene_key: str | None = None,
     pin_cpu: str | None = None,
     priority: str = "normal",
+    hwc_mode: str = "auto",
+    hwc_backend: str = "none",
 ) -> dict:
     if not BINARY.exists():
         die(f"Бинарник не найден: {BINARY}")
@@ -938,6 +1450,8 @@ def run_benchmark(
             "scene_name": scene_label(scene_key or "crystal3d"),
             "pin_cpu": pin_cpu or "",
             "priority": priority,
+            "hwc_mode": hwc_mode,
+            "hwc_backend": hwc_backend,
         }
         # Каноничный "последний запуск" всегда обновляем после успешного прогона.
         last_run = RESULTS_DIR / "last_run.json"
@@ -983,7 +1497,7 @@ def maybe_save_baseline(data: dict) -> bool:
     return True
 
 
-def interactive_menu() -> tuple[str | None, int, bool, str | None, str, str | None, str]:
+def interactive_menu() -> tuple[str | None, int, bool, str | None, str, str | None, str, str, bool]:
     print(f"{paint('=== Chemical Simulator Benchmarks ===', COLOR_TITLE)}\n")
 
     filters = list_available_filters()
@@ -1112,7 +1626,16 @@ def interactive_menu() -> tuple[str | None, int, bool, str | None, str, str | No
     if priority not in SUPPORTED_PRIORITIES:
         die("Неверный приоритет")
 
-    return selected, repetitions, False, min_time, selected_scene, pin_cpu, priority
+    hwc_mode = input("HWC [none|auto|linux-perf|windows-pcm|windows-amd-uprof] (по умолчанию auto): ").strip().lower()
+    if hwc_mode == "":
+        hwc_mode = "auto"
+    if hwc_mode not in SUPPORTED_HWC:
+        die("Неверный режим HWC")
+
+    hwc_debug_raw = input("Сохранять сырые HWC логи/CSV? [y/N]: ").strip().lower()
+    hwc_debug = hwc_debug_raw in ("y", "yes", "1")
+
+    return selected, repetitions, False, min_time, selected_scene, pin_cpu, priority, hwc_mode, hwc_debug
 
 
 def main() -> None:
@@ -1155,6 +1678,18 @@ def main() -> None:
         default="normal",
         help="Приоритет процесса benchmarks (normal|above_normal|high)",
     )
+    parser.add_argument(
+        "--hwc",
+        metavar="MODE",
+        choices=list(SUPPORTED_HWC),
+        default="auto",
+        help="Сбор cache-miss счётчиков: none|auto|linux-perf|windows-pcm|windows-amd-uprof",
+    )
+    parser.add_argument(
+        "--hwc-debug",
+        action="store_true",
+        help="Сохранять сырые HWC файлы (CSV/stdout/stderr) в Benchmarks/results",
+    )
     parser.add_argument("--open", action="store_true", help="Открыть view.html в браузере")
     args = parser.parse_args()
 
@@ -1179,20 +1714,44 @@ def main() -> None:
     selected_scene = args.scene
     pin_cpu = args.pin_cpu
     priority = args.priority
+    hwc_mode = args.hwc
+    hwc_debug = args.hwc_debug
     if args.filter or args.save:
         filter_regex = args.filter
         save_flag = args.save
     else:
-        filter_regex, repetitions, save_flag, min_time, selected_scene, pin_cpu, priority = interactive_menu()
+        filter_regex, repetitions, save_flag, min_time, selected_scene, pin_cpu, priority, hwc_mode, hwc_debug = interactive_menu()
 
     print()
     print(paint(f"Выбрана сцена: {scene_label(selected_scene)}", COLOR_INDEX_LIGHT_BLUE))
     cpu_profile = pin_cpu if pin_cpu else "без pin"
     print(paint(f"CPU профиль: {cpu_profile} | priority: {priority}", COLOR_HINT))
+    effective_hwc = detect_hwc_backend(hwc_mode)
+    print(paint(f"HWC режим: {hwc_mode} -> {effective_hwc}", COLOR_HINT))
     print()
-    data = run_benchmark(filter_regex, repetitions, min_time, selected_scene, pin_cpu, priority)
+    data = run_benchmark(
+        filter_regex,
+        repetitions,
+        min_time,
+        selected_scene,
+        pin_cpu,
+        priority,
+        hwc_mode,
+        effective_hwc,
+    )
     metadata = load_bench_metadata()
-    print_results_table(data, metadata, scene_label(selected_scene))
+    hwc_rows: dict[str, dict[str, float]] = {}
+    if effective_hwc != "none":
+        base_cases = sorted({normalize_benchmark_case(name) for name in list_benchmark_cases(filter_regex)})
+        hwc_rows = collect_hwc_for_cases(base_cases, effective_hwc, selected_scene, min_time, hwc_debug)
+        if not hwc_rows:
+            if effective_hwc == "windows-amd-uprof":
+                print(paint("Предупреждение: HWC метрики не собраны. Для AMDuProf на Windows обычно нужен запуск от администратора и доступ к драйверу PMU.", COLOR_WARN))
+            else:
+                print(paint("Предупреждение: HWC метрики не собраны (проверь права/инструмент)", COLOR_WARN))
+        elif hwc_debug:
+            print(paint(f"HWC debug: сырые файлы сохранены в {RESULTS_DIR}", COLOR_HINT))
+    print_results_table(data, metadata, scene_label(selected_scene), hwc_rows, effective_hwc)
 
     maybe_save_baseline(data)
 
