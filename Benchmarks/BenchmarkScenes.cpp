@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "App/Scenes.h"
 #include "Engine/Simulation.h"
 
 namespace Benchmarks {
@@ -17,7 +18,6 @@ namespace Benchmarks {
     void BenchmarkScenes::build(Simulation& simulation, const BenchmarkCase& benchmarkCase) {
         simulation.clear();
         simulation.setIntegrator(benchmarkCase.integrator);
-        simulation.setSizeBox(benchmarkCase.boxStart, benchmarkCase.boxEnd, benchmarkCase.cellSize);
 
         switch (benchmarkCase.scene) {
         case SceneKind::Crystal2D:
@@ -33,56 +33,17 @@ namespace Benchmarks {
     }
 
     void BenchmarkScenes::buildCrystal2D(Simulation& simulation, const BenchmarkCase& benchmarkCase) {
-        constexpr double spacing = 3.0;
         const int side = squareSideFromCount(benchmarkCase.atomCount);
-
-        int created = 0;
-        for (int x = 0; x < side && created < benchmarkCase.atomCount; ++x) {
-            for (int y = 0; y < side && created < benchmarkCase.atomCount; ++y) {
-                const Vec3f pos(
-                    benchmarkCase.boxStart.x + 3.0 + x * spacing,
-                    benchmarkCase.boxStart.y + 3.0 + y * spacing,
-                    1.0);
-                simulation.atomStorage.addAtom(pos, Vec3f::Random() * 0.5, AtomData::Type::H, false);
-                ++created;
-            }
-        }
-
-        simulation.sim_box.grid.rebuild(
-            simulation.atomStorage.xDataSpan(),
-            simulation.atomStorage.yDataSpan(),
-            simulation.atomStorage.zDataSpan()
-        );
-        simulation.neighborList.clear();
+        Scenes::crystal(simulation, side, AtomData::Type::Z, false);
     }
 
     void BenchmarkScenes::buildCrystal3D(Simulation& simulation, const BenchmarkCase& benchmarkCase) {
-        constexpr double spacing = 3.0;
         const int side = cubeSideFromCount(benchmarkCase.atomCount);
-
-        int created = 0;
-        for (int x = 0; x < side && created < benchmarkCase.atomCount; ++x) {
-            for (int y = 0; y < side && created < benchmarkCase.atomCount; ++y) {
-                for (int z = 0; z < side && created < benchmarkCase.atomCount; ++z) {
-                    const Vec3f pos(
-                        benchmarkCase.boxStart.x + 3.0 + x * spacing,
-                        benchmarkCase.boxStart.y + 3.0 + y * spacing,
-                        benchmarkCase.boxStart.z + 3.0 + z * spacing);
-                    simulation.atomStorage.addAtom(pos, Vec3f::Random() * 0.5, AtomData::Type::H, false);
-                    ++created;
-                }
-            }
-        }
-
-        simulation.sim_box.grid.rebuild(
-            simulation.atomStorage.xDataSpan(),
-            simulation.atomStorage.yDataSpan(),
-            simulation.atomStorage.zDataSpan()
-        );
-        simulation.neighborList.clear();
+        Scenes::crystal(simulation, side, AtomData::Type::Z, true);
     }
 
     void BenchmarkScenes::buildRandomGas2D(Simulation& simulation, const BenchmarkCase& benchmarkCase) {
+        simulation.setSizeBox(benchmarkCase.boxStart, benchmarkCase.boxEnd, benchmarkCase.cellSize);
         simulation.createRandomAtoms(AtomData::Type::H, benchmarkCase.atomCount);
     }
 }

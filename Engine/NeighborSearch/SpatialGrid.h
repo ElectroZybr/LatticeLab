@@ -52,6 +52,8 @@ public:
     [[nodiscard]] int linearIndex(int x, int y, int z) const noexcept { return index(x, y, z); }
     [[nodiscard]] const std::array<int, 27>& neighborOffsets27() const noexcept { return neighborOffsets27_; }
 
+    [[nodiscard]] std::size_t memoryBytes() const;
+    
 private:
     // CSR хранение данных
     std::vector<std::size_t> offsets;      // массив оффсетов (каждый оффсет - начало новой ячейки)

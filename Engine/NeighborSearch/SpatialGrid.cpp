@@ -5,13 +5,22 @@
 #include <vector>
 
 SpatialGrid::SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize)
-    : sizeX(sizeX + kBorderCells),
-      sizeY(sizeY + kBorderCells),
-      sizeZ(sizeZ + kBorderCells),
+    : sizeX(0),
+      sizeY(0),
+      sizeZ(0),
       cellSize(cellSize) {
     if (sizeX < 0 || sizeY < 0 || sizeZ < 0) {
         throw std::invalid_argument("SpatialGrid::SpatialGrid: invalid arguments");
     }
+    if (this->cellSize <= 0) {
+        throw std::invalid_argument("SpatialGrid::SpatialGrid: cellSize must be > 0");
+    }
+    const int cellsX = std::max(1, (sizeX + this->cellSize - 1) / this->cellSize);
+    const int cellsY = std::max(1, (sizeY + this->cellSize - 1) / this->cellSize);
+    const int cellsZ = std::max(1, (sizeZ + this->cellSize - 1) / this->cellSize);
+    this->sizeX = cellsX + kBorderCells;
+    this->sizeY = cellsY + kBorderCells;
+    this->sizeZ = cellsZ + kBorderCells;
     countCells = this->sizeX * this->sizeY * this->sizeZ;
     offsets.assign(countCells + 1, 0);
     rebuildNeighborOffsets();
@@ -76,9 +85,15 @@ void SpatialGrid::resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSi
     }
 
     if (newCellSize > 0) cellSize = newCellSize;
-    sizeX = newSizeX + kBorderCells;
-    sizeY = newSizeY + kBorderCells;
-    sizeZ = newSizeZ + kBorderCells;
+    if (cellSize <= 0) {
+        throw std::invalid_argument("SpatialGrid::resize: cellSize must be > 0");
+    }
+    const int cellsX = std::max(1, (newSizeX + cellSize - 1) / cellSize);
+    const int cellsY = std::max(1, (newSizeY + cellSize - 1) / cellSize);
+    const int cellsZ = std::max(1, (newSizeZ + cellSize - 1) / cellSize);
+    sizeX = cellsX + kBorderCells;
+    sizeY = cellsY + kBorderCells;
+    sizeZ = cellsZ + kBorderCells;
 
     countCells = sizeX * sizeY * sizeZ;
     offsets.assign(countCells + 1, 0);
@@ -102,4 +117,12 @@ void SpatialGrid::rebuildNeighborOffsets() noexcept {
             }
         }
     }
+}
+
+std::size_t SpatialGrid::memoryBytes() const {
+    return atomsInCells.capacity() * sizeof(std::size_t)
+        + offsets.capacity() * sizeof(std::size_t)
+        + sizeof(neighborOffsets27_)
+        + cellIndices_.capacity() * sizeof(std::size_t)
+        + counts_.capacity() * sizeof(std::size_t);
 }

@@ -16,4 +16,6 @@ BENCHMARK_DEFINE_F(SimulationFixture, NeighborListRebuild)(benchmark::State& sta
 }
 
 BENCHMARK_REGISTER_F(SimulationFixture, NeighborListRebuild)
-    ->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);
+    ->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax)
+    ->Args({10648})   // 22^3
+    ->Args({103823}); // 47^3

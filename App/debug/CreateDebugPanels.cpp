@@ -44,6 +44,7 @@ static DebugView* buildDebugNeighborView(DebugPanel& panel) {
         DebugValue("NeighborList включен", DebugDrawers::String),
         DebugValue("Память AtomStorage (МБ)", DebugDrawers::Float<3>),
         DebugValue("Память NeighborList (МБ)", DebugDrawers::Float<3>),
+        DebugValue("Память SpatialGrid (МБ)", DebugDrawers::Float<3>),
         DebugValue("Пар в NL", DebugDrawers::Int),
         DebugValue("Ср. соседей на атом", DebugDrawers::Float<3>),
         DebugValue("Cutoff", DebugDrawers::Float<3>),
