@@ -18,6 +18,7 @@ SCENES: list[tuple[str, str]] = [
 ]
 
 import argparse
+import ctypes
 import json
 import math
 import os
@@ -55,6 +56,8 @@ COLOR_PROGRESS_BAR = "\033[36m"
 COLOR_PROGRESS_COUNT = "\033[33m"
 COLOR_PROGRESS_CASE = "\033[95m"
 COLOR_PROGRESS_TIME = "\033[92m"
+
+SUPPORTED_PRIORITIES = ("normal", "above_normal", "high")
 
 def paint(text: str, color: str) -> str:
     if not sys.stdout.isatty():
@@ -679,6 +682,95 @@ def scene_label(scene_key: str | None) -> str:
     return scene_key
 
 
+def parse_cpu_list(spec: str, cpu_total: int | None) -> list[int]:
+    result: set[int] = set()
+    for raw_token in spec.split(","):
+        token = raw_token.strip()
+        if not token:
+            continue
+        if "-" in token:
+            parts = token.split("-", 1)
+            if len(parts) != 2 or not parts[0].strip().isdigit() or not parts[1].strip().isdigit():
+                raise ValueError(f"Неверный диапазон CPU: {token}")
+            a = int(parts[0].strip())
+            b = int(parts[1].strip())
+            if a > b:
+                a, b = b, a
+            for c in range(a, b + 1):
+                result.add(c)
+        else:
+            if not token.isdigit():
+                raise ValueError(f"Неверный индекс CPU: {token}")
+            result.add(int(token))
+
+    if not result:
+        raise ValueError("Список CPU пуст")
+
+    if cpu_total is not None:
+        bad = [c for c in result if c < 0 or c >= cpu_total]
+        if bad:
+            raise ValueError(
+                f"CPU вне диапазона 0..{cpu_total - 1}: {', '.join(str(x) for x in sorted(bad))}"
+            )
+
+    return sorted(result)
+
+
+def apply_process_tuning(pid: int, pin_cpu: str | None, priority: str) -> list[str]:
+    warnings: list[str] = []
+    if sys.platform != "win32":
+        if pin_cpu:
+            warnings.append("pin-cpu сейчас реализован только для Windows")
+        return warnings
+
+    PROCESS_SET_INFORMATION = 0x0200
+    PROCESS_QUERY_INFORMATION = 0x0400
+    process_access = PROCESS_SET_INFORMATION | PROCESS_QUERY_INFORMATION
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    handle = kernel32.OpenProcess(process_access, False, pid)
+    if not handle:
+        warnings.append("Не удалось открыть процесс для настройки affinity/priority")
+        return warnings
+
+    try:
+        priority_map = {
+            "normal": 0x00000020,        # NORMAL_PRIORITY_CLASS
+            "above_normal": 0x00008000,  # ABOVE_NORMAL_PRIORITY_CLASS
+            "high": 0x00000080,          # HIGH_PRIORITY_CLASS
+        }
+        prio_class = priority_map.get(priority, priority_map["normal"])
+        if not kernel32.SetPriorityClass(handle, prio_class):
+            warnings.append(f"Не удалось выставить priority={priority}")
+
+        if pin_cpu:
+            cpu_total = os.cpu_count()
+            try:
+                cpu_ids = parse_cpu_list(pin_cpu, cpu_total)
+            except ValueError as exc:
+                warnings.append(str(exc))
+                cpu_ids = []
+
+            mask = 0
+            dropped: list[int] = []
+            for cpu_id in cpu_ids:
+                if cpu_id >= 64:
+                    dropped.append(cpu_id)
+                    continue
+                mask |= (1 << cpu_id)
+
+            if dropped:
+                warnings.append("CPU >= 64 пропущены (ограничение affinity mask WinAPI)")
+
+            if mask != 0:
+                if not kernel32.SetProcessAffinityMask(handle, ctypes.c_size_t(mask)):
+                    warnings.append(f"Не удалось выставить affinity={pin_cpu}")
+    finally:
+        kernel32.CloseHandle(handle)
+
+    return warnings
+
+
 def print_progress(done: int, total: int, current_case: str = "", start_ts: float | None = None, tick: int = 0) -> None:
     if not sys.stdout.isatty() or total <= 0:
         return
@@ -761,6 +853,8 @@ def run_benchmark(
     repetitions: int = 3,
     min_time: str | None = None,
     scene_key: str | None = None,
+    pin_cpu: str | None = None,
+    priority: str = "normal",
 ) -> dict:
     if not BINARY.exists():
         die(f"Бинарник не найден: {BINARY}")
@@ -798,6 +892,9 @@ def run_benchmark(
         bufsize=1,
         env=process_env,
     )
+    tuning_warnings = apply_process_tuning(process.pid, pin_cpu, priority)
+    for warning in tuning_warnings:
+        print(paint(f"Предупреждение: {warning}", COLOR_WARN))
 
     assert process.stdout is not None
     tail_lines: list[str] = []
@@ -839,6 +936,8 @@ def run_benchmark(
         context["bench_py"] = {
             "scene_key": scene_key or "crystal3d",
             "scene_name": scene_label(scene_key or "crystal3d"),
+            "pin_cpu": pin_cpu or "",
+            "priority": priority,
         }
         # Каноничный "последний запуск" всегда обновляем после успешного прогона.
         last_run = RESULTS_DIR / "last_run.json"
@@ -884,7 +983,7 @@ def maybe_save_baseline(data: dict) -> bool:
     return True
 
 
-def interactive_menu() -> tuple[str | None, int, bool, str | None, str]:
+def interactive_menu() -> tuple[str | None, int, bool, str | None, str, str | None, str]:
     print(f"{paint('=== Chemical Simulator Benchmarks ===', COLOR_TITLE)}\n")
 
     filters = list_available_filters()
@@ -1004,7 +1103,16 @@ def interactive_menu() -> tuple[str | None, int, bool, str | None, str]:
             die("Неверный номер сцены")
         selected_scene = scene_options[scene_index][0]
 
-    return selected, repetitions, False, min_time, selected_scene
+    pin_cpu_raw = input("Pin CPU (пример: 2,3 или 2-5, пусто = без pin): ").strip()
+    pin_cpu = pin_cpu_raw if pin_cpu_raw else None
+
+    priority = input("Приоритет [normal|above_normal|high] (по умолчанию normal): ").strip().lower()
+    if priority == "":
+        priority = "normal"
+    if priority not in SUPPORTED_PRIORITIES:
+        die("Неверный приоритет")
+
+    return selected, repetitions, False, min_time, selected_scene, pin_cpu, priority
 
 
 def main() -> None:
@@ -1034,6 +1142,19 @@ def main() -> None:
         default="crystal3d",
         help="Сцена для SimulationFixture: crystal3d | crystal2d | random_gas2d",
     )
+    parser.add_argument(
+        "--pin-cpu",
+        metavar="LIST",
+        default=None,
+        help="Фиксация CPU для процесса benchmarks (пример: 2,3 или 2-5)",
+    )
+    parser.add_argument(
+        "--priority",
+        metavar="LEVEL",
+        choices=list(SUPPORTED_PRIORITIES),
+        default="normal",
+        help="Приоритет процесса benchmarks (normal|above_normal|high)",
+    )
     parser.add_argument("--open", action="store_true", help="Открыть view.html в браузере")
     args = parser.parse_args()
 
@@ -1056,16 +1177,20 @@ def main() -> None:
     repetitions = args.repetitions
     min_time = args.min_time
     selected_scene = args.scene
+    pin_cpu = args.pin_cpu
+    priority = args.priority
     if args.filter or args.save:
         filter_regex = args.filter
         save_flag = args.save
     else:
-        filter_regex, repetitions, save_flag, min_time, selected_scene = interactive_menu()
+        filter_regex, repetitions, save_flag, min_time, selected_scene, pin_cpu, priority = interactive_menu()
 
     print()
     print(paint(f"Выбрана сцена: {scene_label(selected_scene)}", COLOR_INDEX_LIGHT_BLUE))
+    cpu_profile = pin_cpu if pin_cpu else "без pin"
+    print(paint(f"CPU профиль: {cpu_profile} | priority: {priority}", COLOR_HINT))
     print()
-    data = run_benchmark(filter_regex, repetitions, min_time, selected_scene)
+    data = run_benchmark(filter_regex, repetitions, min_time, selected_scene, pin_cpu, priority)
     metadata = load_bench_metadata()
     print_results_table(data, metadata, scene_label(selected_scene))
 
