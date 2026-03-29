@@ -62,27 +62,25 @@ void ForceField::compute(AtomStorage& atoms, SimBox& box, NeighborList* neighbor
     if (!neighborList && !atoms.empty()) {
         box.grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
     }
+
     // расчет нековалентных сил для каждого атома
-    for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
-        ComputeForces(atoms, atomIndex, box, neighborList);
-    }
+    if (neighborList)
+        ComputeForces<true>(atoms, box, neighborList);
+    else
+        ComputeForces<false>(atoms, box, neighborList);
 
     // проверка образования и разрыва связей, а также расчет сил
-    for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end();) {
-        Bond& bond = *it;
+    std::erase_if(Bond::bonds_list, [&](Bond& bond) {
         if (bond.shouldBreak(atoms)) {
-            Bond* currentBond = &bond;
-            ++it;
-            Bond::BreakBond(currentBond, atoms);
-            continue;
+            Bond::BreakBond(&bond, atoms);
+            return true;
         }
+        
         bond.forceBond(atoms, dt);
-        ++it;
-    }
+        return false;
+    });
 
-    if (Bond::bonds_list.size() < 2) {
-        return;
-    }
+    if (Bond::bonds_list.size() < 2) return;
 
     std::vector<std::uint16_t> degree(atoms.size(), 0);
     for (const Bond& bond : Bond::bonds_list) {
@@ -92,8 +90,8 @@ void ForceField::compute(AtomStorage& atoms, SimBox& box, NeighborList* neighbor
         }
     }
 
-    std::vector<std::vector<std::size_t>> bondedNeighbours(atoms.size());
-    for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
+    std::vector<std::vector<size_t>> bondedNeighbours(atoms.size());
+    for (size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
         if (degree[atomIndex] > 0) {
             bondedNeighbours[atomIndex].reserve(degree[atomIndex]);
         }
@@ -101,30 +99,26 @@ void ForceField::compute(AtomStorage& atoms, SimBox& box, NeighborList* neighbor
 
     for (const Bond& bond : Bond::bonds_list) {
         if (bond.aIndex < atoms.size() && bond.bIndex < atoms.size()) {
-            bondedNeighbours[bond.aIndex].push_back(bond.bIndex);
-            bondedNeighbours[bond.bIndex].push_back(bond.aIndex);
+            bondedNeighbours[bond.aIndex].emplace_back(bond.bIndex);
+            bondedNeighbours[bond.bIndex].emplace_back(bond.aIndex);
         }
     }
 
-    for (std::size_t atomIndex = 0; atomIndex < bondedNeighbours.size(); ++atomIndex) {
+    for (size_t atomIndex = 0; atomIndex < bondedNeighbours.size(); ++atomIndex) {
         const auto& neighbours = bondedNeighbours[atomIndex];
         if (neighbours.size() < 2) {
             continue;
         }
 
-        for (std::size_t i = 0; i + 1 < neighbours.size(); ++i) {
-            for (std::size_t j = i + 1; j < neighbours.size(); ++j) {
+        for (size_t i = 0; i + 1 < neighbours.size(); ++i) {
+            for (size_t j = i + 1; j < neighbours.size(); ++j) {
                 Bond::angleForce(atoms, atomIndex, neighbours[i], neighbours[j]);
             }
         }
     }
 }
 
-void ForceField::softWalls(const AtomStorage& atoms, std::size_t atomIndex, float& forceX, float& forceY, float& forceZ) const {
-    const float coordX = atoms.posX(atomIndex);
-    const float coordY = atoms.posY(atomIndex);
-    const float coordZ = atoms.posZ(atomIndex);
-
+void ForceField::softWalls(const AtomStorage& atoms, float coordX, float coordY, float coordZ, float& forceX, float& forceY, float& forceZ) const {
     applyWall(coordX, forceX, wallMinX, wallMaxX);
     applyWall(coordY, forceY, wallMinY, wallMaxY);
     applyWall(coordZ, forceZ, wallMinZ, wallMaxZ);
@@ -151,63 +145,66 @@ void ForceField::applyWall(float coord, float& force, float min, float max) {
     }
 }
 
-void ForceField::ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox& box, NeighborList* neighborList) const {
-    // загружаем данные текущего атома из AtomStorage
-    float posX = atoms.posX(atomIndex);
-    float posY = atoms.posY(atomIndex);
-    float posZ = atoms.posZ(atomIndex);
-    float forceX = atoms.forceX(atomIndex);
-    float forceY = atoms.forceY(atomIndex);
-    float forceZ = atoms.forceZ(atomIndex);
-    float potenE = atoms.energy(atomIndex);
-    // выбираем строку таблицы LJ для данного типа атома
-    const LJPairRow& ljPairRow = ljPairTable[static_cast<std::size_t>(atoms.type(atomIndex))];
+template<bool UseNeighborList>
+void ForceField::ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* neighborList) const {
+    for (size_t atomIndex = 0; atomIndex < atoms.mobileCount(); ++atomIndex) {
+        float posX = atoms.posX(atomIndex);
+        float posY = atoms.posY(atomIndex);
+        float posZ = atoms.posZ(atomIndex);
+        float forceX = atoms.forceX(atomIndex);
+        float forceY = atoms.forceY(atomIndex);
+        float forceZ = atoms.forceZ(atomIndex);
+        float potenE = atoms.energy(atomIndex);
+        // загружаем данные текущего атома из AtomStorage
+        // выбираем строку таблицы LJ для данного типа атома
+        const LJPairRow& ljPairRow = ljPairTable[static_cast<size_t>(atoms.type(atomIndex))];
 
-    // мягкие стены
-    softWalls(atoms, atomIndex, forceX, forceY, forceZ);
-    // постоянная сила
-    applyGravityForce(forceX, forceY, forceZ);
+        // мягкие стены
+        softWalls(atoms, posX, posY, posZ, forceX, forceY, forceZ);
+        // постоянная сила
+        applyGravityForce(forceX, forceY, forceZ);
 
-    // взаимодействия с соседями
-    if (!neighborList) {
-        // без списка соседей
-        const int cx = box.grid.worldToCellX(posX);
-        const int cy = box.grid.worldToCellY(posY);
-        const int cz = box.grid.worldToCellZ(posZ);
+        // взаимодействия с соседями
+        if constexpr (UseNeighborList) {
+            // используем список соседей
+            for (size_t neighbourIndex : neighborList->neighborsIndices(atomIndex)) {
+                pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
+            }
+        }
+        else {
+            // без списка соседей
+            const int cx = box.grid.worldToCellX(posX);
+            const int cy = box.grid.worldToCellY(posY);
+            const int cz = box.grid.worldToCellZ(posZ);
 
-        const int x0 = std::max(cx - 1, 0);
-        const int x1 = std::min(cx + 1, box.grid.sizeX - 1);
-        const int y0 = std::max(cy - 1, 0);
-        const int y1 = std::min(cy + 1, box.grid.sizeY - 1);
-        const int z0 = std::max(cz - 1, 0);
-        const int z1 = std::min(cz + 1, box.grid.sizeZ - 1);
+            const int x0 = std::max(cx - 1, 0);
+            const int x1 = std::min(cx + 1, box.grid.sizeX - 1);
+            const int y0 = std::max(cy - 1, 0);
+            const int y1 = std::min(cy + 1, box.grid.sizeY - 1);
+            const int z0 = std::max(cz - 1, 0);
+            const int z1 = std::min(cz + 1, box.grid.sizeZ - 1);
 
-        for (int ix = x0; ix <= x1; ++ix) {
-            for (int iy = y0; iy <= y1; ++iy) {
-                for (int iz = z0; iz <= z1; ++iz) {
-                    const auto cell = box.grid.atomsInCell(ix, iy, iz);
-                    for (std::size_t neighbourIndex : cell) {
-                        if (atomIndex <= neighbourIndex) continue;
-                        pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
+            for (int ix = x0; ix <= x1; ++ix) {
+                for (int iy = y0; iy <= y1; ++iy) {
+                    for (int iz = z0; iz <= z1; ++iz) {
+                        for (size_t neighbourIndex : box.grid.atomsInCell(ix, iy, iz)) {
+                            if (atomIndex <= neighbourIndex) continue;
+                            pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
+                        }
                     }
                 }
             }
         }
-    } else {
-        // используем список соседей
-        for (std::size_t neighbourIndex : neighborList->neighborsIndices(atomIndex)) {
-            pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
-        }
-    }
 
-    // записываем обратно в AtomStorage
-    atoms.forceX(atomIndex) = forceX;
-    atoms.forceY(atomIndex) = forceY;
-    atoms.forceZ(atomIndex) = forceZ;
-    atoms.energy(atomIndex) = potenE;
+        // записываем обратно в AtomStorage
+        atoms.forceX(atomIndex) = forceX;
+        atoms.forceY(atomIndex) = forceY;
+        atoms.forceZ(atomIndex) = forceZ;
+        atoms.energy(atomIndex) = potenE;
+    }
 }
 
-void ForceField::pairNonBondedInteraction(AtomStorage& atoms, std::size_t bIndex, const LJPairRow& ljPairRow,
+void ForceField::pairNonBondedInteraction(AtomStorage& atoms, size_t bIndex, const LJPairRow& ljPairRow,
                                           float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const {
     // расчет вектора между атомами
     const float dx = atoms.posX(bIndex) - posX;
@@ -219,7 +216,7 @@ void ForceField::pairNonBondedInteraction(AtomStorage& atoms, std::size_t bIndex
     }
 
     // параметры LJ для данной пары атомов
-    const LJParams& params = ljPairRow[static_cast<std::size_t>(atoms.type(bIndex))];
+    const LJParams& params = ljPairRow[static_cast<size_t>(atoms.type(bIndex))];
 
     // предварительные расчеты для LJ потенциала
     const float invD2 = 1.0f / d2;
@@ -249,7 +246,7 @@ void ForceField::pairNonBondedInteraction(AtomStorage& atoms, std::size_t bIndex
 }
 
 void ForceField::applyGravityForce(float& forceX, float& forceY, float& forceZ) const {
-    forceX += static_cast<float>(static_force.x);
-    forceY += static_cast<float>(static_force.y);
-    forceZ += static_cast<float>(static_force.z);
+    forceX += static_force.x;
+    forceY += static_force.y;
+    forceZ += static_force.z;
 }
