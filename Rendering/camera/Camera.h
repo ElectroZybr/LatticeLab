@@ -70,7 +70,8 @@ private:
     float elevation = 0.f;
 
     // Перспектива
-    static constexpr float FOV      = 45.f;
+    static constexpr float FOV_ORBIT = 45.f;
+    static constexpr float FOV_FREE  = 60.f;
     static constexpr float NEAR     = 0.1f;
     static constexpr float FAR      = 10000.f;
 };

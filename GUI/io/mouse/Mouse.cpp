@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cmath>
 
 #include "GUI/io/mouse/Mouse.h"
 
@@ -20,6 +21,7 @@ void Mouse::init(sf::RenderWindow* w, std::unique_ptr<IRenderer>& r, SimBox* b, 
 void Mouse::onEvent(const sf::Event& event) {
     const sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
     std::unique_ptr<IRenderer>& rend = *renderer;
+    constexpr float kFreeWheelMoveScale = 0.008f;
 
     if (const auto* e = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (e->button == sf::Mouse::Button::Left) {
@@ -64,7 +66,19 @@ void Mouse::onEvent(const sf::Event& event) {
 
     if (const auto* e = event.getIf<sf::Event::MouseWheelScrolled>()) {
         if (e->wheel == sf::Mouse::Wheel::Vertical && !Interface::cursorHovered) {
-            rend->camera.zoomAt(e->delta, sf::Vector2f(e->position), *window);
+            if (rend->camera.getMode() == Camera::Mode::Free) {
+                const float wheelStep = rend->camera.moveSpeed * kFreeWheelMoveScale;
+                const float distance = e->delta * wheelStep;
+
+                const Vec3f forward(
+                    std::cos(rend->camera.elevation) * std::sin(rend->camera.azimuth),
+                    std::sin(rend->camera.elevation),
+                    std::cos(rend->camera.elevation) * std::cos(rend->camera.azimuth)
+                );
+                rend->camera.move3D(forward * distance);
+            } else {
+                rend->camera.zoomAt(e->delta, sf::Vector2f(e->position), *window);
+            }
         }
     }
 }

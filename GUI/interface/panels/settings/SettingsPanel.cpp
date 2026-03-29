@@ -85,7 +85,13 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
         }
         ImGui::EndCombo();
     }
-    
+
+    if (currentIntegrator == Integrator::Scheme::RK4 || currentIntegrator == Integrator::Scheme::Langevin) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.00f, 0.75f, 0.25f, 1.00f));
+        ImGui::TextWrapped("Внимание: %s пока не реализован и временно работает как Velocity Verlet.",
+                           integratorName(currentIntegrator));
+        ImGui::PopStyleColor();
+    }
 
     ImGui::SeparatorText("Рендер");
     ImGui::Checkbox("Сетка", &renderer->drawGrid);

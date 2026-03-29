@@ -126,7 +126,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
         pendingResult_ = IOCommand::ApplyBoxSize;
     }
 
-    ImGui::SeparatorText("Генератор");
+    ImGui::SeparatorText("Массивогенератор");
     ImGui::SliderInt("##Атомов по оси", &sceneAxisCount_, 2, 200);
     ImGui::SameLine();
     drawAtomTypeCombo("##atom_type", atomType_, 80.f * scale, scale);
@@ -137,7 +137,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     ImGui::SameLine();
     ImGui::Checkbox("3D", &sceneIs3D_);
 
-    ImGui::SeparatorText("Генератор газа");
+    ImGui::SeparatorText("Газогенератор");
     ImGui::SliderInt("##gas_atom_count", &gasAtomCount_, 100, 300000);
     ImGui::SameLine();
     drawAtomTypeCombo("##atom_type_gas", gasAtomType_, 80.f * scale, scale);
