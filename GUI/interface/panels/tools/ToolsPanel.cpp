@@ -72,6 +72,17 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, 
     }
     ImGui::SameLine();
 
+    if (drawActiveButton(ICON_FA_BUG, debug.isVisible())) {
+        if (debug.isVisible()) {
+            debug.close();
+        } else {
+            debug.toggle();
+            settings.close();
+            ioPanel.close();
+        }
+    }
+    ImGui::SameLine();
+
     if (ImGui::Button(is3D ? "3D" : "2D", ImVec2(buttonSize, buttonSize)))
     {
         is3D = !is3D;
@@ -83,17 +94,6 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, 
         if (ImGui::Button(isFree ? ICON_FA_STREET_VIEW : ICON_FA_SYNC_ALT, ImVec2(buttonSize, buttonSize))) {
             isFree = !isFree;
             pendingResult = isFree ? ToolsCommand::SetCameraFree : ToolsCommand::SetCameraOrbit;
-        }
-    }
-    ImGui::SameLine();
-
-    if (drawActiveButton(ICON_FA_BUG, debug.isVisible())) {
-        if (debug.isVisible()) {
-            debug.close();
-        } else {
-            debug.toggle();
-            settings.close();
-            ioPanel.close();
         }
     }
 
