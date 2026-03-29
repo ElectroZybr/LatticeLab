@@ -5,11 +5,11 @@
 #include "metrics/NeighborListMetrics.h"
 #include "physics/AtomData.h"
 #include "physics/AtomStorage.h"
-#include "physics/SpatialGrid.h"
+#include "NeighborSearch/SpatialGrid.h"
 #include "SimBox.h"
 #include "physics/Integrator.h"
 #include "physics/ForceField.h"
-#include "physics/NeighborList.h"
+#include "NeighborSearch/NeighborList.h"
 
 class Simulation {
 public:

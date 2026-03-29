@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "AtomStorage.h"
+#include "../physics/AtomStorage.h"
 #include "SpatialGrid.h"
 #include "../utils/RateCounter.h"
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "math/Vec3f.h"
-#include "physics/SpatialGrid.h"
+#include "NeighborSearch/SpatialGrid.h"
 
 class SimBox {
     public:
