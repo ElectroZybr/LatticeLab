@@ -62,6 +62,11 @@ COLOR_PROGRESS_TIME = "\033[92m"
 
 SUPPORTED_PRIORITIES = ("normal", "above_normal", "high")
 SUPPORTED_HWC = ("none", "auto", "linux-perf", "windows-pcm", "windows-amd-uprof")
+RUN_PROFILES: list[tuple[str, str, int, str]] = [
+    ("quick", "Быстрый", 1, "0.1s"),
+    ("medium", "Средний", 3, "0.5s"),
+    ("accurate", "Точный", 7, "1s"),
+]
 
 def paint(text: str, color: str) -> str:
     if not sys.stdout.isatty():
@@ -788,17 +793,19 @@ def compute_case_timeout_seconds(
     if min_time_sec is not None and min_time_sec > 0.0:
         timeout = max(timeout, int(min_time_sec * max(1, repetitions) * 4.0 + 30.0))
 
-    # Для HWC нужны более длинные окна: инициализация профайлера + сбор счетчиков.
+    # Для HWC нужны длиннее окна, но без многоминутных "залипаний".
     if active_hwc_backend != "none":
-        timeout = max(timeout, 240)
+        timeout = max(timeout, 90)
         if active_hwc_backend == "windows-amd-uprof":
-            timeout = max(timeout, 420)
+            timeout = max(timeout, 120)
         elif active_hwc_backend == "windows-pcm":
-            timeout = max(timeout, 300)
+            timeout = max(timeout, 90)
 
     # Повторный plain-запуск после HWC-ошибки не должен висеть слишком долго.
     if fallback_plain:
         timeout = min(timeout, 120)
+    elif active_hwc_backend != "none":
+        timeout = min(timeout, 180)
 
     return timeout
 
@@ -1384,6 +1391,29 @@ def backend_requires_admin(backend: str) -> bool:
     return backend in ("windows-amd-uprof", "windows-pcm")
 
 
+def looks_like_amd_msr_busy(stderr_text: str) -> bool:
+    s = (stderr_text or "").lower()
+    return (
+        "hw pmc msrs are in use" in s
+        or "pmc msrs are in use" in s
+        or "msrs are in use" in s
+    )
+
+
+def try_amd_reset(exe_path: str) -> bool:
+    try:
+        res = subprocess.run(
+            [exe_path, "-r"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+        return res.returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
 def kill_process_tree(proc: subprocess.Popen) -> None:
     if proc.poll() is not None:
         return
@@ -1393,9 +1423,10 @@ def kill_process_tree(proc: subprocess.Popen) -> None:
                 ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                timeout=5,
                 check=False,
             )
-        except OSError:
+        except (OSError, subprocess.TimeoutExpired):
             try:
                 proc.kill()
             except OSError:
@@ -1508,7 +1539,6 @@ def run_benchmark(
     start_ts = time.monotonic()
     tick = 0
     current_case = ""
-    print_progress(0, total_cases, current_case, start_ts, tick)
 
     process_env = os.environ.copy()
     if scene_key:
@@ -1517,6 +1547,18 @@ def run_benchmark(
     merged: dict = {"context": {}, "benchmarks": []}
     hwc_rows: dict[str, dict[str, float]] = {}
     active_hwc_backend = hwc_backend
+
+    # Для AMDuProf на Windows полезно заранее сбросить PMU/MSR,
+    # чтобы избежать "MSRs are in use" на середине прогона.
+    if active_hwc_backend == "windows-amd-uprof":
+        amduprof_exe = find_amd_uprof_exe()
+        if amduprof_exe:
+            if try_amd_reset(amduprof_exe):
+                print(paint("HWC: предварительный сброс PMU выполнен (AMDuProfPcm -r)", COLOR_HINT))
+            else:
+                print(paint("HWC: reset PMU пропущен (AMDuProfPcm -r)", COLOR_HINT))
+
+    print_progress(0, total_cases, current_case, start_ts, tick)
 
     for idx, case in enumerate(case_list, 1):
         current_case = case
@@ -1684,6 +1726,41 @@ def run_benchmark(
             hwc_wrapper_failed = (
                 active_hwc_backend != "none" and run_cmd != bench_cmd
             )
+            if hwc_wrapper_failed and active_hwc_backend == "windows-amd-uprof":
+                if looks_like_amd_msr_busy(stderr_data):
+                    amduprof_exe = run_cmd[0] if run_cmd else None
+                    if isinstance(amduprof_exe, str) and amduprof_exe:
+                        print()
+                        print(paint("HWC: обнаружен занятый PMU/MSR, пробую автоматический сброс (AMDuProfPcm -r)...", COLOR_WARN))
+                        if try_amd_reset(amduprof_exe):
+                            # Один повтор того же кейса под HWC после reset.
+                            proc_retry = subprocess.Popen(
+                                run_cmd,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                text=True,
+                                bufsize=1,
+                                env=process_env,
+                            )
+                            tuning_warnings = apply_process_tuning(proc_retry.pid, pin_cpu, priority)
+                            for warning in tuning_warnings:
+                                print(paint(f"Предупреждение: {warning}", COLOR_WARN))
+                            retry_timed_out = False
+                            try:
+                                stdout_data, stderr_data = proc_retry.communicate(timeout=hwc_case_timeout)
+                            except subprocess.TimeoutExpired:
+                                retry_timed_out = True
+                                kill_process_tree(proc_retry)
+                                try:
+                                    stdout_data, stderr_data = proc_retry.communicate(timeout=5)
+                                except subprocess.TimeoutExpired:
+                                    stdout_data, stderr_data = "", ""
+                            return_code = proc_retry.returncode if not retry_timed_out else return_code
+                            if retry_timed_out:
+                                print(paint("HWC: повтор после reset превысил timeout.", COLOR_WARN))
+                        else:
+                            print(paint("HWC: автоматический сброс PMU не удался.", COLOR_WARN))
+
             if hwc_wrapper_failed:
                 print()
                 print(paint(f"Предупреждение: HWC backend '{active_hwc_backend}' недоступен, перехожу на обычный режим без HWC", COLOR_WARN))
@@ -1837,18 +1914,59 @@ def save_result(data: dict, filter_used: str | None) -> Path:
     return path
 
 
+def merge_current_tests_into_baseline(baseline_data: dict, current_data: dict) -> tuple[dict, int]:
+    baseline_benchmarks = baseline_data.get("benchmarks")
+    current_benchmarks = current_data.get("benchmarks")
+    if not isinstance(baseline_benchmarks, list):
+        baseline_benchmarks = []
+    if not isinstance(current_benchmarks, list):
+        current_benchmarks = []
+
+    current_cases: set[str] = set()
+    for item in current_benchmarks:
+        if not isinstance(item, dict):
+            continue
+        run_name = item.get("run_name") or item.get("name")
+        if isinstance(run_name, str) and run_name:
+            current_cases.add(normalize_benchmark_case(run_name))
+
+    kept: list[dict] = []
+    replaced = 0
+    for item in baseline_benchmarks:
+        if not isinstance(item, dict):
+            continue
+        run_name = item.get("run_name") or item.get("name")
+        if isinstance(run_name, str) and normalize_benchmark_case(run_name) in current_cases:
+            replaced += 1
+            continue
+        kept.append(item)
+
+    merged = dict(baseline_data)
+    merged["benchmarks"] = [*kept, *current_benchmarks]
+    return merged, replaced
+
+
 def maybe_save_baseline(data: dict) -> bool:
     if not sys.stdin.isatty():
         return False
 
-    answer = input("\nСохранить как baseline? [y/N]: ").strip().lower()
+    answer = input("\nОбновить данные текущих тестов в baseline? [y/N]: ").strip().lower()
     if answer != "y":
         return False
 
     ensure_results_dir()
     baseline_path = RESULTS_DIR / "baseline.json"
-    baseline_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    print(paint(f"Baseline сохранен: {baseline_path}", COLOR_OK))
+    if baseline_path.exists():
+        try:
+            old = json.loads(baseline_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            old = {}
+        merged, replaced = merge_current_tests_into_baseline(old, data)
+        baseline_path.write_text(json.dumps(merged, indent=2), encoding="utf-8")
+        print(paint(f"Baseline обновлен: {baseline_path} (заменено записей: {replaced})", COLOR_OK))
+    else:
+        baseline_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        print(paint(f"Baseline создан: {baseline_path}", COLOR_OK))
     return True
 
 
@@ -1945,13 +2063,6 @@ def interactive_menu() -> tuple[str | None, int, bool, str | None, str, str | No
             selected_filters = list(dict.fromkeys(selected_filters))
             selected = "(" + "|".join(re.escape(item) for item in selected_filters) + ")"
 
-    rep_input = input("Количество прогонов [3]: ").strip()
-    repetitions = int(rep_input) if rep_input.isdigit() else 3
-
-    min_time = input("Минимальное время прогона [пусто = по умолчанию, пример: 5s]: ").strip()
-    if min_time == "":
-        min_time = None
-
     print()
     print(paint("Выбор сцены (для SimulationFixture):", COLOR_TITLE))
     default_scene_id = "crystal3d"
@@ -1972,14 +2083,27 @@ def interactive_menu() -> tuple[str | None, int, bool, str | None, str, str | No
             die("Неверный номер сцены")
         selected_scene = scene_options[scene_index][0]
 
-    pin_cpu_raw = input("Pin CPU (пример: 2,3 или 2-5, пусто = без pin): ").strip()
-    pin_cpu = pin_cpu_raw if pin_cpu_raw else None
+    print()
+    print(paint("Режим прогона:", COLOR_TITLE))
+    default_profile_idx = 2  # Средний
+    for i, (_, ru_name, reps, mt) in enumerate(RUN_PROFILES, 1):
+        print(f"  {paint(f'{i})', COLOR_INDEX)} {ru_name} ({reps} прогон(а), min_time={mt})")
+    profile_choice = input(f"Выбери режим [{default_profile_idx}]: ").strip()
+    if profile_choice == "":
+        profile_idx = default_profile_idx - 1
+    elif profile_choice.isdigit():
+        profile_idx = int(profile_choice) - 1
+        if not (0 <= profile_idx < len(RUN_PROFILES)):
+            die("Неверный номер режима")
+    else:
+        die("Неверный номер режима")
 
-    priority = input("Приоритет [normal|above_normal|high] (по умолчанию normal): ").strip().lower()
-    if priority == "":
-        priority = "normal"
-    if priority not in SUPPORTED_PRIORITIES:
-        die("Неверный приоритет")
+    _, profile_name, repetitions, min_time = RUN_PROFILES[profile_idx]
+    print(paint(f"Выбран режим: {profile_name} (repetitions={repetitions}, min_time={min_time})", COLOR_HINT))
+
+    # В интерактивном режиме держим простой дефолтный профиль CPU.
+    pin_cpu = None
+    priority = "normal"
 
     # В интерактивном режиме используем дефолтные HWC-настройки,
     # чтобы не перегружать меню лишними вопросами.
