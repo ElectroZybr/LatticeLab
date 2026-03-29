@@ -127,7 +127,18 @@ void processIOPanel(Simulation& simulation) {
         switch (result.value()) {
             case IOCommand::CreateCrystal:
                 simulation.clear();
-                Scenes::crystal(simulation, Interface::ioPanel.sceneAxisCount(), AtomData::Type::Z, Interface::ioPanel.sceneIs3D());
+                Scenes::crystal(simulation, Interface::ioPanel.sceneAxisCount(), Interface::ioPanel.atomType(), Interface::ioPanel.sceneIs3D());
+                Tools::resetInteractionState();
+                break;
+            case IOCommand::CreateGas:
+                simulation.clear();
+                Scenes::randomGas(simulation,
+                                  Interface::ioPanel.gasAtomCount(),
+                                  Interface::ioPanel.gasAtomType(),
+                                  Interface::ioPanel.gasIs3D(),
+                                  6.0,
+                                  6.0,
+                                  Interface::ioPanel.gasDensity());
                 Tools::resetInteractionState();
                 break;
             case IOCommand::ClearSimulation:

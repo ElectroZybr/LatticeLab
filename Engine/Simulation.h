@@ -19,7 +19,6 @@ public:
 
     void setSizeBox(Vec3f newStart, Vec3f newEnd, int cellSize = -1);
 
-    void createRandomAtoms(AtomData::Type type, int quantity);
     bool createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Type type, bool fixed = false);
     bool removeAtom(std::size_t atomIndex);
     void addBond(std::size_t aIndex, std::size_t bIndex);
@@ -58,6 +57,4 @@ private:
     int sim_step = 0;
     bool useNeighborList_ = true;
     NeighborListMetrics neighborListMetrics_;
-
-    bool checkNeighbor(Vec3f coords, float delta);
 };
