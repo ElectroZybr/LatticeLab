@@ -108,7 +108,7 @@ int Interface::Update() {
         fileDialog.draw(styleManager.getScale());
         debugPanel.draw(styleManager.getScale(), window->getSize());
         settingsPanel.draw(styleManager.getScale(), window->getSize(), *simulation, *renderer);
-        ioPanel.draw(styleManager.getScale(), window->getSize(), fileDialog);
+        ioPanel.draw(styleManager.getScale(), window->getSize(), *simulation, fileDialog);
     ImGui::PopFont();
 
     // Проверка на вхождение курсора в область

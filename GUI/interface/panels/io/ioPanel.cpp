@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/style/ComboStyle.h"
+#include "Engine/Simulation.h"
 
 namespace {
 struct AtomTypeOption {
@@ -68,12 +70,16 @@ void drawAtomTypeCombo(const char* id, AtomData::Type& atomType, float width, fl
 }
 } // namespace
 
-void IOPanel::draw(float scale, sf::Vector2u windowSize, FileDialogManager& fileDialog) {
+void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation, FileDialogManager& fileDialog) {
     const float target = visible_ ? 1.f : 0.f;
     const float step = ImGui::GetIO().DeltaTime * 12.f;
     animProgress_ += (target - animProgress_) * std::min(step, 1.f);
 
     if (animProgress_ < 0.01f) return;
+
+    boxSizeX_ = std::fabs(simulation.sim_box.end.x - simulation.sim_box.start.x);
+    boxSizeY_ = std::fabs(simulation.sim_box.end.y - simulation.sim_box.start.y);
+    boxSizeZ_ = std::fabs(simulation.sim_box.end.z - simulation.sim_box.start.z);
 
     const float panelWidth = 300.f * scale;
     const float topOffset = 65.f * scale;
@@ -97,6 +103,27 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, FileDialogManager& file
     ImGui::SameLine();
     if (ImGui::Button("Очистить", ImVec2(saveButtonWidth * scale, 0.f))) {
         pendingResult_ = IOCommand::ClearSimulation;
+    }
+
+    ImGui::SeparatorText("Размер бокса");
+    bool boxSizeChanged = false;
+    boxSizeChanged |= ImGui::SliderFloat("X##box_size_x", &boxSizeX_, 5.0f, 400.0f, "%.1f");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(70.0f * scale);
+    boxSizeChanged |= ImGui::InputFloat("##box_size_x_input", &boxSizeX_, 0.0f, 0.0f, "%.1f");
+
+    boxSizeChanged |= ImGui::SliderFloat("Y##box_size_y", &boxSizeY_, 5.0f, 400.0f, "%.1f");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(70.0f * scale);
+    boxSizeChanged |= ImGui::InputFloat("##box_size_y_input", &boxSizeY_, 0.0f, 0.0f, "%.1f");
+
+    boxSizeChanged |= ImGui::SliderFloat("Z##box_size_z", &boxSizeZ_, 5.0f, 200.0f, "%.1f");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(70.0f * scale);
+    boxSizeChanged |= ImGui::InputFloat("##box_size_z_input", &boxSizeZ_, 0.0f, 0.0f, "%.1f");
+
+    if (boxSizeChanged) {
+        pendingResult_ = IOCommand::ApplyBoxSize;
     }
 
     ImGui::SeparatorText("Генератор");

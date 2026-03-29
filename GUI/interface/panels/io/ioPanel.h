@@ -8,9 +8,11 @@
 #include "Engine/physics/AtomData.h"
 
 class FileDialogManager;
+class Simulation;
 
 enum class IOCommand : uint8_t {
     ClearSimulation,
+    ApplyBoxSize,
     CreateCrystal,
     CreateGas,
 };
@@ -23,7 +25,7 @@ public:
         ImGuiWindowFlags_NoCollapse |
         ImGuiWindowFlags_NoTitleBar;
 
-    void draw(float scale, sf::Vector2u windowSize, FileDialogManager& fileDialog);
+    void draw(float scale, sf::Vector2u windowSize, Simulation& simulation, FileDialogManager& fileDialog);
 
     void toggle() { visible_ = !visible_; }
     void close() { visible_ = false; }
@@ -35,17 +37,23 @@ public:
     [[nodiscard]] AtomData::Type atomType() const { return atomType_; }
     [[nodiscard]] AtomData::Type gasAtomType() const { return gasAtomType_; }
     [[nodiscard]] float gasDensity() const { return gasDensity_; }
+    [[nodiscard]] float boxSizeX() const { return boxSizeX_; }
+    [[nodiscard]] float boxSizeY() const { return boxSizeY_; }
+    [[nodiscard]] float boxSizeZ() const { return boxSizeZ_; }
 
     std::optional<IOCommand> popResult();
 
 private:
     bool visible_ = false;
     float animProgress_ = 0.f;
-    int sceneAxisCount_ = 46;
+    int sceneAxisCount_ = 25;
     bool sceneIs3D_ = true;
-    int gasAtomCount_ = 10000;
+    int gasAtomCount_ = 1000;
     bool gasIs3D_ = false;
     float gasDensity_ = 1.0f;
+    float boxSizeX_ = 50.0f;
+    float boxSizeY_ = 50.0f;
+    float boxSizeZ_ = 6.0f;
     AtomData::Type atomType_ = AtomData::Type::Z;
     AtomData::Type gasAtomType_ = AtomData::Type::Z;
     std::optional<IOCommand> pendingResult_;
