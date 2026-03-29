@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include <cstddef>
-#include <cstdint>
 #include <span>
 #include <utility>
 #include <vector>
@@ -24,10 +23,10 @@ public:
     void build(const AtomStorage& atoms, SimBox& box);
     bool needsRebuild(const AtomStorage& atoms) const;
 
-    [[nodiscard]] std::size_t atomCount() const;
-    [[nodiscard]] std::size_t pairStorageSize() const;
-    [[nodiscard]] std::pair<std::size_t, std::size_t> rangeFor(std::size_t atomIndex) const;
-    [[nodiscard]] std::size_t memoryBytes() const;
+    [[nodiscard]] size_t atomCount() const;
+    [[nodiscard]] size_t pairStorageSize() const;
+    [[nodiscard]] std::pair<size_t, size_t> rangeFor(size_t atomIndex) const;
+    [[nodiscard]] size_t memoryBytes() const;
     [[nodiscard]] const RateCounter& buildCounter() const { return buildCounter_; }
     [[nodiscard]] const RateCounter& needsRebuildCounter() const { return needsRebuildCounter_; }
     [[nodiscard]] float cutoff() const { return cutoff_; }
@@ -41,6 +40,7 @@ public:
     }
     [[nodiscard]] const std::vector<std::size_t>& neighbors() const { return neighbors_; }
     [[nodiscard]] const std::vector<std::size_t>& offsets() const { return offsets_; }
+    
     // Hot-path helper для сборки списка соседей одного атома.
     inline void writeAtomNeighbors(const SpatialGrid& grid, const AtomStorage& atoms, std::size_t atomIndex, std::vector<std::size_t>& outNeighbors) const {
         const float xi = atoms.posX(atomIndex);
@@ -70,16 +70,37 @@ public:
     }
 
     template<typename F>
-    void forEachNeighbor(const SpatialGrid& grid, const AtomStorage& atoms, std::size_t atomIndex, F&& callback) const {
+    /* helper функция, перебирает всех соседей атома */
+    void forEachNeighbor(const SpatialGrid& grid, const AtomStorage& atoms, size_t atomIndex, F&& callback) const {
         const int cx = grid.worldToCellX(atoms.posX(atomIndex));
         const int cy = grid.worldToCellY(atoms.posY(atomIndex));
         const int cz = grid.worldToCellZ(atoms.posZ(atomIndex));
 
-        const int center = grid.linearIndex(cx, cy, cz);
-        const auto& offsets27 = grid.neighborOffsets27();
-        for (int k = 0; k < 27; ++k) {
-            for (std::size_t neighbourIndex : grid.atomsInCellByLinearIndex(center + offsets27[k])) {
-                callback(neighbourIndex);
+        for (int iz = cz - 1; iz <= cz + 1; ++iz) {
+            for (int iy = cy - 1; iy <= cy + 1; ++iy) {
+                for (int ix = cx - 1; ix <= cx + 1; ++ix) {
+                    for (size_t neighbourIndex : grid.atomsInCell(ix, iy, iz)) {
+                        callback(neighbourIndex);
+                    }
+                }
+            }
+        }
+    }
+
+    template<typename F>
+    /* helper функция, перебирает всех соседей атома */
+    void forEachNeighbor(const SpatialGrid& grid, const AtomStorage& atoms, float x, float y, float z, F&& callback) const {
+        const int cx = grid.worldToCellX(x);
+        const int cy = grid.worldToCellY(y);
+        const int cz = grid.worldToCellZ(z);
+
+        for (int iz = cz - 1; iz <= cz + 1; ++iz) {
+            for (int iy = cy - 1; iy <= cy + 1; ++iy) {
+                for (int ix = cx - 1; ix <= cx + 1; ++ix) {
+                    for (size_t neighbourIndex : grid.atomsInCell(ix, iy, iz)) {
+                        callback(neighbourIndex);
+                    }
+                }
             }
         }
     }
@@ -87,8 +108,8 @@ public:
 private:
     void reserveListBuffers(const AtomStorage& atoms, const SpatialGrid& grid);
 
-    std::vector<std::size_t> neighbors_;
-    std::vector<std::size_t> offsets_;
+    std::vector<size_t> neighbors_;
+    std::vector<size_t> offsets_;
 
     std::vector<float> refPosX_;
     std::vector<float> refPosY_;

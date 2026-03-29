@@ -73,3 +73,6 @@ cmake-build-*/
 # Local app state
 imgui.ini
 *.sim
+
+# Python
+__pycache__/

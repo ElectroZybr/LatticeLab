@@ -7,6 +7,8 @@
 #include "SpatialGrid.h"
 #include "../SimBox.h"
 
+#include "restrict.h"
+
 NeighborList::NeighborList() = default;
 
 void NeighborList::setCutoff(float cutoff) {
@@ -56,20 +58,26 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
 
     reserveListBuffers(atoms, grid);
 
-    std::vector<std::size_t> tmp;
-    tmp.reserve(neighbors_.capacity());
-
     offsets_[0] = 0;
-    for (std::size_t index = 0; index < atomCount; ++index) {
-        writeAtomNeighbors(grid, atoms, index, tmp);
-        offsets_[index + 1] = tmp.size();
+    for (std::size_t i = 0; i < atomCount; ++i) {
+        const float xi = atoms.posX(i);
+        const float yi = atoms.posY(i);
+        const float zi = atoms.posZ(i);
 
-        refPosX_[index] = atoms.posX(index);
-        refPosY_[index] = atoms.posY(index);
-        refPosZ_[index] = atoms.posZ(index);
+        forEachNeighbor(grid, atoms, xi, yi, zi, [&](std::size_t j) {
+            if (j >= i) return;
+            const float dx = atoms.posX(j) - xi;
+            const float dy = atoms.posY(j) - yi;
+            const float dz = atoms.posZ(j) - zi;
+            if (dx*dx + dy*dy + dz*dz <= listRadiusSqr_)
+                neighbors_.emplace_back(j);
+        });
+        offsets_[i + 1] = neighbors_.size();
+
+        refPosX_[i] = xi;
+        refPosY_[i] = yi;
+        refPosZ_[i] = zi;
     }
-
-    neighbors_ = std::move(tmp);
 
     buildCounter_.finishStep();
     valid_ = true;
@@ -77,20 +85,30 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
 
 bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
     needsRebuildCounter_.startStep();
+    const size_t n = atoms.size();
 
-    if (!valid_ || atoms.size() != refPosX_.size()) {
+    if (!valid_ || n != refPosX_.size()) {
         needsRebuildCounter_.finishStep();
         return true;
     }
 
     const float maxDispSqr = (0.5f * skin_) * (0.5f * skin_);
 
-    bool rebuild = false;
-    for (std::size_t i = 0; i < atoms.size(); ++i) {
-        const float dx = atoms.posX(i) - refPosX_[i];
-        const float dy = atoms.posY(i) - refPosY_[i];
-        const float dz = atoms.posZ(i) - refPosZ_[i];
-        rebuild |= (dx*dx + dy*dy + dz*dz) > maxDispSqr;
+    const float* RESTRICT x = atoms.xData();
+    const float* RESTRICT y = atoms.yData();
+    const float* RESTRICT z = atoms.zData();
+
+    const float* RESTRICT refX = refPosX_.data();
+    const float* RESTRICT refY = refPosY_.data();
+    const float* RESTRICT refZ = refPosZ_.data();
+
+    int rebuild = false;
+    #pragma GCC ivdep
+    for (std::size_t i = 0; i < n; ++i) {
+        const float dx = x[i] - refX[i];
+        const float dy = y[i] - refY[i];
+        const float dz = z[i] - refZ[i];
+        rebuild |= ((dx*dx + dy*dy + dz*dz) > maxDispSqr);
     }
 
     needsRebuildCounter_.finishStep();
