@@ -27,10 +27,10 @@ public:
     [[nodiscard]] const RateCounter& rebuildCounter() const noexcept { return rebuildCounter_; }
 
     // (warning) нет проверки выхода за границы
-    [[nodiscard]] std::span<const std::size_t> atomsInCell(int x, int y, int z) const noexcept {
-        const std::size_t idx = static_cast<std::size_t>(index(x, y, z));
-        const std::size_t begin = offsets[idx];
-        return std::span<const std::size_t>(atomsInCells.data() + begin, offsets[idx + 1] - begin);
+    [[nodiscard]] std::span<const size_t> atomsInCell(int x, int y, int z) const noexcept {
+        const size_t idx = static_cast<size_t>(index(x, y, z));
+        const size_t begin = offsets[idx];
+        return std::span<const size_t>(atomsInCells.data() + begin, offsets[idx + 1] - begin);
     }
 
     // (warning) нет проверки выхода за границы
@@ -45,7 +45,7 @@ public:
     int worldToCellZ(float z) const { return toCell(z, sizeZ); }
 
     [[nodiscard]] int countAtomsInCell(int cx, int cy, int cz) const {
-        const std::size_t idx = static_cast<std::size_t>(index(cx, cy, cz));
+        const size_t idx = static_cast<size_t>(index(cx, cy, cz));
         return static_cast<int>(offsets[idx + 1] - offsets[idx]);
     }
 
@@ -57,6 +57,10 @@ private:
     std::vector<std::size_t> offsets;      // массив оффсетов (каждый оффсет - начало новой ячейки)
     std::vector<std::size_t> atomsInCells; // атомы подряд сгруппированные по ячейкам
     std::array<int, 27> neighborOffsets27_{};
+    
+    // рабочие буферы rebuild — переиспользуются между вызовами
+    std::vector<size_t> cellIndices_;
+    std::vector<size_t> counts_;
 
     static constexpr int kBorderCells = 2; // запас + 1 клетка с каждой стороны от бокса
 

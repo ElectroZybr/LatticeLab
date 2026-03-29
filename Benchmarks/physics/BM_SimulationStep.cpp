@@ -9,15 +9,15 @@ BENCHMARK_DEFINE_F(SimulationFixture, FullStepWithNeighborList)(benchmark::State
     for (int i = 0; i < kWarmupSteps; ++i) {
         simulation_->update(Benchmarks::kDt);
     }
-    const std::size_t rebuildCountBefore = simulation_->neighborListRebuildCount();
+    const size_t rebuildCountBefore = simulation_->neighborListRebuildCount();
 
     for (auto _ : state) {
         simulation_->update(Benchmarks::kDt);
         benchmark::ClobberMemory();
     }
 
-    const std::size_t rebuildCountAfter = simulation_->neighborListRebuildCount();
-    const std::size_t rebuildCount = rebuildCountAfter - rebuildCountBefore;
+    const size_t rebuildCountAfter = simulation_->neighborListRebuildCount();
+    const size_t rebuildCount = rebuildCountAfter - rebuildCountBefore;
     const double iterCount = static_cast<double>(state.iterations());
 
     state.counters["nl_rebuild_count"] = static_cast<double>(rebuildCount);

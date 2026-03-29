@@ -35,8 +35,9 @@ private:
     static LJPairTable buildLJPairTable();
 
     static void applyWall(float coord, float& force, float min, float max);
-    void softWalls(const AtomStorage& atoms, std::size_t atomIndex, float& forceX, float& forceY, float& forceZ) const;
-    void ComputeForces(AtomStorage& atoms, std::size_t atomIndex, SimBox& box, NeighborList* neighborList) const;
+    void softWalls(const AtomStorage& atoms, float coordX, float coordY, float coordZ, float& forceX, float& forceY, float& forceZ) const;
+    template<bool UseNeighborList>
+    void ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* neighborList) const;
     void pairNonBondedInteraction(AtomStorage& atoms, std::size_t bIndex, const LJPairRow& ljPairRow, float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const;
     void applyGravityForce(float& forceX, float& forceY, float& forceZ) const;
 
