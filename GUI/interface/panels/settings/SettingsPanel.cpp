@@ -159,7 +159,7 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
         }
     }
 
-    const float exitButtonWidth = 90.0f * uiScale;
+    const float exitButtonWidth = ImGui::GetContentRegionAvail().x;
     const float footerHeight = ImGui::GetFrameHeightWithSpacing();
     const float remaining = ImGui::GetContentRegionAvail().y - footerHeight;
     if (remaining > 0.0f) {

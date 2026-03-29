@@ -35,13 +35,27 @@ void Simulation::update(float dt) {
 }
 
 void Simulation::setSizeBox(Vec3f newStart, Vec3f newEnd, int cellSize) {
-    if (sim_box.setSizeBox(newStart, newEnd, cellSize)) {
+    const Vec3f oldStart = sim_box.start;
+    const bool resized = sim_box.setSizeBox(newStart, newEnd, cellSize);
+    const Vec3f shift = oldStart - sim_box.start;
+    const bool originShifted = shift.sqrAbs() > 0.0;
+
+    if (originShifted) {
+        for (std::size_t i = 0; i < atomStorage.size(); ++i) {
+            atomStorage.posX(i) += static_cast<float>(shift.x);
+            atomStorage.posY(i) += static_cast<float>(shift.y);
+            atomStorage.posZ(i) += static_cast<float>(shift.z);
+        }
+    }
+
+    if (resized || originShifted) {
         forceField.updateBoxCache(sim_box);
         sim_box.grid.rebuild(
             atomStorage.xDataSpan(),
             atomStorage.yDataSpan(),
             atomStorage.zDataSpan()
         );
+        neighborList.clear();
     }
 }
 
