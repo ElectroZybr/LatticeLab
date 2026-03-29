@@ -4,6 +4,7 @@
 #include <array>
 
 #include "GUI/interface/file_dialog/FileDialogManager.h"
+#include "GUI/interface/style/ComboStyle.h"
 
 namespace {
 struct AtomTypeOption {
@@ -42,23 +43,12 @@ int findTypeIndex(AtomData::Type type) {
     return 0;
 }
 
-void drawCenteredComboPreview(const char* selectedLabel) {
-    const ImVec2 comboMin = ImGui::GetItemRectMin();
-    const ImVec2 comboMax = ImGui::GetItemRectMax();
-    const float arrowWidth = ImGui::GetFrameHeight();
-    const ImVec2 textSize = ImGui::CalcTextSize(selectedLabel);
-    const float textX = comboMin.x + ((comboMax.x - comboMin.x - arrowWidth) - textSize.x) * 0.5f;
-    const float textY = comboMin.y + ((comboMax.y - comboMin.y) - textSize.y) * 0.5f;
-    ImGui::GetWindowDrawList()->AddText(ImVec2(textX, textY), ImGui::GetColorU32(ImGuiCol_Text), selectedLabel);
-}
-
-void drawAtomTypeCombo(const char* id, AtomData::Type& atomType, float width) {
+void drawAtomTypeCombo(const char* id, AtomData::Type& atomType, float width, float uiScale) {
     int selectedTypeIndex = findTypeIndex(atomType);
-    ImGui::SetNextItemWidth(width);
     const char* selectedLabel = kAtomTypeOptions[static_cast<std::size_t>(selectedTypeIndex)].label;
 
-    if (ImGui::BeginCombo(id, "")) {
-        ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.5f, 0.5f));
+    if (ComboStyle::beginCenteredCombo(id, width, uiScale)) {
+        ComboStyle::pushCenteredSelectableText();
         for (int i = 0; i < static_cast<int>(kAtomTypeOptions.size()); ++i) {
             const bool selected = (i == selectedTypeIndex);
             if (ImGui::Selectable(kAtomTypeOptions[static_cast<std::size_t>(i)].label, selected)) {
@@ -70,11 +60,11 @@ void drawAtomTypeCombo(const char* id, AtomData::Type& atomType, float width) {
                 ImGui::SetItemDefaultFocus();
             }
         }
-        ImGui::PopStyleVar();
+        ComboStyle::popCenteredSelectableText();
         ImGui::EndCombo();
     }
 
-    drawCenteredComboPreview(selectedLabel);
+    ComboStyle::drawCenteredComboPreview(selectedLabel);
 }
 } // namespace
 
@@ -112,7 +102,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, FileDialogManager& file
     ImGui::SeparatorText("Генератор");
     ImGui::SliderInt("##Атомов по оси", &sceneAxisCount_, 2, 200);
     ImGui::SameLine();
-    drawAtomTypeCombo("##atom_type", atomType_, 80.f * scale);
+    drawAtomTypeCombo("##atom_type", atomType_, 80.f * scale, scale);
 
     if (ImGui::Button("Создать##crystal", ImVec2(buttonWidth * scale, 0.f))) {
         pendingResult_ = IOCommand::CreateCrystal;
@@ -123,7 +113,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, FileDialogManager& file
     ImGui::SeparatorText("Генератор газа");
     ImGui::SliderInt("##gas_atom_count", &gasAtomCount_, 100, 300000);
     ImGui::SameLine();
-    drawAtomTypeCombo("##atom_type_gas", gasAtomType_, 80.f * scale);
+    drawAtomTypeCombo("##atom_type_gas", gasAtomType_, 80.f * scale, scale);
     if (ImGui::Button("Создать##gas", ImVec2(buttonWidth * scale, 0.f))) {
         pendingResult_ = IOCommand::CreateGas;
     }

@@ -277,10 +277,12 @@ void RendererGL::drawShot(const AtomStorage& atoms, const SimBox& box)
 
 void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
     const size_t atomCount = atoms.size();
+    const bool useSpeedGradient = speedColorMode != SpeedColorMode::AtomColor;
+    const bool useTurboGradient = speedColorMode == SpeedColorMode::GradientTurbo;
 
     // --- maxSpeedSqr ---
     float maxSpeedSqr = 1.f;
-    if (speedGradient) {
+    if (useSpeedGradient) {
         if (speedGradientMax > 0.0f) {
             maxSpeedSqr = speedGradientMax * speedGradientMax;
         } else {
@@ -298,11 +300,11 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
         radii[i] = static_cast<float>(props.radius);
 
         sf::Color sfColor;
-        if (speedGradient) {
+        if (useSpeedGradient) {
             const float vSqr = atoms.vel(i).sqrAbs();
             const float t = std::clamp(std::sqrt(vSqr / maxSpeedSqr), 0.f, 1.f);
-            sfColor = speedGradientTurbo ? turboColor(t)
-                                         : sf::Color(255*t, 0, (1.f-t)*255.f);
+            sfColor = useTurboGradient ? turboColor(t)
+                                       : sf::Color(255*t, 0, (1.f-t)*255.f);
         } else {
             sfColor = props.color;
         }

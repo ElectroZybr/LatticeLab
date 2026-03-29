@@ -113,8 +113,7 @@ void processToolsPanel(std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& w
         if (newRenderer) {
             newRenderer->drawGrid = renderer->drawGrid;
             newRenderer->drawBonds = renderer->drawBonds;
-            newRenderer->speedGradient = renderer->speedGradient;
-            newRenderer->speedGradientTurbo = renderer->speedGradientTurbo;
+            newRenderer->speedColorMode = renderer->speedColorMode;
             newRenderer->speedGradientMax = renderer->speedGradientMax;
             newRenderer->setAtomStorage(&simulation.atomStorage);
             renderer = std::move(newRenderer);
@@ -176,7 +175,7 @@ int Application::run() {
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
     renderer->setAtomStorage(&simulation.atomStorage);
     renderer->drawBonds = true;
-    renderer->speedGradient = true;
+    renderer->speedColorMode = IRenderer::SpeedColorMode::GradientClassic;
 
     Interface::init(window, simulation, renderer);
     EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atomStorage);
