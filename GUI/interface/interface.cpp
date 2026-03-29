@@ -36,6 +36,7 @@ DebugPanel Interface::debugPanel;
 FileDialogManager Interface::fileDialog;
 StyleManager Interface::styleManager;
 ToolsPanel Interface::toolsPanel;
+IOPanel Interface::ioPanel;
 SideToolsPanel Interface::sideToolsPanel;
 SimControlPanel Interface::simControlPanel;
 PeriodicPanel Interface::periodicPanel;
@@ -88,7 +89,7 @@ int Interface::Update() {
     ImGui::SFML::Update(*window, clock.restart());
 
     ImGui::PushFont(fontManager.main);
-        toolsPanel.draw(styleManager.getScale(), *window, debugPanel, fileDialog, settingsPanel);
+        toolsPanel.draw(styleManager.getScale(), *window, debugPanel, settingsPanel, ioPanel);
         periodicPanel.draw(styleManager.getScale(), window->getSize(), selectedAtom);
         simControlPanel.draw(styleManager.getScale(), window->getSize(), pause, simulationSpeed);
         sideToolsPanel.draw(styleManager.getScale(), window->getSize(), fontManager.icons, fontManager.dialog);
@@ -107,6 +108,7 @@ int Interface::Update() {
         fileDialog.draw(styleManager.getScale());
         debugPanel.draw(styleManager.getScale(), window->getSize());
         settingsPanel.draw(styleManager.getScale(), window->getSize(), *simulation, *renderer);
+        ioPanel.draw(styleManager.getScale(), window->getSize(), fileDialog);
     ImGui::PopFont();
 
     // Проверка на вхождение курсора в область

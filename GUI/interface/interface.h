@@ -8,6 +8,7 @@
 #include "style/StyleManager.h"
 #include "panels/debug/DebugPanel.h"
 #include "panels/settings/SettingsPanel.h"
+#include "panels/io/ioPanel.h"
 #include "panels/tools/ToolsPanel.h"
 #include "panels/tools/SideToolsPanel.h"
 #include "panels/sim_control/SimControlPanel.h"
@@ -45,6 +46,7 @@ public:
     static FileDialogManager fileDialog;
     static StyleManager styleManager;
     static ToolsPanel toolsPanel;
+    static IOPanel ioPanel;
     static SideToolsPanel sideToolsPanel;
     static SimControlPanel simControlPanel;
     static PeriodicPanel periodicPanel;

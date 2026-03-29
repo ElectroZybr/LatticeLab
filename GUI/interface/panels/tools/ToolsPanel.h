@@ -6,11 +6,18 @@
 #include <SFML/Window.hpp>
 #include "imgui.h"
 
-enum class ToolsCommand : uint8_t { ToggleRenderer2D, ToggleRenderer3D, ClearSimulation, SetCameraOrbit, SetCameraFree };
+enum class ToolsCommand : uint8_t {
+    ToggleRenderer2D,
+    ToggleRenderer3D,
+    ClearSimulation,
+    SetCameraOrbit,
+    SetCameraFree,
+};
 
 class DebugPanel;
 class FileDialogManager;
 class SettingsPanel;
+class IOPanel;
 
 class ToolsPanel {
 public:
@@ -21,7 +28,7 @@ public:
         ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoScrollbar;
 
-    void draw(float scale, sf::RenderWindow& window, DebugPanel& debug, FileDialogManager& fileDialog, SettingsPanel& settings);
+    void draw(float scale, sf::RenderWindow& window, DebugPanel& debug, SettingsPanel& settings, IOPanel& ioPanel);
 
     std::optional<ToolsCommand> popResult();
 private:
