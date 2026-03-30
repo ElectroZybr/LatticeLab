@@ -50,6 +50,7 @@ public:
     }
 
     [[nodiscard]] int linearIndex(int x, int y, int z) const noexcept { return index(x, y, z); }
+    [[nodiscard]] int linearCellOfAtom(std::uint32_t atomIndex) const noexcept { return static_cast<int>(cellIndices_[atomIndex]); }
     [[nodiscard]] const std::array<int, 27>& neighborOffsets27() const noexcept { return neighborOffsets27_; }
 
     [[nodiscard]] std::size_t memoryBytes() const;
