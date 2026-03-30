@@ -93,10 +93,10 @@ void processToolsPanel(std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& w
         std::unique_ptr<IRenderer> newRenderer;
         switch (result.value()) {
             case ToolsCommand::ToggleRenderer2D:
-                newRenderer = std::make_unique<Renderer2D>(window, gameView);
+                newRenderer = std::make_unique<Renderer2D>(window, gameView, simulation.sim_box);
                 break;
             case ToolsCommand::ToggleRenderer3D:
-                newRenderer = std::make_unique<Renderer3D>(window, gameView);
+                newRenderer = std::make_unique<Renderer3D>(window, gameView, simulation.sim_box);
                 break;
             case ToolsCommand::ClearSimulation:
                 simulation.clear();
@@ -175,7 +175,7 @@ int Application::run() {
     simulation.setIntegrator(Integrator::Scheme::Verlet);
     Scenes::crystal(simulation, 25, AtomData::Type::Z, false);
 
-    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
+    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView, simulation.sim_box);
     renderer->setAtomStorage(&simulation.atomStorage);
     renderer->drawBonds = true;
     renderer->speedColorMode = IRenderer::SpeedColorMode::GradientClassic;
@@ -261,5 +261,3 @@ int Application::run() {
     Interface::shutdown();
     return 0;
 }
-
-

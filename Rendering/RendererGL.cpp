@@ -50,8 +50,8 @@ void initializeGlad(sf::RenderTarget& target) {
 }
 }
 
-RendererGL::RendererGL(sf::RenderTarget& t, sf::View& gv)
-    : IRenderer(gv), target(t)
+RendererGL::RendererGL(sf::RenderTarget& t, sf::View& gv, SimBox& simbox)
+    : IRenderer(gv, simbox), target(t)
 {
     initializeGlad(t);
     initQuadGL();
@@ -435,14 +435,9 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
 }
 
 void RendererGL::drawBox(const SimBox& box) {
-<<<<<<< HEAD
     PROFILE_SCOPE("RendererGL::drawBox");
-    const float x0 = box.start.x, y0 = box.start.y, z0 = box.start.z;
-    const float x1 = box.end.x,   y1 = box.end.y,   z1 = box.end.z;
-=======
     const float x0 = 0, y0 = 0, z0 = 0;
     const float x1 = box.size.x,   y1 = box.size.y,   z1 = box.size.z;
->>>>>>> 8793cfe (SimBox всегда начинается в 0)
 
     const float lines[] = {
         x0,y0,z0, x1,y0,z0,  x1,y0,z0, x1,y1,z0,
@@ -470,12 +465,8 @@ void RendererGL::drawBox(const SimBox& box) {
     glBindVertexArray(0);
 }
 
-<<<<<<< HEAD
-void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
-    PROFILE_SCOPE("RendererGL::drawBondsGL");
-=======
 void RendererGL::drawBondsGL() {
->>>>>>> 8793cfe (SimBox всегда начинается в 0)
+    PROFILE_SCOPE("RendererGL::drawBondsGL");
     if (bondShader == 0 || !atomStorage) return;
 
     bondData.clear();
@@ -523,12 +514,8 @@ void RendererGL::drawBondsGL() {
     glBindVertexArray(0);
 }
 
-<<<<<<< HEAD
-void RendererGL::drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset) {
-    PROFILE_SCOPE("RendererGL::drawGridGL");
-=======
 void RendererGL::drawGridGL(const SpatialGrid& grid) {
->>>>>>> 8793cfe (SimBox всегда начинается в 0)
+    PROFILE_SCOPE("RendererGL::drawGridGL");
     gridData.clear();
 
     int maxCount = 1;
