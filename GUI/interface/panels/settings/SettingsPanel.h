@@ -10,7 +10,7 @@
 class Simulation;
 class IRenderer;
 
-enum class SettingsCommand : std::uint8_t {
+enum class SettingsCommand : uint8_t {
     ExitApplication,
 };
 

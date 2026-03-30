@@ -17,7 +17,7 @@ struct StaticAtomicData {
 
 class AtomData {
 public:
-    enum class Type : std::uint8_t {
+    enum class Type : uint8_t {
         Z,
 
         H, He,

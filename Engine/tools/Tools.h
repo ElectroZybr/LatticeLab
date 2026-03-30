@@ -22,7 +22,7 @@ public:
     using AtomCreator = std::function<bool(Vec3f, Vec3f, AtomData::Type, bool)>;
     using AtomRemover = std::function<bool(size_t)>;
 
-    enum class Mode : std::uint8_t {
+    enum class Mode : uint8_t {
         Cursor,
         Frame,
         Lasso,

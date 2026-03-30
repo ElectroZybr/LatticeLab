@@ -36,7 +36,7 @@ private:
     float* pe_ = nullptr;
 
     std::vector<AtomData::Type> atomType_;
-    std::vector<std::uint8_t> valence_;
+    std::vector<uint8_t> valence_;
 
     void bindFloatViews() {
         if (capacity_ == 0 || floatData_.empty()) {
@@ -172,7 +172,7 @@ public:
     size_t memoryBytes() const {
         return floatData_.capacity() * sizeof(float)
             + atomType_.capacity() * sizeof(AtomData::Type)
-            + valence_.capacity() * sizeof(std::uint8_t);
+            + valence_.capacity() * sizeof(uint8_t);
     }
 
     void clear() {
@@ -317,8 +317,8 @@ public:
     float& energy(size_t i) { return pe_[i]; }
     const float& energy(size_t i) const { return pe_[i]; }
 
-    std::uint8_t& valenceCount(size_t i) { return valence_[i]; }
-    const std::uint8_t& valenceCount(size_t i) const { return valence_[i]; }
+    uint8_t& valenceCount(size_t i) { return valence_[i]; }
+    const uint8_t& valenceCount(size_t i) const { return valence_[i]; }
 
     bool isAtomFixed(size_t i) const { return i >= mobileCount_; }
     void setFixed(size_t i, bool fixed) {

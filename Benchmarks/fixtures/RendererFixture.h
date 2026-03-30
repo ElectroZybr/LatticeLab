@@ -22,7 +22,7 @@ public:
         }
 
         view_ = renderTexture_->getView();;
-        renderer_ = std::make_unique<TRenderer>(*renderTexture_, view_);
+        renderer_ = std::make_unique<TRenderer>(*renderTexture_, view_, box_);
         Tools::init(nullptr, &view_, nullptr, nullptr, renderer_);
 
         atomStorage_ = makeGridAtoms(static_cast<int>(state.range(0)));
@@ -44,7 +44,7 @@ protected:
     std::unique_ptr<IRenderer> renderer_;
     sf::View view_;
     AtomStorage atomStorage_;
-    SimBox box_{ Vec3f(0, 0, 0), Vec3f(300, 300, 300) };
+    SimBox box_{ Vec3f(300, 300, 300) };
 
 private:
     static AtomStorage makeGridAtoms(int count) {

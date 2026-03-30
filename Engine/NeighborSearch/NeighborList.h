@@ -31,21 +31,21 @@ public:
     [[nodiscard]] float skin() const { return skin_; }
     [[nodiscard]] float listRadius() const { return listRadius_; }
     [[nodiscard]] bool isValid() const { return valid_; }
-    [[nodiscard]] const std::vector<std::uint32_t>& neighbors() const { return neighbors_; }
-    [[nodiscard]] const std::vector<std::uint32_t>& offsets() const { return offsets_; }
+    [[nodiscard]] const std::vector<uint32_t>& neighbors() const { return neighbors_; }
+    [[nodiscard]] const std::vector<uint32_t>& offsets() const { return offsets_; }
     [[nodiscard]] const NeighborListStats& stats() const { return stats_; }
     void resetStats();
     void recordRebuild(int simStep);
     
     // Hot-path helper для записи соседей одного атома.
     inline void writeAtomNeighbors(const SpatialGrid& grid, const float* x, const float* y, const float* z,
-                                   const std::uint32_t atomIndex, const float xi, const float yi, const float zi,
-                                   std::vector<std::uint32_t>& outNeighbors) const {
+                                   const uint32_t atomIndex, const float xi, const float yi, const float zi,
+                                   std::vector<uint32_t>& outNeighbors) const {
         const auto& offsets27 = grid.neighborOffsets27();
         const int center = grid.linearCellOfAtom(atomIndex); // центральная ячейка атома i
 
         for (int k = 0; k < 27; ++k) {
-            for (std::uint32_t neighborIndex : grid.atomsInCellByLinearIndex(center + offsets27[k])) {
+            for (uint32_t neighborIndex : grid.atomsInCellByLinearIndex(center + offsets27[k])) {
                 if (neighborIndex >= atomIndex) continue;
                 const float dx = x[neighborIndex] - xi;
                 const float dy = y[neighborIndex] - yi;
