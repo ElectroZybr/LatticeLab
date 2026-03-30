@@ -12,9 +12,7 @@ void SimulationStateIO::save(const Simulation& simulation, std::string_view path
         return;
     }
 
-    file << "box "
-         << simulation.sim_box.start.x << " " << simulation.sim_box.start.y << " " << simulation.sim_box.start.z << " "
-         << simulation.sim_box.end.x   << " " << simulation.sim_box.end.y   << " " << simulation.sim_box.end.z   << "\n";
+    file << "box " << simulation.sim_box.size.x << " " << simulation.sim_box.size.y << " " << simulation.sim_box.size.z << "\n";
 
     file << "step " << simulation.sim_step << "\n";
 
@@ -44,15 +42,14 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
     };
     std::vector<LoadedAtomData> buffer;
 
-    Vec3f boxStart, boxEnd;
+    Vec3f boxSize;
     int cellSize = -1;
     int loadedStep = 0;
 
     std::string tag;
     while (file >> tag) {
         if (tag == "box") {
-            file >> boxStart.x >> boxStart.y >> boxStart.z
-                 >> boxEnd.x   >> boxEnd.y   >> boxEnd.z;
+            file >> boxSize.x >> boxSize.y >> boxSize.z;
         } else if (tag == "step") {
             file >> loadedStep;
         } else if (tag == "atom") {
@@ -77,7 +74,7 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
         }
     }
 
-    simulation.setSizeBox(boxStart, boxEnd, cellSize);
+    simulation.setSizeBox(boxSize, cellSize);
 
     for (const LoadedAtomData& data : buffer) {
         simulation.createAtom(data.coords, data.speed, static_cast<AtomData::Type>(data.type), data.fixed);

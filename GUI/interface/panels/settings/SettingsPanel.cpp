@@ -150,7 +150,7 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
 
     int cellSize = simulation.sim_box.grid.cellSize;
     if (ImGui::SliderInt("Cell size", &cellSize, 1, 32)) {
-        simulation.setSizeBox(simulation.sim_box.start, simulation.sim_box.end, cellSize);
+        simulation.setSizeBox(simulation.sim_box.size, cellSize);
     }
 
     if (simulation.isNeighborListEnabled()) {

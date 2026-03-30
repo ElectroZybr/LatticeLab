@@ -296,8 +296,6 @@ void RendererGL::drawShot(const AtomStorage& atoms, const SimBox& box)
     currentBox = &box;
     updateMatrices();
 
-    const glm::vec3 boxOffset(box.start.x, box.start.y, box.start.z);
-
     target.setActive(true);
 
     glEnable(GL_DEPTH_TEST);
@@ -305,8 +303,8 @@ void RendererGL::drawShot(const AtomStorage& atoms, const SimBox& box)
     glClearColor(0.13f, 0.13f, 0.13f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (drawBonds) drawBondsGL(boxOffset);
-    if (drawGrid)  drawGridGL(box.grid, boxOffset);
+    if (drawBonds) drawBondsGL();
+    if (drawGrid)  drawGridGL(box.grid);
     drawBox(box);
 
     drawAtoms(atoms, box);
@@ -342,8 +340,7 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
                        1, GL_FALSE, glm::value_ptr(projection));
     glUniformMatrix4fv(glGetUniformLocation(atomShader, "view"),
                        1, GL_FALSE, glm::value_ptr(view));
-    glUniform3f(glGetUniformLocation(atomShader, "boxStart"),
-                box.start.x, box.start.y, box.start.z);
+    glUniform1i(glGetUniformLocation(atomShader, "colorMode"),   static_cast<int>(speedColorMode));
     glUniform1f(glGetUniformLocation(atomShader, "maxSpeedSqr"), maxSpeedSqr);
 
     if (useLighting()) {
@@ -438,9 +435,14 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
 }
 
 void RendererGL::drawBox(const SimBox& box) {
+<<<<<<< HEAD
     PROFILE_SCOPE("RendererGL::drawBox");
     const float x0 = box.start.x, y0 = box.start.y, z0 = box.start.z;
     const float x1 = box.end.x,   y1 = box.end.y,   z1 = box.end.z;
+=======
+    const float x0 = 0, y0 = 0, z0 = 0;
+    const float x1 = box.size.x,   y1 = box.size.y,   z1 = box.size.z;
+>>>>>>> 8793cfe (SimBox всегда начинается в 0)
 
     const float lines[] = {
         x0,y0,z0, x1,y0,z0,  x1,y0,z0, x1,y1,z0,
@@ -468,8 +470,12 @@ void RendererGL::drawBox(const SimBox& box) {
     glBindVertexArray(0);
 }
 
+<<<<<<< HEAD
 void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
     PROFILE_SCOPE("RendererGL::drawBondsGL");
+=======
+void RendererGL::drawBondsGL() {
+>>>>>>> 8793cfe (SimBox всегда начинается в 0)
     if (bondShader == 0 || !atomStorage) return;
 
     bondData.clear();
@@ -486,8 +492,8 @@ void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
         const float r = (AtomData::getProps(atomStorage->type(aIndex)).radius +
                          AtomData::getProps(atomStorage->type(bIndex)).radius) * 0.15f;
         bondData.emplace_back(
-            glm::vec3(aPos.x, aPos.y, aPos.z) + boxOffset,
-            glm::vec3(bPos.x, bPos.y, bPos.z) + boxOffset,
+            glm::vec3(aPos.x, aPos.y, aPos.z),
+            glm::vec3(bPos.x, bPos.y, bPos.z),
             r
         );
     }
@@ -517,8 +523,12 @@ void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
     glBindVertexArray(0);
 }
 
+<<<<<<< HEAD
 void RendererGL::drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset) {
     PROFILE_SCOPE("RendererGL::drawGridGL");
+=======
+void RendererGL::drawGridGL(const SpatialGrid& grid) {
+>>>>>>> 8793cfe (SimBox всегда начинается в 0)
     gridData.clear();
 
     int maxCount = 1;
@@ -532,7 +542,7 @@ void RendererGL::drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset)
                 gridData.emplace_back(
                     glm::vec3((x - 1) * grid.cellSize,
                               (y - 1) * grid.cellSize,
-                              (z - 1) * grid.cellSize) + boxOffset,
+                              (z - 1) * grid.cellSize),
                     static_cast<float>(grid.cellSize),
                     static_cast<float>(countAtomsInCell)
                 );

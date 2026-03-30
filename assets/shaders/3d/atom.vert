@@ -12,7 +12,8 @@ layout(location = 9) in int isSelected;
 
 uniform mat4 projection;
 uniform mat4 view;
-uniform vec3 boxStart;
+// режим окраски
+uniform int   colorMode; // 0 = AtomColor, 1 = GradientClassic, 2 = GradientTurbo
 uniform float maxSpeedSqr;
 uniform vec3  typeColors[119];
 
@@ -35,7 +36,7 @@ vec3 turboColor(float t) {
 }
 
 void main() {
-    vec3 atomPos = vec3(posX, posY, posZ) + boxStart;
+    vec3 atomPos = vec3(posX, posY, posZ);
 
     vec3 color;
 #if COLOR_MODE == 0
