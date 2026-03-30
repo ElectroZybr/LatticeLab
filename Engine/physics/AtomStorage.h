@@ -110,6 +110,10 @@ public:
     float* vxData() { return vx_; }
     float* vyData() { return vy_; }
     float* vzData() { return vz_; }
+    const float* vxData() const { return vx_; }
+    const float* vyData() const { return vy_; }
+    const float* vzData() const { return vz_; }
+    
 
     float* fxData() { return fx_; }
     float* fyData() { return fy_; }
@@ -121,6 +125,8 @@ public:
 
     float* energyData() { return pe_; }
     float* invMassData() { return invMass_; }
+
+    AtomData::Type* atomTypeData() { return atomType_.data(); }
 
     std::span<float> xDataSpan() const { return {x_, count_}; }
     std::span<float> yDataSpan() const { return {y_, count_}; }

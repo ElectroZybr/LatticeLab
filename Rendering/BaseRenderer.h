@@ -3,7 +3,6 @@
 #include <cstdint>
 
 #include "Rendering/camera/Camera.h"
-#include "Engine/selection/OverlayState.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/SimBox.h"
 
@@ -34,19 +33,4 @@ protected:
     IRenderer(sf::View& gv)
         : camera(&gv) {}
     const AtomStorage* atomStorage = nullptr;
-
-    sf::Color turboColor(float t) {
-        t = std::clamp(t, 0.f, 1.f);
-        const float r = 34.61f + t * (1172.33f + t * (-10793.56f + t * (33300.12f + t * (-38394.49f + t * 14825.05f))));
-        const float g = 23.31f + t * (557.33f + t * (1225.33f + t * (-3574.96f + t * (1073.77f + t * 707.56f))));
-        const float b = 27.20f + t * (3211.10f + t * (-15327.97f + t * (27814.00f + t * (-22569.18f + t * 6838.66f))));;
-        const auto toU8 = [](float v) -> uint8_t {
-            return static_cast<uint8_t>(std::clamp(v, 0.0f, 255.0f));
-        };
-        return sf::Color(
-            toU8(r),
-            toU8(g),
-            toU8(b))
-        ;
-    }
 };

@@ -61,10 +61,9 @@ RendererGL::RendererGL(sf::RenderTarget& t, sf::View& gv)
 }
 
 RendererGL::~RendererGL() {
-    glDeleteVertexArrays(1, &vao);
+    glDeleteVertexArrays(1, &atomVao);
     glDeleteBuffers(1, &quadVbo);
-    glDeleteBuffers(1, &instanceVbo);
-    glDeleteProgram(shaderProgram);
+    glDeleteProgram(atomShader);
 
     glDeleteVertexArrays(1, &boxVao);
     glDeleteBuffers(1, &boxVbo);
@@ -91,8 +90,8 @@ void RendererGL::initQuadGL() {
 }
 
 void RendererGL::initAtomGL() {
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
+    glGenVertexArrays(1, &atomVao);
+    glBindVertexArray(atomVao);
 
     // quad (location 0)
     glBindBuffer(GL_ARRAY_BUFFER, quadVbo);
@@ -183,6 +182,22 @@ void RendererGL::initGridGL() {
     glBindVertexArray(0);
 }
 
+void RendererGL::initAtomColors() {
+    const int typeCount = static_cast<int>(AtomData::Type::COUNT);
+    std::vector<glm::vec3> typeColors(typeCount);
+    for (int i = 0; i < typeCount; ++i) {
+        const auto& props = AtomData::getProps(static_cast<AtomData::Type>(i));
+        typeColors[i] = glm::vec3(
+            props.color.r / 255.f,
+            props.color.g / 255.f,
+            props.color.b / 255.f
+        );
+    }
+    glUseProgram(atomShader);
+    glUniform3fv(glGetUniformLocation(atomShader, "typeColors"),
+                 typeCount, glm::value_ptr(typeColors[0]));
+}
+
 // --------------------------------------------------------------- shaders ---
 
 GLuint RendererGL::loadShader(GLenum type, std::string_view path) {
@@ -245,13 +260,6 @@ GLuint RendererGL::linkProgram(std::string_view vert, std::string_view frag, std
     return prog;
 }
 
-void RendererGL::uploadBuffer(GLuint vbo, GLsizeiptr size, const void* data)
-{
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, size, nullptr, GL_DYNAMIC_DRAW); // orphaning
-    glBufferData(GL_ARRAY_BUFFER, size, data, GL_DYNAMIC_DRAW);    // upload
-}
-
 // ------------------------------------------------------------------ draw ---
 
 void RendererGL::drawShot(const AtomStorage& atoms, const SimBox& box)
@@ -278,7 +286,6 @@ void RendererGL::drawShot(const AtomStorage& atoms, const SimBox& box)
 void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
     const size_t atomCount = atoms.size();
     const bool useSpeedGradient = speedColorMode != SpeedColorMode::AtomColor;
-    const bool useTurboGradient = speedColorMode == SpeedColorMode::GradientTurbo;
 
     // --- maxSpeedSqr ---
     float maxSpeedSqr = 1.f;
@@ -294,49 +301,40 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
     }
 
     radii.resize(atomCount);
-    colors.resize(atomCount);
     for (std::size_t i = 0; i < atomCount; ++i) {
         const auto& props = AtomData::getProps(atoms.type(i));
         radii[i] = static_cast<float>(props.radius);
-
-        sf::Color sfColor;
-        if (useSpeedGradient) {
-            const float vSqr = atoms.vel(i).sqrAbs();
-            const float t = std::clamp(std::sqrt(vSqr / maxSpeedSqr), 0.f, 1.f);
-            sfColor = useTurboGradient ? turboColor(t)
-                                       : sf::Color(255*t, 0, (1.f-t)*255.f);
-        } else {
-            sfColor = props.color;
-        }
-
-        colors[i] = glm::vec3(sfColor.r / 255.f, sfColor.g / 255.f, sfColor.b / 255.f);
     }
 
-    glUseProgram(shaderProgram);
-    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"),
+    glUseProgram(atomShader);
+    glUniformMatrix4fv(glGetUniformLocation(atomShader, "projection"),
                        1, GL_FALSE, glm::value_ptr(projection));
-    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"),
+    glUniformMatrix4fv(glGetUniformLocation(atomShader, "view"),
                        1, GL_FALSE, glm::value_ptr(view));
-    glUniform3f(glGetUniformLocation(shaderProgram, "boxStart"),
+    glUniform3f(glGetUniformLocation(atomShader, "boxStart"),
                 box.start.x, box.start.y, box.start.z);
+    glUniform1i(glGetUniformLocation(atomShader, "colorMode"),   static_cast<int>(speedColorMode));
+    glUniform1f(glGetUniformLocation(atomShader, "maxSpeedSqr"), maxSpeedSqr);
 
     if (useLighting()) {
         const glm::vec3 light = getLightDir();
-        glUniform3f(glGetUniformLocation(shaderProgram, "lightDir"),
+        glUniform3f(glGetUniformLocation(atomShader, "lightDir"),
                     light.x, light.y, light.z);
     }
 
     const GLsizeiptr floatN    = atomCount * sizeof(float);
-    const GLsizeiptr vec3N     = atomCount * sizeof(glm::vec3);
     const GLsizeiptr uint8N    = atomCount * sizeof(uint8_t);
-    const GLsizeiptr totalSize = floatN * 4 + vec3N + uint8N;
+    const GLsizeiptr totalSize = floatN * 7 + uint8N * 2;
 
     const GLsizeiptr offX        = 0;
-    const GLsizeiptr offY        = offX        + floatN;
-    const GLsizeiptr offZ        = offY        + floatN;
-    const GLsizeiptr offRadius   = offZ        + floatN;
-    const GLsizeiptr offColor    = offRadius   + floatN;
-    const GLsizeiptr offSelected = offColor    + vec3N;
+    const GLsizeiptr offY        = offX      + floatN;
+    const GLsizeiptr offZ        = offY      + floatN;
+    const GLsizeiptr offRadius   = offZ      + floatN;
+    const GLsizeiptr offVelX     = offRadius + floatN;
+    const GLsizeiptr offVelY     = offVelX   + floatN;
+    const GLsizeiptr offVelZ     = offVelY   + floatN;
+    const GLsizeiptr offType     = offVelZ   + floatN;
+    const GLsizeiptr offSelected = offType   + uint8N;
 
     if (selectedDataBuffer.size() < atomCount) {
         selectedDataBuffer.resize(atomCount);
@@ -352,11 +350,16 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
     glBufferSubData(GL_ARRAY_BUFFER, offX,        floatN, atoms.xData());
     glBufferSubData(GL_ARRAY_BUFFER, offY,        floatN, atoms.yData());
     glBufferSubData(GL_ARRAY_BUFFER, offZ,        floatN, atoms.zData());
+    if (useSpeedGradient) {
+        glBufferSubData(GL_ARRAY_BUFFER, offVelX,     floatN, atoms.vxData());
+        glBufferSubData(GL_ARRAY_BUFFER, offVelY,     floatN, atoms.vyData());
+        glBufferSubData(GL_ARRAY_BUFFER, offVelZ,     floatN, atoms.vzData());
+    }    
+    glBufferSubData(GL_ARRAY_BUFFER, offType,     uint8N, atoms.atomTypeData());
     glBufferSubData(GL_ARRAY_BUFFER, offRadius,   floatN, radii.data());
-    glBufferSubData(GL_ARRAY_BUFFER, offColor,    vec3N,  colors.data());
     glBufferSubData(GL_ARRAY_BUFFER, offSelected, uint8N, selectedDataBuffer.data());
 
-    glBindVertexArray(vao);
+    glBindVertexArray(atomVao);
 
     if (atomCount != lastAtomCount) {
         glBindBuffer(GL_ARRAY_BUFFER, atomVbo);
@@ -378,12 +381,24 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
         glVertexAttribDivisor(4, 1);
 
         glEnableVertexAttribArray(5);
-        glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, 0, (void*)offColor);
+        glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, 0, (void*)offVelX);
         glVertexAttribDivisor(5, 1);
 
         glEnableVertexAttribArray(6);
-        glVertexAttribIPointer(6, 1, GL_UNSIGNED_BYTE, 0, (void*)offSelected);
+        glVertexAttribPointer(6, 1, GL_FLOAT, GL_FALSE, 0, (void*)offVelY);
         glVertexAttribDivisor(6, 1);
+
+        glEnableVertexAttribArray(7);
+        glVertexAttribPointer(7, 1, GL_FLOAT, GL_FALSE, 0, (void*)offVelZ);
+        glVertexAttribDivisor(7, 1);
+
+        glEnableVertexAttribArray(8);
+        glVertexAttribIPointer(8, 1, GL_UNSIGNED_BYTE, 0, (void*)offType);
+        glVertexAttribDivisor(8, 1);
+
+        glEnableVertexAttribArray(9);
+        glVertexAttribIPointer(9, 1, GL_UNSIGNED_BYTE, 0, (void*)offSelected);
+        glVertexAttribDivisor(9, 1);
 
         lastAtomCount = atomCount;
     }
