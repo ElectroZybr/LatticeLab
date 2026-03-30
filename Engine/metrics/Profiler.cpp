@@ -65,6 +65,7 @@ void Profiler::reset() {
 void Profiler::addSample(const char* name, double ms) {
     ProfileEntry& entry = entryFor(name);
     entry.lastMs += ms;
+    entry.lastActiveMs = entry.lastMs;
     entry.totalMs += ms;
     entry.maxMs = std::max(entry.maxMs, ms);
     ++entry.callCount;
@@ -120,6 +121,11 @@ const ProfileEntry* Profiler::findEntry(const char* name) const noexcept {
 double Profiler::lastMs(const char* name) const noexcept {
     const ProfileEntry* entry = findEntry(name);
     return entry != nullptr ? entry->lastMs : 0.0;
+}
+
+double Profiler::lastActiveMs(const char* name) const noexcept {
+    const ProfileEntry* entry = findEntry(name);
+    return entry != nullptr ? entry->lastActiveMs : 0.0;
 }
 
 ProfileEntry& Profiler::entryFor(const char* name) {

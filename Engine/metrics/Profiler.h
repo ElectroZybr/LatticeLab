@@ -7,6 +7,7 @@
 struct ProfileEntry {
     const char* name = "";
     double lastMs = 0.0;
+    double lastActiveMs = 0.0;
     double totalMs = 0.0;
     double averageMs = 0.0;
     double maxMs = 0.0;
@@ -46,6 +47,7 @@ public:
     [[nodiscard]] const std::vector<ProfileEntry>& entries() const noexcept { return entries_; }
     [[nodiscard]] const ProfileEntry* findEntry(const char* name) const noexcept;
     [[nodiscard]] double lastMs(const char* name) const noexcept;
+    [[nodiscard]] double lastActiveMs(const char* name) const noexcept;
     [[nodiscard]] double counterRate(const char* name) const noexcept;
 
 private:
