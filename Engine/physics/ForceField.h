@@ -38,7 +38,7 @@ private:
     void softWalls(const AtomStorage& atoms, float coordX, float coordY, float coordZ, float& forceX, float& forceY, float& forceZ) const;
     template<bool UseNeighborList>
     void ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* neighborList) const;
-    void pairNonBondedInteraction(AtomStorage& atoms, std::uint32_t bIndex, const LJPairRow& ljPairRow, float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const;
+    void pairNonBondedInteraction(AtomStorage& atoms, uint32_t bIndex, const LJPairRow& ljPairRow, float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const;
     void applyGravityForce(float& forceX, float& forceY, float& forceZ) const;
 
     Vec3f static_force;

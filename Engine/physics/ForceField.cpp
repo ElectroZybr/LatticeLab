@@ -84,7 +84,7 @@ void ForceField::compute(AtomStorage& atoms, SimBox& box, NeighborList* neighbor
 
     if (Bond::bonds_list.size() < 2) return;
 
-    std::vector<std::uint16_t> degree(atoms.size(), 0);
+    std::vector<uint16_t> degree(atoms.size(), 0);
     for (const Bond& bond : Bond::bonds_list) {
         if (bond.aIndex < atoms.size() && bond.bIndex < atoms.size()) {
             ++degree[bond.aIndex];
@@ -203,7 +203,7 @@ void ForceField::ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* ne
             const auto& offsets27 = grid.neighborOffsets27();
 
             for (int k = 0; k < 27; ++k) {
-                for (std::uint32_t neighbourIndex : grid.atomsInCellByLinearIndex(center + offsets27[k])) {
+                for (uint32_t neighbourIndex : grid.atomsInCellByLinearIndex(center + offsets27[k])) {
                     if (neighbourIndex >= atomIndex) continue;
                     pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
                 }

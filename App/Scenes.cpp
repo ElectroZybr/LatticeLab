@@ -40,7 +40,7 @@ namespace detail {
         return false;
     }
 
-    std::uint32_t resolveSeed(std::uint32_t seed) {
+    uint32_t resolveSeed(uint32_t seed) {
         return seed == 0 ? std::random_device{}() : seed;
     }
 } // namespace detail
@@ -86,7 +86,7 @@ int randomGasInCurrentBox(Simulation& sim,
                           float minDistance,
                           float speedScale,
                           int maxAttemptsPerAtom,
-                          std::uint32_t seed) {
+                          uint32_t seed) {
     atomCount = std::max(0, atomCount);
     if (atomCount == 0) {
         sim.neighborList.clear();
@@ -183,7 +183,7 @@ void randomGas(Simulation& sim,
                double margin,
                float density,
                float speedScale,
-               std::uint32_t seed) {
+               uint32_t seed) {
     atomCount = std::max(0, atomCount);
     const float clampedDensity = std::clamp(density, 0.25f, 3.0f);
     const double effectiveSpacing = spacing / static_cast<double>(clampedDensity);

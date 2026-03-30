@@ -58,7 +58,7 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
     box.grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
 
     const SpatialGrid& grid = box.grid;
-    const std::uint32_t atomCount = static_cast<std::uint32_t>(atoms.size());
+    const uint32_t atomCount = static_cast<uint32_t>(atoms.size());
     const float* RESTRICT x = atoms.xData();
     const float* RESTRICT y = atoms.yData();
     const float* RESTRICT z = atoms.zData();
@@ -66,13 +66,13 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
     reserveListBuffers(atoms, grid);
 
     offsets_[0] = 0;
-    for (std::uint32_t i = 0; i < atomCount; ++i) {
+    for (uint32_t i = 0; i < atomCount; ++i) {
         const float xi = x[i];
         const float yi = y[i];
         const float zi = z[i];
         // запись всех соседей атома в массив
         writeAtomNeighbors(grid, x, y, z, i, xi, yi, zi, neighbors_);
-        offsets_[i + 1] = static_cast<std::uint32_t>(neighbors_.size());
+        offsets_[i + 1] = static_cast<uint32_t>(neighbors_.size());
 
         refPosX_[i] = xi;
         refPosY_[i] = yi;
@@ -85,10 +85,10 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
 bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
     PROFILE_SCOPE("NeighborList::needsRebuild");
     const size_t nSize = atoms.size();
-    if (nSize > static_cast<size_t>(std::numeric_limits<std::uint32_t>::max())) {
+    if (nSize > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
         return true;
     }
-    const std::uint32_t n = static_cast<std::uint32_t>(nSize);
+    const uint32_t n = static_cast<uint32_t>(nSize);
 
     if (!valid_ || n != refPosX_.size()) {
         return true;
@@ -106,7 +106,7 @@ bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
 
     int rebuild = false;
     #pragma GCC ivdep
-    for (std::uint32_t i = 0; i < n; ++i) {
+    for (uint32_t i = 0; i < n; ++i) {
         const float dx = x[i] - refX[i];
         const float dy = y[i] - refY[i];
         const float dz = z[i] - refZ[i];
@@ -116,20 +116,20 @@ bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
     return rebuild;
 }
 
-std::uint32_t NeighborList::atomCount() const {
+uint32_t NeighborList::atomCount() const {
     if (offsets_.empty()) {
         return 0;
     }
-    return static_cast<std::uint32_t>(offsets_.size() - 1);
+    return static_cast<uint32_t>(offsets_.size() - 1);
 }
 
-std::uint32_t NeighborList::pairStorageSize() const {
-    return static_cast<std::uint32_t>(std::min(neighbors_.size(), static_cast<size_t>(std::numeric_limits<std::uint32_t>::max())));
+uint32_t NeighborList::pairStorageSize() const {
+    return static_cast<uint32_t>(std::min(neighbors_.size(), static_cast<size_t>(std::numeric_limits<uint32_t>::max())));
 }
 
-std::uint32_t NeighborList::memoryBytes() const {
-    return neighbors_.capacity() * sizeof(std::uint32_t)
-        + offsets_.capacity() * sizeof(std::uint32_t)
+uint32_t NeighborList::memoryBytes() const {
+    return neighbors_.capacity() * sizeof(uint32_t)
+        + offsets_.capacity() * sizeof(uint32_t)
         + refPosX_.capacity() * sizeof(float)
         + refPosY_.capacity() * sizeof(float)
         + refPosZ_.capacity() * sizeof(float);
