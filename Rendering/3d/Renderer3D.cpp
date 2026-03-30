@@ -7,8 +7,19 @@ Renderer3D::Renderer3D(sf::RenderTarget& t, sf::View& gv)
     camera.setMode(Camera::Mode::Orbit);
     camera.setZoom(4.f);
 
-    atomShader = linkProgram("assets/shaders/3d/atom.vert",
-                                "assets/shaders/3d/atom.frag");
+    atomShaders[0] = linkProgram("assets/shaders/3d/atom.vert",
+                                 "assets/shaders/3d/atom.frag",
+                                 "",
+                                 "#define COLOR_MODE 0");
+    atomShaders[1] = linkProgram("assets/shaders/3d/atom.vert",
+                                 "assets/shaders/3d/atom.frag",
+                                 "",
+                                 "#define COLOR_MODE 1");
+    atomShaders[2] = linkProgram("assets/shaders/3d/atom.vert",
+                                 "assets/shaders/3d/atom.frag",
+                                 "",
+                                 "#define COLOR_MODE 2");
+    atomShader = atomShaders[0];
     boxShader = linkProgram("assets/shaders/3d/box.vert",
                             "assets/shaders/3d/box.frag");
     bondShader = linkProgram("assets/shaders/3d/bond.vert",
