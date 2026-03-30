@@ -25,7 +25,8 @@ protected:
     void initGridGL();
     void initBoxGL();
 
-    void uploadBuffer(GLuint vbo, GLsizeiptr size, const void* data);
+    void initAtomColors();
+
     GLuint loadShader(GLenum type, std::string_view path);
     GLuint compileShader(GLenum type, std::string_view src);
     GLuint linkProgram(std::string_view vert, std::string_view frag,
@@ -42,17 +43,15 @@ protected:
     glm::mat4 view{1.f};
 
     // GL handles
-    GLuint vao{0},        quadVbo{0},     instanceVbo{0}, shaderProgram{0};
+    GLuint quadVbo = 0;
+    GLuint atomVao{0},    atomVbo{0},     atomShader{0};
     GLuint boxVao{0},     boxVbo{0},      boxShader{0};
     GLuint bondVao{0},    bondVbo{0},     bondShader{0};
     GLuint gridVao{0},    gridLineVbo{0}, gridInstVbo{0},  gridShader{0};
 
     // Атомы
-    GLuint atomVbo = 0;
-    GLsizeiptr atomVboSize = 0;
     std::vector<float> radii;
     std::vector<uint8_t> selectedDataBuffer;
-    std::vector<glm::vec3> colors;
 
     struct alignas(32) BondInstance {
         glm::vec3 posA;

@@ -7,7 +7,7 @@ Renderer3D::Renderer3D(sf::RenderTarget& t, sf::View& gv)
     camera.setMode(Camera::Mode::Orbit);
     camera.setZoom(4.f);
 
-    shaderProgram = linkProgram("assets/shaders/3d/atom.vert",
+    atomShader = linkProgram("assets/shaders/3d/atom.vert",
                                 "assets/shaders/3d/atom.frag");
     boxShader = linkProgram("assets/shaders/3d/box.vert",
                             "assets/shaders/3d/box.frag");
@@ -16,6 +16,8 @@ Renderer3D::Renderer3D(sf::RenderTarget& t, sf::View& gv)
                              "assets/shaders/3d/bond.geom");
     gridShader = linkProgram("assets/shaders/3d/grid.vert",
                             "assets/shaders/3d/grid.frag");
+
+    initAtomColors();
 }
 
 void Renderer3D::updateMatrices() {
