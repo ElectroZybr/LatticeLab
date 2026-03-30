@@ -5,9 +5,39 @@
 
 #include "CreateDebugPanels.h"
 #include "Engine/metrics/MemoryMetrics.h"
+#include "Engine/metrics/Profiler.h"
 #include "Engine/Simulation.h"
 #include "Engine/tools/Tools.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
+
+namespace {
+const ProfileEntry* findProfileEntry(const std::vector<ProfileEntry>& entries, const char* name) {
+    for (const ProfileEntry& entry : entries) {
+        if (entry.name != nullptr && std::string_view(entry.name) == name) {
+            return &entry;
+        }
+    }
+    return nullptr;
+}
+
+void addProfilerMetric(DebugView* view, const std::vector<ProfileEntry>& entries,
+                       const char* entryName, const char* msLabel, const char* percentLabel,
+                       const char* graphLabel = nullptr) {
+    if (view == nullptr) {
+        return;
+    }
+
+    const ProfileEntry* entry = findProfileEntry(entries, entryName);
+    const double ms = entry != nullptr ? entry->lastMs : 0.0;
+    const double percent = entry != nullptr ? entry->percentOfFrame : 0.0;
+
+    view->add_data(msLabel, ms);
+    view->add_data(percentLabel, percent);
+    if (graphLabel != nullptr) {
+        view->add_data(graphLabel, static_cast<float>(ms));
+    }
+}
+}
 
 void updateAtomSelectionDebug(const DebugViews& debugViews, const Simulation& simulation) {
     if (Tools::pickingSystem->getSelectedIndices().size() == 1)
@@ -76,27 +106,51 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     debugViews.neighbor->add_data("SG ср. атомов/ячейку",
         simulation.sim_box.grid.metrics().lastAverageAtomsPerNonEmptyCell());
 
-    if (debugViews.timers != nullptr) {
-        const float integratorLastMs = simulation.integrator.metrics().stepCounter().lastMs();
-        const float nlBuildLastMs = simulation.neighborList.buildCounter().lastMs();
-        const float nlNeedsRebuildLastMs = simulation.neighborList.needsRebuildCounter().lastMs();
-        const float sgRebuildLastMs = simulation.sim_box.grid.metrics().lastRebuildTimeMs();
+    if (debugViews.profiler != nullptr) {
+        const Profiler& profiler = Profiler::instance();
+        const auto& frame = profiler.frameData();
+        const auto& entries = profiler.entries();
 
-        debugViews.timers->add_data("Интегратор step (avg, мс)", simulation.integrator.metrics().stepCounter().totalAvgMs());
-        debugViews.timers->add_data("Интегратор step (max, мс)", simulation.integrator.metrics().stepCounter().maxMs());
-        debugViews.timers->add_data("Интегратор step (last, график)", integratorLastMs);
+        debugViews.profiler->add_data("Кадр (мс)", frame.frameMs);
+        debugViews.profiler->add_data("Tracked (мс)", frame.totalTrackedMs);
+        debugViews.profiler->add_data("Frame (график)", static_cast<float>(frame.frameMs));
 
-        debugViews.timers->add_data("NL build (avg, мс)", simulation.neighborList.buildCounter().totalAvgMs());
-        debugViews.timers->add_data("NL build (max, мс)", simulation.neighborList.buildCounter().maxMs());
-        debugViews.timers->add_data("NL build (last, график)", nlBuildLastMs);
-
-        debugViews.timers->add_data("NL needsRebuild (avg, мс)", simulation.neighborList.needsRebuildCounter().totalAvgMs());
-        debugViews.timers->add_data("NL needsRebuild (max, мс)", simulation.neighborList.needsRebuildCounter().maxMs());
-        debugViews.timers->add_data("NL needsRebuild (last, график)", nlNeedsRebuildLastMs);
-
-        debugViews.timers->add_data("SG rebuild (avg, мс)", simulation.sim_box.grid.metrics().averageRebuildTimeMs());
-        debugViews.timers->add_data("SG rebuild (max, мс)", simulation.sim_box.grid.metrics().maxRebuildTimeMs());
-        debugViews.timers->add_data("SG rebuild (last, график)", sgRebuildLastMs);
+        addProfilerMetric(debugViews.profiler, entries,
+                          "Application::PhysicsStep",
+                          "Application::PhysicsStep (мс)",
+                          "Application::PhysicsStep (%)");
+        addProfilerMetric(debugViews.profiler, entries,
+                          "Application::RenderFrame",
+                          "Application::RenderFrame (мс)",
+                          "Application::RenderFrame (%)");
+        addProfilerMetric(debugViews.profiler, entries,
+                          "Simulation::update",
+                          "Simulation::update (мс)",
+                          "Simulation::update (%)",
+                          "Simulation::update (график)");
+        addProfilerMetric(debugViews.profiler, entries,
+                          "ForceField::compute",
+                          "ForceField::compute (мс)",
+                          "ForceField::compute (%)",
+                          "ForceField::compute (график)");
+        addProfilerMetric(debugViews.profiler, entries,
+                          "NeighborList::build",
+                          "NeighborList::build (мс)",
+                          "NeighborList::build (%)",
+                          "NeighborList::build (график)");
+        addProfilerMetric(debugViews.profiler, entries,
+                          "NeighborList::needsRebuild",
+                          "NeighborList::needsRebuild (мс)",
+                          "NeighborList::needsRebuild (%)");
+        addProfilerMetric(debugViews.profiler, entries,
+                          "SpatialGrid::rebuild",
+                          "SpatialGrid::rebuild (мс)",
+                          "SpatialGrid::rebuild (%)");
+        addProfilerMetric(debugViews.profiler, entries,
+                          "RendererGL::drawShot",
+                          "RendererGL::drawShot (мс)",
+                          "RendererGL::drawShot (%)",
+                          "RendererGL::drawShot (график)");
     }
 }
 

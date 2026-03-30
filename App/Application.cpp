@@ -14,6 +14,7 @@
 #include "imgui-SFML.h"
 
 #include "Engine/Simulation.h"
+#include "Engine/metrics/Profiler.h"
 #include "Engine/tools/Tools.h"
 #include "Engine/utils/RateCounter.h"
 #include "GUI/interface/interface.h"
@@ -217,6 +218,7 @@ int Application::run() {
     constexpr double logInterval = 1.0 / LPS;
 
     while (window.isOpen()) {
+        Profiler::instance().beginFrame();
         float deltaTime = clock.restart().asSeconds();
         physicsAccum += deltaTime;
         renderAccum += deltaTime;
@@ -229,6 +231,7 @@ int Application::run() {
         if (!Interface::getPause()) {
             const double physicsInterval = 1.0 / Interface::getSimulationSpeed();
             if (physicsAccum >= physicsInterval) {
+                PROFILE_SCOPE("Application::PhysicsStep");
                 physicsCounter.startStep();
                 simulation.update(Dt);
                 physicsCounter.finishStep();
@@ -240,6 +243,7 @@ int Application::run() {
 
         // один шаг симуляции
         if (auto cmd = Keyboard::popResult(); cmd == KeyboardCommand::StepPhysics) {
+            PROFILE_SCOPE("Application::SinglePhysicsStep");
             physicsCounter.startStep();
             simulation.update(Dt);
             physicsCounter.finishStep();
@@ -248,6 +252,7 @@ int Application::run() {
         if (renderAccum >= renderInterval) {
             renderAccum -= renderInterval;
 
+            PROFILE_SCOPE("Application::RenderFrame");
             Interface::Update();
 
             updateAtomSelectionDebug(debugViews, simulation);
@@ -274,6 +279,8 @@ int Application::run() {
             physicsCounter.flush(logInterval);
             renderCounter.flush(logInterval);
         }
+
+        Profiler::instance().endFrame();
     }
 
     Interface::shutdown();

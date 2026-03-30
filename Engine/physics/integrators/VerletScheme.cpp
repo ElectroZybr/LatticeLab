@@ -1,8 +1,10 @@
 #include "VerletScheme.h"
 
+#include "Engine/metrics/Profiler.h"
 #include "StepOps.h"
 
 void VerletScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) const {
+    PROFILE_SCOPE("VerletScheme::pipeline");
     // Расчет новых позиций
     StepOps::predictAndSync(atomStorage, box, dt, &predict);
     // Расчет сил
@@ -12,6 +14,7 @@ void VerletScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& f
 }
 
 void VerletScheme::predict(AtomStorage& atomStorage, float dt) {
+    PROFILE_SCOPE("VerletScheme::predict");
     const size_t n = atomStorage.mobileCount();
 
     float* RESTRICT x = atomStorage.xData();
@@ -39,6 +42,7 @@ void VerletScheme::predict(AtomStorage& atomStorage, float dt) {
 }
 
 void VerletScheme::correct(AtomStorage& atomStorage, float dt) {
+    PROFILE_SCOPE("VerletScheme::correct");
     const size_t n = atomStorage.mobileCount();
 
     const float* RESTRICT fx  = atomStorage.fxData();

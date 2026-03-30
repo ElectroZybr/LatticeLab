@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "../physics/AtomStorage.h"
+#include "../metrics/Profiler.h"
 #include "SpatialGrid.h"
 #include "../SimBox.h"
 
@@ -53,23 +54,27 @@ void NeighborList::clear() {
 }
 
 void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
+    PROFILE_SCOPE("NeighborList::build");
     // перестройка пространственной сетки
     box.grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
 
     buildCounter_.startStep();
     const SpatialGrid& grid = box.grid;
     const std::uint32_t atomCount = static_cast<std::uint32_t>(atoms.size());
+    const float* RESTRICT x = atoms.xData();
+    const float* RESTRICT y = atoms.yData();
+    const float* RESTRICT z = atoms.zData();
 
     reserveListBuffers(atoms, grid);
 
     offsets_[0] = 0;
     for (std::uint32_t i = 0; i < atomCount; ++i) {
-        const float xi = atoms.posX(i);
-        const float yi = atoms.posY(i);
-        const float zi = atoms.posZ(i);
-        // запись всех соседей в массив
-        writeAtomNeighbors(grid, atoms, i, xi, yi, zi, neighbors_);
-        offsets_[i + 1] = neighbors_.size();
+        const float xi = x[i];
+        const float yi = y[i];
+        const float zi = z[i];
+        // запись всех соседей атома в массив
+        writeAtomNeighbors(grid, x, y, z, i, xi, yi, zi, neighbors_);
+        offsets_[i + 1] = static_cast<std::uint32_t>(neighbors_.size());
 
         refPosX_[i] = xi;
         refPosY_[i] = yi;
@@ -81,6 +86,7 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
 }
 
 bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
+    PROFILE_SCOPE("NeighborList::needsRebuild");
     needsRebuildCounter_.startStep();
     const std::size_t nSize = atoms.size();
     if (nSize > static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max())) {

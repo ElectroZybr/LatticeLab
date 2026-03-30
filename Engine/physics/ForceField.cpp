@@ -7,6 +7,7 @@
 
 #include "AtomData.h"
 #include "Bond.h"
+#include "../metrics/Profiler.h"
 #include "../SimBox.h"
 #include "../math/Consts.h"
 #include "../NeighborSearch/NeighborList.h"
@@ -59,6 +60,7 @@ ForceField::LJPairTable ForceField::buildLJPairTable() {
 }
 
 void ForceField::compute(AtomStorage& atoms, SimBox& box, NeighborList* neighborList, float dt) const {
+    PROFILE_SCOPE("ForceField::compute");
     if (!neighborList && !atoms.empty()) {
         box.grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
     }
@@ -147,6 +149,7 @@ void ForceField::applyWall(float coord, float& force, float min, float max) {
 
 template<bool UseNeighborList>
 void ForceField::ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* neighborList) const {
+    PROFILE_SCOPE(UseNeighborList ? "ForceField::ComputeForces(NL)" : "ForceField::ComputeForces(NoNL)");
     for (size_t atomIndex = 0; atomIndex < atoms.mobileCount(); ++atomIndex) {
         // загружаем данные текущего атома из AtomStorage
         float posX = atoms.posX(atomIndex);

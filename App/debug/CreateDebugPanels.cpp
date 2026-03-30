@@ -60,20 +60,31 @@ static DebugView* buildDebugNeighborView(DebugPanel& panel) {
     }));
 }
 
-static DebugView* buildDebugTimersView(DebugPanel& panel) {
-    return panel.addView(DebugView("Timers", {
-        DebugValue("Интегратор step (avg, мс)", DebugDrawers::Float<4>),
-        DebugValue("Интегратор step (max, мс)", DebugDrawers::Float<4>),
-        DebugSeries("Интегратор step (last, график)"),
-        DebugValue("NL build (avg, мс)", DebugDrawers::Float<4>),
-        DebugValue("NL build (max, мс)", DebugDrawers::Float<4>),
-        DebugSeries("NL build (last, график)"),
-        DebugValue("NL needsRebuild (avg, мс)", DebugDrawers::Float<4>),
-        DebugValue("NL needsRebuild (max, мс)", DebugDrawers::Float<4>),
-        DebugSeries("NL needsRebuild (last, график)"),
-        DebugValue("SG rebuild (avg, мс)", DebugDrawers::Float<4>),
-        DebugValue("SG rebuild (max, мс)", DebugDrawers::Float<4>),
-        DebugSeries("SG rebuild (last, график)"),
+static DebugView* buildDebugProfilerView(DebugPanel& panel) {
+    return panel.addView(DebugView("Profiler", {
+        DebugValue("Кадр (мс)", DebugDrawers::Float<4>),
+        DebugValue("Tracked (мс)", DebugDrawers::Float<4>),
+        DebugValue("Application::PhysicsStep (мс)", DebugDrawers::Float<4>),
+        DebugValue("Application::PhysicsStep (%)", DebugDrawers::Float<2>),
+        DebugValue("Application::RenderFrame (мс)", DebugDrawers::Float<4>),
+        DebugValue("Application::RenderFrame (%)", DebugDrawers::Float<2>),
+        DebugValue("Simulation::update (мс)", DebugDrawers::Float<4>),
+        DebugValue("Simulation::update (%)", DebugDrawers::Float<2>),
+        DebugValue("ForceField::compute (мс)", DebugDrawers::Float<4>),
+        DebugValue("ForceField::compute (%)", DebugDrawers::Float<2>),
+        DebugValue("NeighborList::build (мс)", DebugDrawers::Float<4>),
+        DebugValue("NeighborList::build (%)", DebugDrawers::Float<2>),
+        DebugValue("NeighborList::needsRebuild (мс)", DebugDrawers::Float<4>),
+        DebugValue("NeighborList::needsRebuild (%)", DebugDrawers::Float<2>),
+        DebugValue("SpatialGrid::rebuild (мс)", DebugDrawers::Float<4>),
+        DebugValue("SpatialGrid::rebuild (%)", DebugDrawers::Float<2>),
+        DebugValue("RendererGL::drawShot (мс)", DebugDrawers::Float<4>),
+        DebugValue("RendererGL::drawShot (%)", DebugDrawers::Float<2>),
+        DebugSeries("Frame (график)"),
+        DebugSeries("Simulation::update (график)"),
+        DebugSeries("ForceField::compute (график)"),
+        DebugSeries("NeighborList::build (график)"),
+        DebugSeries("RendererGL::drawShot (график)"),
     }));
 }
 } // namespace
@@ -84,7 +95,7 @@ DebugViews createDebugViews(DebugPanel& panel) {
         buildDebugAtomSingle(panel),
         buildDebugAtomBatch(panel),
         buildDebugNeighborView(panel),
-        buildDebugTimersView(panel),
+        buildDebugProfilerView(panel),
     };
 }
 
