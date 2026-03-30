@@ -242,7 +242,7 @@ bool Tools::tryRemoveAtom(sf::Vector2i mousePos) {
 
     if (removeSelection) {
         std::vector<std::size_t> toRemove(selected.begin(), selected.end());
-        std::sort(toRemove.begin(), toRemove.end(), std::greater<std::size_t>());
+        std::sort(toRemove.begin(), toRemove.end(), std::greater());
 
         for (std::size_t index : toRemove) {
             if (atomRemover(index)) {

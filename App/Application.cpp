@@ -125,9 +125,7 @@ void processIOPanel(Simulation& simulation) {
     if (auto result = Interface::ioPanel.popResult()) {
         switch (result.value()) {
             case IOCommand::ApplyBoxSize: {
-                simulation.setSizeBox(
-                    Vec3f(Interface::ioPanel.boxSizeX(), Interface::ioPanel.boxSizeY(), Interface::ioPanel.boxSizeZ())
-                );
+                simulation.setSizeBox(Interface::ioPanel.boxSize());
                 break;
             }
             case IOCommand::CreateCrystal:
