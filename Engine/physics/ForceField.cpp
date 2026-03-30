@@ -19,9 +19,9 @@ void ForceField::updateBoxCache(const SimBox& box) {
     wallMinX = 0.0f;
     wallMinY = 0.0f;
     wallMinZ = 0.0f;
-    wallMaxX = static_cast<float>(box.end.x - box.start.x - 1.0);
-    wallMaxY = static_cast<float>(box.end.y - box.start.y - 1.0);
-    wallMaxZ = static_cast<float>(box.end.z - box.start.z - 1.0);
+    wallMaxX = static_cast<float>(box.size.x - 1.0);
+    wallMaxY = static_cast<float>(box.size.y - 1.0);
+    wallMaxZ = static_cast<float>(box.size.z - 1.0);
 }
 
 ForceField::LJPairTable ForceField::buildLJPairTable() {

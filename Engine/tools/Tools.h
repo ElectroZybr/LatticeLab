@@ -40,11 +40,7 @@ public:
                      AtomRemover atomRemover = {});
 
     static Vec3f screenToWorld(sf::Vector2i mousePos);
-    static Vec3f screenToBox(sf::Vector2i mousePos);
     static sf::Vector2i worldToScreen(Vec3f pos);
-    static sf::Vector2i boxToScreen(Vec3f pos);
-    static Vec3f worldToBox(Vec3f pos);
-    static Vec3f boxToWorld(Vec3f pos);
 
     static void onLeftPressed(sf::Vector2i mousePos);
     static void onLeftReleased(sf::Vector2i mousePos);

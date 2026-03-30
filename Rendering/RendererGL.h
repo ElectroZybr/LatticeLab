@@ -36,9 +36,14 @@ protected:
 
     void drawAtoms(const AtomStorage& atoms, const SimBox& box);
     void drawBox(const SimBox& box);
+<<<<<<< HEAD
     void drawBondsGL(const glm::vec3& boxOffset);
     void drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset);
     GLuint atomShaderForMode(SpeedColorMode mode) const;
+=======
+    void drawBondsGL();
+    void drawGridGL(const SpatialGrid& grid);
+>>>>>>> 8793cfe (SimBox всегда начинается в 0)
 
     // общее состояние
     std::size_t lastAtomCount = 0;

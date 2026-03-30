@@ -4,7 +4,6 @@
 
 #include "physics/AtomData.h"
 #include "physics/AtomStorage.h"
-#include "NeighborSearch/SpatialGrid.h"
 #include "SimBox.h"
 #include "physics/Integrator.h"
 #include "physics/ForceField.h"
@@ -16,7 +15,7 @@ public:
 
     void update(float dt);
 
-    void setSizeBox(Vec3f newStart, Vec3f newEnd, int cellSize = -1);
+    void setSizeBox(Vec3f newSize, int cellSize = -1);
 
     bool createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Type type, bool fixed = false);
     bool removeAtom(std::size_t atomIndex);

@@ -48,7 +48,7 @@ void PickingSystem::processRect(sf::Vector2i start, sf::Vector2i end, bool cumul
     const sf::Vector2f vCenter = rend->camera.getView().getCenter();
 
     for (std::size_t i = 0; i < atomStorage.size(); ++i) {
-        const Vec3f worldPos = atomStorage.pos(i) + box.start;
+        const Vec3f worldPos = atomStorage.pos(i);
         const sf::Vector2i atomScreen = rend->camera.worldToScreen(worldPos);
         if (pointInRect(atomScreen, start, end)) {
             selectedIndices.insert(i);
@@ -62,7 +62,7 @@ void PickingSystem::processLasso(std::span<sf::Vector2i> points, bool cumulative
     IRenderer* rend = renderer->get();
 
     for (std::size_t i = 0; i < atomStorage.size(); ++i) {
-        const Vec3f worldPos = atomStorage.pos(i) + box.start;
+        const Vec3f worldPos = atomStorage.pos(i);
         const sf::Vector2i screenPos = rend->camera.worldToScreen(worldPos);
         if (pointInPolygon(screenPos, points)) {
             selectedIndices.insert(i);
@@ -100,7 +100,7 @@ bool PickingSystem::pickAtom2D(sf::Vector2i screenPos, float tolerance, AtomHit&
     std::size_t bestIndex = static_cast<std::size_t>(-1);
 
     for (std::size_t i = 0; i < atomStorage.size(); ++i) {
-        const Vec3f worldPos = atomStorage.pos(i) + box.start;
+        const Vec3f worldPos = atomStorage.pos(i);
         const sf::Vector2i atomScreen = rend->camera.worldToScreen(worldPos);
         const float distSqr = (atomScreen - screenPos).lengthSquared();
 
@@ -132,7 +132,7 @@ bool PickingSystem::pickAtom3D(sf::Vector2i screenPos, AtomHit& hit) const {
     std::size_t bestIndex = static_cast<std::size_t>(-1);
 
     for (std::size_t i = 0; i < atomStorage.size(); ++i) {
-        const Vec3f worldPos = atomStorage.pos(i) + box.start;
+        const Vec3f worldPos = atomStorage.pos(i);
         const float radius = AtomData::getProps(atomStorage.type(i)).radius;
 
         RaySphereHit rayHit;

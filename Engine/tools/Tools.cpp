@@ -158,8 +158,8 @@ void Tools::onFrame(sf::Vector2i mousePos, float deltaTime) {
         const auto& selectedIndices = pickingSystem->getSelectedIndices();
 
         // Позиция "захваченного" атома
-        const Vec3f selectedWorldPos = boxToWorld(atomStorage->pos(selectedMoveAtomIndex));
-        const Vec3f force = (worldMouse - selectedWorldPos) * 0.05f; 
+        const Vec3f selectedWorldPos = atomStorage->pos(selectedMoveAtomIndex);
+        const Vec3f force = (worldMouse - selectedWorldPos) * 0.05f;
 
         auto applyRawForce = [&](std::size_t idx, const Vec3f& f) {
             atomStorage->forceX(idx) += f.x;
@@ -185,24 +185,8 @@ Vec3f Tools::screenToWorld(sf::Vector2i mousePos) {
     return (*renderer)->camera.screenToWorld(mousePos);
 }
 
-Vec3f Tools::screenToBox(sf::Vector2i mousePos) {
-    return screenToWorld(mousePos) - box->start;
-}
-
 sf::Vector2i Tools::worldToScreen(Vec3f pos) {
     return (*renderer)->camera.worldToScreen(pos);
-}
-
-sf::Vector2i Tools::boxToScreen(Vec3f pos) {
-    return worldToScreen(pos + box->start);
-}
-
-Vec3f Tools::worldToBox(Vec3f pos) {
-    return pos - box->start;
-}
-
-Vec3f Tools::boxToWorld(Vec3f pos) {
-    return pos + box->start;
 }
 
 Tools::Mode Tools::currentMode() {
@@ -218,15 +202,14 @@ bool Tools::tryAddAtom(sf::Vector2i mousePos, AtomData::Type atomType) {
         return false;
     }
 
-    const Vec3f worldPos = screenToWorld(mousePos);
+    const Vec3f spawnPos = screenToWorld(mousePos);
 
-    if (!(box->start.x + 1 <= worldPos.x && worldPos.x <= box->end.x - 1 &&
-          box->start.y + 1 <= worldPos.y && worldPos.y <= box->end.y - 1 &&
-          box->start.z + 1 <= worldPos.z && worldPos.z <= box->end.z - 1)) {
+    if (!(1 <= spawnPos.x && spawnPos.x <= box->size.x - 1 &&
+          1 <= spawnPos.y && spawnPos.y <= box->size.y - 1 &&
+          1 <= spawnPos.z && spawnPos.z <= box->size.z - 1)) {
         return false;
     }
 
-    const Vec3f spawnPos = worldToBox(worldPos);
     const float atomRadius = AtomData::getProps(atomType).radius;
 
     for (std::size_t atomIndex = 0; atomIndex < atomStorage->size(); ++atomIndex) {

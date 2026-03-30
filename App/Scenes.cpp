@@ -47,11 +47,9 @@ namespace detail {
 
 void crystal(Simulation& sim, int n, AtomData::Type type, bool is3d, double padding, double margin) {
     const double side = n * padding + padding + 2.0 * margin;
-    const double half = side / 2.0;
 
     sim.setSizeBox(
-        Vec3f(-half, -half, is3d ? -half : sim.sim_box.start.z),
-        Vec3f(half, half, is3d ? half : sim.sim_box.end.z)
+        Vec3f(side, side, is3d ? side : sim.sim_box.size.z)
     );
 
     const Vec3f vecMargin(margin, margin, is3d ? margin : 0.0);
@@ -97,9 +95,6 @@ int randomGasInCurrentBox(Simulation& sim,
 
     std::srand(static_cast<unsigned>(detail::resolveSeed(seed)));
 
-    const double zMid = (sim.sim_box.end.z - sim.sim_box.start.z) * 0.5;
-    const double zSpan = sim.sim_box.end.z - sim.sim_box.start.z - 4.0;
-    const int maxZ = std::max(0, static_cast<int>(zSpan));
     const float minDistanceSqr = minDistance * minDistance;
 
     const std::size_t oldSize = sim.atomStorage.size();
@@ -137,10 +132,13 @@ int randomGasInCurrentBox(Simulation& sim,
         return false;
     };
 
+    const double zMid = sim.sim_box.size.z * 0.5;
+    const double zSpan = sim.sim_box.size.z - 4.0;
+    const int maxZ = std::max(0, static_cast<int>(zSpan));
     for (int i = 0; i < atomCount; ++i) {
         for (int attempt = 0; attempt < maxAttemptsPerAtom; ++attempt) {
-            const double rx = std::rand() % int(sim.sim_box.end.x - sim.sim_box.start.x - 4.0);
-            const double ry = std::rand() % int(sim.sim_box.end.y - sim.sim_box.start.y - 4.0);
+            const double rx = std::rand() % int(sim.sim_box.size.x - 4.0);
+            const double ry = std::rand() % int(sim.sim_box.size.y - 4.0);
             const double rz = is3d ? (std::rand() % (maxZ + 1)) : zMid;
             const Vec3f coords(rx + 2.0, ry + 2.0, is3d ? (rz + 2.0) : zMid);
 
@@ -195,11 +193,9 @@ void randomGas(Simulation& sim,
         : std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<double>(atomCount)))));
 
     const double span = sideCount * effectiveSpacing + 2.0 * margin;
-    const double half = span * 0.5;
 
     sim.setSizeBox(
-        Vec3f(-half, -half, is3d ? -half : 0),
-        Vec3f(half, half, is3d ? half : 6)
+        Vec3f(span, span, is3d ? span : 6)
     );
 
     randomGasInCurrentBox(sim, atomCount, type, is3d, 4.0f, speedScale, 20, seed);

@@ -125,17 +125,8 @@ void processIOPanel(Simulation& simulation) {
     if (auto result = Interface::ioPanel.popResult()) {
         switch (result.value()) {
             case IOCommand::ApplyBoxSize: {
-                const float halfX = Interface::ioPanel.boxSizeX() * 0.5f;
-                const float halfY = Interface::ioPanel.boxSizeY() * 0.5f;
-                const float halfZ = Interface::ioPanel.boxSizeZ() * 0.5f;
-                const Vec3f center(
-                    0.5f * (simulation.sim_box.start.x + simulation.sim_box.end.x),
-                    0.5f * (simulation.sim_box.start.y + simulation.sim_box.end.y),
-                    0.5f * (simulation.sim_box.start.z + simulation.sim_box.end.z)
-                );
                 simulation.setSizeBox(
-                    Vec3f(center.x - halfX, center.y - halfY, center.z - halfZ),
-                    Vec3f(center.x + halfX, center.y + halfY, center.z + halfZ)
+                    Vec3f(Interface::ioPanel.boxSizeX(), Interface::ioPanel.boxSizeY(), Interface::ioPanel.boxSizeZ())
                 );
                 break;
             }
@@ -181,7 +172,7 @@ int Application::run() {
     }
     sf::View& gameView = const_cast<sf::View&>(window.getView());
 
-    SimBox box(Vec3f(-25, -25, -3), Vec3f(25, 25, 3));
+    SimBox box(Vec3f(50, 50, 50));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
     Scenes::crystal(simulation, 25, AtomData::Type::Z, false);

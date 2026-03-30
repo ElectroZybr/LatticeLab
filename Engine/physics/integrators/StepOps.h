@@ -15,7 +15,7 @@ concept AtomStepFunc = requires(T fn, AtomStorage& storage, float dt) {
 
 inline void confineToBox(AtomStorage& atomStorage, SimBox& box) {
     constexpr float restitution = 0.8f;
-    const Vec3f max = box.end - box.start - Vec3f(1.0, 1.0, 1.0);
+    const Vec3f max = box.size - Vec3f(1.0, 1.0, 1.0);
 
     auto confineAxis = [&](float& coord, float& speed, float axisMax) {
         if (coord < 0.0f) {
