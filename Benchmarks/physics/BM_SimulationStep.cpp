@@ -9,14 +9,14 @@ BENCHMARK_DEFINE_F(SimulationFixture, FullStepWithNeighborList)(benchmark::State
     for (int i = 0; i < kWarmupSteps; ++i) {
         simulation_->update(Benchmarks::kDt);
     }
-    const size_t rebuildCountBefore = simulation_->neighborListRebuildCount();
+    const size_t rebuildCountBefore = simulation_->neighborList.stats().rebuildCount();
 
     for (auto _ : state) {
         simulation_->update(Benchmarks::kDt);
         benchmark::ClobberMemory();
     }
 
-    const size_t rebuildCountAfter = simulation_->neighborListRebuildCount();
+    const size_t rebuildCountAfter = simulation_->neighborList.stats().rebuildCount();
     const size_t rebuildCount = rebuildCountAfter - rebuildCountBefore;
     const double iterCount = static_cast<double>(state.iterations());
 
@@ -25,9 +25,9 @@ BENCHMARK_DEFINE_F(SimulationFixture, FullStepWithNeighborList)(benchmark::State
         ? static_cast<double>(rebuildCount) / iterCount
         : 0.0;
     state.counters["nl_avg_steps_between_rebuilds"] =
-        static_cast<double>(simulation_->averageStepsPerNeighborListRebuild());
+        static_cast<double>(simulation_->neighborList.stats().averageStepsBetweenRebuilds());
     state.counters["nl_steps_since_last_rebuild"] =
-        static_cast<double>(simulation_->stepsSinceNeighborListRebuild());
+        static_cast<double>(simulation_->neighborList.stats().stepsSinceLastRebuild(simulation_->getSimStep()));
 
     setCounters(state);
 }
@@ -51,7 +51,7 @@ BENCHMARK_DEFINE_F(SimulationFixture, FullStepNoNeighborList)(benchmark::State& 
     state.counters["nl_rebuilds_per_step"] = 0.0;
     state.counters["nl_avg_steps_between_rebuilds"] = 0.0;
     state.counters["nl_steps_since_last_rebuild"] =
-        static_cast<double>(simulation_->stepsSinceNeighborListRebuild());
+        static_cast<double>(simulation_->neighborList.stats().stepsSinceLastRebuild(simulation_->getSimStep()));
 
     setCounters(state);
 }

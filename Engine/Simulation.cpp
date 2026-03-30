@@ -2,7 +2,6 @@
 
 #include "Simulation.h"
 #include "io/SimulationStateIO.h"
-#include "metrics/EnergyMetrics.h"
 #include "metrics/Profiler.h"
 #include "physics/Bond.h"
 
@@ -22,7 +21,6 @@ void Simulation::setNeighborListEnabled(bool enabled) {
     useNeighborList_ = enabled;
     if (!useNeighborList_) {
         neighborList.clear();
-        neighborListMetrics_.onDisable();
     }
 }
 
@@ -31,7 +29,7 @@ void Simulation::update(float dt) {
     integrator.step(atomStorage, sim_box, forceField, useNeighborList_ ? &neighborList : nullptr, dt);
     if (useNeighborList_ && neighborList.needsRebuild(atomStorage)) {
         neighborList.build(atomStorage, sim_box);
-        neighborListMetrics_.onRebuild(sim_step, neighborList.buildCounter());
+        neighborList.recordRebuild(sim_step);
     }
     ++sim_step;
 }
@@ -127,42 +125,4 @@ void Simulation::clear() {
     sim_box.grid.rebuild(atomStorage.xDataSpan(), atomStorage.yDataSpan(), atomStorage.zDataSpan());
     neighborList.clear();
     sim_step = 0;
-    integrator.resetMetrics();
-    neighborListMetrics_.reset();
-}
-
-float Simulation::averageKineticEnegry() const {
-    return EnergyMetrics::averageKineticEnergy(atomStorage);
-}
-
-float Simulation::averagePotentialEnergy() const {
-    return EnergyMetrics::averagePotentialEnergy(atomStorage);
-}
-
-float Simulation::fullAverageEnergy() const {
-    return EnergyMetrics::fullAverageEnergy(atomStorage);
-}
-
-float Simulation::averageStepsPerNeighborListRebuild() const {
-    return neighborListMetrics_.averageStepsBetweenRebuilds();
-}
-
-float Simulation::recentAverageStepsPerNeighborListRebuild() const {
-    return neighborListMetrics_.recentAverageStepsBetweenRebuilds();
-}
-
-int Simulation::stepsSinceNeighborListRebuild() const {
-    return neighborListMetrics_.stepsSinceLastRebuild(sim_step);
-}
-
-float Simulation::lastNeighborListRebuildTimeMs() const {
-    return neighborListMetrics_.lastRebuildTimeMs();
-}
-
-float Simulation::averageNeighborListRebuildTimeMs() const {
-    return neighborListMetrics_.averageRebuildTimeMs();
-}
-
-float Simulation::maxNeighborListRebuildTimeMs() const {
-    return neighborListMetrics_.maxRebuildTimeMs();
 }

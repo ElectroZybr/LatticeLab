@@ -2,7 +2,6 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "metrics/NeighborListMetrics.h"
 #include "physics/AtomData.h"
 #include "physics/AtomStorage.h"
 #include "NeighborSearch/SpatialGrid.h"
@@ -26,20 +25,9 @@ public:
     void setIntegrator(Integrator::Scheme scheme) { integrator.setScheme(scheme); }
     Integrator::Scheme getIntegrator() const { return integrator.getScheme(); }
     
-    // метрики
-    float averageKineticEnegry() const;
-    float averagePotentialEnergy() const;
-    float fullAverageEnergy() const;
     int getSimStep() const { return sim_step; }
     void setNeighborListEnabled(bool enabled);
     bool isNeighborListEnabled() const { return useNeighborList_; }
-    std::size_t neighborListRebuildCount() const { return neighborListMetrics_.rebuildCount(); }
-    float averageStepsPerNeighborListRebuild() const;
-    float recentAverageStepsPerNeighborListRebuild() const;
-    int stepsSinceNeighborListRebuild() const;
-    float lastNeighborListRebuildTimeMs() const;
-    float averageNeighborListRebuildTimeMs() const;
-    float maxNeighborListRebuildTimeMs() const;
 
     // io
     void save(const std::string_view path) const;
@@ -56,5 +44,4 @@ private:
 
     int sim_step = 0;
     bool useNeighborList_ = true;
-    NeighborListMetrics neighborListMetrics_;
 };

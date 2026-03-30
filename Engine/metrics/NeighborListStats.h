@@ -1,0 +1,92 @@
+#pragma once
+
+#include <array>
+#include <cstddef>
+
+class NeighborListStats {
+public:
+    void reset() {
+        rebuildCount_ = 0;
+        rebuildIntervalsSum_ = 0;
+        lastRebuildStep_ = -1;
+        recentRebuildIntervals_.fill(0);
+        recentRebuildCount_ = 0;
+        recentRebuildCursor_ = 0;
+        lastRebuildTimeMs_ = 0.0f;
+        averageRebuildTimeMs_ = 0.0f;
+        maxRebuildTimeMs_ = 0.0f;
+    }
+
+    void recordRebuild(int simStep, float rebuildTimeMs) {
+        if (lastRebuildStep_ >= 0 && simStep >= lastRebuildStep_) {
+            const std::size_t interval = static_cast<std::size_t>(simStep - lastRebuildStep_);
+            rebuildIntervalsSum_ += interval;
+            recentRebuildIntervals_[recentRebuildCursor_] = interval;
+            recentRebuildCursor_ = (recentRebuildCursor_ + 1) % kRecentRebuildWindow;
+            if (recentRebuildCount_ < kRecentRebuildWindow) {
+                ++recentRebuildCount_;
+            }
+        }
+
+        lastRebuildTimeMs_ = rebuildTimeMs;
+        if (rebuildTimeMs > maxRebuildTimeMs_) {
+            maxRebuildTimeMs_ = rebuildTimeMs;
+        }
+        if (rebuildCount_ == 0) {
+            averageRebuildTimeMs_ = rebuildTimeMs;
+        } else {
+            averageRebuildTimeMs_ +=
+                (rebuildTimeMs - averageRebuildTimeMs_) /
+                static_cast<float>(rebuildCount_ + 1);
+        }
+
+        lastRebuildStep_ = simStep;
+        ++rebuildCount_;
+    }
+
+    [[nodiscard]] std::size_t rebuildCount() const { return rebuildCount_; }
+
+    [[nodiscard]] float averageStepsBetweenRebuilds() const {
+        if (rebuildCount_ <= 1) {
+            return 0.0f;
+        }
+        return static_cast<float>(rebuildIntervalsSum_) /
+            static_cast<float>(rebuildCount_ - 1);
+    }
+
+    [[nodiscard]] float recentAverageStepsBetweenRebuilds() const {
+        if (recentRebuildCount_ == 0) {
+            return 0.0f;
+        }
+
+        std::size_t sum = 0;
+        for (std::size_t i = 0; i < recentRebuildCount_; ++i) {
+            sum += recentRebuildIntervals_[i];
+        }
+        return static_cast<float>(sum) / static_cast<float>(recentRebuildCount_);
+    }
+
+    [[nodiscard]] int stepsSinceLastRebuild(int simStep) const {
+        if (lastRebuildStep_ < 0) {
+            return simStep;
+        }
+        return simStep - lastRebuildStep_;
+    }
+
+    [[nodiscard]] float lastRebuildTimeMs() const { return lastRebuildTimeMs_; }
+    [[nodiscard]] float averageRebuildTimeMs() const { return averageRebuildTimeMs_; }
+    [[nodiscard]] float maxRebuildTimeMs() const { return maxRebuildTimeMs_; }
+
+private:
+    static constexpr std::size_t kRecentRebuildWindow = 8;
+
+    std::size_t rebuildCount_ = 0;
+    std::size_t rebuildIntervalsSum_ = 0;
+    int lastRebuildStep_ = -1;
+    std::array<std::size_t, kRecentRebuildWindow> recentRebuildIntervals_{};
+    std::size_t recentRebuildCount_ = 0;
+    std::size_t recentRebuildCursor_ = 0;
+    float lastRebuildTimeMs_ = 0.0f;
+    float averageRebuildTimeMs_ = 0.0f;
+    float maxRebuildTimeMs_ = 0.0f;
+};

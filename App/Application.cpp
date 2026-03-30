@@ -16,7 +16,6 @@
 #include "Engine/Simulation.h"
 #include "Engine/metrics/Profiler.h"
 #include "Engine/tools/Tools.h"
-#include "Engine/utils/RateCounter.h"
 #include "GUI/interface/interface.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
@@ -29,7 +28,7 @@ namespace {
 
 constexpr int FPS = 60;
 constexpr int LPS = 20;
-constexpr double Dt = 0.01;
+constexpr float Dt = 0.01;
 
 std::string_view schemeName(Integrator::Scheme scheme) {
     switch (scheme) {
@@ -173,7 +172,6 @@ void processSettingsPanel(sf::RenderWindow& window) {
         }
     }
 }
-
 } // namespace
 
 int Application::run() {
@@ -207,9 +205,6 @@ int Application::run() {
     const DebugViews debugViews = createDebugViews(Interface::debugPanel);
 
     sf::Clock clock;
-    RateCounter physicsCounter;
-    RateCounter renderCounter;
-
     double renderAccum = 0.0;
     double physicsAccum = 0.0;
     double logAccum = 0.0;
@@ -231,10 +226,8 @@ int Application::run() {
         if (!Interface::getPause()) {
             const double physicsInterval = 1.0 / Interface::getSimulationSpeed();
             if (physicsAccum >= physicsInterval) {
-                PROFILE_SCOPE("Application::PhysicsStep");
-                physicsCounter.startStep();
                 simulation.update(Dt);
-                physicsCounter.finishStep();
+                Profiler::instance().addCount("Simulation::steps");
                 physicsAccum = 0.0;
             }
         } else {
@@ -243,10 +236,8 @@ int Application::run() {
 
         // один шаг симуляции
         if (auto cmd = Keyboard::popResult(); cmd == KeyboardCommand::StepPhysics) {
-            PROFILE_SCOPE("Application::SinglePhysicsStep");
-            physicsCounter.startStep();
             simulation.update(Dt);
-            physicsCounter.finishStep();
+            Profiler::instance().addCount("Simulation::steps");
         }
 
         if (renderAccum >= renderInterval) {
@@ -262,25 +253,20 @@ int Application::run() {
             processIOPanel(simulation);
             processSettingsPanel(window);
 
-            renderCounter.startStep();
             renderer->drawShot(simulation.atomStorage, simulation.sim_box);
             Tools::pickingSystem->getOverlay().draw(window);
             ImGui::SFML::Render(window);
             window.display();
-            renderCounter.finishStep();
         }
+
+        Profiler::instance().endFrame();
 
         // обновение логов и данных счетчиков
         if (logAccum >= logInterval) {
             logAccum -= logInterval;
-            updateSimulationDebug(debugViews, simulation, renderCounter.avgMs(), physicsCounter.avgMs(),
-                                  physicsCounter.stepsPerSecond, schemeName(simulation.getIntegrator()));
-
-            physicsCounter.flush(logInterval);
-            renderCounter.flush(logInterval);
+            Profiler::instance().updateRates(logInterval);
+            updateSimulationDebug(debugViews, simulation, schemeName(simulation.getIntegrator()));
         }
-
-        Profiler::instance().endFrame();
     }
 
     Interface::shutdown();

@@ -64,8 +64,6 @@ static DebugView* buildDebugProfilerView(DebugPanel& panel) {
     return panel.addView(DebugView("Profiler", {
         DebugValue("Кадр (мс)", DebugDrawers::Float<4>),
         DebugValue("Tracked (мс)", DebugDrawers::Float<4>),
-        DebugValue("Application::PhysicsStep (мс)", DebugDrawers::Float<4>),
-        DebugValue("Application::PhysicsStep (%)", DebugDrawers::Float<2>),
         DebugValue("Application::RenderFrame (мс)", DebugDrawers::Float<4>),
         DebugValue("Application::RenderFrame (%)", DebugDrawers::Float<2>),
         DebugValue("Simulation::update (мс)", DebugDrawers::Float<4>),

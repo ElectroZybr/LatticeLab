@@ -11,7 +11,7 @@ BENCHMARK_DEFINE_F(SimulationFixture, SpatialGridRebuild)(benchmark::State& stat
 
     for (auto _ : state) {
         grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
-        benchmark::DoNotOptimize(grid.metrics().lastNonEmptyCellCount());
+    benchmark::DoNotOptimize(grid.stats().lastNonEmptyCellCount());
         benchmark::ClobberMemory();
     }
 
