@@ -143,13 +143,13 @@ int randomGasInCurrentBox(Simulation& sim,
             const Vec3f coords(rx + 2.0, ry + 2.0, is3d ? (rz + 2.0) : zMid);
 
             if (!detail::hasNeighborInStorage(sim, coords, minDistance) && !isTooCloseToPending(coords)) {
-                acceptedPositions.push_back(coords);
+                acceptedPositions.emplace_back(coords);
                 const int cell = sim.sim_box.grid.linearIndex(
                     sim.sim_box.grid.worldToCellX(coords.x),
                     sim.sim_box.grid.worldToCellY(coords.y),
                     sim.sim_box.grid.worldToCellZ(coords.z)
                 );
-                pendingByCell[static_cast<std::size_t>(cell)].push_back(coords);
+                pendingByCell[static_cast<std::size_t>(cell)].emplace_back(coords);
                 break;
             }
         }

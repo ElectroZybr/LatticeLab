@@ -30,7 +30,7 @@ public:
     Camera camera;
 
 protected:
-    IRenderer(sf::View& gv)
-        : camera(&gv) {}
+    IRenderer(sf::View& gv, SimBox& box)
+        : camera(&gv, box) {}
     const AtomStorage* atomStorage = nullptr;
 };

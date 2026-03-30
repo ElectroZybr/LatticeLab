@@ -4,7 +4,7 @@
 
 class Renderer2D : public RendererGL {
 public:
-    Renderer2D(sf::RenderTarget& t, sf::View& gv);
+    Renderer2D(sf::RenderTarget& t, sf::View& gv, SimBox& simbox);
     ~Renderer2D() override = default;
 
 protected:

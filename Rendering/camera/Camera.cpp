@@ -1,14 +1,15 @@
 #include <cmath>
 #include <algorithm>
+#include <Engine/SimBox.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "Camera.h"
 
-Camera::Camera(sf::View* view, float moveSpeed, float zoomSpeed) 
-    : view(view), position(0, 0), zoom(20.f), speed(moveSpeed / 20.f), moveSpeed(moveSpeed), zoomSpeed(zoomSpeed),
-    isDragging(false), lastMousePos(0, 0) {
-}
+Camera::Camera(sf::View* view, SimBox& simBox, float moveSpeed, float zoomSpeed) 
+    : view(view), simBox(simBox), 
+    moveSpeed(moveSpeed), zoomSpeed(zoomSpeed),
+    isDragging(false), lastMousePos(0, 0) { }
 
 void Camera::update(sf::RenderTarget& target) {
     screenSize = sf::Vector2f(target.getSize());
@@ -91,8 +92,10 @@ glm::vec3 Camera::getEyePosition() const {
     if (mode == Mode::Free)
         return glm::vec3(freePosition.x, freePosition.y, freePosition.z);
 
+    glm::vec3 center(simBox.size.x * 0.5f, simBox.size.y * 0.5f, simBox.size.z * 0.5f);
+
     const float r = moveSpeed / zoom;
-    return r * glm::vec3(
+    return center + r * glm::vec3(
         std::cos(elevation) * std::sin(azimuth),
         std::sin(elevation),
         std::cos(elevation) * std::cos(azimuth)
@@ -110,9 +113,10 @@ glm::mat4 Camera::getViewMatrix() const {
         return glm::lookAt(eye, eye + forward, glm::vec3(0.f, 1.f, 0.f));
     }
 
-    // камера всегда смотрит в центр мира
+    // камера всегда смотрит в центр коробки
+    Vec3f center = simBox.size / 2.f;
     glm::vec3 eye = getEyePosition();
-    return glm::lookAt(eye, glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f));
+    return glm::lookAt(eye, glm::vec3(center.x, center.y, center.z), glm::vec3(0.f, 1.f, 0.f));
 
 }
 
