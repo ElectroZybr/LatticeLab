@@ -22,6 +22,14 @@ struct ProfilerFrameData {
     std::size_t frameIndex = 0;
 };
 
+struct ProfileCounter {
+    const char* name = "";
+    std::size_t pendingCount = 0;
+    std::size_t totalCount = 0;
+    double ratePerSecond = 0.0;
+    bool hasRateSample = false;
+};
+
 class Profiler {
 public:
     static Profiler& instance();
@@ -31,9 +39,14 @@ public:
     void reset();
 
     void addSample(const char* name, double ms);
+    void addCount(const char* name, std::size_t delta = 1);
+    void updateRates(double intervalSeconds);
 
     [[nodiscard]] const ProfilerFrameData& frameData() const noexcept { return frameData_; }
     [[nodiscard]] const std::vector<ProfileEntry>& entries() const noexcept { return entries_; }
+    [[nodiscard]] const ProfileEntry* findEntry(const char* name) const noexcept;
+    [[nodiscard]] double lastMs(const char* name) const noexcept;
+    [[nodiscard]] double counterRate(const char* name) const noexcept;
 
 private:
     using Clock = std::chrono::steady_clock;
@@ -45,8 +58,10 @@ private:
 
     ProfilerFrameData frameData_{};
     std::vector<ProfileEntry> entries_{};
+    std::vector<ProfileCounter> counters_{};
 
     ProfileEntry& entryFor(const char* name);
+    ProfileCounter& counterFor(const char* name);
 };
 
 class ProfileScope {

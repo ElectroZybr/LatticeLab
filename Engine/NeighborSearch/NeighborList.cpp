@@ -48,9 +48,8 @@ void NeighborList::clear() {
     refPosX_.shrink_to_fit();
     refPosY_.shrink_to_fit();
     refPosZ_.shrink_to_fit();
-    buildCounter_.reset();
-    needsRebuildCounter_.reset();
     valid_ = false;
+    resetStats();
 }
 
 void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
@@ -58,7 +57,6 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
     // перестройка пространственной сетки
     box.grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
 
-    buildCounter_.startStep();
     const SpatialGrid& grid = box.grid;
     const std::uint32_t atomCount = static_cast<std::uint32_t>(atoms.size());
     const float* RESTRICT x = atoms.xData();
@@ -81,22 +79,18 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
         refPosZ_[i] = zi;
     }
 
-    buildCounter_.finishStep();
     valid_ = true;
 }
 
 bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
     PROFILE_SCOPE("NeighborList::needsRebuild");
-    needsRebuildCounter_.startStep();
     const std::size_t nSize = atoms.size();
     if (nSize > static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max())) {
-        needsRebuildCounter_.finishStep();
         return true;
     }
     const std::uint32_t n = static_cast<std::uint32_t>(nSize);
 
     if (!valid_ || n != refPosX_.size()) {
-        needsRebuildCounter_.finishStep();
         return true;
     }
 
@@ -119,7 +113,6 @@ bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
         rebuild |= ((dx*dx + dy*dy + dz*dz) > maxDispSqr);
     }
 
-    needsRebuildCounter_.finishStep();
     return rebuild;
 }
 
@@ -140,6 +133,15 @@ std::uint32_t NeighborList::memoryBytes() const {
         + refPosX_.capacity() * sizeof(float)
         + refPosY_.capacity() * sizeof(float)
         + refPosZ_.capacity() * sizeof(float);
+}
+
+void NeighborList::resetStats() {
+    stats_.reset();
+}
+
+void NeighborList::recordRebuild(int simStep) {
+    const float rebuildTimeMs = static_cast<float>(Profiler::instance().lastMs("NeighborList::build"));
+    stats_.recordRebuild(simStep, rebuildTimeMs);
 }
 
 void NeighborList::reserveListBuffers(const AtomStorage& atoms, const SpatialGrid& grid) {

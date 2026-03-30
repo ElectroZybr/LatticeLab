@@ -35,8 +35,6 @@ void SpatialGrid::rebuild(std::span<const float> posX,
                           std::span<const float> posY,
                           std::span<const float> posZ) {
     PROFILE_SCOPE("SpatialGrid::rebuild");
-    rebuildCounter_.startStep();
-
     const size_t n = posX.size();
     if (n != posY.size() || n != posZ.size()) {
         throw std::invalid_argument("SpatialGrid::rebuild: inconsistent coordinate span sizes");
@@ -45,8 +43,7 @@ void SpatialGrid::rebuild(std::span<const float> posX,
     if (n == 0) {
         atomsInCells.clear();
         std::fill(offsets.begin(), offsets.end(), 0);
-        rebuildCounter_.finishStep();
-        metrics_.onRebuild(rebuildCounter_.lastMs(), 0, 0, 0);
+        stats_.recordRebuild(0, 0, 0.0f);
         return;
     }
 
@@ -78,8 +75,10 @@ void SpatialGrid::rebuild(std::span<const float> posX,
         atomsInCells[counts_[cell]++] = i;
     }
 
-    rebuildCounter_.finishStep();
-    metrics_.onRebuild(rebuildCounter_.lastMs(), n, nonEmptyCellCount, maxAtomsPerCell);
+    const float averageAtomsPerNonEmptyCell = nonEmptyCellCount > 0
+        ? static_cast<float>(n) / static_cast<float>(nonEmptyCellCount)
+        : 0.0f;
+    stats_.recordRebuild(nonEmptyCellCount, maxAtomsPerCell, averageAtomsPerNonEmptyCell);
 }
 
 void SpatialGrid::resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSize) {
@@ -102,8 +101,7 @@ void SpatialGrid::resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSi
     offsets.assign(countCells + 1, 0);
     atomsInCells.clear();
     rebuildNeighborOffsets();
-    rebuildCounter_.reset();
-    metrics_.reset();
+    stats_.reset();
 }
 
 void SpatialGrid::rebuildNeighborOffsets() noexcept {

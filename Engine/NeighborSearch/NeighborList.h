@@ -6,9 +6,9 @@
 #include <utility>
 #include <vector>
 
+#include "../metrics/NeighborListStats.h"
 #include "../physics/AtomStorage.h"
 #include "SpatialGrid.h"
-#include "../utils/RateCounter.h"
 
 class SimBox;
 
@@ -27,24 +27,19 @@ public:
     [[nodiscard]] uint32_t atomCount() const;
     [[nodiscard]] uint32_t pairStorageSize() const;
     [[nodiscard]] uint32_t memoryBytes() const;
-    [[nodiscard]] const RateCounter& buildCounter() const { return buildCounter_; }
-    [[nodiscard]] const RateCounter& needsRebuildCounter() const { return needsRebuildCounter_; }
     [[nodiscard]] float cutoff() const { return cutoff_; }
     [[nodiscard]] float skin() const { return skin_; }
     [[nodiscard]] float listRadius() const { return listRadius_; }
     [[nodiscard]] bool isValid() const { return valid_; }
     [[nodiscard]] const std::vector<std::uint32_t>& neighbors() const { return neighbors_; }
     [[nodiscard]] const std::vector<std::uint32_t>& offsets() const { return offsets_; }
+    [[nodiscard]] const NeighborListStats& stats() const { return stats_; }
+    void resetStats();
+    void recordRebuild(int simStep);
     
     // Hot-path helper для записи соседей одного атома.
-    inline void writeAtomNeighbors(const SpatialGrid& grid,
-                                   const float* x,
-                                   const float* y,
-                                   const float* z,
-                                   const std::uint32_t atomIndex,
-                                   const float xi,
-                                   const float yi,
-                                   const float zi,
+    inline void writeAtomNeighbors(const SpatialGrid& grid, const float* x, const float* y, const float* z,
+                                   const std::uint32_t atomIndex, const float xi, const float yi, const float zi,
                                    std::vector<std::uint32_t>& outNeighbors) const {
         const auto& offsets27 = grid.neighborOffsets27();
         const int center = grid.linearCellOfAtom(atomIndex); // центральная ячейка атома i
@@ -78,7 +73,5 @@ private:
     float listRadius_ = 0.0f;
     float listRadiusSqr_ = 0.0f;
     bool valid_ = false;
-
-    RateCounter buildCounter_;
-    mutable RateCounter needsRebuildCounter_;
+    NeighborListStats stats_{};
 };

@@ -1,14 +1,13 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <array>
 #include <span>
 #include <vector>
 
 #include <Engine/math/Vec3f.h>
-
-#include "../metrics/SpatialGridMetrics.h"
-#include "../utils/RateCounter.h"
+#include "../metrics/SpatialGridStats.h"
 
 class SpatialGrid {
 public:
@@ -23,8 +22,9 @@ public:
     void rebuild(std::span<const float> posX, std::span<const float> posY, std::span<const float> posZ);
     void resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSize = -1);
 
-    [[nodiscard]] const SpatialGridMetrics& metrics() const noexcept { return metrics_; }
-    [[nodiscard]] const RateCounter& rebuildCounter() const noexcept { return rebuildCounter_; }
+    // метрики SG
+    [[nodiscard]] const SpatialGridStats& stats() const noexcept { return stats_; }
+    [[nodiscard]] std::size_t memoryBytes() const;
 
     // (warning) нет проверки выхода за границы
     [[nodiscard]] std::span<const size_t> atomsInCell(int x, int y, int z) const noexcept {
@@ -52,8 +52,6 @@ public:
     [[nodiscard]] int linearIndex(int x, int y, int z) const noexcept { return index(x, y, z); }
     [[nodiscard]] int linearCellOfAtom(std::uint32_t atomIndex) const noexcept { return static_cast<int>(cellIndices_[atomIndex]); }
     [[nodiscard]] const std::array<int, 27>& neighborOffsets27() const noexcept { return neighborOffsets27_; }
-
-    [[nodiscard]] std::size_t memoryBytes() const;
     
 private:
     // CSR хранение данных
@@ -67,8 +65,7 @@ private:
 
     static constexpr int kBorderCells = 2; // запас + 1 клетка с каждой стороны от бокса
 
-    RateCounter rebuildCounter_;
-    SpatialGridMetrics metrics_;
+    SpatialGridStats stats_{};
 
     [[nodiscard]] int index(int x, int y, int z) const noexcept {
         return z * sizeY * sizeX + y * sizeX + x;
