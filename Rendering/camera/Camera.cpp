@@ -57,7 +57,7 @@ Vec3f Camera::screenToWorld(sf::Vector2i screenPos) const {
         const sf::Vector2f viewCenter = view->getCenter();
         const float wx = viewCenter.x + (screenPos.x - screenSize.x * 0.5f) * (viewSize.x / screenSize.x);
         const float wy = viewCenter.y + (screenPos.y - screenSize.y * 0.5f) * (viewSize.y / screenSize.y);
-        return Vec3f(wx, wy, 0.f);
+        return Vec3f(wx, wy, 1.f);
     }
  
     const Ray ray = screenToRay(screenPos.x, screenPos.y);

@@ -121,6 +121,9 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     boxSizeChanged |= ImGui::InputFloat("##box_size_z_input", &boxSize_.z, 0.0f, 0.0f, "%.1f");
 
     if (boxSizeChanged) {
+        if(boxSize_.x < 1.f) boxSize_.x = 1.f;
+        if(boxSize_.y < 1.f) boxSize_.y = 1.f;
+        if(boxSize_.z < 1.f) boxSize_.z = 1.f; 
         pendingResult_ = IOCommand::ApplyBoxSize;
     }
 
