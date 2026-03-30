@@ -60,7 +60,7 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
                            std::string_view integratorName) {
     const Profiler& profiler = Profiler::instance();
     const double renderMs = profiler.lastMs("Application::RenderFrame");
-    const double physicsMs = profiler.lastMs("Simulation::update");
+    const double physicsMs = profiler.lastActiveMs("Simulation::update");
     const double nlNeedsRebuildMs = profiler.lastMs("NeighborList::needsRebuild");
     const float stepsPerSecond = static_cast<float>(profiler.counterRate("Simulation::steps"));
 
