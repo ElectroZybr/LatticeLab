@@ -77,9 +77,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
 
     if (animProgress_ < 0.01f) return;
 
-    boxSizeX_ = simulation.sim_box.size.x;
-    boxSizeY_ = simulation.sim_box.size.y;
-    boxSizeZ_ = simulation.sim_box.size.z;
+    boxSize_ = simulation.sim_box.size;
 
     const float panelWidth = 300.f * scale;
     const float topOffset = 65.f * scale;
@@ -107,20 +105,20 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
 
     ImGui::SeparatorText("Размер бокса");
     bool boxSizeChanged = false;
-    boxSizeChanged |= ImGui::SliderFloat("X##box_size_x", &boxSizeX_, 5.0f, 400.0f, "%.1f");
+    boxSizeChanged |= ImGui::SliderFloat("X##box_size_x", &boxSize_.x, 5.0f, 400.0f, "%.1f");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(70.0f * scale);
-    boxSizeChanged |= ImGui::InputFloat("##box_size_x_input", &boxSizeX_, 0.0f, 0.0f, "%.1f");
+    boxSizeChanged |= ImGui::InputFloat("##box_size_x_input", &boxSize_.x, 0.0f, 0.0f, "%.1f");
 
-    boxSizeChanged |= ImGui::SliderFloat("Y##box_size_y", &boxSizeY_, 5.0f, 400.0f, "%.1f");
+    boxSizeChanged |= ImGui::SliderFloat("Y##box_size_y", &boxSize_.y, 5.0f, 400.0f, "%.1f");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(70.0f * scale);
-    boxSizeChanged |= ImGui::InputFloat("##box_size_y_input", &boxSizeY_, 0.0f, 0.0f, "%.1f");
+    boxSizeChanged |= ImGui::InputFloat("##box_size_y_input", &boxSize_.y, 0.0f, 0.0f, "%.1f");
 
-    boxSizeChanged |= ImGui::SliderFloat("Z##box_size_z", &boxSizeZ_, 5.0f, 200.0f, "%.1f");
+    boxSizeChanged |= ImGui::SliderFloat("Z##box_size_z", &boxSize_.z, 5.0f, 200.0f, "%.1f");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(70.0f * scale);
-    boxSizeChanged |= ImGui::InputFloat("##box_size_z_input", &boxSizeZ_, 0.0f, 0.0f, "%.1f");
+    boxSizeChanged |= ImGui::InputFloat("##box_size_z_input", &boxSize_.z, 0.0f, 0.0f, "%.1f");
 
     if (boxSizeChanged) {
         pendingResult_ = IOCommand::ApplyBoxSize;
