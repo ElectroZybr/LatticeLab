@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 #include <span>
+#include <algorithm>
 #include "Engine/math/Vec3f.h"
 
 #include "AtomData.h"
@@ -64,37 +65,35 @@ private:
         pe_      = base + 13 * capacity_;
     }
 
-    void ensureCapacity(std::size_t requiredCount) {
+    void ensureCapacity(size_t requiredCount) {
         if (requiredCount <= capacity_) {
             return;
         }
 
-        std::size_t newCapacity = (capacity_ == 0) ? requiredCount : capacity_;
+        size_t newCapacity = (capacity_ == 0) ? requiredCount : capacity_;
         while (newCapacity < requiredCount) {
-            newCapacity *= 2;
+            newCapacity = newCapacity * 3 / 2 + 1;
         }
 
         std::vector<float> newFloatData(kFloatFieldCount * newCapacity, 0.0f);
-        float* newBase = newFloatData.data();
-        auto newField = [&](std::size_t fieldIndex) {
-            return newBase + fieldIndex * newCapacity;
-        };
 
-        for (std::size_t i = 0; i < count_; ++i) {
-            newField(0)[i]  = x_[i];
-            newField(1)[i]  = y_[i];
-            newField(2)[i]  = z_[i];
-            newField(3)[i]  = vx_[i];
-            newField(4)[i]  = vy_[i];
-            newField(5)[i]  = vz_[i];
-            newField(6)[i]  = invMass_[i];
-            newField(7)[i]  = fx_[i];
-            newField(8)[i]  = fy_[i];
-            newField(9)[i]  = fz_[i];
-            newField(10)[i] = pfx_[i];
-            newField(11)[i] = pfy_[i];
-            newField(12)[i] = pfz_[i];
-            newField(13)[i] = pe_[i];
+        if (count_ > 0) {
+            float* newBase = newFloatData.data();
+
+            auto getNewFieldPtr = [&](size_t fieldIndex) {
+                return newBase + (fieldIndex * newCapacity);
+            };
+
+            const std::array<float*, kFloatFieldCount> oldFields = {
+                x_, y_, z_, 
+                fx_, fy_, fz_, pe_, 
+                vx_, vy_, vz_, invMass_, 
+                pfx_, pfy_, pfz_
+            };
+
+            for (size_t i = 0; i < oldFields.size(); ++i) {
+                std::copy_n(oldFields[i], count_, getNewFieldPtr(i));
+            }
         }
 
         floatData_ = std::move(newFloatData);
@@ -113,7 +112,6 @@ public:
     const float* vxData() const { return vx_; }
     const float* vyData() const { return vy_; }
     const float* vzData() const { return vz_; }
-    
 
     float* fxData() { return fx_; }
     float* fyData() { return fy_; }
