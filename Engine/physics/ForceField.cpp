@@ -148,6 +148,7 @@ void ForceField::applyWall(float coord, float& force, float min, float max) {
 template<bool UseNeighborList>
 void ForceField::ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* neighborList) const {
     for (size_t atomIndex = 0; atomIndex < atoms.mobileCount(); ++atomIndex) {
+        // загружаем данные текущего атома из AtomStorage
         float posX = atoms.posX(atomIndex);
         float posY = atoms.posY(atomIndex);
         float posZ = atoms.posZ(atomIndex);
@@ -155,7 +156,6 @@ void ForceField::ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* ne
         float forceY = atoms.forceY(atomIndex);
         float forceZ = atoms.forceZ(atomIndex);
         float potenE = atoms.energy(atomIndex);
-        // загружаем данные текущего атома из AtomStorage
         // выбираем строку таблицы LJ для данного типа атома
         const LJPairRow& ljPairRow = ljPairTable[static_cast<size_t>(atoms.type(atomIndex))];
 
@@ -167,7 +167,7 @@ void ForceField::ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* ne
         // взаимодействия с соседями
         if constexpr (UseNeighborList) {
             // используем список соседей
-            for (size_t neighbourIndex : neighborList->neighborsIndices(atomIndex)) {
+            for (uint32_t neighbourIndex : neighborList->neighborsIndices(atomIndex)) {
                 pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
             }
         }
@@ -187,7 +187,7 @@ void ForceField::ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* ne
             for (int ix = x0; ix <= x1; ++ix) {
                 for (int iy = y0; iy <= y1; ++iy) {
                     for (int iz = z0; iz <= z1; ++iz) {
-                        for (size_t neighbourIndex : box.grid.atomsInCell(ix, iy, iz)) {
+                        for (uint32_t neighbourIndex : box.grid.atomsInCell(ix, iy, iz)) {
                             if (atomIndex <= neighbourIndex) continue;
                             pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
                         }
@@ -204,7 +204,7 @@ void ForceField::ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* ne
     }
 }
 
-void ForceField::pairNonBondedInteraction(AtomStorage& atoms, size_t bIndex, const LJPairRow& ljPairRow,
+void ForceField::pairNonBondedInteraction(AtomStorage& atoms, uint32_t bIndex, const LJPairRow& ljPairRow,
                                           float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const {
     // расчет вектора между атомами
     const float dx = atoms.posX(bIndex) - posX;
