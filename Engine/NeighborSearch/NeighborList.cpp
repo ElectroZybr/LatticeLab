@@ -68,7 +68,7 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
         const float yi = atoms.posY(i);
         const float zi = atoms.posZ(i);
         // запись всех соседей в массив
-        writeAtomNeighbors(grid, atoms, i, neighbors_);
+        writeAtomNeighbors(grid, atoms, i, xi, yi, zi, neighbors_);
         offsets_[i + 1] = neighbors_.size();
 
         refPosX_[i] = xi;
@@ -126,14 +126,6 @@ std::uint32_t NeighborList::atomCount() const {
 
 std::uint32_t NeighborList::pairStorageSize() const {
     return static_cast<std::uint32_t>(std::min(neighbors_.size(), static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max())));
-}
-
-std::pair<std::uint32_t, std::uint32_t> NeighborList::rangeFor(std::uint32_t atomIndex) const {
-    const std::size_t index = static_cast<std::size_t>(atomIndex);
-    if (offsets_.empty() || index + 1 >= offsets_.size()) {
-        return {0, 0};
-    }
-    return {offsets_[index], offsets_[index + 1]};
 }
 
 std::uint32_t NeighborList::memoryBytes() const {

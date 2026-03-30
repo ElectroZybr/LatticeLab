@@ -167,31 +167,42 @@ void ForceField::ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* ne
         // взаимодействия с соседями
         if constexpr (UseNeighborList) {
             // используем список соседей
-            for (uint32_t neighbourIndex : neighborList->neighborsIndices(atomIndex)) {
+            const auto& off = neighborList->offsets();
+            const auto& nei = neighborList->neighbors();
+            if (atomIndex + 1 >= off.size()) {
+                atoms.forceX(atomIndex) = forceX;
+                atoms.forceY(atomIndex) = forceY;
+                atoms.forceZ(atomIndex) = forceZ;
+                atoms.energy(atomIndex) = potenE;
+                continue;
+            }
+            const uint32_t begin = off[atomIndex];
+            const uint32_t end   = off[atomIndex + 1];
+            if (begin > end || static_cast<std::size_t>(end) > nei.size()) {
+                atoms.forceX(atomIndex) = forceX;
+                atoms.forceY(atomIndex) = forceY;
+                atoms.forceZ(atomIndex) = forceZ;
+                atoms.energy(atomIndex) = potenE;
+                continue;
+            }
+            for (uint32_t p = begin; p < end; ++p) {
+                const uint32_t neighbourIndex = nei[p];
                 pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
             }
         }
         else {
             // без списка соседей
-            const int cx = box.grid.worldToCellX(posX);
-            const int cy = box.grid.worldToCellY(posY);
-            const int cz = box.grid.worldToCellZ(posZ);
+            const auto& grid = box.grid;
+            const int cx = grid.worldToCellX(posX);
+            const int cy = grid.worldToCellY(posY);
+            const int cz = grid.worldToCellZ(posZ);
+            const int center = grid.linearIndex(cx, cy, cz);
+            const auto& offsets27 = grid.neighborOffsets27();
 
-            const int x0 = std::max(cx - 1, 0);
-            const int x1 = std::min(cx + 1, box.grid.sizeX - 1);
-            const int y0 = std::max(cy - 1, 0);
-            const int y1 = std::min(cy + 1, box.grid.sizeY - 1);
-            const int z0 = std::max(cz - 1, 0);
-            const int z1 = std::min(cz + 1, box.grid.sizeZ - 1);
-
-            for (int ix = x0; ix <= x1; ++ix) {
-                for (int iy = y0; iy <= y1; ++iy) {
-                    for (int iz = z0; iz <= z1; ++iz) {
-                        for (uint32_t neighbourIndex : box.grid.atomsInCell(ix, iy, iz)) {
-                            if (atomIndex <= neighbourIndex) continue;
-                            pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
-                        }
-                    }
+            for (int k = 0; k < 27; ++k) {
+                for (std::uint32_t neighbourIndex : grid.atomsInCellByLinearIndex(center + offsets27[k])) {
+                    if (neighbourIndex >= atomIndex) continue;
+                    pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
                 }
             }
         }

@@ -26,7 +26,6 @@ public:
 
     [[nodiscard]] uint32_t atomCount() const;
     [[nodiscard]] uint32_t pairStorageSize() const;
-    [[nodiscard]] std::pair<uint32_t, uint32_t> rangeFor(uint32_t atomIndex) const;
     [[nodiscard]] uint32_t memoryBytes() const;
     [[nodiscard]] const RateCounter& buildCounter() const { return buildCounter_; }
     [[nodiscard]] const RateCounter& needsRebuildCounter() const { return needsRebuildCounter_; }
@@ -34,25 +33,14 @@ public:
     [[nodiscard]] float skin() const { return skin_; }
     [[nodiscard]] float listRadius() const { return listRadius_; }
     [[nodiscard]] bool isValid() const { return valid_; }
-
-    [[nodiscard]] std::span<const std::uint32_t> neighborsIndices(std::uint32_t atomIndex) const {
-        auto r = rangeFor(atomIndex);
-        return std::span(neighbors_).subspan(r.first, r.second - r.first);
-    }
     [[nodiscard]] const std::vector<std::uint32_t>& neighbors() const { return neighbors_; }
     [[nodiscard]] const std::vector<std::uint32_t>& offsets() const { return offsets_; }
     
     // Hot-path helper для записи соседей одного атома.
-    inline void writeAtomNeighbors(const SpatialGrid& grid, const AtomStorage& atoms, std::uint32_t atomIndex, std::vector<std::uint32_t>& outNeighbors) const {
-        const float xi = atoms.posX(atomIndex);
-        const float yi = atoms.posY(atomIndex);
-        const float zi = atoms.posZ(atomIndex);
-
-        const int cx = grid.worldToCellX(xi);
-        const int cy = grid.worldToCellY(yi);
-        const int cz = grid.worldToCellZ(zi);
-        const int center = grid.linearIndex(cx, cy, cz);
+    inline void writeAtomNeighbors(const SpatialGrid& grid, const AtomStorage& atoms, const std::uint32_t atomIndex, 
+                                   const float xi, const float yi, const float zi, std::vector<std::uint32_t>& outNeighbors) const {
         const auto& offsets27 = grid.neighborOffsets27();
+        const int center = grid.linearCellOfAtom(atomIndex); // центральная ячейка атома i
 
         for (int k = 0; k < 27; ++k) {
             for (std::uint32_t neighborIndex : grid.atomsInCellByLinearIndex(center + offsets27[k])) {
