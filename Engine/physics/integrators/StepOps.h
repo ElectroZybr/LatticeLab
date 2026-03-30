@@ -2,6 +2,7 @@
 
 #include "../ForceField.h"
 #include "Engine/SimBox.h"
+#include "Engine/metrics/Profiler.h"
 #include "restrict.h"
 
 class NeighborList;
@@ -38,12 +39,14 @@ inline void confineToBox(AtomStorage& atomStorage, SimBox& box) {
 }
 
 inline void computeForces(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) {
+    PROFILE_SCOPE("StepOps::computeForces");
     forceField.compute(atomStorage, box, neighborList, dt);
 }
 
 template<typename StepFn>
 requires AtomStepFunc<StepFn>
 inline void predictAndSync(AtomStorage& atomStorage, SimBox& box, float dt, StepFn predictFn) {
+    PROFILE_SCOPE("StepOps::predictAndSync");
     predictFn(atomStorage, dt);
     confineToBox(atomStorage, box);
 

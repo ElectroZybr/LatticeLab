@@ -3,6 +3,7 @@
 #include "Simulation.h"
 #include "io/SimulationStateIO.h"
 #include "metrics/EnergyMetrics.h"
+#include "metrics/Profiler.h"
 #include "physics/Bond.h"
 
 Simulation::Simulation(SimBox& box)
@@ -26,6 +27,7 @@ void Simulation::setNeighborListEnabled(bool enabled) {
 }
 
 void Simulation::update(float dt) {
+    PROFILE_SCOPE("Simulation::update");
     integrator.step(atomStorage, sim_box, forceField, useNeighborList_ ? &neighborList : nullptr, dt);
     if (useNeighborList_ && neighborList.needsRebuild(atomStorage)) {
         neighborList.build(atomStorage, sim_box);

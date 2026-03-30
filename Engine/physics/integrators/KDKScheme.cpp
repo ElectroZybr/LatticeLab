@@ -1,8 +1,10 @@
 #include "KDKScheme.h"
 
+#include "Engine/metrics/Profiler.h"
 #include "StepOps.h"
 
 void KDKScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) const {
+    PROFILE_SCOPE("KDKScheme::pipeline");
     // Kick: половина шага
     halfKick(atomStorage, dt);
     // Расчет новых позиций
@@ -14,6 +16,7 @@ void KDKScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forc
 }
 
 void KDKScheme::halfKick(AtomStorage& atomStorage, float dt) {
+    PROFILE_SCOPE("KDKScheme::halfKick");
     const float* RESTRICT fx  = atomStorage.fxData();
     const float* RESTRICT fy  = atomStorage.fyData();
     const float* RESTRICT fz  = atomStorage.fzData();
@@ -33,6 +36,7 @@ void KDKScheme::halfKick(AtomStorage& atomStorage, float dt) {
 }
 
 void KDKScheme::drift(AtomStorage& atomStorage, float dt) {
+    PROFILE_SCOPE("KDKScheme::drift");
     float* RESTRICT x = atomStorage.xData();
     float* RESTRICT y = atomStorage.yData();
     float* RESTRICT z = atomStorage.zData();

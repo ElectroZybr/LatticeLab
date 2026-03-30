@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include "../metrics/Profiler.h"
+
 SpatialGrid::SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize)
     : sizeX(0),
       sizeY(0),
@@ -32,6 +34,7 @@ SpatialGrid::SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize)
 void SpatialGrid::rebuild(std::span<const float> posX,
                           std::span<const float> posY,
                           std::span<const float> posZ) {
+    PROFILE_SCOPE("SpatialGrid::rebuild");
     rebuildCounter_.startStep();
 
     const size_t n = posX.size();

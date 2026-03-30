@@ -8,6 +8,7 @@
 
 #include <SFML/Window/Context.hpp>
 #include <Engine/tools/Tools.h>
+#include <Engine/metrics/Profiler.h>
 
 #include "Engine/physics/Bond.h"
 #include "RendererGL.h"
@@ -291,6 +292,7 @@ GLuint RendererGL::linkProgram(std::string_view vert, std::string_view frag, std
 
 void RendererGL::drawShot(const AtomStorage& atoms, const SimBox& box)
 {
+    PROFILE_SCOPE("RendererGL::drawShot");
     currentBox = &box;
     updateMatrices();
 
@@ -311,6 +313,7 @@ void RendererGL::drawShot(const AtomStorage& atoms, const SimBox& box)
 }
 
 void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
+    PROFILE_SCOPE("RendererGL::drawAtoms");
     const size_t atomCount = atoms.size();
     const bool useSpeedGradient = speedColorMode != SpeedColorMode::AtomColor;
     atomShader = atomShaderForMode(speedColorMode);
@@ -435,6 +438,7 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
 }
 
 void RendererGL::drawBox(const SimBox& box) {
+    PROFILE_SCOPE("RendererGL::drawBox");
     const float x0 = box.start.x, y0 = box.start.y, z0 = box.start.z;
     const float x1 = box.end.x,   y1 = box.end.y,   z1 = box.end.z;
 
@@ -465,6 +469,7 @@ void RendererGL::drawBox(const SimBox& box) {
 }
 
 void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
+    PROFILE_SCOPE("RendererGL::drawBondsGL");
     if (bondShader == 0 || !atomStorage) return;
 
     bondData.clear();
@@ -513,6 +518,7 @@ void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
 }
 
 void RendererGL::drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset) {
+    PROFILE_SCOPE("RendererGL::drawGridGL");
     gridData.clear();
 
     int maxCount = 1;

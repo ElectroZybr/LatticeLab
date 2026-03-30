@@ -1,0 +1,68 @@
+#pragma once
+
+#include <chrono>
+#include <cstddef>
+#include <vector>
+
+struct ProfileEntry {
+    const char* name = "";
+    double lastMs = 0.0;
+    double totalMs = 0.0;
+    double averageMs = 0.0;
+    double maxMs = 0.0;
+    double percentOfFrame = 0.0;
+    std::size_t callCount = 0;
+    std::size_t totalCallCount = 0;
+    bool touchedThisFrame = false;
+};
+
+struct ProfilerFrameData {
+    double frameMs = 0.0;
+    double totalTrackedMs = 0.0;
+    std::size_t frameIndex = 0;
+};
+
+class Profiler {
+public:
+    static Profiler& instance();
+
+    void beginFrame();
+    void endFrame();
+    void reset();
+
+    void addSample(const char* name, double ms);
+
+    [[nodiscard]] const ProfilerFrameData& frameData() const noexcept { return frameData_; }
+    [[nodiscard]] const std::vector<ProfileEntry>& entries() const noexcept { return entries_; }
+
+private:
+    using Clock = std::chrono::steady_clock;
+
+    Profiler() = default;
+
+    Clock::time_point frameStart_{};
+    bool frameActive_ = false;
+
+    ProfilerFrameData frameData_{};
+    std::vector<ProfileEntry> entries_{};
+
+    ProfileEntry& entryFor(const char* name);
+};
+
+class ProfileScope {
+public:
+    explicit ProfileScope(const char* name) noexcept;
+    ~ProfileScope();
+
+    ProfileScope(const ProfileScope&) = delete;
+    ProfileScope& operator=(const ProfileScope&) = delete;
+
+private:
+    using Clock = std::chrono::steady_clock;
+
+    const char* name_;
+    Clock::time_point start_;
+};
+
+#define PROFILE_SCOPE(name) ::ProfileScope profileScope##__LINE__(name)
+#define PROFILE_FUNC() ::ProfileScope profileScope##__LINE__(__FUNCTION__)

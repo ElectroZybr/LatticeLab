@@ -37,17 +37,24 @@ public:
     [[nodiscard]] const std::vector<std::uint32_t>& offsets() const { return offsets_; }
     
     // Hot-path helper для записи соседей одного атома.
-    inline void writeAtomNeighbors(const SpatialGrid& grid, const AtomStorage& atoms, const std::uint32_t atomIndex, 
-                                   const float xi, const float yi, const float zi, std::vector<std::uint32_t>& outNeighbors) const {
+    inline void writeAtomNeighbors(const SpatialGrid& grid,
+                                   const float* x,
+                                   const float* y,
+                                   const float* z,
+                                   const std::uint32_t atomIndex,
+                                   const float xi,
+                                   const float yi,
+                                   const float zi,
+                                   std::vector<std::uint32_t>& outNeighbors) const {
         const auto& offsets27 = grid.neighborOffsets27();
         const int center = grid.linearCellOfAtom(atomIndex); // центральная ячейка атома i
 
         for (int k = 0; k < 27; ++k) {
             for (std::uint32_t neighborIndex : grid.atomsInCellByLinearIndex(center + offsets27[k])) {
                 if (neighborIndex >= atomIndex) continue;
-                const float dx = atoms.posX(neighborIndex) - xi;
-                const float dy = atoms.posY(neighborIndex) - yi;
-                const float dz = atoms.posZ(neighborIndex) - zi;
+                const float dx = x[neighborIndex] - xi;
+                const float dy = y[neighborIndex] - yi;
+                const float dz = z[neighborIndex] - zi;
                 if (dx * dx + dy * dy + dz * dz <= listRadiusSqr_) {
                     outNeighbors.emplace_back(neighborIndex);
                 }
