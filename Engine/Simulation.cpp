@@ -48,12 +48,12 @@ bool Simulation::createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Typ
     return true;
 }
 
-bool Simulation::removeAtom(std::size_t atomIndex) {
+bool Simulation::removeAtom(size_t atomIndex) {
     if (atomIndex >= atomStorage.size()) {
         return false;
     }
 
-    const std::size_t lastIndex = atomStorage.size() - 1;
+    const size_t lastIndex = atomStorage.size() - 1;
 
     for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end();) {
         if (it->aIndex == atomIndex || it->bIndex == atomIndex) {
@@ -86,7 +86,7 @@ bool Simulation::removeAtom(std::size_t atomIndex) {
     return true;
 }
 
-void Simulation::addBond(std::size_t aIndex, std::size_t bIndex) {
+void Simulation::addBond(size_t aIndex, size_t bIndex) {
     if (aIndex >= atomStorage.size() || bIndex >= atomStorage.size()) {
         return;
     }

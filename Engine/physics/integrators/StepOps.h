@@ -31,7 +31,7 @@ inline void confineToBox(AtomStorage& atomStorage, SimBox& box) {
         }
     };
 
-    for (std::size_t atomIndex = 0; atomIndex < atomStorage.mobileCount(); ++atomIndex) {
+    for (size_t atomIndex = 0; atomIndex < atomStorage.mobileCount(); ++atomIndex) {
         confineAxis(atomStorage.posX(atomIndex), atomStorage.velX(atomIndex), static_cast<float>(max.x));
         confineAxis(atomStorage.posY(atomIndex), atomStorage.velY(atomIndex), static_cast<float>(max.y));
         confineAxis(atomStorage.posZ(atomIndex), atomStorage.velZ(atomIndex), static_cast<float>(max.z));

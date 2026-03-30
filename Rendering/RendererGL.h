@@ -41,7 +41,7 @@ protected:
     GLuint atomShaderForMode(SpeedColorMode mode) const;
 
     // общее состояние
-    std::size_t lastAtomCount = 0;
+    size_t lastAtomCount = 0;
     glm::mat4 projection{1.f};
     glm::mat4 view{1.f};
 

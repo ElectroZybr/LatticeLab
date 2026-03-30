@@ -26,7 +26,7 @@ namespace detail {
                     }
 
                     auto cell = sim.sim_box.grid.atomsInCell(nx, ny, nz);
-                    for (std::size_t atomIndex : cell) {
+                    for (size_t atomIndex : cell) {
                         if (atomIndex >= sim.atomStorage.size()) {
                             continue;
                         }
@@ -54,9 +54,9 @@ void crystal(Simulation& sim, int n, AtomData::Type type, bool is3d, double padd
 
     const Vec3f vecMargin(margin, margin, is3d ? margin : 0.0);
     const int zMax = is3d ? n : 1;
-    const std::size_t atomTotal = static_cast<std::size_t>(n)
-        * static_cast<std::size_t>(n)
-        * static_cast<std::size_t>(zMax);
+    const size_t atomTotal = static_cast<size_t>(n)
+        * static_cast<size_t>(n)
+        * static_cast<size_t>(zMax);
     sim.atomStorage.reserve(sim.atomStorage.size() + atomTotal);
 
     for (int x = 1; x <= n; ++x) {
@@ -97,11 +97,11 @@ int randomGasInCurrentBox(Simulation& sim,
 
     const float minDistanceSqr = minDistance * minDistance;
 
-    const std::size_t oldSize = sim.atomStorage.size();
+    const size_t oldSize = sim.atomStorage.size();
     std::vector<Vec3f> acceptedPositions;
-    acceptedPositions.reserve(static_cast<std::size_t>(atomCount));
+    acceptedPositions.reserve(static_cast<size_t>(atomCount));
 
-    std::vector<std::vector<Vec3f>> pendingByCell(static_cast<std::size_t>(sim.sim_box.grid.countCells));
+    std::vector<std::vector<Vec3f>> pendingByCell(static_cast<size_t>(sim.sim_box.grid.countCells));
     const int pendingRadiusCells = std::max(1, static_cast<int>(std::ceil(minDistance / static_cast<float>(sim.sim_box.grid.cellSize))));
 
     const auto isTooCloseToPending = [&](const Vec3f& coords) {
@@ -120,7 +120,7 @@ int randomGasInCurrentBox(Simulation& sim,
                     }
 
                     const int cellIndex = sim.sim_box.grid.linearIndex(nx, ny, nz);
-                    const auto& bucket = pendingByCell[static_cast<std::size_t>(cellIndex)];
+                    const auto& bucket = pendingByCell[static_cast<size_t>(cellIndex)];
                     for (const Vec3f& other : bucket) {
                         if ((coords - other).sqrAbs() < minDistanceSqr) {
                             return true;
@@ -149,7 +149,7 @@ int randomGasInCurrentBox(Simulation& sim,
                     sim.sim_box.grid.worldToCellY(coords.y),
                     sim.sim_box.grid.worldToCellZ(coords.z)
                 );
-                pendingByCell[static_cast<std::size_t>(cell)].emplace_back(coords);
+                pendingByCell[static_cast<size_t>(cell)].emplace_back(coords);
                 break;
             }
         }

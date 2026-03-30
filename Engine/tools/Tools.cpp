@@ -161,14 +161,14 @@ void Tools::onFrame(sf::Vector2i mousePos, float deltaTime) {
         const Vec3f selectedWorldPos = atomStorage->pos(selectedMoveAtomIndex);
         const Vec3f force = (worldMouse - selectedWorldPos) * 0.05f;
 
-        auto applyRawForce = [&](std::size_t idx, const Vec3f& f) {
+        auto applyRawForce = [&](size_t idx, const Vec3f& f) {
             atomStorage->forceX(idx) += f.x;
             atomStorage->forceY(idx) += f.y;
             atomStorage->forceZ(idx) += f.z;
         };
 
         if (selectedIndices.contains(selectedMoveAtomIndex)) {
-            for (std::size_t idx : selectedIndices) {
+            for (size_t idx : selectedIndices) {
                 // Проверка границ на всякий случай, если AtomStorage изменился
                 if (idx < atomStorage->size()) {
                     applyRawForce(idx, force);
@@ -212,7 +212,7 @@ bool Tools::tryAddAtom(sf::Vector2i mousePos, AtomData::Type atomType) {
 
     const float atomRadius = AtomData::getProps(atomType).radius;
 
-    for (std::size_t atomIndex = 0; atomIndex < atomStorage->size(); ++atomIndex) {
+    for (size_t atomIndex = 0; atomIndex < atomStorage->size(); ++atomIndex) {
         const Vec3f atomPos = atomStorage->pos(atomIndex);
         const float radius = AtomData::getProps(atomStorage->type(atomIndex)).radius;
         if ((atomPos - spawnPos).abs() <= 2.f * (radius + atomRadius)) {
@@ -234,17 +234,17 @@ bool Tools::tryRemoveAtom(sf::Vector2i mousePos) {
         return false;
     }
 
-    const std::size_t target = hit.index;
+    const size_t target = hit.index;
     bool removed = false;
 
     const auto& selected = pickingSystem->getSelectedIndices();
     bool removeSelection = selected.contains(target);
 
     if (removeSelection) {
-        std::vector<std::size_t> toRemove(selected.begin(), selected.end());
+        std::vector<size_t> toRemove(selected.begin(), selected.end());
         std::sort(toRemove.begin(), toRemove.end(), std::greater());
 
-        for (std::size_t index : toRemove) {
+        for (size_t index : toRemove) {
             if (atomRemover(index)) {
                 pickingSystem->handleAtomRemoval(index);
                 removed = true;

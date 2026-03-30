@@ -15,7 +15,7 @@ inline float averageKineticEnergy(const AtomStorage& atomStorage) {
     }
 
     double totalEnergy = 0.0;
-    for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
+    for (size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
         totalEnergy += kineticEnergy(atomStorage.type(atomIndex), atomStorage.vel(atomIndex));
     }
 
@@ -28,7 +28,7 @@ inline float averagePotentialEnergy(const AtomStorage& atomStorage) {
     }
 
     double totalEnergy = 0.0;
-    for (std::size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
+    for (size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
         totalEnergy += atomStorage.energy(atomIndex);
     }
 

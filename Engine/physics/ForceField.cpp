@@ -181,7 +181,7 @@ void ForceField::ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* ne
             }
             const uint32_t begin = off[atomIndex];
             const uint32_t end   = off[atomIndex + 1];
-            if (begin > end || static_cast<std::size_t>(end) > nei.size()) {
+            if (begin > end || static_cast<size_t>(end) > nei.size()) {
                 atoms.forceX(atomIndex) = forceX;
                 atoms.forceY(atomIndex) = forceY;
                 atoms.forceZ(atomIndex) = forceZ;

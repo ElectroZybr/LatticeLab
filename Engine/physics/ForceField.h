@@ -28,7 +28,7 @@ private:
         float potentialC12 = 0.0f; // 4 * eps * a^12
     };
 
-    static constexpr std::size_t TypeCount = static_cast<std::size_t>(AtomData::Type::COUNT);
+    static constexpr size_t TypeCount = static_cast<size_t>(AtomData::Type::COUNT);
     using LJPairTable = std::array<std::array<LJParams, TypeCount>, TypeCount>;
     using LJPairRow = std::array<LJParams, TypeCount>;
 

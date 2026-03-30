@@ -47,7 +47,7 @@ void PickingSystem::processRect(sf::Vector2i start, sf::Vector2i end, bool cumul
     const sf::Vector2f vSize = rend->camera.getView().getSize();
     const sf::Vector2f vCenter = rend->camera.getView().getCenter();
 
-    for (std::size_t i = 0; i < atomStorage.size(); ++i) {
+    for (size_t i = 0; i < atomStorage.size(); ++i) {
         const Vec3f worldPos = atomStorage.pos(i);
         const sf::Vector2i atomScreen = rend->camera.worldToScreen(worldPos);
         if (pointInRect(atomScreen, start, end)) {
@@ -61,7 +61,7 @@ void PickingSystem::processLasso(std::span<sf::Vector2i> points, bool cumulative
     if (!cumulative) clearSelection();
     IRenderer* rend = renderer->get();
 
-    for (std::size_t i = 0; i < atomStorage.size(); ++i) {
+    for (size_t i = 0; i < atomStorage.size(); ++i) {
         const Vec3f worldPos = atomStorage.pos(i);
         const sf::Vector2i screenPos = rend->camera.worldToScreen(worldPos);
         if (pointInPolygon(screenPos, points)) {
@@ -70,10 +70,10 @@ void PickingSystem::processLasso(std::span<sf::Vector2i> points, bool cumulative
     }
 }
 
-void PickingSystem::handleAtomRemoval(std::size_t index) {
+void PickingSystem::handleAtomRemoval(size_t index) {
     selectedIndices.erase(index);
     
-    std::size_t movedFrom = atomStorage.size();
+    size_t movedFrom = atomStorage.size();
 
     if (index < movedFrom) {
         if (selectedIndices.erase(movedFrom) > 0) {
@@ -97,9 +97,9 @@ bool PickingSystem::pickAtom(sf::Vector2i screenPos, float tolerance, AtomHit& h
 bool PickingSystem::pickAtom2D(sf::Vector2i screenPos, float tolerance, AtomHit& hit) const {
     IRenderer* rend = renderer->get();
     float bestDistSqr = std::numeric_limits<float>::max();
-    std::size_t bestIndex = static_cast<std::size_t>(-1);
+    size_t bestIndex = static_cast<size_t>(-1);
 
-    for (std::size_t i = 0; i < atomStorage.size(); ++i) {
+    for (size_t i = 0; i < atomStorage.size(); ++i) {
         const Vec3f worldPos = atomStorage.pos(i);
         const sf::Vector2i atomScreen = rend->camera.worldToScreen(worldPos);
         const float distSqr = (atomScreen - screenPos).lengthSquared();
@@ -114,7 +114,7 @@ bool PickingSystem::pickAtom2D(sf::Vector2i screenPos, float tolerance, AtomHit&
         }
     }
 
-    if (bestIndex == static_cast<std::size_t>(-1))
+    if (bestIndex == static_cast<size_t>(-1))
         return false;
 
     hit = { bestIndex, std::sqrt(bestDistSqr) };
@@ -129,9 +129,9 @@ bool PickingSystem::pickAtom3D(sf::Vector2i screenPos, AtomHit& hit) const {
     );
 
     float bestT = std::numeric_limits<float>::max();
-    std::size_t bestIndex = static_cast<std::size_t>(-1);
+    size_t bestIndex = static_cast<size_t>(-1);
 
-    for (std::size_t i = 0; i < atomStorage.size(); ++i) {
+    for (size_t i = 0; i < atomStorage.size(); ++i) {
         const Vec3f worldPos = atomStorage.pos(i);
         const float radius = AtomData::getProps(atomStorage.type(i)).radius;
 
@@ -144,7 +144,7 @@ bool PickingSystem::pickAtom3D(sf::Vector2i screenPos, AtomHit& hit) const {
         }
     }
 
-    if (bestIndex == static_cast<std::size_t>(-1))
+    if (bestIndex == static_cast<size_t>(-1))
         return false;
 
     hit = { bestIndex, bestT };
@@ -156,9 +156,9 @@ bool PickingSystem::pointInPolygon(sf::Vector2i point, std::span<sf::Vector2i> p
     bool inside = false;
     const int x = point.x;
     const int y = point.y;
-    const std::size_t n = polygon.size();
+    const size_t n = polygon.size();
 
-    for (std::size_t i = 0, j = n - 1; i < n; j = i++) {
+    for (size_t i = 0, j = n - 1; i < n; j = i++) {
         const int xi = polygon[i].x, yi = polygon[i].y;
         const int xj = polygon[j].x, yj = polygon[j].y;
 

@@ -24,7 +24,7 @@ public:
 
     // метрики SG
     [[nodiscard]] const SpatialGridStats& stats() const noexcept { return stats_; }
-    [[nodiscard]] std::size_t memoryBytes() const;
+    [[nodiscard]] size_t memoryBytes() const;
 
     // (warning) нет проверки выхода за границы
     [[nodiscard]] std::span<const size_t> atomsInCell(int x, int y, int z) const noexcept {
@@ -34,10 +34,10 @@ public:
     }
 
     // (warning) нет проверки выхода за границы
-    [[nodiscard]] std::span<const std::size_t> atomsInCellByLinearIndex(int linearIndex) const noexcept {
-        const std::size_t idx = static_cast<std::size_t>(linearIndex);
-        const std::size_t begin = offsets[idx];
-        return std::span<const std::size_t>(atomsInCells.data() + begin, offsets[idx + 1] - begin);
+    [[nodiscard]] std::span<const size_t> atomsInCellByLinearIndex(int linearIndex) const noexcept {
+        const size_t idx = static_cast<size_t>(linearIndex);
+        const size_t begin = offsets[idx];
+        return std::span<const size_t>(atomsInCells.data() + begin, offsets[idx + 1] - begin);
     }
 
     int worldToCellX(float x) const { return toCell(x, sizeX); }
@@ -55,8 +55,8 @@ public:
     
 private:
     // CSR хранение данных
-    std::vector<std::size_t> offsets;      // массив оффсетов (каждый оффсет - начало новой ячейки)
-    std::vector<std::size_t> atomsInCells; // атомы подряд сгруппированные по ячейкам
+    std::vector<size_t> offsets;      // массив оффсетов (каждый оффсет - начало новой ячейки)
+    std::vector<size_t> atomsInCells; // атомы подряд сгруппированные по ячейкам
     std::array<int, 27> neighborOffsets27_{};
     
     // рабочие буферы rebuild — переиспользуются между вызовами

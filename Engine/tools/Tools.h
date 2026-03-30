@@ -20,7 +20,7 @@ class SimBox;
 class Tools {
 public:
     using AtomCreator = std::function<bool(Vec3f, Vec3f, AtomData::Type, bool)>;
-    using AtomRemover = std::function<bool(std::size_t)>;
+    using AtomRemover = std::function<bool(size_t)>;
 
     enum class Mode : std::uint8_t {
         Cursor,
@@ -53,7 +53,7 @@ public:
     static PickingSystem* pickingSystem;
 
 private:
-    static constexpr std::size_t InvalidIndex = static_cast<std::size_t>(-1);
+    static constexpr size_t InvalidIndex = static_cast<size_t>(-1);
 
     static bool tryAddAtom(sf::Vector2i mousePos, AtomData::Type atomType);
     static bool tryRemoveAtom(sf::Vector2i mousePos);

@@ -9,7 +9,7 @@ DebugView::DebugView(std::string_view title, std::initializer_list<DebugEntry> e
     indicesByLabel.reserve(entries.size());
 
     for (const auto& e : entries) {
-        const std::size_t index = data.size();
+        const size_t index = data.size();
         Storage storage = (e.type == DebugDisplayType::Series)
             ? Storage{ std::deque<float>{} }
             : Storage{ std::any{} };

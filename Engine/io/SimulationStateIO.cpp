@@ -16,7 +16,7 @@ void SimulationStateIO::save(const Simulation& simulation, std::string_view path
 
     file << "step " << simulation.sim_step << "\n";
 
-    for (std::size_t atomIndex = 0; atomIndex < simulation.atomStorage.size(); ++atomIndex) {
+    for (size_t atomIndex = 0; atomIndex < simulation.atomStorage.size(); ++atomIndex) {
         const Vec3f pos = simulation.atomStorage.pos(atomIndex);
         const Vec3f vel = simulation.atomStorage.vel(atomIndex);
         file << "atom "

@@ -186,7 +186,7 @@ int Application::run() {
                 [&](Vec3f coords, Vec3f speed, AtomData::Type type, bool fixed) {
                     return simulation.createAtom(coords, speed, type, fixed);
                 },
-                [&](std::size_t atomIndex) {
+                [&](size_t atomIndex) {
                     return simulation.removeAtom(atomIndex);
                 });
     Interface::pause = true;

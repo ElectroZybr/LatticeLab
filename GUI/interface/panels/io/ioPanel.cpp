@@ -38,7 +38,7 @@ constexpr std::array<AtomTypeOption, 19> kAtomTypeOptions{{
 
 int findTypeIndex(AtomData::Type type) {
     for (int i = 0; i < static_cast<int>(kAtomTypeOptions.size()); ++i) {
-        if (kAtomTypeOptions[static_cast<std::size_t>(i)].type == type) {
+        if (kAtomTypeOptions[static_cast<size_t>(i)].type == type) {
             return i;
         }
     }
@@ -47,16 +47,16 @@ int findTypeIndex(AtomData::Type type) {
 
 void drawAtomTypeCombo(const char* id, AtomData::Type& atomType, float width, float uiScale) {
     int selectedTypeIndex = findTypeIndex(atomType);
-    const char* selectedLabel = kAtomTypeOptions[static_cast<std::size_t>(selectedTypeIndex)].label;
+    const char* selectedLabel = kAtomTypeOptions[static_cast<size_t>(selectedTypeIndex)].label;
 
     if (ComboStyle::beginCenteredCombo(id, width, uiScale)) {
         ComboStyle::pushCenteredSelectableText();
         for (int i = 0; i < static_cast<int>(kAtomTypeOptions.size()); ++i) {
             const bool selected = (i == selectedTypeIndex);
-            if (ImGui::Selectable(kAtomTypeOptions[static_cast<std::size_t>(i)].label, selected)) {
-                atomType = kAtomTypeOptions[static_cast<std::size_t>(i)].type;
+            if (ImGui::Selectable(kAtomTypeOptions[static_cast<size_t>(i)].label, selected)) {
+                atomType = kAtomTypeOptions[static_cast<size_t>(i)].type;
                 selectedTypeIndex = i;
-                selectedLabel = kAtomTypeOptions[static_cast<std::size_t>(i)].label;
+                selectedLabel = kAtomTypeOptions[static_cast<size_t>(i)].label;
             }
             if (selected) {
                 ImGui::SetItemDefaultFocus();
