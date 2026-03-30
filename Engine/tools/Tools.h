@@ -4,8 +4,6 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
-#include <unordered_set>
-#include <vector>
 
 #include "Engine/math/Vec3f.h"
 #include "Engine/physics/AtomData.h"
