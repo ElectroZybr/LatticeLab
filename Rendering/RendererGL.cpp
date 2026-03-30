@@ -208,7 +208,7 @@ void RendererGL::initAtomColors() {
 }
 
 GLuint RendererGL::atomShaderForMode(SpeedColorMode mode) const {
-    const std::size_t idx = static_cast<std::size_t>(mode);
+    const size_t idx = static_cast<size_t>(mode);
     if (idx < atomShaders.size() && atomShaders[idx] != 0) {
         return atomShaders[idx];
     }
@@ -228,7 +228,7 @@ GLuint RendererGL::loadShader(GLenum type, std::string_view path, std::string_vi
     std::string source = ss.str();
 
     if (!defines.empty()) {
-        const std::size_t lineEnd = source.find('\n');
+        const size_t lineEnd = source.find('\n');
         if (lineEnd != std::string::npos && source.rfind("#version", 0) == 0) {
             source.insert(lineEnd + 1, std::string(defines) + "\n");
         } else {
@@ -322,7 +322,7 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
         if (speedGradientMax > 0.0f) {
             maxSpeedSqr = speedGradientMax * speedGradientMax;
         } else {
-            for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
+            for (size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
                 maxSpeedSqr = std::max(maxSpeedSqr, static_cast<float>(atoms.vel(atomIndex).sqrAbs()));
             }
         }
@@ -330,7 +330,7 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
     }
 
     radii.resize(atomCount);
-    for (std::size_t i = 0; i < atomCount; ++i) {
+    for (size_t i = 0; i < atomCount; ++i) {
         const auto& props = AtomData::getProps(atoms.type(i));
         radii[i] = static_cast<float>(props.radius);
     }
@@ -368,7 +368,7 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
     }
     std::fill_n(selectedDataBuffer.data(), selectedDataBuffer.size(), 0);
     const auto& selectedIndices = Tools::pickingSystem->getSelectedIndices();
-    for (const std::size_t idx : selectedIndices) {
+    for (const size_t idx : selectedIndices) {
         selectedDataBuffer[idx] = 1;
     }
 
@@ -476,8 +476,8 @@ void RendererGL::drawBondsGL() {
         if (bond.aIndex >= atomStorage->size() || bond.bIndex >= atomStorage->size()) {
             continue;
         }
-        const std::size_t aIndex = bond.aIndex;
-        const std::size_t bIndex = bond.bIndex;
+        const size_t aIndex = bond.aIndex;
+        const size_t bIndex = bond.bIndex;
         const Vec3f aPos = atomStorage->pos(aIndex);
         const Vec3f bPos = atomStorage->pos(bIndex);
         const float r = (AtomData::getProps(atomStorage->type(aIndex)).radius +

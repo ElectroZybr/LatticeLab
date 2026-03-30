@@ -84,8 +84,8 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
 
 bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
     PROFILE_SCOPE("NeighborList::needsRebuild");
-    const std::size_t nSize = atoms.size();
-    if (nSize > static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max())) {
+    const size_t nSize = atoms.size();
+    if (nSize > static_cast<size_t>(std::numeric_limits<std::uint32_t>::max())) {
         return true;
     }
     const std::uint32_t n = static_cast<std::uint32_t>(nSize);
@@ -124,7 +124,7 @@ std::uint32_t NeighborList::atomCount() const {
 }
 
 std::uint32_t NeighborList::pairStorageSize() const {
-    return static_cast<std::uint32_t>(std::min(neighbors_.size(), static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max())));
+    return static_cast<std::uint32_t>(std::min(neighbors_.size(), static_cast<size_t>(std::numeric_limits<std::uint32_t>::max())));
 }
 
 std::uint32_t NeighborList::memoryBytes() const {
@@ -145,7 +145,7 @@ void NeighborList::recordRebuild(int simStep) {
 }
 
 void NeighborList::reserveListBuffers(const AtomStorage& atoms, const SpatialGrid& grid) {
-    const std::size_t prevCapacity = neighbors_.capacity();
+    const size_t prevCapacity = neighbors_.capacity();
     neighbors_.clear();
     offsets_.assign(atoms.size() + 1, 0);
     refPosX_.resize(atoms.size());

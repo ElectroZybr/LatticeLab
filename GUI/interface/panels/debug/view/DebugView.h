@@ -31,5 +31,5 @@ private:
 
     std::string title;
     std::vector<DebugData> data;
-    std::unordered_map<std::string, std::size_t> indicesByLabel;
+    std::unordered_map<std::string, size_t> indicesByLabel;
 };

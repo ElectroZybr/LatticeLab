@@ -18,8 +18,8 @@ public:
     void setSizeBox(Vec3f newSize, int cellSize = -1);
 
     bool createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Type type, bool fixed = false);
-    bool removeAtom(std::size_t atomIndex);
-    void addBond(std::size_t aIndex, std::size_t bIndex);
+    bool removeAtom(size_t atomIndex);
+    void addBond(size_t aIndex, size_t bIndex);
 
     void setIntegrator(Integrator::Scheme scheme) { integrator.setScheme(scheme); }
     Integrator::Scheme getIntegrator() const { return integrator.getScheme(); }

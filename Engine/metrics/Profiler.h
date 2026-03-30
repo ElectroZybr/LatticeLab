@@ -11,21 +11,21 @@ struct ProfileEntry {
     double averageMs = 0.0;
     double maxMs = 0.0;
     double percentOfFrame = 0.0;
-    std::size_t callCount = 0;
-    std::size_t totalCallCount = 0;
+    size_t callCount = 0;
+    size_t totalCallCount = 0;
     bool touchedThisFrame = false;
 };
 
 struct ProfilerFrameData {
     double frameMs = 0.0;
     double totalTrackedMs = 0.0;
-    std::size_t frameIndex = 0;
+    size_t frameIndex = 0;
 };
 
 struct ProfileCounter {
     const char* name = "";
-    std::size_t pendingCount = 0;
-    std::size_t totalCount = 0;
+    size_t pendingCount = 0;
+    size_t totalCount = 0;
     double ratePerSecond = 0.0;
     bool hasRateSample = false;
 };
@@ -39,7 +39,7 @@ public:
     void reset();
 
     void addSample(const char* name, double ms);
-    void addCount(const char* name, std::size_t delta = 1);
+    void addCount(const char* name, size_t delta = 1);
     void updateRates(double intervalSeconds);
 
     [[nodiscard]] const ProfilerFrameData& frameData() const noexcept { return frameData_; }
