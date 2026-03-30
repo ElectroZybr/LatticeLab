@@ -63,7 +63,11 @@ RendererGL::RendererGL(sf::RenderTarget& t, sf::View& gv)
 RendererGL::~RendererGL() {
     glDeleteVertexArrays(1, &atomVao);
     glDeleteBuffers(1, &quadVbo);
-    glDeleteProgram(atomShader);
+    for (GLuint shader : atomShaders) {
+        if (shader != 0) {
+            glDeleteProgram(shader);
+        }
+    }
 
     glDeleteVertexArrays(1, &boxVao);
     glDeleteBuffers(1, &boxVbo);
@@ -193,14 +197,26 @@ void RendererGL::initAtomColors() {
             props.color.b / 255.f
         );
     }
-    glUseProgram(atomShader);
-    glUniform3fv(glGetUniformLocation(atomShader, "typeColors"),
-                 typeCount, glm::value_ptr(typeColors[0]));
+    for (GLuint shader : atomShaders) {
+        if (shader == 0) continue;
+        glUseProgram(shader);
+        glUniform3fv(glGetUniformLocation(shader, "typeColors"),
+                    typeCount, glm::value_ptr(typeColors[0]));
+    }
+    glUseProgram(0);
+}
+
+GLuint RendererGL::atomShaderForMode(SpeedColorMode mode) const {
+    const std::size_t idx = static_cast<std::size_t>(mode);
+    if (idx < atomShaders.size() && atomShaders[idx] != 0) {
+        return atomShaders[idx];
+    }
+    return atomShaders[0];
 }
 
 // --------------------------------------------------------------- shaders ---
 
-GLuint RendererGL::loadShader(GLenum type, std::string_view path) {
+GLuint RendererGL::loadShader(GLenum type, std::string_view path, std::string_view defines) {
     std::ifstream file(path.data());
     if (!file.is_open()) {
         std::cerr << "Failed to open shader: " << path << '\n';
@@ -208,7 +224,18 @@ GLuint RendererGL::loadShader(GLenum type, std::string_view path) {
     }
     std::stringstream ss;
     ss << file.rdbuf();
-    return compileShader(type, ss.str());
+    std::string source = ss.str();
+
+    if (!defines.empty()) {
+        const std::size_t lineEnd = source.find('\n');
+        if (lineEnd != std::string::npos && source.rfind("#version", 0) == 0) {
+            source.insert(lineEnd + 1, std::string(defines) + "\n");
+        } else {
+            source = std::string(defines) + "\n" + source;
+        }
+    }
+
+    return compileShader(type, source);
 }
 
 GLuint RendererGL::compileShader(GLenum type, std::string_view src) {
@@ -227,8 +254,8 @@ GLuint RendererGL::compileShader(GLenum type, std::string_view src) {
     return shader;
 }
 
-GLuint RendererGL::linkProgram(std::string_view vert, std::string_view frag, std::string_view geom) {
-    GLuint v = loadShader(GL_VERTEX_SHADER,   vert);
+GLuint RendererGL::linkProgram(std::string_view vert, std::string_view frag, std::string_view geom, std::string_view vertDefines) {
+    GLuint v = loadShader(GL_VERTEX_SHADER,   vert, vertDefines);
     GLuint f = loadShader(GL_FRAGMENT_SHADER, frag);
 
     GLuint prog = glCreateProgram();
@@ -286,6 +313,7 @@ void RendererGL::drawShot(const AtomStorage& atoms, const SimBox& box)
 void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
     const size_t atomCount = atoms.size();
     const bool useSpeedGradient = speedColorMode != SpeedColorMode::AtomColor;
+    atomShader = atomShaderForMode(speedColorMode);
 
     // --- maxSpeedSqr ---
     float maxSpeedSqr = 1.f;
@@ -313,7 +341,6 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
                        1, GL_FALSE, glm::value_ptr(view));
     glUniform3f(glGetUniformLocation(atomShader, "boxStart"),
                 box.start.x, box.start.y, box.start.z);
-    glUniform1i(glGetUniformLocation(atomShader, "colorMode"),   static_cast<int>(speedColorMode));
     glUniform1f(glGetUniformLocation(atomShader, "maxSpeedSqr"), maxSpeedSqr);
 
     if (useLighting()) {

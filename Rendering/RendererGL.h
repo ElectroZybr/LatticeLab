@@ -2,6 +2,7 @@
 
 #include "BaseRenderer.h"
 
+#include <array>
 #include <SFML/Graphics.hpp>
 #include <glad/glad.h>
 
@@ -27,15 +28,17 @@ protected:
 
     void initAtomColors();
 
-    GLuint loadShader(GLenum type, std::string_view path);
+    GLuint loadShader(GLenum type, std::string_view path, std::string_view defines = {});
     GLuint compileShader(GLenum type, std::string_view src);
     GLuint linkProgram(std::string_view vert, std::string_view frag,
-                       std::string_view geom = "");
+                       std::string_view geom = "",
+                       std::string_view vertDefines = {});
 
     void drawAtoms(const AtomStorage& atoms, const SimBox& box);
     void drawBox(const SimBox& box);
     void drawBondsGL(const glm::vec3& boxOffset);
     void drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset);
+    GLuint atomShaderForMode(SpeedColorMode mode) const;
 
     // общее состояние
     std::size_t lastAtomCount = 0;
@@ -45,6 +48,7 @@ protected:
     // GL handles
     GLuint quadVbo = 0;
     GLuint atomVao{0},    atomVbo{0},     atomShader{0};
+    std::array<GLuint, 3> atomShaders{{0, 0, 0}};
     GLuint boxVao{0},     boxVbo{0},      boxShader{0};
     GLuint bondVao{0},    bondVbo{0},     bondShader{0};
     GLuint gridVao{0},    gridLineVbo{0}, gridInstVbo{0},  gridShader{0};

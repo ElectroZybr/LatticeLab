@@ -13,17 +13,18 @@ layout(location = 9) in int isSelected;
 uniform mat4 projection;
 uniform mat4 view;
 uniform vec3 boxStart;
-
-// режим окраски
-uniform int   colorMode; // 0 = AtomColor, 1 = GradientClassic, 2 = GradientTurbo
 uniform float maxSpeedSqr;
-uniform vec3  typeColors[119];  // цвета по типу атомов
+uniform vec3  typeColors[119];
 
 out vec3 fragAtomPos;
 out float fragRadius;
 out vec3 fragColor;
 out vec2 fragQuadPos;
 flat out int vIsSelected;
+
+#ifndef COLOR_MODE
+#define COLOR_MODE 0
+#endif
 
 vec3 turboColor(float t) {
     t = clamp(t, 0.0, 1.0);
@@ -37,17 +38,17 @@ void main() {
     vec3 atomPos = vec3(posX, posY, posZ) + boxStart;
 
     vec3 color;
-    if (colorMode == 0) {
-        color = typeColors[atomType];
-    }
-    else {
-        float vSqr = velX*velX + velY*velY + velZ*velZ;
-        float t    = clamp(sqrt(vSqr / maxSpeedSqr), 0.0, 1.0);
-        if (colorMode == 1)
-            color = vec3(t, 0.0, 1.0 - t);
-        else
-            color = turboColor(t);
-    }
+#if COLOR_MODE == 0
+    color = typeColors[atomType];
+#elif COLOR_MODE == 1
+    float vSqr = velX*velX + velY*velY + velZ*velZ;
+    float t    = clamp(sqrt(vSqr / maxSpeedSqr), 0.0, 1.0);
+    color = vec3(t, 0.0, 1.0 - t);
+#else
+    float vSqr = velX*velX + velY*velY + velZ*velZ;
+    float t    = clamp(sqrt(vSqr / maxSpeedSqr), 0.0, 1.0);
+    color = turboColor(t);
+#endif
 
     fragAtomPos = atomPos;
     fragRadius  = atomRadius;
