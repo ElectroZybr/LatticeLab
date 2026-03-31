@@ -40,13 +40,7 @@ inline void confineToBox(AtomStorage& atomStorage, SimBox& box) {
     }
 }
 
-inline void clampSpeed(AtomStorage& atomStorage, float maxSpeed) {
-    if (maxSpeed <= 0.0f) {
-        return;
-    }
-
-    PROFILE_SCOPE("StepOps::clampSpeed");
-
+inline void postProcessVelocities(AtomStorage& atomStorage, float maxSpeed) {
     const float maxSpeedSqr = maxSpeed * maxSpeed;
     float* RESTRICT vx = atomStorage.vxData();
     float* RESTRICT vy = atomStorage.vyData();
@@ -55,18 +49,21 @@ inline void clampSpeed(AtomStorage& atomStorage, float maxSpeed) {
     const size_t mobileCount = atomStorage.mobileCount();
     #pragma GCC ivdep
     for (size_t atomIndex = 0; atomIndex < mobileCount; ++atomIndex) {
-        const float vxValue = vx[atomIndex];
-        const float vyValue = vy[atomIndex];
-        const float vzValue = vz[atomIndex];
+        float vxValue = vx[atomIndex];
+        float vyValue = vy[atomIndex];
+        float vzValue = vz[atomIndex];
+
         const float speedSqr = vxValue * vxValue + vyValue * vyValue + vzValue * vzValue;
-        if (speedSqr <= maxSpeedSqr) {
-            continue;
+        if (speedSqr > maxSpeedSqr) {
+            const float scale = maxSpeed / std::sqrt(speedSqr);
+            vxValue *= scale;
+            vyValue *= scale;
+            vzValue *= scale;
         }
 
-        const float scale = maxSpeed / std::sqrt(speedSqr);
-        vx[atomIndex] = vxValue * scale;
-        vy[atomIndex] = vyValue * scale;
-        vz[atomIndex] = vzValue * scale;
+        vx[atomIndex] = vxValue;
+        vy[atomIndex] = vyValue;
+        vz[atomIndex] = vzValue;
     }
 }
 
@@ -78,7 +75,6 @@ inline void computeForces(AtomStorage& atomStorage, SimBox& box, ForceField& for
 template<typename StepFn>
 requires AtomStepFunc<StepFn>
 inline void predictAndSync(AtomStorage& atomStorage, SimBox& box, float dt, StepFn predictFn) {
-    PROFILE_SCOPE("StepOps::predictAndSync");
     predictFn(atomStorage, dt);
     confineToBox(atomStorage, box);
 

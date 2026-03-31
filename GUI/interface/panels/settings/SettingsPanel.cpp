@@ -95,8 +95,15 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
 
     float maxParticleSpeed = simulation.getMaxParticleSpeed();
     ImGui::PushItemWidth(150.0f * uiScale);
-    if (ImGui::SliderFloat("Скорость светы", &maxParticleSpeed, 0.0f, 100.0f, maxParticleSpeed <= 0.0f ? "не ограничена" : "%.2f")) {
+    if (ImGui::SliderFloat("Скорость света", &maxParticleSpeed, 0.0f, 100.0f, maxParticleSpeed <= 0.0f ? "не ограничена" : "%.2f")) {
         simulation.setMaxParticleSpeed(maxParticleSpeed);
+    }
+    ImGui::PopItemWidth();
+
+    float accelDamping = simulation.getAccelDamping();
+    ImGui::PushItemWidth(150.0f * uiScale);
+    if (ImGui::SliderFloat("Accel damping", &accelDamping, 0.0f, 1.0f, "%.3f")) {
+        simulation.setAccelDamping(accelDamping);
     }
     ImGui::PopItemWidth();
     ImGui::SeparatorText("Рендер");

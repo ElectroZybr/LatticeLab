@@ -15,7 +15,7 @@ struct AtomTypeOption {
 };
 
 constexpr std::array<AtomTypeOption, 19> kAtomTypeOptions{{
-    {"Z", AtomData::Type::Z},
+    {"Zero", AtomData::Type::Z},
     {"H", AtomData::Type::H},
     {"He", AtomData::Type::He},
     {"Li", AtomData::Type::Li},

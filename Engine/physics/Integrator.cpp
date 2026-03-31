@@ -18,13 +18,17 @@ void Integrator::setMaxParticleSpeed(float maxSpeed) {
     maxParticleSpeed_ = std::max(0.0f, maxSpeed);
 }
 
+void Integrator::setAccelDamping(float accelDamping) {
+    accelDamping_ = std::clamp(accelDamping, 0.0f, 1.0f);
+}
+
 void Integrator::step(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) {
     std::visit([&](const auto& scheme) {
-        scheme.pipeline(atomStorage, box, forceField, neighborList, dt);
+        scheme.pipeline(atomStorage, box, forceField, neighborList, accelDamping_, dt);
     }, scheme_impl);
     // Ограничение максимальной скорости атомов
     if (maxParticleSpeed_ > 0.0f) {
-        StepOps::clampSpeed(atomStorage, maxParticleSpeed_);
+        StepOps::postProcessVelocities(atomStorage, maxParticleSpeed_);
     }
 }
 

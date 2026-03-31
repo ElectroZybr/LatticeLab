@@ -3,19 +3,19 @@
 #include "Engine/metrics/Profiler.h"
 #include "StepOps.h"
 
-void KDKScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) const {
+void KDKScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float accelDamping, float dt) const {
     PROFILE_SCOPE("KDKScheme::pipeline");
     // Kick: половина шага
-    halfKick(atomStorage, dt);
+    halfKick(atomStorage, accelDamping, dt);
     // Расчет новых позиций
     StepOps::predictAndSync(atomStorage, box, dt, &drift);
     // Расчет сил
     StepOps::computeForces(atomStorage, box, forceField, neighborList, dt);
     // Kick: вторая половина шага
-    halfKick(atomStorage,  dt);
+    halfKick(atomStorage, accelDamping, dt);
 }
 
-void KDKScheme::halfKick(AtomStorage& atomStorage, float dt) {
+void KDKScheme::halfKick(AtomStorage& atomStorage, float accelDamping, float dt) {
     PROFILE_SCOPE("KDKScheme::halfKick");
     const float* RESTRICT fx  = atomStorage.fxData();
     const float* RESTRICT fy  = atomStorage.fyData();
@@ -30,10 +30,9 @@ void KDKScheme::halfKick(AtomStorage& atomStorage, float dt) {
     const size_t mobileCount = atomStorage.mobileCount();
 
     for (size_t i = 0; i < mobileCount; ++i) {
-
-        vx[i] += 0.5f * fx[i] * invMass[i] * dt;
-        vy[i] += 0.5f * fy[i] * invMass[i] * dt;
-        vz[i] += 0.5f * fz[i] * invMass[i] * dt;
+        vx[i] += 0.5f * fx[i] * invMass[i] * accelDamping * dt;
+        vy[i] += 0.5f * fy[i] * invMass[i] * accelDamping * dt;
+        vz[i] += 0.5f * fz[i] * invMass[i] * accelDamping * dt;
     }
 }
 
