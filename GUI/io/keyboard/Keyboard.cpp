@@ -48,7 +48,6 @@ void Keyboard::onFrame(float deltaTime) {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) rend->camera.move3D(Vec3f( right.x,    right.y,    right.z)   * s);
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) rend->camera.move3D(Vec3f(0.f, -s, 0.f));
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E)) rend->camera.move3D(Vec3f(0.f,  s, 0.f));
-
     }
     else if (rend->camera.mode == Camera::Mode::Mode2D) {
         float deltaSpeed = rend->camera.speed * deltaTime;

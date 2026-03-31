@@ -52,17 +52,17 @@ private:
         x_       = base +  0 * capacity_;
         y_       = base +  1 * capacity_;
         z_       = base +  2 * capacity_;
-        vx_      = base +  3 * capacity_;
-        vy_      = base +  4 * capacity_;
-        vz_      = base +  5 * capacity_;
-        invMass_ = base +  6 * capacity_;
-        fx_      = base +  7 * capacity_;
-        fy_      = base +  8 * capacity_;
-        fz_      = base +  9 * capacity_;
-        pfx_     = base + 10 * capacity_;
-        pfy_     = base + 11 * capacity_;
-        pfz_     = base + 12 * capacity_;
-        pe_      = base + 13 * capacity_;
+        fx_      = base +  3 * capacity_;
+        fy_      = base +  4 * capacity_;
+        fz_      = base +  5 * capacity_;
+        pe_      = base +  6 * capacity_;
+        vx_      = base +  7 * capacity_;
+        vy_      = base +  8 * capacity_;
+        vz_      = base +  9 * capacity_;
+        invMass_ = base + 10 * capacity_;
+        pfx_     = base + 11 * capacity_;
+        pfy_     = base + 12 * capacity_;
+        pfz_     = base + 13 * capacity_;
     }
 
     void ensureCapacity(size_t requiredCount) {
