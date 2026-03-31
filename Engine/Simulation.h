@@ -4,7 +4,6 @@
 
 #include "physics/AtomData.h"
 #include "physics/AtomStorage.h"
-#include "NeighborSearch/SpatialGrid.h"
 #include "SimBox.h"
 #include "physics/Integrator.h"
 #include "physics/ForceField.h"
@@ -16,14 +15,16 @@ public:
 
     void update(float dt);
 
-    void setSizeBox(Vec3f newStart, Vec3f newEnd, int cellSize = -1);
+    void setSizeBox(Vec3f newSize, int cellSize = -1);
 
     bool createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Type type, bool fixed = false);
-    bool removeAtom(std::size_t atomIndex);
-    void addBond(std::size_t aIndex, std::size_t bIndex);
+    bool removeAtom(size_t atomIndex);
+    void addBond(size_t aIndex, size_t bIndex);
 
     void setIntegrator(Integrator::Scheme scheme) { integrator.setScheme(scheme); }
     Integrator::Scheme getIntegrator() const { return integrator.getScheme(); }
+    void setMaxParticleSpeed(float maxSpeed) { integrator.setMaxParticleSpeed(maxSpeed); }
+    float getMaxParticleSpeed() const { return integrator.maxParticleSpeed(); }
     
     int getSimStep() const { return sim_step; }
     void setNeighborListEnabled(bool enabled);

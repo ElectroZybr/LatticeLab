@@ -9,7 +9,7 @@
 
 class RendererGL : public IRenderer {
 public:
-    RendererGL(sf::RenderTarget& t, sf::View& gv);
+    RendererGL(sf::RenderTarget& t, sf::View& gv, SimBox& simbox);
     virtual ~RendererGL();
 
     void drawShot(const AtomStorage& atoms,
@@ -36,12 +36,12 @@ protected:
 
     void drawAtoms(const AtomStorage& atoms, const SimBox& box);
     void drawBox(const SimBox& box);
-    void drawBondsGL(const glm::vec3& boxOffset);
-    void drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset);
+    void drawBondsGL();
+    void drawGridGL(const SpatialGrid& grid);
     GLuint atomShaderForMode(SpeedColorMode mode) const;
 
     // общее состояние
-    std::size_t lastAtomCount = 0;
+    size_t lastAtomCount = 0;
     glm::mat4 projection{1.f};
     glm::mat4 view{1.f};
 

@@ -31,12 +31,12 @@ int Application::run() {
     }
     sf::View& gameView = const_cast<sf::View&>(window.getView());
 
-    SimBox box(Vec3f(-25, -25, -3), Vec3f(25, 25, 3));
+    SimBox box(Vec3f(50, 50, 50));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
     Scenes::crystal(simulation, 25, AtomData::Type::Z, false);
 
-    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView);
+    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView, simulation.sim_box);
     renderer->setAtomStorage(&simulation.atomStorage);
     renderer->drawBonds = true;
     renderer->speedColorMode = IRenderer::SpeedColorMode::GradientClassic;
@@ -47,7 +47,7 @@ int Application::run() {
                 [&](Vec3f coords, Vec3f speed, AtomData::Type type, bool fixed) {
                     return simulation.createAtom(coords, speed, type, fixed);
                 },
-                [&](std::size_t atomIndex) {
+                [&](size_t atomIndex) {
                     return simulation.removeAtom(atomIndex);
                 });
     Interface::pause = true;
@@ -123,5 +123,3 @@ int Application::run() {
     Interface::shutdown();
     return 0;
 }
-
-

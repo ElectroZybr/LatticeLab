@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include "../ForceField.h"
 #include "Engine/SimBox.h"
 #include "Engine/metrics/Profiler.h"
@@ -15,7 +17,7 @@ concept AtomStepFunc = requires(T fn, AtomStorage& storage, float dt) {
 
 inline void confineToBox(AtomStorage& atomStorage, SimBox& box) {
     constexpr float restitution = 0.8f;
-    const Vec3f max = box.end - box.start - Vec3f(1.0, 1.0, 1.0);
+    const Vec3f max = box.size - Vec3f(1.0, 1.0, 1.0);
 
     auto confineAxis = [&](float& coord, float& speed, float axisMax) {
         if (coord < 0.0f) {
@@ -31,10 +33,40 @@ inline void confineToBox(AtomStorage& atomStorage, SimBox& box) {
         }
     };
 
-    for (std::size_t atomIndex = 0; atomIndex < atomStorage.mobileCount(); ++atomIndex) {
+    for (size_t atomIndex = 0; atomIndex < atomStorage.mobileCount(); ++atomIndex) {
         confineAxis(atomStorage.posX(atomIndex), atomStorage.velX(atomIndex), static_cast<float>(max.x));
         confineAxis(atomStorage.posY(atomIndex), atomStorage.velY(atomIndex), static_cast<float>(max.y));
         confineAxis(atomStorage.posZ(atomIndex), atomStorage.velZ(atomIndex), static_cast<float>(max.z));
+    }
+}
+
+inline void clampSpeed(AtomStorage& atomStorage, float maxSpeed) {
+    if (maxSpeed <= 0.0f) {
+        return;
+    }
+
+    PROFILE_SCOPE("StepOps::clampSpeed");
+
+    const float maxSpeedSqr = maxSpeed * maxSpeed;
+    float* RESTRICT vx = atomStorage.vxData();
+    float* RESTRICT vy = atomStorage.vyData();
+    float* RESTRICT vz = atomStorage.vzData();
+
+    const size_t mobileCount = atomStorage.mobileCount();
+    #pragma GCC ivdep
+    for (size_t atomIndex = 0; atomIndex < mobileCount; ++atomIndex) {
+        const float vxValue = vx[atomIndex];
+        const float vyValue = vy[atomIndex];
+        const float vzValue = vz[atomIndex];
+        const float speedSqr = vxValue * vxValue + vyValue * vyValue + vzValue * vzValue;
+        if (speedSqr <= maxSpeedSqr) {
+            continue;
+        }
+
+        const float scale = maxSpeed / std::sqrt(speedSqr);
+        vx[atomIndex] = vxValue * scale;
+        vy[atomIndex] = vyValue * scale;
+        vz[atomIndex] = vzValue * scale;
     }
 }
 

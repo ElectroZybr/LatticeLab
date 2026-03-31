@@ -120,10 +120,10 @@ void SpatialGrid::rebuildNeighborOffsets() noexcept {
     }
 }
 
-std::size_t SpatialGrid::memoryBytes() const {
-    return atomsInCells.capacity() * sizeof(std::size_t)
-        + offsets.capacity() * sizeof(std::size_t)
+size_t SpatialGrid::memoryBytes() const {
+    return atomsInCells.capacity() * sizeof(size_t)
+        + offsets.capacity() * sizeof(size_t)
         + sizeof(neighborOffsets27_)
-        + cellIndices_.capacity() * sizeof(std::size_t)
-        + counts_.capacity() * sizeof(std::size_t);
+        + cellIndices_.capacity() * sizeof(size_t)
+        + counts_.capacity() * sizeof(size_t);
 }

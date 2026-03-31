@@ -11,7 +11,6 @@ layout(location = 7) in float velZ;
 layout(location = 8) in uint  atomType;
 layout(location = 9) in int   isSelected;
 
-uniform vec3  boxStart;
 uniform mat4  projection;
 uniform mat4  view;
 uniform float maxSpeedSqr;
@@ -51,5 +50,5 @@ void main() {
     uv = quadPos;
     vIsSelected = isSelected;
     vec2 screenOffset = quadPos * radius;
-    gl_Position = projection * view * vec4(vec2(posX, posY) + boxStart.xy + screenOffset, 0.0, 1.0);
+    gl_Position = projection * view * vec4(vec2(posX, posY) + screenOffset, 0.0, 1.0);
 }

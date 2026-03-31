@@ -3,8 +3,10 @@
 #include <cstdint>
 #include <optional>
 
+#include <imgui.h>
 #include <SFML/Graphics.hpp>
-#include "imgui.h"
+
+#include "Engine//math/Vec3f.h"
 #include "Engine/physics/AtomData.h"
 
 class FileDialogManager;
@@ -37,9 +39,7 @@ public:
     [[nodiscard]] AtomData::Type atomType() const { return atomType_; }
     [[nodiscard]] AtomData::Type gasAtomType() const { return gasAtomType_; }
     [[nodiscard]] float gasDensity() const { return gasDensity_; }
-    [[nodiscard]] float boxSizeX() const { return boxSizeX_; }
-    [[nodiscard]] float boxSizeY() const { return boxSizeY_; }
-    [[nodiscard]] float boxSizeZ() const { return boxSizeZ_; }
+    [[nodiscard]] Vec3f boxSize() const { return boxSize_; }
 
     std::optional<IOCommand> popResult();
 
@@ -51,9 +51,7 @@ private:
     int gasAtomCount_ = 1000;
     bool gasIs3D_ = false;
     float gasDensity_ = 1.0f;
-    float boxSizeX_ = 50.0f;
-    float boxSizeY_ = 50.0f;
-    float boxSizeZ_ = 6.0f;
+    Vec3f boxSize_ = Vec3f(100.0f, 100.0f, 6.0f);
     AtomData::Type atomType_ = AtomData::Type::Z;
     AtomData::Type gasAtomType_ = AtomData::Type::Z;
     std::optional<IOCommand> pendingResult_;

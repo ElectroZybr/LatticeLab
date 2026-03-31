@@ -50,8 +50,8 @@ void initializeGlad(sf::RenderTarget& target) {
 }
 }
 
-RendererGL::RendererGL(sf::RenderTarget& t, sf::View& gv)
-    : IRenderer(gv), target(t)
+RendererGL::RendererGL(sf::RenderTarget& t, sf::View& gv, SimBox& simbox)
+    : IRenderer(gv, simbox), target(t)
 {
     initializeGlad(t);
     initQuadGL();
@@ -208,7 +208,7 @@ void RendererGL::initAtomColors() {
 }
 
 GLuint RendererGL::atomShaderForMode(SpeedColorMode mode) const {
-    const std::size_t idx = static_cast<std::size_t>(mode);
+    const size_t idx = static_cast<size_t>(mode);
     if (idx < atomShaders.size() && atomShaders[idx] != 0) {
         return atomShaders[idx];
     }
@@ -228,7 +228,7 @@ GLuint RendererGL::loadShader(GLenum type, std::string_view path, std::string_vi
     std::string source = ss.str();
 
     if (!defines.empty()) {
-        const std::size_t lineEnd = source.find('\n');
+        const size_t lineEnd = source.find('\n');
         if (lineEnd != std::string::npos && source.rfind("#version", 0) == 0) {
             source.insert(lineEnd + 1, std::string(defines) + "\n");
         } else {
@@ -296,8 +296,6 @@ void RendererGL::drawShot(const AtomStorage& atoms, const SimBox& box)
     currentBox = &box;
     updateMatrices();
 
-    const glm::vec3 boxOffset(box.start.x, box.start.y, box.start.z);
-
     target.setActive(true);
 
     glEnable(GL_DEPTH_TEST);
@@ -305,8 +303,8 @@ void RendererGL::drawShot(const AtomStorage& atoms, const SimBox& box)
     glClearColor(0.13f, 0.13f, 0.13f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (drawBonds) drawBondsGL(boxOffset);
-    if (drawGrid)  drawGridGL(box.grid, boxOffset);
+    if (drawBonds) drawBondsGL();
+    if (drawGrid)  drawGridGL(box.grid);
     drawBox(box);
 
     drawAtoms(atoms, box);
@@ -324,7 +322,7 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
         if (speedGradientMax > 0.0f) {
             maxSpeedSqr = speedGradientMax * speedGradientMax;
         } else {
-            for (std::size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
+            for (size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
                 maxSpeedSqr = std::max(maxSpeedSqr, static_cast<float>(atoms.vel(atomIndex).sqrAbs()));
             }
         }
@@ -332,7 +330,7 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
     }
 
     radii.resize(atomCount);
-    for (std::size_t i = 0; i < atomCount; ++i) {
+    for (size_t i = 0; i < atomCount; ++i) {
         const auto& props = AtomData::getProps(atoms.type(i));
         radii[i] = static_cast<float>(props.radius);
     }
@@ -342,8 +340,7 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
                        1, GL_FALSE, glm::value_ptr(projection));
     glUniformMatrix4fv(glGetUniformLocation(atomShader, "view"),
                        1, GL_FALSE, glm::value_ptr(view));
-    glUniform3f(glGetUniformLocation(atomShader, "boxStart"),
-                box.start.x, box.start.y, box.start.z);
+    glUniform1i(glGetUniformLocation(atomShader, "colorMode"),   static_cast<int>(speedColorMode));
     glUniform1f(glGetUniformLocation(atomShader, "maxSpeedSqr"), maxSpeedSqr);
 
     if (useLighting()) {
@@ -371,7 +368,7 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
     }
     std::fill_n(selectedDataBuffer.data(), selectedDataBuffer.size(), 0);
     const auto& selectedIndices = Tools::pickingSystem->getSelectedIndices();
-    for (const std::size_t idx : selectedIndices) {
+    for (const size_t idx : selectedIndices) {
         selectedDataBuffer[idx] = 1;
     }
 
@@ -439,8 +436,8 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
 
 void RendererGL::drawBox(const SimBox& box) {
     PROFILE_SCOPE("RendererGL::drawBox");
-    const float x0 = box.start.x, y0 = box.start.y, z0 = box.start.z;
-    const float x1 = box.end.x,   y1 = box.end.y,   z1 = box.end.z;
+    const float x0 = 0, y0 = 0, z0 = 0;
+    const float x1 = box.size.x,   y1 = box.size.y,   z1 = box.size.z;
 
     const float lines[] = {
         x0,y0,z0, x1,y0,z0,  x1,y0,z0, x1,y1,z0,
@@ -468,7 +465,7 @@ void RendererGL::drawBox(const SimBox& box) {
     glBindVertexArray(0);
 }
 
-void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
+void RendererGL::drawBondsGL() {
     PROFILE_SCOPE("RendererGL::drawBondsGL");
     if (bondShader == 0 || !atomStorage) return;
 
@@ -479,15 +476,15 @@ void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
         if (bond.aIndex >= atomStorage->size() || bond.bIndex >= atomStorage->size()) {
             continue;
         }
-        const std::size_t aIndex = bond.aIndex;
-        const std::size_t bIndex = bond.bIndex;
+        const size_t aIndex = bond.aIndex;
+        const size_t bIndex = bond.bIndex;
         const Vec3f aPos = atomStorage->pos(aIndex);
         const Vec3f bPos = atomStorage->pos(bIndex);
         const float r = (AtomData::getProps(atomStorage->type(aIndex)).radius +
                          AtomData::getProps(atomStorage->type(bIndex)).radius) * 0.15f;
         bondData.emplace_back(
-            glm::vec3(aPos.x, aPos.y, aPos.z) + boxOffset,
-            glm::vec3(bPos.x, bPos.y, bPos.z) + boxOffset,
+            glm::vec3(aPos.x, aPos.y, aPos.z),
+            glm::vec3(bPos.x, bPos.y, bPos.z),
             r
         );
     }
@@ -517,7 +514,7 @@ void RendererGL::drawBondsGL(const glm::vec3& boxOffset) {
     glBindVertexArray(0);
 }
 
-void RendererGL::drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset) {
+void RendererGL::drawGridGL(const SpatialGrid& grid) {
     PROFILE_SCOPE("RendererGL::drawGridGL");
     gridData.clear();
 
@@ -532,7 +529,7 @@ void RendererGL::drawGridGL(const SpatialGrid& grid, const glm::vec3& boxOffset)
                 gridData.emplace_back(
                     glm::vec3((x - 1) * grid.cellSize,
                               (y - 1) * grid.cellSize,
-                              (z - 1) * grid.cellSize) + boxOffset,
+                              (z - 1) * grid.cellSize),
                     static_cast<float>(grid.cellSize),
                     static_cast<float>(countAtomsInCell)
                 );

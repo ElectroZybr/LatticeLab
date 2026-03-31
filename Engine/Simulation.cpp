@@ -34,27 +34,10 @@ void Simulation::update(float dt) {
     ++sim_step;
 }
 
-void Simulation::setSizeBox(Vec3f newStart, Vec3f newEnd, int cellSize) {
-    const Vec3f oldStart = sim_box.start;
-    const bool resized = sim_box.setSizeBox(newStart, newEnd, cellSize);
-    const Vec3f shift = oldStart - sim_box.start;
-    const bool originShifted = shift.sqrAbs() > 0.0;
-
-    if (originShifted) {
-        for (std::size_t i = 0; i < atomStorage.size(); ++i) {
-            atomStorage.posX(i) += static_cast<float>(shift.x);
-            atomStorage.posY(i) += static_cast<float>(shift.y);
-            atomStorage.posZ(i) += static_cast<float>(shift.z);
-        }
-    }
-
-    if (resized || originShifted) {
+void Simulation::setSizeBox(Vec3f newSize, int cellSize) {
+    const bool resized = sim_box.setSizeBox(newSize, cellSize);
+    if (resized) {
         forceField.updateBoxCache(sim_box);
-        sim_box.grid.rebuild(
-            atomStorage.xDataSpan(),
-            atomStorage.yDataSpan(),
-            atomStorage.zDataSpan()
-        );
         neighborList.clear();
     }
 }
@@ -65,12 +48,12 @@ bool Simulation::createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Typ
     return true;
 }
 
-bool Simulation::removeAtom(std::size_t atomIndex) {
+bool Simulation::removeAtom(size_t atomIndex) {
     if (atomIndex >= atomStorage.size()) {
         return false;
     }
 
-    const std::size_t lastIndex = atomStorage.size() - 1;
+    const size_t lastIndex = atomStorage.size() - 1;
 
     for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end();) {
         if (it->aIndex == atomIndex || it->bIndex == atomIndex) {
@@ -103,7 +86,7 @@ bool Simulation::removeAtom(std::size_t atomIndex) {
     return true;
 }
 
-void Simulation::addBond(std::size_t aIndex, std::size_t bIndex) {
+void Simulation::addBond(size_t aIndex, size_t bIndex) {
     if (aIndex >= atomStorage.size() || bIndex >= atomStorage.size()) {
         return;
     }

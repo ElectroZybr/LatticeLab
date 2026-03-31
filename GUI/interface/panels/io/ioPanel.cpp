@@ -38,7 +38,7 @@ constexpr std::array<AtomTypeOption, 19> kAtomTypeOptions{{
 
 int findTypeIndex(AtomData::Type type) {
     for (int i = 0; i < static_cast<int>(kAtomTypeOptions.size()); ++i) {
-        if (kAtomTypeOptions[static_cast<std::size_t>(i)].type == type) {
+        if (kAtomTypeOptions[static_cast<size_t>(i)].type == type) {
             return i;
         }
     }
@@ -47,16 +47,16 @@ int findTypeIndex(AtomData::Type type) {
 
 void drawAtomTypeCombo(const char* id, AtomData::Type& atomType, float width, float uiScale) {
     int selectedTypeIndex = findTypeIndex(atomType);
-    const char* selectedLabel = kAtomTypeOptions[static_cast<std::size_t>(selectedTypeIndex)].label;
+    const char* selectedLabel = kAtomTypeOptions[static_cast<size_t>(selectedTypeIndex)].label;
 
     if (ComboStyle::beginCenteredCombo(id, width, uiScale)) {
         ComboStyle::pushCenteredSelectableText();
         for (int i = 0; i < static_cast<int>(kAtomTypeOptions.size()); ++i) {
             const bool selected = (i == selectedTypeIndex);
-            if (ImGui::Selectable(kAtomTypeOptions[static_cast<std::size_t>(i)].label, selected)) {
-                atomType = kAtomTypeOptions[static_cast<std::size_t>(i)].type;
+            if (ImGui::Selectable(kAtomTypeOptions[static_cast<size_t>(i)].label, selected)) {
+                atomType = kAtomTypeOptions[static_cast<size_t>(i)].type;
                 selectedTypeIndex = i;
-                selectedLabel = kAtomTypeOptions[static_cast<std::size_t>(i)].label;
+                selectedLabel = kAtomTypeOptions[static_cast<size_t>(i)].label;
             }
             if (selected) {
                 ImGui::SetItemDefaultFocus();
@@ -77,9 +77,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
 
     if (animProgress_ < 0.01f) return;
 
-    boxSizeX_ = std::fabs(simulation.sim_box.end.x - simulation.sim_box.start.x);
-    boxSizeY_ = std::fabs(simulation.sim_box.end.y - simulation.sim_box.start.y);
-    boxSizeZ_ = std::fabs(simulation.sim_box.end.z - simulation.sim_box.start.z);
+    boxSize_ = simulation.sim_box.size;
 
     const float panelWidth = 300.f * scale;
     const float topOffset = 65.f * scale;
@@ -107,22 +105,25 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
 
     ImGui::SeparatorText("Размер бокса");
     bool boxSizeChanged = false;
-    boxSizeChanged |= ImGui::SliderFloat("X##box_size_x", &boxSizeX_, 5.0f, 400.0f, "%.1f");
+    boxSizeChanged |= ImGui::SliderFloat("X##box_size_x", &boxSize_.x, 5.0f, 400.0f, "%.1f");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(70.0f * scale);
-    boxSizeChanged |= ImGui::InputFloat("##box_size_x_input", &boxSizeX_, 0.0f, 0.0f, "%.1f");
+    boxSizeChanged |= ImGui::InputFloat("##box_size_x_input", &boxSize_.x, 0.0f, 0.0f, "%.1f");
 
-    boxSizeChanged |= ImGui::SliderFloat("Y##box_size_y", &boxSizeY_, 5.0f, 400.0f, "%.1f");
+    boxSizeChanged |= ImGui::SliderFloat("Y##box_size_y", &boxSize_.y, 5.0f, 400.0f, "%.1f");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(70.0f * scale);
-    boxSizeChanged |= ImGui::InputFloat("##box_size_y_input", &boxSizeY_, 0.0f, 0.0f, "%.1f");
+    boxSizeChanged |= ImGui::InputFloat("##box_size_y_input", &boxSize_.y, 0.0f, 0.0f, "%.1f");
 
-    boxSizeChanged |= ImGui::SliderFloat("Z##box_size_z", &boxSizeZ_, 5.0f, 200.0f, "%.1f");
+    boxSizeChanged |= ImGui::SliderFloat("Z##box_size_z", &boxSize_.z, 5.0f, 200.0f, "%.1f");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(70.0f * scale);
-    boxSizeChanged |= ImGui::InputFloat("##box_size_z_input", &boxSizeZ_, 0.0f, 0.0f, "%.1f");
+    boxSizeChanged |= ImGui::InputFloat("##box_size_z_input", &boxSize_.z, 0.0f, 0.0f, "%.1f");
 
     if (boxSizeChanged) {
+        if(boxSize_.x < 1.f) boxSize_.x = 1.f;
+        if(boxSize_.y < 1.f) boxSize_.y = 1.f;
+        if(boxSize_.z < 1.f) boxSize_.z = 1.f; 
         pendingResult_ = IOCommand::ApplyBoxSize;
     }
 

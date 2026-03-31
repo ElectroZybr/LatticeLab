@@ -1,14 +1,9 @@
 #include "Renderer2D.h"
 #include <glm/gtc/matrix_transform.hpp>
 
-namespace {
-constexpr sf::Color kSelectionContourColor(75, 75, 75); 
-}
-
-Renderer2D::Renderer2D(sf::RenderTarget& t, sf::View& gv)
-    : RendererGL(t, gv)
+Renderer2D::Renderer2D(sf::RenderTarget& t, sf::View& gv, SimBox& simBox)
+    : RendererGL(t, gv, simBox)
 {
-    camera.setZoom(10.f);
     atomShaders[0] = linkProgram("assets/shaders/2d/atom.vert",
                                  "assets/shaders/2d/atom.frag",
                                  "",
@@ -31,6 +26,9 @@ Renderer2D::Renderer2D(sf::RenderTarget& t, sf::View& gv)
                             "assets/shaders/3d/grid.frag");
 
     initAtomColors();
+
+    camera.position = Vec2f(simBox.size.x, simBox.size.y) / 2.f;
+    camera.setZoom(std::max(simBox.size.x, simBox.size.y) * 0.07);
 }
 
 void Renderer2D::updateMatrices() {

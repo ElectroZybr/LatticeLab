@@ -17,7 +17,7 @@ struct StaticAtomicData {
 
 class AtomData {
 public:
-    enum class Type : std::uint8_t {
+    enum class Type : uint8_t {
         Z,
 
         H, He,
@@ -45,7 +45,7 @@ public:
     };
 
 private:
-static const std::array<StaticAtomicData, static_cast<std::size_t>(Type::COUNT)> properties;
+static const std::array<StaticAtomicData, static_cast<size_t>(Type::COUNT)> properties;
 public:
     static const StaticAtomicData& getProps(Type type) {
         return properties.at(static_cast<int>(type));

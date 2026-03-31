@@ -93,6 +93,12 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
         ImGui::PopStyleColor();
     }
 
+    float maxParticleSpeed = simulation.getMaxParticleSpeed();
+    ImGui::PushItemWidth(150.0f * uiScale);
+    if (ImGui::SliderFloat("Скорость светы", &maxParticleSpeed, 0.0f, 100.0f, maxParticleSpeed <= 0.0f ? "не ограничена" : "%.2f")) {
+        simulation.setMaxParticleSpeed(maxParticleSpeed);
+    }
+    ImGui::PopItemWidth();
     ImGui::SeparatorText("Рендер");
     ImGui::Checkbox("Сетка", &renderer->drawGrid);
     ImGui::Checkbox("Связи", &renderer->drawBonds);
@@ -150,7 +156,7 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
 
     int cellSize = simulation.sim_box.grid.cellSize;
     if (ImGui::SliderInt("Cell size", &cellSize, 1, 32)) {
-        simulation.setSizeBox(simulation.sim_box.start, simulation.sim_box.end, cellSize);
+        simulation.setSizeBox(simulation.sim_box.size, cellSize);
     }
 
     if (simulation.isNeighborListEnabled()) {
