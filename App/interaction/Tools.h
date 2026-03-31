@@ -11,7 +11,7 @@
 #include "Engine/NeighborSearch/SpatialGrid.h"
 #include "Rendering/BaseRenderer.h"
 
-#include "Engine/tools/picking_system/PickingSystem.h"
+#include "App/interaction/picking/PickingSystem.h"
 
 class SimBox;
 

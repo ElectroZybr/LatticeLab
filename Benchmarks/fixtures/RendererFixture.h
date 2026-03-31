@@ -9,7 +9,7 @@
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/SimBox.h"
-#include "Engine/tools/Tools.h"
+#include "App/interaction/Tools.h"
 
 template <typename TRenderer>
 class RendererFixture : public benchmark::Fixture {

@@ -8,7 +8,7 @@
 #include "Engine/metrics/MemoryMetrics.h"
 #include "Engine/metrics/Profiler.h"
 #include "Engine/Simulation.h"
-#include "Engine/tools/Tools.h"
+#include "App/interaction/Tools.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
 
 namespace {
