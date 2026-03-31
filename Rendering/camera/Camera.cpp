@@ -57,11 +57,11 @@ Vec3f Camera::screenToWorld(sf::Vector2i screenPos) const {
         const sf::Vector2f viewCenter = view->getCenter();
         const float wx = viewCenter.x + (screenPos.x - screenSize.x * 0.5f) * (viewSize.x / screenSize.x);
         const float wy = viewCenter.y + (screenPos.y - screenSize.y * 0.5f) * (viewSize.y / screenSize.y);
-        return Vec3f(wx, wy, 0.f);
+        return Vec3f(wx, wy, 1.f);
     }
- 
+
     const Ray ray = screenToRay(screenPos.x, screenPos.y);
-    return ray.at(10.0);
+    return ray.at(100.0);
 }
 
 sf::Vector2i Camera::worldToScreen(Vec3f worldPos) const {
@@ -92,10 +92,10 @@ glm::vec3 Camera::getEyePosition() const {
     if (mode == Mode::Free)
         return glm::vec3(freePosition.x, freePosition.y, freePosition.z);
 
-    glm::vec3 center(simBox.size.x * 0.5f, simBox.size.y * 0.5f, simBox.size.z * 0.5f);
-
+    const Vec3f center = simBox.size / 2.f;
+    const glm::vec3 glmCenter(center.x, center.y, center.z);
     const float r = moveSpeed / zoom;
-    return center + r * glm::vec3(
+    return glmCenter + r * glm::vec3(
         std::cos(elevation) * std::sin(azimuth),
         std::sin(elevation),
         std::cos(elevation) * std::cos(azimuth)
@@ -132,18 +132,18 @@ glm::mat4 Camera::getProjectionMatrix() const {
 
 Ray Camera::screenToRay(float screenX, float screenY) const
 {
-    const float ndcX = (screenX / screenSize.x)  * 2.f - 1.f;
+    const float ndcX = (screenX / screenSize.x)  * 2.f - 1.f; 
     const float ndcY = 1.f - (screenY / screenSize.y) * 2.f;
  
     const glm::vec4 rayClip(ndcX, ndcY, -1.f, 1.f);
  
     glm::vec4 rayEye = glm::inverse(getProjectionMatrix()) * rayClip;
-    rayEye = glm::vec4(rayEye.x, rayEye.y, -1.f, 0.f);
+    rayEye = glm::vec4(rayEye.x / rayEye.w, rayEye.y / rayEye.w, -1.f, 0.f);
  
     const glm::vec3 rayDirGLM = glm::normalize(
         glm::vec3(glm::inverse(getViewMatrix()) * rayEye)
     );
- 
+
     const glm::vec3 eye = getEyePosition();
  
     return Ray(
