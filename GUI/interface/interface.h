@@ -26,6 +26,7 @@ private:
     static float simulationSpeed;
     static double averageEnergy;
     static int sim_step;
+    static bool stepRequested;
 public:
     static bool pause;
     static int init(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r);
@@ -34,6 +35,7 @@ public:
     static bool getPause();
     static int getSelectedAtom();
     static float getSimulationSpeed();
+    static bool popStepRequested();
     static void setAverageEnergy(double energy);
     static void setSimStep(int step);
     static bool cursorHovered;

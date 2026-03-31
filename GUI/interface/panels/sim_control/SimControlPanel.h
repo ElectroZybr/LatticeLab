@@ -12,8 +12,5 @@ public:
         ImGuiWindowFlags_NoScrollbar;
 
     void draw(float scale, sf::Vector2u windowSize,
-              bool& pause, float& simulationSpeed);
-
-private:
-    int fastMode = 0;
+              bool& pause, float& simulationSpeed, bool& stepRequested);
 };

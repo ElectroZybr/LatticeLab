@@ -22,7 +22,6 @@
 
 constexpr int FPS = 60;
 constexpr int LPS = 20;
-constexpr float Dt = 0.01;
 
 int Application::run() {
     sf::RenderWindow window = createWindow();
@@ -76,7 +75,7 @@ int Application::run() {
         if (!Interface::getPause()) {
             const double physicsInterval = 1.0 / Interface::getSimulationSpeed();
             if (physicsAccum >= physicsInterval) {
-                simulation.update(Dt);
+                simulation.update();
                 Profiler::instance().addCount("Simulation::steps");
                 physicsAccum = 0.0;
             }
@@ -86,7 +85,11 @@ int Application::run() {
 
         // один шаг симуляции
         if (auto cmd = Keyboard::popResult(); cmd == KeyboardCommand::StepPhysics) {
-            simulation.update(Dt);
+            simulation.update();
+            Profiler::instance().addCount("Simulation::steps");
+        }
+        if (Interface::popStepRequested()) {
+            simulation.update();
             Profiler::instance().addCount("Simulation::steps");
         }
 
@@ -101,7 +104,7 @@ int Application::run() {
 
             processFileDialog(simulation);
             processToolsPanel(renderer, window, gameView, simulation);
-            processIOPanel(simulation);
+            processIOPanel(simulation, renderer);
             processSettingsPanel(window);
 
             renderer->drawShot(simulation.atomStorage, simulation.sim_box);

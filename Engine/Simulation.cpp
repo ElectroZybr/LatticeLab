@@ -24,9 +24,9 @@ void Simulation::setNeighborListEnabled(bool enabled) {
     }
 }
 
-void Simulation::update(float dt) {
+void Simulation::update() {
     PROFILE_SCOPE("Simulation::update");
-    integrator.step(atomStorage, sim_box, forceField, useNeighborList_ ? &neighborList : nullptr, dt);
+    integrator.step(atomStorage, sim_box, forceField, useNeighborList_ ? &neighborList : nullptr, Dt);
     if (useNeighborList_ && neighborList.needsRebuild(atomStorage)) {
         neighborList.build(atomStorage, sim_box);
         neighborList.recordRebuild(sim_step);
