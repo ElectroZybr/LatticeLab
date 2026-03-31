@@ -26,6 +26,8 @@ public:
 
     void setScheme(Scheme scheme);
     Scheme getScheme() const { return integrator_type; }
+    void setMaxParticleSpeed(float maxSpeed);
+    float maxParticleSpeed() const { return maxParticleSpeed_; }
 
     void step(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt);
 
@@ -36,4 +38,5 @@ private:
 
     Scheme integrator_type = Scheme::Verlet;
     SchemeVariant scheme_impl;
+    float maxParticleSpeed_ = 0.0f;
 };
