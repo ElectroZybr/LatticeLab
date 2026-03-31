@@ -15,6 +15,7 @@ void SimulationStateIO::save(const Simulation& simulation, std::string_view path
     file << "box " << simulation.sim_box.size.x << " " << simulation.sim_box.size.y << " " << simulation.sim_box.size.z << "\n";
 
     file << "step " << simulation.sim_step << "\n";
+    file << "max_speed " << simulation.getMaxParticleSpeed() << "\n";
 
     for (size_t atomIndex = 0; atomIndex < simulation.atomStorage.size(); ++atomIndex) {
         const Vec3f pos = simulation.atomStorage.pos(atomIndex);
@@ -45,6 +46,7 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
     Vec3f boxSize;
     int cellSize = -1;
     int loadedStep = 0;
+    float loadedMaxSpeed = 0.0f;
 
     std::string tag;
     while (file >> tag) {
@@ -52,6 +54,8 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
             file >> boxSize.x >> boxSize.y >> boxSize.z;
         } else if (tag == "step") {
             file >> loadedStep;
+        } else if (tag == "max_speed") {
+            file >> loadedMaxSpeed;
         } else if (tag == "atom") {
             LoadedAtomData data{Vec3f(0.f, 0.f, 0.f), Vec3f(0.f, 0.f, 0.f), 0, false};
             std::string atomLine;
@@ -81,5 +85,6 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
     }
 
     simulation.sim_step = loadedStep;
+    simulation.setMaxParticleSpeed(loadedMaxSpeed);
 }
 

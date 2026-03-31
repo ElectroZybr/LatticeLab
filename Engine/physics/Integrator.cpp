@@ -1,6 +1,9 @@
 #include "Integrator.h"
 
+#include <algorithm>
+
 #include "AtomStorage.h"
+#include "integrators/StepOps.h"
 
 Integrator::Integrator()
     : integrator_type(Scheme::Verlet),
@@ -11,10 +14,18 @@ void Integrator::setScheme(Scheme scheme) {
     scheme_impl = makeSchemeImpl(scheme);
 }
 
+void Integrator::setMaxParticleSpeed(float maxSpeed) {
+    maxParticleSpeed_ = std::max(0.0f, maxSpeed);
+}
+
 void Integrator::step(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) {
     std::visit([&](const auto& scheme) {
         scheme.pipeline(atomStorage, box, forceField, neighborList, dt);
     }, scheme_impl);
+    // Ограничение максимальной скорости атомов
+    if (maxParticleSpeed_ > 0.0f) {
+        StepOps::clampSpeed(atomStorage, maxParticleSpeed_);
+    }
 }
 
 Integrator::SchemeVariant Integrator::makeSchemeImpl(Scheme scheme) {
