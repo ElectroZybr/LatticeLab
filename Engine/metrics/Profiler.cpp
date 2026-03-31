@@ -76,7 +76,7 @@ void Profiler::addSample(const char* name, double ms) {
     entry.touchedThisFrame = true;
 }
 
-void Profiler::addCount(const char* name, std::size_t delta) {
+void Profiler::addCount(const char* name, size_t delta) {
     ProfileCounter& counter = counterFor(name);
     counter.pendingCount += delta;
     counter.totalCount += delta;

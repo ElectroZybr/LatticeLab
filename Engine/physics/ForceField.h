@@ -28,7 +28,7 @@ private:
         float potentialC12 = 0.0f; // 4 * eps * a^12
     };
 
-    static constexpr std::size_t TypeCount = static_cast<std::size_t>(AtomData::Type::COUNT);
+    static constexpr size_t TypeCount = static_cast<size_t>(AtomData::Type::COUNT);
     using LJPairTable = std::array<std::array<LJParams, TypeCount>, TypeCount>;
     using LJPairRow = std::array<LJParams, TypeCount>;
 
@@ -38,7 +38,7 @@ private:
     void softWalls(const AtomStorage& atoms, float coordX, float coordY, float coordZ, float& forceX, float& forceY, float& forceZ) const;
     template<bool UseNeighborList>
     void ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* neighborList) const;
-    void pairNonBondedInteraction(AtomStorage& atoms, std::uint32_t bIndex, const LJPairRow& ljPairRow, float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const;
+    void pairNonBondedInteraction(AtomStorage& atoms, uint32_t bIndex, const LJPairRow& ljPairRow, float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const;
     void applyGravityForce(float& forceX, float& forceY, float& forceZ) const;
 
     Vec3f static_force;

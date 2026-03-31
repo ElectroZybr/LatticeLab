@@ -4,8 +4,6 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
-#include <unordered_set>
-#include <vector>
 
 #include "Engine/math/Vec3f.h"
 #include "Engine/physics/AtomData.h"
@@ -20,9 +18,9 @@ class SimBox;
 class Tools {
 public:
     using AtomCreator = std::function<bool(Vec3f, Vec3f, AtomData::Type, bool)>;
-    using AtomRemover = std::function<bool(std::size_t)>;
+    using AtomRemover = std::function<bool(size_t)>;
 
-    enum class Mode : std::uint8_t {
+    enum class Mode : uint8_t {
         Cursor,
         Frame,
         Lasso,
@@ -40,11 +38,7 @@ public:
                      AtomRemover atomRemover = {});
 
     static Vec3f screenToWorld(sf::Vector2i mousePos);
-    static Vec3f screenToBox(sf::Vector2i mousePos);
     static sf::Vector2i worldToScreen(Vec3f pos);
-    static sf::Vector2i boxToScreen(Vec3f pos);
-    static Vec3f worldToBox(Vec3f pos);
-    static Vec3f boxToWorld(Vec3f pos);
 
     static void onLeftPressed(sf::Vector2i mousePos);
     static void onLeftReleased(sf::Vector2i mousePos);
@@ -57,7 +51,7 @@ public:
     static PickingSystem* pickingSystem;
 
 private:
-    static constexpr std::size_t InvalidIndex = static_cast<std::size_t>(-1);
+    static constexpr size_t InvalidIndex = static_cast<size_t>(-1);
 
     static bool tryAddAtom(sf::Vector2i mousePos, AtomData::Type atomType);
     static bool tryRemoveAtom(sf::Vector2i mousePos);

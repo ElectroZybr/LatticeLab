@@ -21,7 +21,7 @@ void ensureBondTableInitialized() {
 BondTable Bond::bond_default_props;
 std::list<Bond> Bond::bonds_list;
 
-Bond::Bond(std::size_t aIndex, std::size_t bIndex, AtomData::Type aType, AtomData::Type bType)
+Bond::Bond(size_t aIndex, size_t bIndex, AtomData::Type aType, AtomData::Type bType)
     : aIndex(aIndex), bIndex(bIndex) {
     const BondParams bondParams = bond_default_props.get(aType, bType);
     params.r0 = bondParams.r0;
@@ -76,7 +76,7 @@ float Bond::MorseForce(float distanse) {
     return 2.0f * params.De * params.a * (expA * expA - expA);
 }
 
-void Bond::angleForce(AtomStorage& atomStorage, std::size_t aIndex, std::size_t bIndex, std::size_t cIndex) {
+void Bond::angleForce(AtomStorage& atomStorage, size_t aIndex, size_t bIndex, size_t cIndex) {
     const double ox = atomStorage.posX(aIndex);
     const double oy = atomStorage.posY(aIndex);
     const double oz = atomStorage.posZ(aIndex);
@@ -141,7 +141,7 @@ void Bond::angleForce(AtomStorage& atomStorage, std::size_t aIndex, std::size_t 
     atomStorage.forceZ(aIndex) += static_cast<float>(force_o_z);
 }
 
-Bond* Bond::CreateBond(std::size_t aIndex, std::size_t bIndex, AtomStorage& atomStorage) {
+Bond* Bond::CreateBond(size_t aIndex, size_t bIndex, AtomStorage& atomStorage) {
     ensureBondTableInitialized();
 
     if (aIndex >= atomStorage.size() || bIndex >= atomStorage.size() || aIndex == bIndex) {

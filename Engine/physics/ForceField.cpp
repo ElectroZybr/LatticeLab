@@ -19,9 +19,9 @@ void ForceField::updateBoxCache(const SimBox& box) {
     wallMinX = 0.0f;
     wallMinY = 0.0f;
     wallMinZ = 0.0f;
-    wallMaxX = static_cast<float>(box.end.x - box.start.x - 1.0);
-    wallMaxY = static_cast<float>(box.end.y - box.start.y - 1.0);
-    wallMaxZ = static_cast<float>(box.end.z - box.start.z - 1.0);
+    wallMaxX = static_cast<float>(box.size.x - 1.0);
+    wallMaxY = static_cast<float>(box.size.y - 1.0);
+    wallMaxZ = static_cast<float>(box.size.z - 1.0);
 }
 
 ForceField::LJPairTable ForceField::buildLJPairTable() {
@@ -84,7 +84,7 @@ void ForceField::compute(AtomStorage& atoms, SimBox& box, NeighborList* neighbor
 
     if (Bond::bonds_list.size() < 2) return;
 
-    std::vector<std::uint16_t> degree(atoms.size(), 0);
+    std::vector<uint16_t> degree(atoms.size(), 0);
     for (const Bond& bond : Bond::bonds_list) {
         if (bond.aIndex < atoms.size() && bond.bIndex < atoms.size()) {
             ++degree[bond.aIndex];
@@ -181,7 +181,7 @@ void ForceField::ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* ne
             }
             const uint32_t begin = off[atomIndex];
             const uint32_t end   = off[atomIndex + 1];
-            if (begin > end || static_cast<std::size_t>(end) > nei.size()) {
+            if (begin > end || static_cast<size_t>(end) > nei.size()) {
                 atoms.forceX(atomIndex) = forceX;
                 atoms.forceY(atomIndex) = forceY;
                 atoms.forceZ(atomIndex) = forceZ;
@@ -203,7 +203,7 @@ void ForceField::ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* ne
             const auto& offsets27 = grid.neighborOffsets27();
 
             for (int k = 0; k < 27; ++k) {
-                for (std::uint32_t neighbourIndex : grid.atomsInCellByLinearIndex(center + offsets27[k])) {
+                for (uint32_t neighbourIndex : grid.atomsInCellByLinearIndex(center + offsets27[k])) {
                     if (neighbourIndex >= atomIndex) continue;
                     pairNonBondedInteraction(atoms, neighbourIndex, ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
                 }

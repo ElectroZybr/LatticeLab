@@ -5,9 +5,16 @@
 
 #include "Engine/math/Ray.h"
 
+class SimBox;
+class Renderer2D;
+class Renderer3D;
+
 class Camera {
     friend class Mouse;
     friend class Keyboard;
+
+    friend Renderer2D;
+    friend Renderer3D;
 public:
     enum class Mode: uint8_t {
         Mode2D,
@@ -15,7 +22,7 @@ public:
         Free
     };
 
-    Camera(sf::View* view, float moveSpeed = 500.f, float zoomSpeed = 0.1f);
+    Camera(sf::View* view, SimBox& simBox, float moveSpeed = 500.f, float zoomSpeed = 0.1f);
 
     void update(sf::RenderTarget& target);
 
@@ -64,6 +71,7 @@ private:
     Vec2f dragStartCameraPos;
 
     Mode mode = Mode::Mode2D;
+    SimBox& simBox;
 
     // Orbit / Free
     float azimuth   = 0.f;

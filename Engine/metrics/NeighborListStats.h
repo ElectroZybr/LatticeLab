@@ -19,7 +19,7 @@ public:
 
     void recordRebuild(int simStep, float rebuildTimeMs) {
         if (lastRebuildStep_ >= 0 && simStep >= lastRebuildStep_) {
-            const std::size_t interval = static_cast<std::size_t>(simStep - lastRebuildStep_);
+            const size_t interval = static_cast<size_t>(simStep - lastRebuildStep_);
             rebuildIntervalsSum_ += interval;
             recentRebuildIntervals_[recentRebuildCursor_] = interval;
             recentRebuildCursor_ = (recentRebuildCursor_ + 1) % kRecentRebuildWindow;
@@ -44,7 +44,7 @@ public:
         ++rebuildCount_;
     }
 
-    [[nodiscard]] std::size_t rebuildCount() const { return rebuildCount_; }
+    [[nodiscard]] size_t rebuildCount() const { return rebuildCount_; }
 
     [[nodiscard]] float averageStepsBetweenRebuilds() const {
         if (rebuildCount_ <= 1) {
@@ -59,8 +59,8 @@ public:
             return 0.0f;
         }
 
-        std::size_t sum = 0;
-        for (std::size_t i = 0; i < recentRebuildCount_; ++i) {
+        size_t sum = 0;
+        for (size_t i = 0; i < recentRebuildCount_; ++i) {
             sum += recentRebuildIntervals_[i];
         }
         return static_cast<float>(sum) / static_cast<float>(recentRebuildCount_);
@@ -78,14 +78,14 @@ public:
     [[nodiscard]] float maxRebuildTimeMs() const { return maxRebuildTimeMs_; }
 
 private:
-    static constexpr std::size_t kRecentRebuildWindow = 8;
+    static constexpr size_t kRecentRebuildWindow = 8;
 
-    std::size_t rebuildCount_ = 0;
-    std::size_t rebuildIntervalsSum_ = 0;
+    size_t rebuildCount_ = 0;
+    size_t rebuildIntervalsSum_ = 0;
     int lastRebuildStep_ = -1;
-    std::array<std::size_t, kRecentRebuildWindow> recentRebuildIntervals_{};
-    std::size_t recentRebuildCount_ = 0;
-    std::size_t recentRebuildCursor_ = 0;
+    std::array<size_t, kRecentRebuildWindow> recentRebuildIntervals_{};
+    size_t recentRebuildCount_ = 0;
+    size_t recentRebuildCursor_ = 0;
     float lastRebuildTimeMs_ = 0.0f;
     float averageRebuildTimeMs_ = 0.0f;
     float maxRebuildTimeMs_ = 0.0f;

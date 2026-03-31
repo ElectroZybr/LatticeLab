@@ -36,7 +36,7 @@ void updateAtomSelectionDebug(const DebugViews& debugViews, const Simulation& si
     {
         debugViews.atomSingle->visible = true;
         debugViews.atomBatch->visible = false;
-        const std::size_t selectedIndex = *Tools::pickingSystem->getSelectedIndices().begin();
+        const size_t selectedIndex = *Tools::pickingSystem->getSelectedIndices().begin();
         if (selectedIndex < simulation.atomStorage.size()) {
             debugViews.atomSingle->add_data("Позиция", simulation.atomStorage.pos(selectedIndex));
             debugViews.atomSingle->add_data("Скорость", simulation.atomStorage.vel(selectedIndex));

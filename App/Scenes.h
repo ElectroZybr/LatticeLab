@@ -20,7 +20,7 @@ namespace Scenes {
                               float minDistance = 4.0f,
                               float speedScale = 5.0f,
                               int maxAttemptsPerAtom = 20,
-                              std::uint32_t seed = 0);
+                              uint32_t seed = 0);
 
     void randomGas(Simulation& sim,
                    int atomCount,
@@ -30,5 +30,5 @@ namespace Scenes {
                    double margin = 6.0,
                    float density = 1.0f,
                    float speedScale = 5.0f,
-                   std::uint32_t seed = 0);
+                   uint32_t seed = 0);
 } // namespace Scenes

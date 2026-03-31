@@ -36,14 +36,12 @@ namespace Benchmarks {
             .scene      = sceneFromEnv(),
             .integrator = Integrator::Scheme::Verlet,
             .atomCount  = atomCount,
-            .boxStart   = Vec3f(-80.0, -80.0, -80.0),
-            .boxEnd     = Vec3f(80.0, 80.0, 80.0),
+            .boxSize     = Vec3f(160.0, 160.0, 160.0),
             .cellSize   = 5
         };
 
         if (benchmarkCase.scene == SceneKind::Crystal2D || benchmarkCase.scene == SceneKind::RandomGas2D) {
-            benchmarkCase.boxStart = Vec3f(-80.0, -80.0, 0.0);
-            benchmarkCase.boxEnd = Vec3f(80.0, 80.0, 6.0);
+            benchmarkCase.boxSize = Vec3f(160.0, 160.0, 6.0);
         }
         return benchmarkCase;
     }
@@ -53,7 +51,7 @@ class SimulationFixture : public benchmark::Fixture {
 public:
     void SetUp(benchmark::State& state) override {
         atomCount_  = static_cast<int>(state.range(0));
-        box_ = std::make_unique<SimBox>(Vec3f(-80, -80, -80), Vec3f(80, 80, 80));
+        box_ = std::make_unique<SimBox>(Vec3f(160, 160, 160));
         simulation_ = std::make_unique<Simulation>(*box_);
     }
 

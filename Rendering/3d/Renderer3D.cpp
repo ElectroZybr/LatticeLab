@@ -1,11 +1,10 @@
 #include "Renderer3D.h"
 #include <glm/gtc/matrix_transform.hpp>
 
-Renderer3D::Renderer3D(sf::RenderTarget& t, sf::View& gv)
-    : RendererGL(t, gv)
+Renderer3D::Renderer3D(sf::RenderTarget& t, sf::View& gv, SimBox& simBox)
+    : RendererGL(t, gv, simBox)
 {
     camera.setMode(Camera::Mode::Orbit);
-    camera.setZoom(4.f);
 
     atomShaders[0] = linkProgram("assets/shaders/3d/atom.vert",
                                  "assets/shaders/3d/atom.frag",
@@ -29,6 +28,10 @@ Renderer3D::Renderer3D(sf::RenderTarget& t, sf::View& gv)
                             "assets/shaders/3d/grid.frag");
 
     initAtomColors();
+
+    camera.freePosition = simBox.size / 2.f;
+    camera.freePosition.z = -200.f;
+    camera.setZoom(std::max({simBox.size.x, simBox.size.y, simBox.size.z}) * 0.02);
 }
 
 void Renderer3D::updateMatrices() {

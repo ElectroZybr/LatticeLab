@@ -12,13 +12,12 @@ void SimulationStateIO::save(const Simulation& simulation, std::string_view path
         return;
     }
 
-    file << "box "
-         << simulation.sim_box.start.x << " " << simulation.sim_box.start.y << " " << simulation.sim_box.start.z << " "
-         << simulation.sim_box.end.x   << " " << simulation.sim_box.end.y   << " " << simulation.sim_box.end.z   << "\n";
+    file << "box " << simulation.sim_box.size.x << " " << simulation.sim_box.size.y << " " << simulation.sim_box.size.z << "\n";
 
     file << "step " << simulation.sim_step << "\n";
+    file << "max_speed " << simulation.getMaxParticleSpeed() << "\n";
 
-    for (std::size_t atomIndex = 0; atomIndex < simulation.atomStorage.size(); ++atomIndex) {
+    for (size_t atomIndex = 0; atomIndex < simulation.atomStorage.size(); ++atomIndex) {
         const Vec3f pos = simulation.atomStorage.pos(atomIndex);
         const Vec3f vel = simulation.atomStorage.vel(atomIndex);
         file << "atom "
@@ -44,17 +43,19 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
     };
     std::vector<LoadedAtomData> buffer;
 
-    Vec3f boxStart, boxEnd;
+    Vec3f boxSize;
     int cellSize = -1;
     int loadedStep = 0;
+    float loadedMaxSpeed = 0.0f;
 
     std::string tag;
     while (file >> tag) {
         if (tag == "box") {
-            file >> boxStart.x >> boxStart.y >> boxStart.z
-                 >> boxEnd.x   >> boxEnd.y   >> boxEnd.z;
+            file >> boxSize.x >> boxSize.y >> boxSize.z;
         } else if (tag == "step") {
             file >> loadedStep;
+        } else if (tag == "max_speed") {
+            file >> loadedMaxSpeed;
         } else if (tag == "atom") {
             LoadedAtomData data{Vec3f(0.f, 0.f, 0.f), Vec3f(0.f, 0.f, 0.f), 0, false};
             std::string atomLine;
@@ -77,12 +78,13 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
         }
     }
 
-    simulation.setSizeBox(boxStart, boxEnd, cellSize);
+    simulation.setSizeBox(boxSize, cellSize);
 
     for (const LoadedAtomData& data : buffer) {
         simulation.createAtom(data.coords, data.speed, static_cast<AtomData::Type>(data.type), data.fixed);
     }
 
     simulation.sim_step = loadedStep;
+    simulation.setMaxParticleSpeed(loadedMaxSpeed);
 }
 

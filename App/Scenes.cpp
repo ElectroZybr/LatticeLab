@@ -26,7 +26,7 @@ namespace detail {
                     }
 
                     auto cell = sim.sim_box.grid.atomsInCell(nx, ny, nz);
-                    for (std::size_t atomIndex : cell) {
+                    for (size_t atomIndex : cell) {
                         if (atomIndex >= sim.atomStorage.size()) {
                             continue;
                         }
@@ -40,25 +40,23 @@ namespace detail {
         return false;
     }
 
-    std::uint32_t resolveSeed(std::uint32_t seed) {
+    uint32_t resolveSeed(uint32_t seed) {
         return seed == 0 ? std::random_device{}() : seed;
     }
 } // namespace detail
 
 void crystal(Simulation& sim, int n, AtomData::Type type, bool is3d, double padding, double margin) {
     const double side = n * padding + padding + 2.0 * margin;
-    const double half = side / 2.0;
 
     sim.setSizeBox(
-        Vec3f(-half, -half, is3d ? -half : sim.sim_box.start.z),
-        Vec3f(half, half, is3d ? half : sim.sim_box.end.z)
+        Vec3f(side, side, is3d ? side : sim.sim_box.size.z)
     );
 
     const Vec3f vecMargin(margin, margin, is3d ? margin : 0.0);
     const int zMax = is3d ? n : 1;
-    const std::size_t atomTotal = static_cast<std::size_t>(n)
-        * static_cast<std::size_t>(n)
-        * static_cast<std::size_t>(zMax);
+    const size_t atomTotal = static_cast<size_t>(n)
+        * static_cast<size_t>(n)
+        * static_cast<size_t>(zMax);
     sim.atomStorage.reserve(sim.atomStorage.size() + atomTotal);
 
     for (int x = 1; x <= n; ++x) {
@@ -88,7 +86,7 @@ int randomGasInCurrentBox(Simulation& sim,
                           float minDistance,
                           float speedScale,
                           int maxAttemptsPerAtom,
-                          std::uint32_t seed) {
+                          uint32_t seed) {
     atomCount = std::max(0, atomCount);
     if (atomCount == 0) {
         sim.neighborList.clear();
@@ -97,16 +95,13 @@ int randomGasInCurrentBox(Simulation& sim,
 
     std::srand(static_cast<unsigned>(detail::resolveSeed(seed)));
 
-    const double zMid = (sim.sim_box.end.z - sim.sim_box.start.z) * 0.5;
-    const double zSpan = sim.sim_box.end.z - sim.sim_box.start.z - 4.0;
-    const int maxZ = std::max(0, static_cast<int>(zSpan));
     const float minDistanceSqr = minDistance * minDistance;
 
-    const std::size_t oldSize = sim.atomStorage.size();
+    const size_t oldSize = sim.atomStorage.size();
     std::vector<Vec3f> acceptedPositions;
-    acceptedPositions.reserve(static_cast<std::size_t>(atomCount));
+    acceptedPositions.reserve(static_cast<size_t>(atomCount));
 
-    std::vector<std::vector<Vec3f>> pendingByCell(static_cast<std::size_t>(sim.sim_box.grid.countCells));
+    std::vector<std::vector<Vec3f>> pendingByCell(static_cast<size_t>(sim.sim_box.grid.countCells));
     const int pendingRadiusCells = std::max(1, static_cast<int>(std::ceil(minDistance / static_cast<float>(sim.sim_box.grid.cellSize))));
 
     const auto isTooCloseToPending = [&](const Vec3f& coords) {
@@ -125,7 +120,7 @@ int randomGasInCurrentBox(Simulation& sim,
                     }
 
                     const int cellIndex = sim.sim_box.grid.linearIndex(nx, ny, nz);
-                    const auto& bucket = pendingByCell[static_cast<std::size_t>(cellIndex)];
+                    const auto& bucket = pendingByCell[static_cast<size_t>(cellIndex)];
                     for (const Vec3f& other : bucket) {
                         if ((coords - other).sqrAbs() < minDistanceSqr) {
                             return true;
@@ -137,21 +132,24 @@ int randomGasInCurrentBox(Simulation& sim,
         return false;
     };
 
+    const double zMid = sim.sim_box.size.z * 0.5;
+    const double zSpan = sim.sim_box.size.z - 4.0;
+    const int maxZ = std::max(0, static_cast<int>(zSpan));
     for (int i = 0; i < atomCount; ++i) {
         for (int attempt = 0; attempt < maxAttemptsPerAtom; ++attempt) {
-            const double rx = std::rand() % int(sim.sim_box.end.x - sim.sim_box.start.x - 4.0);
-            const double ry = std::rand() % int(sim.sim_box.end.y - sim.sim_box.start.y - 4.0);
+            const double rx = std::rand() % int(sim.sim_box.size.x - 4.0);
+            const double ry = std::rand() % int(sim.sim_box.size.y - 4.0);
             const double rz = is3d ? (std::rand() % (maxZ + 1)) : zMid;
             const Vec3f coords(rx + 2.0, ry + 2.0, is3d ? (rz + 2.0) : zMid);
 
             if (!detail::hasNeighborInStorage(sim, coords, minDistance) && !isTooCloseToPending(coords)) {
-                acceptedPositions.push_back(coords);
+                acceptedPositions.emplace_back(coords);
                 const int cell = sim.sim_box.grid.linearIndex(
                     sim.sim_box.grid.worldToCellX(coords.x),
                     sim.sim_box.grid.worldToCellY(coords.y),
                     sim.sim_box.grid.worldToCellZ(coords.z)
                 );
-                pendingByCell[static_cast<std::size_t>(cell)].push_back(coords);
+                pendingByCell[static_cast<size_t>(cell)].emplace_back(coords);
                 break;
             }
         }
@@ -185,7 +183,7 @@ void randomGas(Simulation& sim,
                double margin,
                float density,
                float speedScale,
-               std::uint32_t seed) {
+               uint32_t seed) {
     atomCount = std::max(0, atomCount);
     const float clampedDensity = std::clamp(density, 0.25f, 3.0f);
     const double effectiveSpacing = spacing / static_cast<double>(clampedDensity);
@@ -195,11 +193,9 @@ void randomGas(Simulation& sim,
         : std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<double>(atomCount)))));
 
     const double span = sideCount * effectiveSpacing + 2.0 * margin;
-    const double half = span * 0.5;
 
     sim.setSizeBox(
-        Vec3f(-half, -half, is3d ? -half : 0),
-        Vec3f(half, half, is3d ? half : 6)
+        Vec3f(span, span, is3d ? span : 6)
     );
 
     randomGasInCurrentBox(sim, atomCount, type, is3d, 4.0f, speedScale, 20, seed);
