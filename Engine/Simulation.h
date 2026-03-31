@@ -25,6 +25,8 @@ public:
     Integrator::Scheme getIntegrator() const { return integrator.getScheme(); }
     void setMaxParticleSpeed(float maxSpeed) { integrator.setMaxParticleSpeed(maxSpeed); }
     float getMaxParticleSpeed() const { return integrator.maxParticleSpeed(); }
+    void setAccelDamping(float accelDamping) { integrator.setAccelDamping(accelDamping); }
+    float getAccelDamping() const { return integrator.accelDamping(); }
     
     int getSimStep() const { return sim_step; }
     void setNeighborListEnabled(bool enabled);

@@ -3,18 +3,17 @@
 #include "Engine/metrics/Profiler.h"
 #include "StepOps.h"
 
-void VerletScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) const {
+void VerletScheme::pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float accelDamping, float dt) const {
     PROFILE_SCOPE("VerletScheme::pipeline");
     // Расчет новых позиций
     StepOps::predictAndSync(atomStorage, box, dt, &predict);
     // Расчет сил
     StepOps::computeForces(atomStorage, box, forceField, neighborList, dt);
     // Корректировка скоростей
-    correct(atomStorage, dt);
+    correct(atomStorage, accelDamping, dt);
 }
 
 void VerletScheme::predict(AtomStorage& atomStorage, float dt) {
-    PROFILE_SCOPE("VerletScheme::predict");
     const size_t n = atomStorage.mobileCount();
 
     float* RESTRICT x = atomStorage.xData();
@@ -33,15 +32,13 @@ void VerletScheme::predict(AtomStorage& atomStorage, float dt) {
 
     #pragma GCC ivdep
     for (size_t i = 0; i < n; ++i) {
-        constexpr float damping = 0.6f;
-
-        x[i] += (vx[i] * damping + fx[i] * invMass[i] * 0.5f * dt) * dt;
-        y[i] += (vy[i] * damping + fy[i] * invMass[i] * 0.5f * dt) * dt;
-        z[i] += (vz[i] * damping + fz[i] * invMass[i] * 0.5f * dt) * dt;
+        x[i] += (vx[i] + fx[i] * invMass[i] * 0.5f * dt) * dt;
+        y[i] += (vy[i] + fy[i] * invMass[i] * 0.5f * dt) * dt;
+        z[i] += (vz[i] + fz[i] * invMass[i] * 0.5f * dt) * dt;
     }
 }
 
-void VerletScheme::correct(AtomStorage& atomStorage, float dt) {
+void VerletScheme::correct(AtomStorage& atomStorage, float accelDamping, float dt) {
     PROFILE_SCOPE("VerletScheme::correct");
     const size_t n = atomStorage.mobileCount();
 
@@ -61,7 +58,7 @@ void VerletScheme::correct(AtomStorage& atomStorage, float dt) {
 
     #pragma GCC ivdep
     for (size_t i = 0; i < n; ++i) {
-        const float halfDtInvMass = 0.5f * dt * invMass[i];
+        const float halfDtInvMass = 0.5f * accelDamping * dt * invMass[i];
 
         vx[i] += (pfx[i] + fx[i]) * halfDtInvMass;
         vy[i] += (pfy[i] + fy[i]) * halfDtInvMass;

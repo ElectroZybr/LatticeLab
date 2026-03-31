@@ -28,6 +28,8 @@ public:
     Scheme getScheme() const { return integrator_type; }
     void setMaxParticleSpeed(float maxSpeed);
     float maxParticleSpeed() const { return maxParticleSpeed_; }
+    void setAccelDamping(float accelDamping);
+    float accelDamping() const { return accelDamping_; }
 
     void step(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt);
 
@@ -39,4 +41,5 @@ private:
     Scheme integrator_type = Scheme::Verlet;
     SchemeVariant scheme_impl;
     float maxParticleSpeed_ = 0.0f;
+    float accelDamping_ = 0.9f;
 };

@@ -7,5 +7,5 @@ class SimBox;
 
 class RK4Scheme {
 public:
-    void pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) const;
+    void pipeline(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float accelDamping, float dt) const;
 };
