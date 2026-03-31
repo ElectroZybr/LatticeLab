@@ -5,7 +5,7 @@
 #include "../ForceField.h"
 #include "Engine/SimBox.h"
 #include "Engine/metrics/Profiler.h"
-#include "restrict.h"
+#include "Engine/restrict.h"
 
 class NeighborList;
 

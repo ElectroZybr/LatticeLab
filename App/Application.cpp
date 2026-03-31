@@ -12,7 +12,7 @@
 
 #include "Engine/Simulation.h"
 #include "Engine/metrics/Profiler.h"
-#include "Engine/tools/Tools.h"
+#include "App/interaction/Tools.h"
 #include "GUI/interface/interface.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"

@@ -3,7 +3,7 @@
 
 #include "GUI/io/mouse/Mouse.h"
 
-#include "Engine/tools/Tools.h"
+#include "App/interaction/Tools.h"
 #include "GUI/interface/interface.h"
 
 sf::RenderWindow*  Mouse::window = nullptr;

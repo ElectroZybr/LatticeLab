@@ -6,7 +6,7 @@
 
 #include <SFML/System/Vector2.hpp>
 
-#include "Engine/selection/OverlayState.h"
+#include "App/interaction/selection/OverlayState.h"
 #include "Engine/physics/AtomStorage.h"
 
 class IRenderer;

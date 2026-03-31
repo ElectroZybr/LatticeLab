@@ -11,7 +11,7 @@
 #include "SpatialGrid.h"
 #include "../SimBox.h"
 
-#include "restrict.h"
+#include "Engine/restrict.h"
 
 NeighborList::NeighborList() = default;
 
