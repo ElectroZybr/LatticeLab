@@ -1,11 +1,16 @@
 #include "SimControlPanel.h"
+#include "Engine/metrics/Profiler.h"
+#include <algorithm>
+#include <cmath>
 
 #define ICON_FA_PAUSE        "\uf04c"
 #define ICON_FA_PLAY         "\uf04b"
-#define ICON_FA_FORWARD      "\uf04e"
-#define ICON_FA_FAST_FORWARD "\uf050"
+#define ICON_FA_STEP_FORWARD "\uf051"
 
 static const ImVec4 ACTIVE_COLOR = ImVec4(0.06f, 0.53f, 0.98f, 1.00f);
+static const ImVec4 DISABLED_BUTTON_COLOR = ImVec4(0.26f, 0.28f, 0.31f, 1.00f);
+static const ImVec4 DISABLED_BUTTON_HOVERED_COLOR = ImVec4(0.26f, 0.28f, 0.31f, 1.00f);
+static const ImVec4 DISABLED_BUTTON_ACTIVE_COLOR = ImVec4(0.26f, 0.28f, 0.31f, 1.00f);
 
 static void pushActiveColor() {
     ImGui::PushStyleColor(ImGuiCol_Button,        ACTIVE_COLOR);
@@ -13,31 +18,73 @@ static void pushActiveColor() {
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ACTIVE_COLOR);
 }
 
+static float speedToSlider(float speed) {
+    constexpr float kMinSpeed = 1.0f;
+    constexpr float kMaxSpeed = 3000.0f;
+    constexpr float kCurve = 2.2f;
+
+    const float normalized = std::clamp((speed - kMinSpeed) / (kMaxSpeed - kMinSpeed), 0.0f, 1.0f);
+    return std::pow(normalized, 1.0f / kCurve);
+}
+
+static float sliderToSpeed(float slider) {
+    constexpr float kMinSpeed = 1.0f;
+    constexpr float kMaxSpeed = 3000.0f;
+    constexpr float kCurve = 2.2f;
+
+    const float normalized = std::pow(std::clamp(slider, 0.0f, 1.0f), kCurve);
+    return kMinSpeed + (kMaxSpeed - kMinSpeed) * normalized;
+}
+
 void SimControlPanel::draw(float scale, sf::Vector2u windowSize,
-                           bool& pause, float& simulationSpeed)
+                           bool& pause, float& simulationSpeed, bool& stepRequested)
 {
     ImGui::SetNextWindowPos(ImVec2(windowSize.x - 122*scale, 0));
     ImGui::SetNextWindowSize(ImVec2(122*scale, 111*scale));
     ImGui::Begin("SimControl", nullptr, PANEL_FLAGS);
 
-    const bool isFast = fastMode > 0;
-    if (isFast) pushActiveColor();
-
-    const char* fastIcon = (fastMode == 2) ? ICON_FA_FAST_FORWARD : ICON_FA_FORWARD;
-    if (ImGui::Button(fastIcon, ImVec2(50*scale, 50*scale))) {
-        fastMode = (fastMode + 1) % 3;
+    if (!pause) {
+        ImGui::PushStyleColor(ImGuiCol_Button, DISABLED_BUTTON_COLOR);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, DISABLED_BUTTON_HOVERED_COLOR);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, DISABLED_BUTTON_ACTIVE_COLOR);
     }
-
-    if (isFast) ImGui::PopStyleColor(3);
+    ImGui::BeginDisabled(!pause);
+    if (ImGui::Button(ICON_FA_STEP_FORWARD, ImVec2(50*scale, 50*scale))) {
+        stepRequested = true;
+    }
+    ImGui::EndDisabled();
+    if (!pause) ImGui::PopStyleColor(3);
 
     ImGui::SameLine();
 
+    const bool playButtonHighlighted = pause;
+    if (playButtonHighlighted) pushActiveColor();
     if (ImGui::Button(pause ? ICON_FA_PLAY : ICON_FA_PAUSE,  ImVec2(50*scale, 50*scale))) pause = !pause;
+    if (playButtonHighlighted) ImGui::PopStyleColor(3);
 
+    float speedSlider = speedToSlider(simulationSpeed);
     ImGui::PushItemWidth(106*scale);
-    ImGui::SliderFloat("##Speed", &simulationSpeed, 1.f, 3000.0f, "%.1f",
-                       ImGuiSliderFlags_AlwaysClamp);
+    if (ImGui::SliderFloat("##Speed", &speedSlider, 0.0f, 1.0f, "", ImGuiSliderFlags_AlwaysClamp)) {
+        simulationSpeed = sliderToSpeed(speedSlider);
+    }
+    const ImVec2 sliderMin = ImGui::GetItemRectMin();
+    const ImVec2 sliderMax = ImGui::GetItemRectMax();
     ImGui::PopItemWidth();
+
+    const float actualStepsPerSecond = Profiler::instance().counterRate("Simulation::steps");
+    const char* valueText = pause ? "pause" : nullptr;
+    char valueBuffer[32]{};
+    if (valueText == nullptr) {
+        std::snprintf(valueBuffer, sizeof(valueBuffer), "%.0f", actualStepsPerSecond);
+        valueText = valueBuffer;
+    }
+
+    const ImVec2 textSize = ImGui::CalcTextSize(valueText);
+    const ImVec2 textPos(
+        sliderMin.x + (sliderMax.x - sliderMin.x - textSize.x) * 0.5f,
+        sliderMin.y + (sliderMax.y - sliderMin.y - textSize.y) * 0.5f
+    );
+    ImGui::GetWindowDrawList()->AddText(textPos, IM_COL32(235, 235, 235, 255), valueText);
 
     ImGui::End();
 }

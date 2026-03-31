@@ -106,6 +106,14 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
         simulation.setAccelDamping(accelDamping);
     }
     ImGui::PopItemWidth();
+
+    float dt = simulation.getDt();
+    ImGui::PushItemWidth(150.0f * uiScale);
+    if (ImGui::SliderFloat("Time step (Dt)", &dt, 0.0001f, 0.05f, "%.4f",
+                           ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_Logarithmic)) {
+        simulation.setDt(dt);
+    }
+    ImGui::PopItemWidth();
     ImGui::SeparatorText("Рендер");
     ImGui::Checkbox("Сетка", &renderer->drawGrid);
     ImGui::Checkbox("Связи", &renderer->drawBonds);
@@ -196,3 +204,4 @@ std::optional<SettingsCommand> SettingsPanel::popResult() {
     pendingResult_ = std::nullopt;
     return result;
 }
+

@@ -6,13 +6,14 @@ BENCHMARK_DEFINE_F(SimulationFixture, FullStepWithNeighborList)(benchmark::State
     constexpr int kWarmupSteps = 128;
 
     rebuildScene();
+    simulation_->setDt(Benchmarks::kDt);
     for (int i = 0; i < kWarmupSteps; ++i) {
-        simulation_->update(Benchmarks::kDt);
+        simulation_->update();
     }
     const size_t rebuildCountBefore = simulation_->neighborList.stats().rebuildCount();
 
     for (auto _ : state) {
-        simulation_->update(Benchmarks::kDt);
+        simulation_->update();
         benchmark::ClobberMemory();
     }
 
@@ -38,12 +39,13 @@ BENCHMARK_DEFINE_F(SimulationFixture, FullStepNoNeighborList)(benchmark::State& 
 
     rebuildScene();
     simulation_->setNeighborListEnabled(false);
+    simulation_->setDt(Benchmarks::kDt);
     for (int i = 0; i < kWarmupSteps; ++i) {
-        simulation_->update(Benchmarks::kDt);
+        simulation_->update();
     }
 
     for (auto _ : state) {
-        simulation_->update(Benchmarks::kDt);
+        simulation_->update();
         benchmark::ClobberMemory();
     }
 

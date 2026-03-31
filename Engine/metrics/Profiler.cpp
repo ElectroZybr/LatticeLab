@@ -87,7 +87,8 @@ void Profiler::updateRates(double intervalSeconds) {
         return;
     }
 
-    const double alpha = 1.0 - std::exp(-intervalSeconds / 0.5);
+    constexpr double kRateSmoothingWindowSeconds = 0.15;
+    const double alpha = 1.0 - std::exp(-intervalSeconds / kRateSmoothingWindowSeconds);
     for (ProfileCounter& counter : counters_) {
         const double instantRate = static_cast<double>(counter.pendingCount) / intervalSeconds;
         if (!counter.hasRateSample) {

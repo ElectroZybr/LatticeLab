@@ -62,19 +62,59 @@ inline void processToolsPanel(std::unique_ptr<IRenderer>& renderer, sf::RenderWi
     }
 }
 
-inline void processIOPanel(Simulation& simulation) {
+inline void applyResizeBox(Simulation& simulation,
+                           std::unique_ptr<IRenderer>& renderer,
+                           const Vec3f& newSize,
+                           const Vec3f& oldSize,
+                           bool resizeGrid = true,
+                           bool moveCamera = true,
+                           bool moveAtoms = true) {
+    if (resizeGrid) {
+        simulation.setSizeBox(newSize);
+    }
+
+    const Vec3f delta = (newSize - oldSize) * 0.5f;
+
+    if (moveCamera) {
+        renderer->camera.move3D(delta);
+        renderer->camera.move({delta.x, delta.y});
+    }
+
+    if (moveAtoms) {
+        float* x = simulation.atomStorage.xData();
+        float* y = simulation.atomStorage.yData();
+        float* z = simulation.atomStorage.zData();
+        for (size_t i = 0; i < simulation.atomStorage.size(); ++i) {
+            x[i] += delta.x;
+            y[i] += delta.y;
+            z[i] += delta.z;
+        }
+    }
+}
+
+inline void processIOPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
     if (auto result = Interface::ioPanel.popResult()) {
         switch (result.value()) {
-            case IOCommand::ApplyBoxSize:
-                simulation.setSizeBox(Interface::ioPanel.boxSize());
+            case IOCommand::ApplyBoxSize: {
+                applyResizeBox(
+                    simulation,
+                    renderer,
+                    Interface::ioPanel.boxSize(),
+                    Vec3f(simulation.sim_box.size)
+                );
                 break;
-            case IOCommand::CreateCrystal:
+            }
+            case IOCommand::CreateCrystal: {
                 simulation.clear();
+                const Vec3f oldSize = simulation.sim_box.size;
                 Scenes::crystal(simulation, Interface::ioPanel.sceneAxisCount(), Interface::ioPanel.atomType(), Interface::ioPanel.sceneIs3D());
                 Tools::resetInteractionState();
+                applyResizeBox(simulation, renderer, simulation.sim_box.size, oldSize, false, true, false);
                 break;
-            case IOCommand::CreateGas:
+            }
+            case IOCommand::CreateGas: {
                 simulation.clear();
+                const Vec3f oldSize = simulation.sim_box.size;
                 Scenes::randomGas(simulation,
                                   Interface::ioPanel.gasAtomCount(),
                                   Interface::ioPanel.gasAtomType(),
@@ -83,7 +123,9 @@ inline void processIOPanel(Simulation& simulation) {
                                   6.0,
                                   Interface::ioPanel.gasDensity());
                 Tools::resetInteractionState();
+                applyResizeBox(simulation, renderer, simulation.sim_box.size, oldSize, false, true, false);
                 break;
+            }
             case IOCommand::ClearSimulation:
                 simulation.clear();
                 Tools::resetInteractionState();

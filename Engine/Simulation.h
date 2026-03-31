@@ -13,7 +13,7 @@ class Simulation {
 public:
     Simulation(SimBox& sim_box);
 
-    void update(float dt);
+    void update();
 
     void setSizeBox(Vec3f newSize, int cellSize = -1);
 
@@ -21,6 +21,8 @@ public:
     bool removeAtom(size_t atomIndex);
     void addBond(size_t aIndex, size_t bIndex);
 
+    void setDt(float dt) { Dt = dt; }
+    float getDt() const { return Dt; }
     void setIntegrator(Integrator::Scheme scheme) { integrator.setScheme(scheme); }
     Integrator::Scheme getIntegrator() const { return integrator.getScheme(); }
     void setMaxParticleSpeed(float maxSpeed) { integrator.setMaxParticleSpeed(maxSpeed); }
@@ -45,6 +47,7 @@ public:
 private:
     friend class SimulationStateIO;
 
+    float Dt = 0.01;
     int sim_step = 0;
     bool useNeighborList_ = true;
 };
