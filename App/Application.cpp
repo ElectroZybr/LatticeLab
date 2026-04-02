@@ -39,7 +39,7 @@ int Application::run() {
     renderer->drawBonds = true;
     renderer->speedColorMode = IRenderer::SpeedColorMode::GradientClassic;
 
-    AppEvents::init(simulation, renderer, window, gameView);
+    AppActions::init(simulation, renderer, window, gameView);
     Interface::init(window, simulation, renderer);
     EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atomStorage);
     Tools::init(&window, &gameView, &box.grid, &box, renderer, &simulation.atomStorage,
@@ -101,8 +101,6 @@ int Application::run() {
             Interface::Update();
 
             refreshAtomDebugViews(debugViews, simulation);
-
-            processSettingsPanel(window);
 
             renderer->drawShot(simulation.atomStorage, simulation.sim_box);
             Tools::pickingSystem->getOverlay().draw(window);

@@ -21,5 +21,7 @@ namespace AppSignals {
 
         inline Signals::Signal<void(std::string_view path)> SaveSimulation;
         inline Signals::Signal<void(std::string_view path)> LoadSimulation;
+
+        inline Signals::Signal<void()> ExitApplication;
     }
 }
