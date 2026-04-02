@@ -6,7 +6,7 @@
 #include "physics/Bond.h"
 
 #include "App/AppSignals.h"
-#include "restrict.h"
+#include "Engine/restrict.h"
 #include "App/interaction/Tools.h"
 
 Simulation::Simulation(SimBox& box)
@@ -48,6 +48,14 @@ void Simulation::update() {
         neighborList.recordRebuild(sim_step);
     }
     ++sim_step;
+}
+
+void Simulation::setSizeBox(Vec3f newSize, int cellSize) {
+    const bool resized = sim_box.setSizeBox(newSize, cellSize);
+    if (resized) {
+        sim_box.grid.rebuild(atomStorage.xDataSpan(), atomStorage.yDataSpan(), atomStorage.zDataSpan());
+        neighborList.clear();
+    }
 }
 
 bool Simulation::createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Type type, bool fixed) {

@@ -72,26 +72,24 @@ int Application::run() {
         EventManager::poll();
         EventManager::frame(deltaTime);
 
-        if (!Interface::getPause()) {
-            const double physicsInterval = 1.0 / Interface::getSimulationSpeed();
-            if (physicsAccum >= physicsInterval) {
+        // обновление физики
+        const double physicsInterval = 1.0 / Interface::getSimulationSpeed();
+        if (physicsAccum >= physicsInterval) {
+            if (!Interface::getPause()) {
                 simulation.update();
                 Profiler::instance().addCount("Simulation::steps");
                 physicsAccum = 0.0;
-            }
-        } else {
-            physicsAccum = 0.0;
+            } else {
+                physicsAccum = 0.0;
+            }       
         }
 
+        // отрисовка кадра
         if (renderAccum >= renderInterval) {
-            renderAccum -= renderInterval;
-
             PROFILE_SCOPE("Application::RenderFrame");
-
+            renderAccum -= renderInterval;
             Interface::Update();
-
             refreshAtomDebugViews(debugViews, simulation);
-
             renderer->drawShot(simulation.atomStorage, simulation.sim_box);
             Tools::pickingSystem->getOverlay().draw(window);
             ImGui::SFML::Render(window);
