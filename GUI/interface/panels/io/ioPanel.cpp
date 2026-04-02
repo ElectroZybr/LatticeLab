@@ -144,7 +144,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     ImGui::SameLine();
     drawAtomTypeCombo("##atom_type_gas", gasAtomType_, 80.f * scale, scale);
     if (ImGui::Button("Создать##gas", ImVec2(buttonWidth * scale, 0.f))) {
-        pendingResult_ = IOCommand::CreateGas;
+        AppSignals::UI::CreateGas.emit();
     }
     ImGui::SameLine();
     ImGui::Checkbox("3D##gas", &gasIs3D_);

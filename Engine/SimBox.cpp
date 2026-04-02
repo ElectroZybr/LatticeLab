@@ -4,11 +4,7 @@
 SimBox::SimBox(Vec3f size)
     : size(size),
       grid(size.x, size.y, size.z)
-{
-    track(AppSignals::UI::ResizeBox.connect([this](const Vec3f& newSize) {
-        setSizeBox(newSize);
-    }));
-}
+{ }
 
 bool SimBox::setSizeBox(const Vec3f& newSize, int cellSize) {
     bool resized = false;

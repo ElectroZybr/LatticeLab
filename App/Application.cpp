@@ -39,6 +39,7 @@ int Application::run() {
     renderer->drawBonds = true;
     renderer->speedColorMode = IRenderer::SpeedColorMode::GradientClassic;
 
+    AppEvents::init(simulation);
     Interface::init(window, simulation, renderer);
     EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atomStorage);
     Tools::init(&window, &gameView, &box.grid, &box, renderer, &simulation.atomStorage,
