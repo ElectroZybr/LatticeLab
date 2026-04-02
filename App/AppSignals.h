@@ -1,6 +1,7 @@
 #include "Signals/Signals.h"
-
 #include "Engine/math/Vec3f.h"
+
+#include "GUI/interface/panels/tools/ToolsPanel.h"
 
 namespace AppSignals {
     inline Signals::Signal<void(const Vec3f& oldSize, const Vec3f& newSize)> ResizeBox;
@@ -11,5 +12,7 @@ namespace AppSignals {
         inline Signals::Signal<void()> ClearSimulation;
         inline Signals::Signal<void()> CreateGas;
         inline Signals::Signal<void()> CreateCrystal;
+
+        inline Signals::Signal<void(RendererType type)> SetRender;
     }
 }

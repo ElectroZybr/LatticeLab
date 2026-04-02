@@ -39,7 +39,7 @@ int Application::run() {
     renderer->drawBonds = true;
     renderer->speedColorMode = IRenderer::SpeedColorMode::GradientClassic;
 
-    AppEvents::init(simulation);
+    AppEvents::init(simulation, renderer, window, gameView);
     Interface::init(window, simulation, renderer);
     EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atomStorage);
     Tools::init(&window, &gameView, &box.grid, &box, renderer, &simulation.atomStorage,
@@ -97,13 +97,13 @@ int Application::run() {
             renderAccum -= renderInterval;
 
             PROFILE_SCOPE("Application::RenderFrame");
-            
+
             Interface::Update();
 
             refreshAtomDebugViews(debugViews, simulation);
 
             processFileDialog(simulation);
-            processToolsPanel(renderer, window, gameView, simulation);
+            processToolsPanel(renderer, window, gameView);
             processSettingsPanel(window);
 
             renderer->drawShot(simulation.atomStorage, simulation.sim_box);

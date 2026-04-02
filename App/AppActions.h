@@ -43,16 +43,40 @@ namespace AppEvents {
                 Scenes::crystal(simulation, Interface::ioPanel.sceneAxisCount(), Interface::ioPanel.atomType(), Interface::ioPanel.sceneIs3D());
             }));
         }
+
+        void trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView) {
+            track(AppSignals::UI::SetRender.connect([&](RendererType type) {
+                std::unique_ptr<IRenderer> newRenderer;
+                switch (type) {
+                case RendererType::Renderer2D:
+                    newRenderer = std::make_unique<Renderer2D>(window, gameView, simulation.sim_box);
+                    break;
+                case RendererType::Renderer3D:
+                    newRenderer = std::make_unique<Renderer3D>(window, gameView, simulation.sim_box);
+                    break;
+                }
+
+                if (newRenderer) {
+                    newRenderer->drawGrid = renderer->drawGrid;
+                    newRenderer->drawBonds = renderer->drawBonds;
+                    newRenderer->speedColorMode = renderer->speedColorMode;
+                    newRenderer->speedGradientMax = renderer->speedGradientMax;
+                    newRenderer->setAtomStorage(&simulation.atomStorage);
+                    renderer = std::move(newRenderer);
+                }
+            }));
+        }
     public:
-        Handler(Simulation& simulation) {
+        Handler(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView) {
             trackIOPanel(simulation);
+            trackToolsPanel(simulation, renderer, window, gameView);
         }
     };
 
     inline Handler* instance = nullptr;
 
-    inline void init(Simulation& simulation) {
-        instance = new Handler(simulation);
+    inline void init(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView) {
+        instance = new Handler(simulation, renderer, window, gameView);
     }
 }
 
@@ -71,31 +95,15 @@ inline void processFileDialog(Simulation& simulation) {
 }
 
 inline void processToolsPanel(std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window,
-                              sf::View& gameView, Simulation& simulation) {
+                              sf::View& gameView) {
     if (auto result = Interface::toolsPanel.popResult()) {
-        std::unique_ptr<IRenderer> newRenderer;
         switch (result.value()) {
-            case ToolsCommand::ToggleRenderer2D:
-                newRenderer = std::make_unique<Renderer2D>(window, gameView, simulation.sim_box);
-                break;
-            case ToolsCommand::ToggleRenderer3D:
-                newRenderer = std::make_unique<Renderer3D>(window, gameView, simulation.sim_box);
-                break;
             case ToolsCommand::SetCameraOrbit:
                 renderer->camera.setMode(Camera::Mode::Orbit);
                 break;
             case ToolsCommand::SetCameraFree:
                 renderer->camera.setMode(Camera::Mode::Free);
                 break;
-        }
-
-        if (newRenderer) {
-            newRenderer->drawGrid = renderer->drawGrid;
-            newRenderer->drawBonds = renderer->drawBonds;
-            newRenderer->speedColorMode = renderer->speedColorMode;
-            newRenderer->speedGradientMax = renderer->speedGradientMax;
-            newRenderer->setAtomStorage(&simulation.atomStorage);
-            renderer = std::move(newRenderer);
         }
     }
 }
