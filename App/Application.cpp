@@ -83,12 +83,6 @@ int Application::run() {
             physicsAccum = 0.0;
         }
 
-        // один шаг симуляции
-        if (Interface::popStepRequested()) {
-            simulation.update();
-            Profiler::instance().addCount("Simulation::steps");
-        }
-
         if (renderAccum >= renderInterval) {
             renderAccum -= renderInterval;
 

@@ -90,11 +90,19 @@ namespace AppActions {
                 Profiler::instance().addCount("Simulation::steps");
             }));
         }
+
+        void trackSimControlPanel(Simulation& simulation) {
+            track(AppSignals::UI::StepPhysics.connect([&]() {
+                simulation.update();
+                Profiler::instance().addCount("Simulation::steps");
+            }));
+        }
     public:
         Handler(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView) {
             trackIOPanel(simulation);
             trackToolsPanel(simulation, renderer, window, gameView);
             trackSettingsPanel(window);
+            trackSimControlPanel(simulation);
             trackKeyboard(simulation);
         }
     };

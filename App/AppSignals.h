@@ -23,6 +23,8 @@ namespace AppSignals {
         inline Signals::Signal<void(std::string_view path)> LoadSimulation;
 
         inline Signals::Signal<void()> ExitApplication;
+
+        inline Signals::Signal<void()> StepPhysics;
     }
 
     namespace Keyboard {
