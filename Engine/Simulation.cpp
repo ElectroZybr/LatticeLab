@@ -102,14 +102,6 @@ void Simulation::addBond(size_t aIndex, size_t bIndex) {
     Bond::CreateBond(aIndex, bIndex, atomStorage);
 }
 
-void Simulation::save(std::string_view path) const {
-    SimulationStateIO::save(*this, path);
-}
-
-void Simulation::load(std::string_view path) {
-    SimulationStateIO::load(*this, path);
-}
-
 void Simulation::clear() {
     atomStorage.clear();
     Bond::bonds_list.clear();

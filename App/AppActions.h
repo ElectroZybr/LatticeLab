@@ -8,6 +8,7 @@
 #include "GUI/interface/interface.h"
 #include "Rendering/2d/Renderer2D.h"
 #include "Rendering/3d/Renderer3D.h"
+#include "Engine/io/SimulationStateIO.h"
 
 #include "AppSignals.h"
 
@@ -19,6 +20,13 @@ namespace sf {
 namespace AppEvents {
     class Handler : public Signals::Trackable {
         void trackIOPanel(Simulation& simulation) {
+            track(AppSignals::UI::SaveSimulation.connect([&](std::string_view path) {
+                SimulationStateIO::save(simulation, path);
+            }));
+            track(AppSignals::UI::LoadSimulation.connect([&](std::string_view path) {
+                SimulationStateIO::load(simulation, path);
+                Tools::resetInteractionState();
+            }));
             track(AppSignals::UI::ResizeBox.connect([&](const Vec3f& newSize) {
                 simulation.sim_box.setSizeBox(newSize);
             }));
@@ -81,20 +89,6 @@ namespace AppEvents {
 
     inline void init(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView) {
         instance = new Handler(simulation, renderer, window, gameView);
-    }
-}
-
-inline void processFileDialog(Simulation& simulation) {
-    if (auto result = Interface::fileDialog.popResult()) {
-        switch (result->command) {
-            case FileDialogCommand::Save:
-                simulation.save(result->path);
-                break;
-            case FileDialogCommand::Load:
-                simulation.load(result->path);
-                Tools::resetInteractionState();
-                break;
-        }
     }
 }
 
