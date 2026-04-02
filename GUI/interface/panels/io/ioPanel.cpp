@@ -134,7 +134,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     drawAtomTypeCombo("##atom_type", atomType_, 80.f * scale, scale);
 
     if (ImGui::Button("Создать##crystal", ImVec2(buttonWidth * scale, 0.f))) {
-        pendingResult_ = IOCommand::CreateCrystal;
+        AppSignals::UI::CreateCrystal.emit();
     }
     ImGui::SameLine();
     ImGui::Checkbox("3D", &sceneIs3D_);
@@ -153,10 +153,4 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     ImGui::SliderFloat("##gas_density", &gasDensity_, 0.25f, 3.0f, "%.2f");
 
     ImGui::End();
-}
-
-std::optional<IOCommand> IOPanel::popResult() {
-    auto result = pendingResult_;
-    pendingResult_ = std::nullopt;
-    return result;
 }

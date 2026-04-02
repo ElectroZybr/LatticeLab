@@ -18,11 +18,6 @@ namespace sf {
 
 namespace AppEvents {
     class Handler : public Signals::Trackable {
-    public:
-        Handler(Simulation& simulation) {
-            trackIOPanel(simulation);
-        }
-
         void trackIOPanel(Simulation& simulation) {
             track(AppSignals::UI::ResizeBox.connect([&](const Vec3f& newSize) {
                 simulation.sim_box.setSizeBox(newSize);
@@ -42,8 +37,16 @@ namespace AppEvents {
                                   6.0,
                                   Interface::ioPanel.gasDensity());
             }));
+            track(AppSignals::UI::CreateCrystal.connect([&]() {
+                simulation.clear();
+                Tools::resetInteractionState();
+                Scenes::crystal(simulation, Interface::ioPanel.sceneAxisCount(), Interface::ioPanel.atomType(), Interface::ioPanel.sceneIs3D());
+            }));
         }
-
+    public:
+        Handler(Simulation& simulation) {
+            trackIOPanel(simulation);
+        }
     };
 
     inline Handler* instance = nullptr;
@@ -93,19 +96,6 @@ inline void processToolsPanel(std::unique_ptr<IRenderer>& renderer, sf::RenderWi
             newRenderer->speedGradientMax = renderer->speedGradientMax;
             newRenderer->setAtomStorage(&simulation.atomStorage);
             renderer = std::move(newRenderer);
-        }
-    }
-}
-
-inline void processIOPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
-    if (auto result = Interface::ioPanel.popResult()) {
-        switch (result.value()) {
-            case IOCommand::CreateCrystal: {
-                simulation.clear();
-                Scenes::crystal(simulation, Interface::ioPanel.sceneAxisCount(), Interface::ioPanel.atomType(), Interface::ioPanel.sceneIs3D());
-                Tools::resetInteractionState();
-                break;
-            }
         }
     }
 }
