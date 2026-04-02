@@ -8,7 +8,8 @@ namespace AppSignals {
     namespace UI {
         inline Signals::Signal<void(const Vec3f& newSize)> ResizeBox;
 
-        inline Signals::Signal<void()> CreateGas;
         inline Signals::Signal<void()> ClearSimulation;
+        inline Signals::Signal<void()> CreateGas;
+        inline Signals::Signal<void()> CreateCrystal;
     }
 }

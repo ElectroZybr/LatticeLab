@@ -104,7 +104,6 @@ int Application::run() {
 
             processFileDialog(simulation);
             processToolsPanel(renderer, window, gameView, simulation);
-            processIOPanel(simulation, renderer);
             processSettingsPanel(window);
 
             renderer->drawShot(simulation.atomStorage, simulation.sim_box);
