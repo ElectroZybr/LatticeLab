@@ -27,11 +27,6 @@ Simulation::Simulation(SimBox& box)
             z[i] += delta.z;
         }
     }));
-
-    track(AppSignals::UI::ClearSimulation.connect([this]() {
-        clear();
-        Tools::resetInteractionState();
-    }));
 }
 
 void Simulation::setNeighborListEnabled(bool enabled) {

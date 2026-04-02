@@ -14,7 +14,6 @@ class Simulation;
 
 enum class IOCommand : uint8_t {
     CreateCrystal,
-    CreateGas,
 };
 
 class IOPanel {

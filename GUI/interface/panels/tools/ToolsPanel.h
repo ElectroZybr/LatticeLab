@@ -9,7 +9,6 @@
 enum class ToolsCommand : uint8_t {
     ToggleRenderer2D,
     ToggleRenderer3D,
-    ClearSimulation,
     SetCameraOrbit,
     SetCameraFree,
 };

@@ -9,9 +9,48 @@
 #include "Rendering/2d/Renderer2D.h"
 #include "Rendering/3d/Renderer3D.h"
 
+#include "AppSignals.h"
+
 namespace sf {
-class RenderWindow;
-class View;
+    class RenderWindow;
+    class View;
+}
+
+namespace AppEvents {
+    class Handler : public Signals::Trackable {
+    public:
+        Handler(Simulation& simulation) {
+            trackIOPanel(simulation);
+        }
+
+        void trackIOPanel(Simulation& simulation) {
+            track(AppSignals::UI::ResizeBox.connect([&](const Vec3f& newSize) {
+                simulation.sim_box.setSizeBox(newSize);
+            }));
+            track(AppSignals::UI::ClearSimulation.connect([&]() {
+                simulation.clear();
+                Tools::resetInteractionState();
+            }));
+            track(AppSignals::UI::CreateGas.connect([&]() {
+                simulation.clear();
+                Tools::resetInteractionState();
+                Scenes::randomGas(simulation,
+                                  Interface::ioPanel.gasAtomCount(),
+                                  Interface::ioPanel.gasAtomType(),
+                                  Interface::ioPanel.gasIs3D(),
+                                  6.0,
+                                  6.0,
+                                  Interface::ioPanel.gasDensity());
+            }));
+        }
+
+    };
+
+    inline Handler* instance = nullptr;
+
+    inline void init(Simulation& simulation) {
+        instance = new Handler(simulation);
+    }
 }
 
 inline void processFileDialog(Simulation& simulation) {
@@ -39,10 +78,6 @@ inline void processToolsPanel(std::unique_ptr<IRenderer>& renderer, sf::RenderWi
             case ToolsCommand::ToggleRenderer3D:
                 newRenderer = std::make_unique<Renderer3D>(window, gameView, simulation.sim_box);
                 break;
-            case ToolsCommand::ClearSimulation:
-                simulation.clear();
-                Tools::resetInteractionState();
-                break;
             case ToolsCommand::SetCameraOrbit:
                 renderer->camera.setMode(Camera::Mode::Orbit);
                 break;
@@ -67,21 +102,7 @@ inline void processIOPanel(Simulation& simulation, std::unique_ptr<IRenderer>& r
         switch (result.value()) {
             case IOCommand::CreateCrystal: {
                 simulation.clear();
-                const Vec3f oldSize = simulation.sim_box.size;
                 Scenes::crystal(simulation, Interface::ioPanel.sceneAxisCount(), Interface::ioPanel.atomType(), Interface::ioPanel.sceneIs3D());
-                Tools::resetInteractionState();
-                break;
-            }
-            case IOCommand::CreateGas: {
-                simulation.clear();
-                const Vec3f oldSize = simulation.sim_box.size;
-                Scenes::randomGas(simulation,
-                                  Interface::ioPanel.gasAtomCount(),
-                                  Interface::ioPanel.gasAtomType(),
-                                  Interface::ioPanel.gasIs3D(),
-                                  6.0,
-                                  6.0,
-                                  Interface::ioPanel.gasDensity());
                 Tools::resetInteractionState();
                 break;
             }
