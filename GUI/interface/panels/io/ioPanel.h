@@ -13,7 +13,6 @@ class FileDialogManager;
 class Simulation;
 
 enum class IOCommand : uint8_t {
-    ClearSimulation,
     CreateCrystal,
     CreateGas,
 };

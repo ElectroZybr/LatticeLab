@@ -101,7 +101,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     }
     ImGui::SameLine();
     if (ImGui::Button("Очистить", ImVec2(saveButtonWidth * scale, 0.f))) {
-        pendingResult_ = IOCommand::ClearSimulation;
+        AppSignals::UI::ClearSimulation.emit();
     }
 
     ImGui::SeparatorText("Размер бокса");
