@@ -26,7 +26,6 @@ private:
     static float simulationSpeed;
     static double averageEnergy;
     static int sim_step;
-    static bool stepRequested;
 public:
     static bool pause;
     static int init(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r);

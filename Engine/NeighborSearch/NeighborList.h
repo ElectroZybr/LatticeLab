@@ -1,9 +1,6 @@
 ﻿#pragma once
 
-#include <cstddef>
 #include <cstdint>
-#include <span>
-#include <utility>
 #include <vector>
 
 #include "../metrics/NeighborListStats.h"
@@ -14,8 +11,6 @@ class SimBox;
 
 class NeighborList {
 public:
-    NeighborList();
-
     void setCutoff(float cutoff);
     void setSkin(float skin);
     void setParams(float cutoff, float skin);

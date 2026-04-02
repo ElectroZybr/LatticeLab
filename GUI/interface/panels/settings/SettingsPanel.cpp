@@ -1,9 +1,10 @@
 #include "SettingsPanel.h"
-#include "imgui.h"
+#include <imgui.h>
 
 #include "Engine/Simulation.h"
 #include "GUI/interface/style/ComboStyle.h"
 #include "Rendering/BaseRenderer.h"
+#include "App/AppSignals.h"
 
 namespace {
 const char* integratorName(Integrator::Scheme scheme) {
@@ -171,7 +172,7 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
 
     int cellSize = simulation.sim_box.grid.cellSize;
     if (ImGui::SliderInt("Cell size", &cellSize, 1, 32)) {
-        simulation.setSizeBox(simulation.sim_box.size, cellSize);
+        simulation.sim_box.setSizeBox(simulation.sim_box.size, cellSize);
     }
 
     if (simulation.isNeighborListEnabled()) {
@@ -193,15 +194,8 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
         ImGui::Dummy(ImVec2(0.0f, remaining));
     }
     if (ImGui::Button("Exit", ImVec2(exitButtonWidth, 0.0f))) {
-        pendingResult_ = SettingsCommand::ExitApplication;
+        AppSignals::UI::ExitApplication.emit();
     }
 
     ImGui::End();
 }
-
-std::optional<SettingsCommand> SettingsPanel::popResult() {
-    auto result = pendingResult_;
-    pendingResult_ = std::nullopt;
-    return result;
-}
-

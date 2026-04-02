@@ -7,8 +7,7 @@
 #include <cstdlib>
 
 #include <SFML/Graphics.hpp>
-
-#include "imgui-SFML.h"
+#include <imgui-SFML.h>
 
 #include "Engine/Simulation.h"
 #include "Engine/metrics/Profiler.h"
@@ -40,6 +39,7 @@ int Application::run() {
     renderer->drawBonds = true;
     renderer->speedColorMode = IRenderer::SpeedColorMode::GradientClassic;
 
+    AppActions::init(simulation, renderer, window, gameView);
     Interface::init(window, simulation, renderer);
     EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atomStorage);
     Tools::init(&window, &gameView, &box.grid, &box, renderer, &simulation.atomStorage,
@@ -72,41 +72,24 @@ int Application::run() {
         EventManager::poll();
         EventManager::frame(deltaTime);
 
-        if (!Interface::getPause()) {
-            const double physicsInterval = 1.0 / Interface::getSimulationSpeed();
-            if (physicsAccum >= physicsInterval) {
+        // обновление физики
+        const double physicsInterval = 1.0 / Interface::getSimulationSpeed();
+        if (physicsAccum >= physicsInterval) {
+            if (!Interface::getPause()) {
                 simulation.update();
                 Profiler::instance().addCount("Simulation::steps");
                 physicsAccum = 0.0;
-            }
-        } else {
-            physicsAccum = 0.0;
+            } else {
+                physicsAccum = 0.0;
+            }       
         }
 
-        // один шаг симуляции
-        if (auto cmd = Keyboard::popResult(); cmd == KeyboardCommand::StepPhysics) {
-            simulation.update();
-            Profiler::instance().addCount("Simulation::steps");
-        }
-        if (Interface::popStepRequested()) {
-            simulation.update();
-            Profiler::instance().addCount("Simulation::steps");
-        }
-
+        // отрисовка кадра
         if (renderAccum >= renderInterval) {
-            renderAccum -= renderInterval;
-
             PROFILE_SCOPE("Application::RenderFrame");
-            
+            renderAccum -= renderInterval;
             Interface::Update();
-
             refreshAtomDebugViews(debugViews, simulation);
-
-            processFileDialog(simulation);
-            processToolsPanel(renderer, window, gameView, simulation);
-            processIOPanel(simulation, renderer);
-            processSettingsPanel(window);
-
             renderer->drawShot(simulation.atomStorage, simulation.sim_box);
             Tools::pickingSystem->getOverlay().draw(window);
             ImGui::SFML::Render(window);
