@@ -85,10 +85,6 @@ inline void processIOPanel(Simulation& simulation, std::unique_ptr<IRenderer>& r
                 Tools::resetInteractionState();
                 break;
             }
-            case IOCommand::ClearSimulation:
-                simulation.clear();
-                Tools::resetInteractionState();
-                break;
         }
     }
 }

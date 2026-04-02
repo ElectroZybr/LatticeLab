@@ -7,6 +7,7 @@
 
 #include "App/AppSignals.h"
 #include "restrict.h"
+#include "App/interaction/Tools.h"
 
 Simulation::Simulation(SimBox& box)
     : sim_box(box), integrator() {
@@ -25,6 +26,11 @@ Simulation::Simulation(SimBox& box)
             y[i] += delta.y;
             z[i] += delta.z;
         }
+    }));
+
+    track(AppSignals::UI::ClearSimulation.connect([this]() {
+        clear();
+        Tools::resetInteractionState();
     }));
 }
 
