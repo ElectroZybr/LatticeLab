@@ -7,6 +7,7 @@
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/style/ComboStyle.h"
 #include "Engine/Simulation.h"
+#include "App/AppSignals.h"
 
 namespace {
 struct AtomTypeOption {
@@ -124,7 +125,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
         if(boxSize_.x < 1.f) boxSize_.x = 1.f;
         if(boxSize_.y < 1.f) boxSize_.y = 1.f;
         if(boxSize_.z < 1.f) boxSize_.z = 1.f; 
-        pendingResult_ = IOCommand::ApplyBoxSize;
+        AppSignals::UI::ResizeBox.emit(boxSize_);
     }
 
     ImGui::SeparatorText("Массивогенератор");

@@ -1,18 +1,17 @@
 ﻿#pragma once
 
-#include <cstddef>
 #include <cstdint>
-#include <span>
-#include <utility>
 #include <vector>
 
 #include "../metrics/NeighborListStats.h"
 #include "../physics/AtomStorage.h"
 #include "SpatialGrid.h"
 
+#include "Signals/Signals.h"
+
 class SimBox;
 
-class NeighborList {
+class NeighborList: Signals::Trackable {
 public:
     NeighborList();
 

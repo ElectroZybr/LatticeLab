@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <stdexcept>
 #include <vector>
 
 #include "../physics/AtomStorage.h"
@@ -12,8 +11,14 @@
 #include "../SimBox.h"
 
 #include "Engine/restrict.h"
+#include "App/AppSignals.h"
 
-NeighborList::NeighborList() = default;
+NeighborList::NeighborList()
+{
+    track(AppSignals::ResizeBox.connect([this](const Vec3f&, const Vec3f&) {
+        clear();
+    }));
+}
 
 void NeighborList::setCutoff(float cutoff) {
     cutoff_ = cutoff;
