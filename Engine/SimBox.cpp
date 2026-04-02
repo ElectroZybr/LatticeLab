@@ -3,9 +3,9 @@
 SimBox::SimBox(Vec3f size)
     : size(size),
       grid(size.x, size.y, size.z)
-    {}
+{ }
 
-bool SimBox::setSizeBox(Vec3f newSize, int cellSize) {
+bool SimBox::setSizeBox(const Vec3f& newSize, int cellSize) {
     bool resized = false;
 
     const bool sizeChanged = (newSize.x != size.x) || (newSize.y != size.y) || (newSize.z != size.z);
@@ -17,6 +17,5 @@ bool SimBox::setSizeBox(Vec3f newSize, int cellSize) {
     }
 
     size = newSize;
-
     return resized;
 }

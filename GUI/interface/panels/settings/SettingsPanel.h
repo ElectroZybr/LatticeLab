@@ -1,7 +1,5 @@
 #pragma once
-#include <cstdint>
 #include <memory>
-#include <optional>
 
 #include <imgui.h>
 #include <imgui-SFML.h>
@@ -9,10 +7,6 @@
 
 class Simulation;
 class IRenderer;
-
-enum class SettingsCommand : uint8_t {
-    ExitApplication,
-};
 
 class SettingsPanel {
 public:
@@ -26,10 +20,7 @@ public:
     void toggle() { visible = !visible; }
     void close() { visible = false; }
     bool isVisible() const { return visible; }
-    std::optional<SettingsCommand> popResult();
-
 private:
     bool  visible      = false;
     float animProgress = 0.f;
-    std::optional<SettingsCommand> pendingResult_;
 };

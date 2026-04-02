@@ -5,12 +5,13 @@
 #include "metrics/Profiler.h"
 #include "physics/Bond.h"
 
+#include "Engine/restrict.h"
+
 Simulation::Simulation(SimBox& box)
     : sim_box(box), integrator() {
     atomStorage.reserve(250000);
-    forceField.updateBoxCache(sim_box); // обновление кэша для параметров стен
-
     neighborList.setParams(5.f, 1.f); // параметры отсечки и скин для NL
+    forceField.syncWalls(sim_box);
 }
 
 void Simulation::setNeighborListEnabled(bool enabled) {
@@ -37,7 +38,8 @@ void Simulation::update() {
 void Simulation::setSizeBox(Vec3f newSize, int cellSize) {
     const bool resized = sim_box.setSizeBox(newSize, cellSize);
     if (resized) {
-        forceField.updateBoxCache(sim_box);
+        forceField.syncWalls(sim_box);
+        sim_box.grid.rebuild(atomStorage.xDataSpan(), atomStorage.yDataSpan(), atomStorage.zDataSpan());
         neighborList.clear();
     }
 }
@@ -80,9 +82,7 @@ bool Simulation::removeAtom(size_t atomIndex) {
     }
 
     atomStorage.removeAtom(atomIndex);
-
     sim_box.grid.rebuild(atomStorage.xDataSpan(), atomStorage.yDataSpan(), atomStorage.zDataSpan());
-
     return true;
 }
 
@@ -92,14 +92,6 @@ void Simulation::addBond(size_t aIndex, size_t bIndex) {
     }
 
     Bond::CreateBond(aIndex, bIndex, atomStorage);
-}
-
-void Simulation::save(std::string_view path) const {
-    SimulationStateIO::save(*this, path);
-}
-
-void Simulation::load(std::string_view path) {
-    SimulationStateIO::load(*this, path);
 }
 
 void Simulation::clear() {

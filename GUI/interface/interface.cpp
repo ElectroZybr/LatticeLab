@@ -29,7 +29,6 @@ double Interface::averageEnergy = 0.0;
 int Interface::countSelectedAtom = 0;
 bool Interface::drawToolTrip = false;
 int Interface::sim_step = 0;
-bool Interface::stepRequested = false;
 
 FontManager Interface::fontManager;
 
@@ -69,12 +68,6 @@ float Interface::getSimulationSpeed() {
     return simulationSpeed;
 }
 
-bool Interface::popStepRequested() {
-    const bool requested = stepRequested;
-    stepRequested = false;
-    return requested;
-}
-
 void Interface::setAverageEnergy(double energy) {
     averageEnergy = energy;
 }
@@ -98,7 +91,7 @@ int Interface::Update() {
     ImGui::PushFont(fontManager.main);
         toolsPanel.draw(styleManager.getScale(), *window, debugPanel, settingsPanel, ioPanel);
         periodicPanel.draw(styleManager.getScale(), window->getSize(), selectedAtom);
-        simControlPanel.draw(styleManager.getScale(), window->getSize(), pause, simulationSpeed, stepRequested);
+        simControlPanel.draw(styleManager.getScale(), window->getSize(), pause, simulationSpeed);
         sideToolsPanel.draw(styleManager.getScale(), window->getSize(), fontManager.icons, fontManager.dialog);
         statsPanel.draw(styleManager.getScale(), window->getSize());
         if (drawToolTrip) {

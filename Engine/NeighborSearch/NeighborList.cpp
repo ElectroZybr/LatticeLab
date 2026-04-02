@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <stdexcept>
 #include <vector>
 
 #include "../physics/AtomStorage.h"
@@ -12,8 +11,6 @@
 #include "../SimBox.h"
 
 #include "Engine/restrict.h"
-
-NeighborList::NeighborList() = default;
 
 void NeighborList::setCutoff(float cutoff) {
     cutoff_ = cutoff;
@@ -110,7 +107,7 @@ bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
         const float dx = x[i] - refX[i];
         const float dy = y[i] - refY[i];
         const float dz = z[i] - refZ[i];
-        rebuild |= ((dx*dx + dy*dy + dz*dz) > maxDispSqr);
+        rebuild |= ((dx * dx + dy * dy + dz * dz) > maxDispSqr);
     }
 
     return rebuild;

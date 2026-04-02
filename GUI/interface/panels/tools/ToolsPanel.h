@@ -1,17 +1,13 @@
 #pragma once
-#include <optional>
 #include <cstdint>
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
 #include "imgui.h"
 
-enum class ToolsCommand : uint8_t {
-    ToggleRenderer2D,
-    ToggleRenderer3D,
-    ClearSimulation,
-    SetCameraOrbit,
-    SetCameraFree,
+enum class RendererType : uint8_t {
+    Renderer2D,
+    Renderer3D,
 };
 
 class DebugPanel;
@@ -29,10 +25,7 @@ public:
         ImGuiWindowFlags_NoScrollbar;
 
     void draw(float scale, sf::RenderWindow& window, DebugPanel& debug, SettingsPanel& settings, IOPanel& ioPanel);
-
-    std::optional<ToolsCommand> popResult();
 private:
     bool is3D = false;
     bool isFree = false;
-    std::optional<ToolsCommand> pendingResult;
 };

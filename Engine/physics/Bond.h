@@ -6,7 +6,6 @@
 
 class AtomStorage;
 
-
 class Bond {
 private:
 public:

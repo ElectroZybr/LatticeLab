@@ -2115,7 +2115,7 @@ def interactive_menu() -> tuple[str | None, int, bool, str | None, str, str | No
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Запускалка бенчмарков для Chemical Simulator",
+        description="Запускалка бенчмарков для LATTICE engine",
     )
     parser.add_argument("--filter", metavar="REGEX", help="Фильтр бенчмарков (regex)")
     parser.add_argument("--save", action="store_true", help="Сохранить результат в results/")

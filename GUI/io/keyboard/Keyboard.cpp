@@ -1,8 +1,8 @@
 #include "Keyboard.h"
 #include "GUI/interface/interface.h"
+#include "App/AppSignals.h"
 
 std::unique_ptr<IRenderer>* Keyboard::render = nullptr;
-std::optional<KeyboardCommand> Keyboard::pendingResult = std::nullopt;
 
 void Keyboard::init(std::unique_ptr<IRenderer>& r) {
     render = &r;
@@ -16,7 +16,7 @@ void Keyboard::onEvent(const sf::Event& event) {
             Interface::pause = !Interface::pause;
         else if (e->code == sf::Keyboard::Key::Right && Interface::getPause())
         {
-            pendingResult = KeyboardCommand::StepPhysics;
+            AppSignals::Keyboard::StepPhysics.emit();
         }
     }
 }
@@ -56,10 +56,4 @@ void Keyboard::onFrame(float deltaTime) {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) rend->camera.move({-deltaSpeed, 0});
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) rend->camera.move({ deltaSpeed, 0});
     }
-}
-
-std::optional<KeyboardCommand> Keyboard::popResult() {
-    auto result = pendingResult;
-    pendingResult = std::nullopt;
-    return result;
 }

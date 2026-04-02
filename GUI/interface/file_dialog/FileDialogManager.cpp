@@ -1,6 +1,9 @@
 #include "FileDialogManager.h"
-#include "ImGuiFileDialog.h"
-#include "imgui.h"
+
+#include <ImGuiFileDialog.h>
+#include <imgui.h>
+
+#include "App/AppSignals.h"
 
 void FileDialogManager::openSave() {
     IGFD::FileDialogConfig config;
@@ -23,27 +26,15 @@ void FileDialogManager::draw(float scale) {
 
     if (ImGuiFileDialog::Instance()->Display("SaveDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
-            pendingResult = InterfaceCommand{
-                FileDialogCommand::Save,
-                ImGuiFileDialog::Instance()->GetFilePathName()
-            };
+            AppSignals::UI::SaveSimulation.emit(ImGuiFileDialog::Instance()->GetFilePathName());
         }
         ImGuiFileDialog::Instance()->Close();
     }
 
     if (ImGuiFileDialog::Instance()->Display("LoadDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
-            pendingResult = InterfaceCommand{
-                FileDialogCommand::Load,
-                ImGuiFileDialog::Instance()->GetFilePathName()
-            };
+            AppSignals::UI::LoadSimulation.emit(ImGuiFileDialog::Instance()->GetFilePathName());
         }
         ImGuiFileDialog::Instance()->Close();
     }
-}
-
-std::optional<InterfaceCommand> FileDialogManager::popResult() {
-    auto result = pendingResult;
-    pendingResult = std::nullopt;
-    return result;
 }

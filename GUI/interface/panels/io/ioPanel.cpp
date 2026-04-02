@@ -7,6 +7,7 @@
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/style/ComboStyle.h"
 #include "Engine/Simulation.h"
+#include "App/AppSignals.h"
 
 namespace {
 struct AtomTypeOption {
@@ -15,7 +16,7 @@ struct AtomTypeOption {
 };
 
 constexpr std::array<AtomTypeOption, 19> kAtomTypeOptions{{
-    {"Zero", AtomData::Type::Z},
+    {"Zerin", AtomData::Type::Z},
     {"H", AtomData::Type::H},
     {"He", AtomData::Type::He},
     {"Li", AtomData::Type::Li},
@@ -100,7 +101,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     }
     ImGui::SameLine();
     if (ImGui::Button("Очистить", ImVec2(saveButtonWidth * scale, 0.f))) {
-        pendingResult_ = IOCommand::ClearSimulation;
+        AppSignals::UI::ClearSimulation.emit();
     }
 
     ImGui::SeparatorText("Размер бокса");
@@ -124,7 +125,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
         if(boxSize_.x < 1.f) boxSize_.x = 1.f;
         if(boxSize_.y < 1.f) boxSize_.y = 1.f;
         if(boxSize_.z < 1.f) boxSize_.z = 1.f; 
-        pendingResult_ = IOCommand::ApplyBoxSize;
+        AppSignals::UI::ResizeBox.emit(boxSize_);
     }
 
     ImGui::SeparatorText("Массивогенератор");
@@ -133,7 +134,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     drawAtomTypeCombo("##atom_type", atomType_, 80.f * scale, scale);
 
     if (ImGui::Button("Создать##crystal", ImVec2(buttonWidth * scale, 0.f))) {
-        pendingResult_ = IOCommand::CreateCrystal;
+        AppSignals::UI::CreateCrystal.emit();
     }
     ImGui::SameLine();
     ImGui::Checkbox("3D", &sceneIs3D_);
@@ -143,7 +144,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     ImGui::SameLine();
     drawAtomTypeCombo("##atom_type_gas", gasAtomType_, 80.f * scale, scale);
     if (ImGui::Button("Создать##gas", ImVec2(buttonWidth * scale, 0.f))) {
-        pendingResult_ = IOCommand::CreateGas;
+        AppSignals::UI::CreateGas.emit();
     }
     ImGui::SameLine();
     ImGui::Checkbox("3D##gas", &gasIs3D_);
@@ -152,10 +153,4 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     ImGui::SliderFloat("##gas_density", &gasDensity_, 0.25f, 3.0f, "%.2f");
 
     ImGui::End();
-}
-
-std::optional<IOCommand> IOPanel::popResult() {
-    auto result = pendingResult_;
-    pendingResult_ = std::nullopt;
-    return result;
 }

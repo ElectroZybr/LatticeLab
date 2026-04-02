@@ -5,6 +5,9 @@
 #include "GUI/interface/panels/debug/DebugPanel.h"
 #include "GUI/interface/panels/io/ioPanel.h"
 #include "GUI/interface/panels/settings/SettingsPanel.h"
+#include "Rendering/camera/Camera.h"
+
+#include "App/AppSignals.h"
 
 #define ICON_FA_FLASK       "\uf0c3"
 #define ICON_FA_COG         "\uf013"
@@ -87,22 +90,20 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, 
     {
         is3D = !is3D;
         if (!is3D) isFree = false;
-        pendingResult = is3D ? ToolsCommand::ToggleRenderer3D : ToolsCommand::ToggleRenderer2D;
+        AppSignals::UI::SetRender.emit(
+            is3D ? RendererType::Renderer3D : RendererType::Renderer2D
+        );
     }
     if (is3D) {
         ImGui::SameLine();
         if (ImGui::Button(isFree ? ICON_FA_STREET_VIEW : ICON_FA_SYNC_ALT, ImVec2(buttonSize, buttonSize))) {
             isFree = !isFree;
-            pendingResult = isFree ? ToolsCommand::SetCameraFree : ToolsCommand::SetCameraOrbit;
+            AppSignals::UI::SetCameraMode.emit(
+                isFree ? Camera::Mode::Free : Camera::Mode::Orbit
+            );
         }
     }
 
     ImGui::End();
     ImGui::PopStyleVar(2);
-}
-
-std::optional<ToolsCommand> ToolsPanel::popResult() {
-    auto result = pendingResult;
-    pendingResult = std::nullopt;
-    return result;
 }
