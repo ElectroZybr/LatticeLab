@@ -65,6 +65,10 @@ namespace AppEvents {
                     renderer = std::move(newRenderer);
                 }
             }));
+
+            track(AppSignals::UI::SetCameraMode.connect([&](Camera::Mode mode) {
+                renderer->camera.setMode(mode);
+            }));
         }
     public:
         Handler(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView) {
@@ -89,20 +93,6 @@ inline void processFileDialog(Simulation& simulation) {
             case FileDialogCommand::Load:
                 simulation.load(result->path);
                 Tools::resetInteractionState();
-                break;
-        }
-    }
-}
-
-inline void processToolsPanel(std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window,
-                              sf::View& gameView) {
-    if (auto result = Interface::toolsPanel.popResult()) {
-        switch (result.value()) {
-            case ToolsCommand::SetCameraOrbit:
-                renderer->camera.setMode(Camera::Mode::Orbit);
-                break;
-            case ToolsCommand::SetCameraFree:
-                renderer->camera.setMode(Camera::Mode::Free);
                 break;
         }
     }

@@ -5,6 +5,7 @@
 #include "GUI/interface/panels/debug/DebugPanel.h"
 #include "GUI/interface/panels/io/ioPanel.h"
 #include "GUI/interface/panels/settings/SettingsPanel.h"
+#include "Rendering/camera/Camera.h"
 
 #include "App/AppSignals.h"
 
@@ -97,16 +98,12 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, 
         ImGui::SameLine();
         if (ImGui::Button(isFree ? ICON_FA_STREET_VIEW : ICON_FA_SYNC_ALT, ImVec2(buttonSize, buttonSize))) {
             isFree = !isFree;
-            pendingResult = isFree ? ToolsCommand::SetCameraFree : ToolsCommand::SetCameraOrbit;
+            AppSignals::UI::SetCameraMode.emit(
+                isFree ? Camera::Mode::Free : Camera::Mode::Orbit
+            );
         }
     }
 
     ImGui::End();
     ImGui::PopStyleVar(2);
-}
-
-std::optional<ToolsCommand> ToolsPanel::popResult() {
-    auto result = pendingResult;
-    pendingResult = std::nullopt;
-    return result;
 }

@@ -1,5 +1,4 @@
 #pragma once
-#include <optional>
 #include <cstdint>
 
 #include <SFML/Graphics.hpp>
@@ -9,11 +8,6 @@
 enum class RendererType : uint8_t {
     Renderer2D,
     Renderer3D,
-};
-
-enum class ToolsCommand : uint8_t {
-    SetCameraOrbit,
-    SetCameraFree,
 };
 
 class DebugPanel;
@@ -31,10 +25,7 @@ public:
         ImGuiWindowFlags_NoScrollbar;
 
     void draw(float scale, sf::RenderWindow& window, DebugPanel& debug, SettingsPanel& settings, IOPanel& ioPanel);
-
-    std::optional<ToolsCommand> popResult();
 private:
     bool is3D = false;
     bool isFree = false;
-    std::optional<ToolsCommand> pendingResult;
 };

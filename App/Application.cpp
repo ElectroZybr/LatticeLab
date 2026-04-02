@@ -103,7 +103,6 @@ int Application::run() {
             refreshAtomDebugViews(debugViews, simulation);
 
             processFileDialog(simulation);
-            processToolsPanel(renderer, window, gameView);
             processSettingsPanel(window);
 
             renderer->drawShot(simulation.atomStorage, simulation.sim_box);
