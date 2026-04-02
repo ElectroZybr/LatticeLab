@@ -84,10 +84,6 @@ int Application::run() {
         }
 
         // один шаг симуляции
-        if (auto cmd = Keyboard::popResult(); cmd == KeyboardCommand::StepPhysics) {
-            simulation.update();
-            Profiler::instance().addCount("Simulation::steps");
-        }
         if (Interface::popStepRequested()) {
             simulation.update();
             Profiler::instance().addCount("Simulation::steps");

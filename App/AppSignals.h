@@ -24,4 +24,8 @@ namespace AppSignals {
 
         inline Signals::Signal<void()> ExitApplication;
     }
+
+    namespace Keyboard {
+        inline Signals::Signal<void()> StepPhysics;
+    }
 }

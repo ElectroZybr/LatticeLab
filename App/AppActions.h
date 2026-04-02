@@ -9,6 +9,7 @@
 #include "Rendering/2d/Renderer2D.h"
 #include "Rendering/3d/Renderer3D.h"
 #include "Engine/io/SimulationStateIO.h"
+#include "Engine/metrics/Profiler.h"
 
 #include "AppSignals.h"
 
@@ -82,11 +83,19 @@ namespace AppActions {
         void trackSettingsPanel(sf::Window& window) {
             track(AppSignals::UI::ExitApplication.connect(&sf::Window::close, &window));
         }
+
+        void trackKeyboard(Simulation& simulation) {
+            track(AppSignals::Keyboard::StepPhysics.connect([&]() {
+                simulation.update();
+                Profiler::instance().addCount("Simulation::steps");
+            }));
+        }
     public:
         Handler(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView) {
             trackIOPanel(simulation);
             trackToolsPanel(simulation, renderer, window, gameView);
             trackSettingsPanel(window);
+            trackKeyboard(simulation);
         }
     };
 
