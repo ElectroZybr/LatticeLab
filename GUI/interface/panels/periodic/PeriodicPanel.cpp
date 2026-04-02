@@ -1,7 +1,7 @@
 #include "PeriodicPanel.h"
 
 static const char* KEYS[] = {
-    "H",  "##1",  "##2",  "##3",  "##4",  "##5",  "##6",  "He",
+    "H",  "Ze",  "##2",  "##3",  "##4",  "##5",  "##6",  "He",
     "Li", "Be", "B",  "C",  "N",  "O",  "F",  "Ne",
     "Na", "Mg", "Al", "Si", "P",  "S",  "Cl", "Ar"
 };
@@ -10,7 +10,7 @@ static const ImVec4 ACTIVE_COLOR = ImVec4(0.06f, 0.53f, 0.98f, 1.00f);
 
 int PeriodicPanel::decodeAtom(int index) {
     static int decode[] = {
-         1, -1, -1, -1, -1, -1, -1,  2,
+         1,  0, -1, -1, -1, -1, -1,  2,
          3,  4,  5,  6,  7,  8,  9, 10,
         11, 12, 13, 14, 15, 16, 17, 18
     };

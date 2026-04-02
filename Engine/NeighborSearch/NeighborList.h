@@ -7,14 +7,10 @@
 #include "../physics/AtomStorage.h"
 #include "SpatialGrid.h"
 
-#include "Signals/Signals.h"
-
 class SimBox;
 
-class NeighborList: Signals::Trackable {
+class NeighborList {
 public:
-    NeighborList();
-
     void setCutoff(float cutoff);
     void setSkin(float skin);
     void setParams(float cutoff, float skin);

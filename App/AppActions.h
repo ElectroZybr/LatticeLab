@@ -19,8 +19,31 @@ namespace sf {
 }
 
 namespace AppActions {
+    inline void shiftAtoms(AtomStorage& atomStorage, Vec3f delta) {
+        float* x = atomStorage.xData();
+        float* y = atomStorage.yData();
+        float* z = atomStorage.zData();
+        const size_t atomCount = atomStorage.size();
+
+        for (size_t i = 0; i < atomCount; ++i) {
+            x[i] += delta.x;
+            y[i] += delta.y;
+            z[i] += delta.z;
+        }
+    }
+
+    inline void applyResizeBox(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, const Vec3f& newSize) {
+        const Vec3f oldSize = simulation.sim_box.size;
+        const Vec3f delta = (newSize - oldSize) * 0.5f;
+
+        shiftAtoms(simulation.atomStorage, delta);
+        renderer->camera.move({delta.x, delta.y});
+        renderer->camera.move3D(delta);
+        simulation.setSizeBox(newSize);
+    }
+
     class Handler : public Signals::Trackable {
-        void trackIOPanel(Simulation& simulation) {
+        void trackIOPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
             track(AppSignals::UI::SaveSimulation.connect([&](std::string_view path) {
                 SimulationStateIO::save(simulation, path);
             }));
@@ -29,7 +52,7 @@ namespace AppActions {
                 Tools::resetInteractionState();
             }));
             track(AppSignals::UI::ResizeBox.connect([&](const Vec3f& newSize) {
-                simulation.sim_box.setSizeBox(newSize);
+                applyResizeBox(simulation, renderer, newSize);
             }));
             track(AppSignals::UI::ClearSimulation.connect([&]() {
                 simulation.clear();
@@ -99,7 +122,7 @@ namespace AppActions {
         }
     public:
         Handler(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView) {
-            trackIOPanel(simulation);
+            trackIOPanel(simulation, renderer);
             trackToolsPanel(simulation, renderer, window, gameView);
             trackSettingsPanel(window);
             trackSimControlPanel(simulation);

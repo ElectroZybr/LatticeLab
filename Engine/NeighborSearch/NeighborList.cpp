@@ -11,14 +11,6 @@
 #include "../SimBox.h"
 
 #include "Engine/restrict.h"
-#include "App/AppSignals.h"
-
-NeighborList::NeighborList()
-{
-    track(AppSignals::ResizeBox.connect([this](const Vec3f&, const Vec3f&) {
-        clear();
-    }));
-}
 
 void NeighborList::setCutoff(float cutoff) {
     cutoff_ = cutoff;
@@ -115,7 +107,7 @@ bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
         const float dx = x[i] - refX[i];
         const float dy = y[i] - refY[i];
         const float dz = z[i] - refZ[i];
-        rebuild |= ((dx*dx + dy*dy + dz*dz) > maxDispSqr);
+        rebuild |= ((dx * dx + dy * dy + dz * dz) > maxDispSqr);
     }
 
     return rebuild;

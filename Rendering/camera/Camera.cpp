@@ -6,19 +6,11 @@
 
 #include "Camera.h"
 
-#include "App/AppSignals.h"
-
 Camera::Camera(sf::View* view, SimBox& simBox, float moveSpeed, float zoomSpeed) 
     : view(view), simBox(simBox), 
     moveSpeed(moveSpeed), zoomSpeed(zoomSpeed),
     isDragging(false), lastMousePos(0, 0)
-{
-    track(AppSignals::ResizeBox.connect([this](const Vec3f& oldSize, const Vec3f& newSize) {
-        const Vec3f delta = (newSize - oldSize) * 0.5f;
-        move3D(delta);
-        move({delta.x, delta.y});
-    }));
-}
+{}
 
 void Camera::update(sf::RenderTarget& target) {
     screenSize = sf::Vector2f(target.getSize());
@@ -126,7 +118,6 @@ glm::mat4 Camera::getViewMatrix() const {
     Vec3f center = simBox.size / 2.f;
     glm::vec3 eye = getEyePosition();
     return glm::lookAt(eye, glm::vec3(center.x, center.y, center.z), glm::vec3(0.f, 1.f, 0.f));
-
 }
 
 glm::mat4 Camera::getProjectionMatrix() const {
@@ -139,22 +130,21 @@ glm::mat4 Camera::getProjectionMatrix() const {
     );
 }
 
-Ray Camera::screenToRay(float screenX, float screenY) const
-{
-    const float ndcX = (screenX / screenSize.x)  * 2.f - 1.f; 
+Ray Camera::screenToRay(float screenX, float screenY) const {
+    const float ndcX = (screenX / screenSize.x) * 2.f - 1.f;
     const float ndcY = 1.f - (screenY / screenSize.y) * 2.f;
- 
+
     const glm::vec4 rayClip(ndcX, ndcY, -1.f, 1.f);
- 
+
     glm::vec4 rayEye = glm::inverse(getProjectionMatrix()) * rayClip;
     rayEye = glm::vec4(rayEye.x / rayEye.w, rayEye.y / rayEye.w, -1.f, 0.f);
- 
+
     const glm::vec3 rayDirGLM = glm::normalize(
         glm::vec3(glm::inverse(getViewMatrix()) * rayEye)
     );
 
     const glm::vec3 eye = getEyePosition();
- 
+
     return Ray(
         Vec3f(eye.x, eye.y, eye.z),
         Vec3f(rayDirGLM.x, rayDirGLM.y, rayDirGLM.z)

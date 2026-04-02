@@ -48,7 +48,7 @@ namespace detail {
 void crystal(Simulation& sim, int n, AtomData::Type type, bool is3d, double padding, double margin) {
     const double side = n * padding + padding + 2.0 * margin;
 
-    sim.sim_box.setSizeBox(
+    sim.setSizeBox(
         Vec3f(side, side, is3d ? side : sim.sim_box.size.z)
     );
 
@@ -194,7 +194,7 @@ void randomGas(Simulation& sim,
 
     const double span = sideCount * effectiveSpacing + 2.0 * margin;
 
-    sim.sim_box.setSizeBox(
+    sim.setSizeBox(
         Vec3f(span, span, is3d ? span : 6)
     );
 

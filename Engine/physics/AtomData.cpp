@@ -2,7 +2,7 @@
 
 /* Atom data table */
 const std::array<StaticAtomicData, static_cast<size_t>(AtomData::Type::COUNT)> AtomData::properties = {{
-    {1.0000f, 0.5f, 1, 0.0f, sf::Color(255, 255, 255, 255), 2.00f, 15.0f}, // Z  - Custom placeholder atom
+    {1.0000f, 0.5f, 1, 0.0f, sf::Color(255, 255, 255, 255), 2.00f, 15.0f}, // Ze - Zerin
 
     {1.0080f, 0.5f, 1, 0.0f, sf::Color(255, 255, 255, 255), 2.40f, 0.03f}, // H  - Hydrogen
     {4.0026f, 0.5f, 0, 0.0f, sf::Color(217, 255, 255, 255), 2.60f, 0.02f}, // He - Helium

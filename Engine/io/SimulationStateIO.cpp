@@ -78,7 +78,7 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
         }
     }
 
-    simulation.sim_box.setSizeBox(boxSize, cellSize);
+    simulation.setSizeBox(boxSize, cellSize);
 
     for (const LoadedAtomData& data : buffer) {
         simulation.createAtom(data.coords, data.speed, static_cast<AtomData::Type>(data.type), data.fixed);

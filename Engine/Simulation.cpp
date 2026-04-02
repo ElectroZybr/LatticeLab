@@ -5,28 +5,13 @@
 #include "metrics/Profiler.h"
 #include "physics/Bond.h"
 
-#include "App/AppSignals.h"
 #include "Engine/restrict.h"
-#include "App/interaction/Tools.h"
 
 Simulation::Simulation(SimBox& box)
     : sim_box(box), integrator() {
     atomStorage.reserve(250000);
-
     neighborList.setParams(5.f, 1.f); // параметры отсечки и скин для NL
-
-    track(AppSignals::ResizeBox.connect([this](const Vec3f& oldSize, const Vec3f& newSize) {
-        const Vec3f delta = (newSize - oldSize) * 0.5f;
-        float* RESTRICT x = atomStorage.xData();
-        float* RESTRICT y = atomStorage.yData();
-        float* RESTRICT z = atomStorage.zData();
-        const size_t size = atomStorage.size();
-        for (size_t i = 0; i < size; ++i) {
-            x[i] += delta.x;
-            y[i] += delta.y;
-            z[i] += delta.z;
-        }
-    }));
+    forceField.syncWalls(sim_box);
 }
 
 void Simulation::setNeighborListEnabled(bool enabled) {
@@ -53,6 +38,7 @@ void Simulation::update() {
 void Simulation::setSizeBox(Vec3f newSize, int cellSize) {
     const bool resized = sim_box.setSizeBox(newSize, cellSize);
     if (resized) {
+        forceField.syncWalls(sim_box);
         sim_box.grid.rebuild(atomStorage.xDataSpan(), atomStorage.yDataSpan(), atomStorage.zDataSpan());
         neighborList.clear();
     }
@@ -96,9 +82,7 @@ bool Simulation::removeAtom(size_t atomIndex) {
     }
 
     atomStorage.removeAtom(atomIndex);
-
     sim_box.grid.rebuild(atomStorage.xDataSpan(), atomStorage.yDataSpan(), atomStorage.zDataSpan());
-
     return true;
 }
 
