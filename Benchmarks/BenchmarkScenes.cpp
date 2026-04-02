@@ -43,7 +43,7 @@ namespace Benchmarks {
     }
 
     void BenchmarkScenes::buildRandomGas2D(Simulation& simulation, const BenchmarkCase& benchmarkCase) {
-        simulation.setSizeBox(benchmarkCase.boxSize, benchmarkCase.cellSize);
+        simulation.sim_box.setSizeBox(benchmarkCase.boxSize, benchmarkCase.cellSize);
         Scenes::randomGasInCurrentBox(simulation, benchmarkCase.atomCount, AtomData::Type::H, false);
     }
 }
