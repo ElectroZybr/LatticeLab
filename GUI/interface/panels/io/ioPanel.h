@@ -14,7 +14,6 @@ class Simulation;
 
 enum class IOCommand : uint8_t {
     ClearSimulation,
-    ApplyBoxSize,
     CreateCrystal,
     CreateGas,
 };

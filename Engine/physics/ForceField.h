@@ -3,19 +3,20 @@
 #include <array>
 #include <cstddef>
 
-#include "../math/Vec3f.h"
+#include "Engine/math/Vec3f.h"
 #include "AtomData.h"
 #include "AtomStorage.h"
+
+#include "Signals/Signals.h"
 
 class SimBox;
 class NeighborList;
 
-class ForceField {
+class ForceField: Signals::Trackable {
 public:
     ForceField();
 
     void compute(AtomStorage& atoms, SimBox& box, NeighborList* neighborList, float dt) const;
-    void updateBoxCache(const SimBox& box);
 
     void setGravity(Vec3f gravity = Vec3f(0, 5, 0)) { static_force = gravity; }
     Vec3f getGravity() const { return static_force; }
@@ -34,7 +35,7 @@ private:
 
     static LJPairTable buildLJPairTable();
 
-    static void applyWall(float coord, float& force, float min, float max);
+    static void applyWall(float coord, float& force, float max);
     void softWalls(const AtomStorage& atoms, float coordX, float coordY, float coordZ, float& forceX, float& forceY, float& forceZ) const;
     template<bool UseNeighborList>
     void ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* neighborList) const;
@@ -43,9 +44,6 @@ private:
 
     Vec3f static_force;
     LJPairTable ljPairTable;
-    float wallMinX = 0.0f;
-    float wallMinY = 0.0f;
-    float wallMinZ = 0.0f;
     float wallMaxX = 0.0f;
     float wallMaxY = 0.0f;
     float wallMaxZ = 0.0f;

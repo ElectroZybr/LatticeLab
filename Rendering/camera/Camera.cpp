@@ -6,10 +6,19 @@
 
 #include "Camera.h"
 
+#include "App/AppSignals.h"
+
 Camera::Camera(sf::View* view, SimBox& simBox, float moveSpeed, float zoomSpeed) 
     : view(view), simBox(simBox), 
     moveSpeed(moveSpeed), zoomSpeed(zoomSpeed),
-    isDragging(false), lastMousePos(0, 0) { }
+    isDragging(false), lastMousePos(0, 0)
+{
+    track(AppSignals::ResizeBox.connect([this](const Vec3f& oldSize, const Vec3f& newSize) {
+        const Vec3f delta = (newSize - oldSize) * 0.5f;
+        move3D(delta);
+        move({delta.x, delta.y});
+    }));
+}
 
 void Camera::update(sf::RenderTarget& target) {
     screenSize = sf::Vector2f(target.getSize());

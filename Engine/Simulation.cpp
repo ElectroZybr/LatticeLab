@@ -5,12 +5,27 @@
 #include "metrics/Profiler.h"
 #include "physics/Bond.h"
 
+#include "App/AppSignals.h"
+#include "restrict.h"
+
 Simulation::Simulation(SimBox& box)
     : sim_box(box), integrator() {
     atomStorage.reserve(250000);
-    forceField.updateBoxCache(sim_box); // обновление кэша для параметров стен
 
     neighborList.setParams(5.f, 1.f); // параметры отсечки и скин для NL
+
+    track(AppSignals::ResizeBox.connect([this](const Vec3f& oldSize, const Vec3f& newSize) {
+        const Vec3f delta = (newSize - oldSize) * 0.5f;
+        float* RESTRICT x = atomStorage.xData();
+        float* RESTRICT y = atomStorage.yData();
+        float* RESTRICT z = atomStorage.zData();
+        const size_t size = atomStorage.size();
+        for (size_t i = 0; i < size; ++i) {
+            x[i] += delta.x;
+            y[i] += delta.y;
+            z[i] += delta.z;
+        }
+    }));
 }
 
 void Simulation::setNeighborListEnabled(bool enabled) {
@@ -32,14 +47,6 @@ void Simulation::update() {
         neighborList.recordRebuild(sim_step);
     }
     ++sim_step;
-}
-
-void Simulation::setSizeBox(Vec3f newSize, int cellSize) {
-    const bool resized = sim_box.setSizeBox(newSize, cellSize);
-    if (resized) {
-        forceField.updateBoxCache(sim_box);
-        neighborList.clear();
-    }
 }
 
 bool Simulation::createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Type type, bool fixed) {

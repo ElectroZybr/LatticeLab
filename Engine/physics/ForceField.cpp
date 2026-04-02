@@ -7,21 +7,19 @@
 
 #include "AtomData.h"
 #include "Bond.h"
-#include "../metrics/Profiler.h"
-#include "../SimBox.h"
-#include "../math/Consts.h"
-#include "../NeighborSearch/NeighborList.h"
+#include "Engine/metrics/Profiler.h"
+#include "Engine/SimBox.h"
+#include "Engine/math/Consts.h"
+#include "Engine/NeighborSearch/NeighborList.h"
 
-ForceField::ForceField() : ljPairTable(buildLJPairTable()) {}
+#include "App/AppSignals.h"
 
-void ForceField::updateBoxCache(const SimBox& box) {
-    /* кеш границ стен */
-    wallMinX = 0.0f;
-    wallMinY = 0.0f;
-    wallMinZ = 0.0f;
-    wallMaxX = static_cast<float>(box.size.x - 1.0);
-    wallMaxY = static_cast<float>(box.size.y - 1.0);
-    wallMaxZ = static_cast<float>(box.size.z - 1.0);
+ForceField::ForceField() : ljPairTable(buildLJPairTable()) {
+    track(AppSignals::ResizeBox.connect([this](const auto& oldSize, const auto& newSize) {
+        wallMaxX = static_cast<float>(newSize.x - 1.0);
+        wallMaxY = static_cast<float>(newSize.y - 1.0);
+        wallMaxZ = static_cast<float>(newSize.z - 1.0);
+    }));
 }
 
 ForceField::LJPairTable ForceField::buildLJPairTable() {
@@ -121,25 +119,26 @@ void ForceField::compute(AtomStorage& atoms, SimBox& box, NeighborList* neighbor
 }
 
 void ForceField::softWalls(const AtomStorage& atoms, float coordX, float coordY, float coordZ, float& forceX, float& forceY, float& forceZ) const {
-    applyWall(coordX, forceX, wallMinX, wallMaxX);
-    applyWall(coordY, forceY, wallMinY, wallMaxY);
-    applyWall(coordZ, forceZ, wallMinZ, wallMaxZ);
+    applyWall(coordX, forceX, wallMaxX);
+    applyWall(coordY, forceY, wallMaxY);
+    applyWall(coordZ, forceZ, wallMaxZ);
 }
 
-void ForceField::applyWall(float coord, float& force, float min, float max) {
+void ForceField::applyWall(float coord, float& force, float max) {
     constexpr float k = 500.0f;
     constexpr float border = 2.0f;
 
-    if (coord <= min || coord >= max) {
+    if (coord <= 0 || coord >= max) {
         return;
     }
 
-    if (coord < min + border) {
-        const float penetration = (min + border) - coord;
+    if (coord < border) {
+        const float penetration = border - coord;
         const float p2 = penetration * penetration;
         const float p4 = p2 * p2;
         force += k * p4 * p2;
-    } else if (coord > max - border) {
+    }
+    else if (coord > max - border) {
         const float penetration = coord - (max - border);
         const float p2 = penetration * penetration;
         const float p4 = p2 * p2;

@@ -9,13 +9,11 @@
 #include "physics/ForceField.h"
 #include "NeighborSearch/NeighborList.h"
 
-class Simulation {
+class Simulation: Signals::Trackable {
 public:
     Simulation(SimBox& sim_box);
 
     void update();
-
-    void setSizeBox(Vec3f newSize, int cellSize = -1);
 
     bool createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Type type, bool fixed = false);
     bool removeAtom(size_t atomIndex);

@@ -7,8 +7,7 @@
 #include <cstdlib>
 
 #include <SFML/Graphics.hpp>
-
-#include "imgui-SFML.h"
+#include <imgui-SFML.h>
 
 #include "Engine/Simulation.h"
 #include "Engine/metrics/Profiler.h"
