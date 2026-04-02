@@ -5,13 +5,11 @@
 
 #include "Engine/math/Ray.h"
 
-#include "Signals/Signals.h"
-
 class SimBox;
 class Renderer2D;
 class Renderer3D;
 
-class Camera: Signals::Trackable {
+class Camera {
     friend class Mouse;
     friend class Keyboard;
 

@@ -9,7 +9,7 @@
 #include "physics/ForceField.h"
 #include "NeighborSearch/NeighborList.h"
 
-class Simulation: Signals::Trackable {
+class Simulation {
 public:
     Simulation(SimBox& sim_box);
 

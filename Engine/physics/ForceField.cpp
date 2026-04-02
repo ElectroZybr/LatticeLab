@@ -8,18 +8,15 @@
 #include "AtomData.h"
 #include "Bond.h"
 #include "Engine/metrics/Profiler.h"
-#include "Engine/SimBox.h"
 #include "Engine/math/Consts.h"
 #include "Engine/NeighborSearch/NeighborList.h"
 
-#include "App/AppSignals.h"
+ForceField::ForceField() : ljPairTable(buildLJPairTable()) {}
 
-ForceField::ForceField() : ljPairTable(buildLJPairTable()) {
-    track(AppSignals::ResizeBox.connect([this](const auto& oldSize, const auto& newSize) {
-        wallMaxX = static_cast<float>(newSize.x - 1.0);
-        wallMaxY = static_cast<float>(newSize.y - 1.0);
-        wallMaxZ = static_cast<float>(newSize.z - 1.0);
-    }));
+void ForceField::syncWalls(const SimBox& box) {
+    wallMaxX = static_cast<float>(box.size.x - 1.0f);
+    wallMaxY = static_cast<float>(box.size.y - 1.0f);
+    wallMaxZ = static_cast<float>(box.size.z - 1.0f);
 }
 
 ForceField::LJPairTable ForceField::buildLJPairTable() {

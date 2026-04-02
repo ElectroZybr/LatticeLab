@@ -3,20 +3,18 @@
 #include <array>
 #include <cstddef>
 
+#include "Engine/SimBox.h"
 #include "Engine/math/Vec3f.h"
 #include "AtomData.h"
 #include "AtomStorage.h"
-
-#include "Signals/Signals.h"
-
-class SimBox;
 class NeighborList;
 
-class ForceField: Signals::Trackable {
+class ForceField {
 public:
     ForceField();
 
     void compute(AtomStorage& atoms, SimBox& box, NeighborList* neighborList, float dt) const;
+    void syncWalls(const SimBox& box);
 
     void setGravity(Vec3f gravity = Vec3f(0, 5, 0)) { static_force = gravity; }
     Vec3f getGravity() const { return static_force; }

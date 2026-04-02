@@ -1,5 +1,4 @@
 #include "SimBox.h"
-#include "App/AppSignals.h"
 
 SimBox::SimBox(Vec3f size)
     : size(size),
@@ -17,8 +16,6 @@ bool SimBox::setSizeBox(const Vec3f& newSize, int cellSize) {
         resized = true;
     }
 
-    AppSignals::ResizeBox.emit(size, newSize);
     size = newSize;
-
     return resized;
 }
