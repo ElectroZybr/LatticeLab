@@ -1,5 +1,7 @@
 #include "SimControlPanel.h"
 #include "Engine/metrics/Profiler.h"
+#include "App/AppSignals.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -37,7 +39,7 @@ static float sliderToSpeed(float slider) {
 }
 
 void SimControlPanel::draw(float scale, sf::Vector2u windowSize,
-                           bool& pause, float& simulationSpeed, bool& stepRequested)
+                           bool& pause, float& simulationSpeed)
 {
     ImGui::SetNextWindowPos(ImVec2(windowSize.x - 122*scale, 0));
     ImGui::SetNextWindowSize(ImVec2(122*scale, 111*scale));
@@ -50,7 +52,7 @@ void SimControlPanel::draw(float scale, sf::Vector2u windowSize,
     }
     ImGui::BeginDisabled(!pause);
     if (ImGui::Button(ICON_FA_STEP_FORWARD, ImVec2(50*scale, 50*scale))) {
-        stepRequested = true;
+        AppSignals::UI::StepPhysics.emit();
     }
     ImGui::EndDisabled();
     if (!pause) ImGui::PopStyleColor(3);
