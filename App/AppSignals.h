@@ -1,3 +1,5 @@
+#include <string_view>
+
 #include "Signals/Signals.h"
 #include "Engine/math/Vec3f.h"
 
@@ -16,6 +18,8 @@ namespace AppSignals {
 
         inline Signals::Signal<void(RendererType type)> SetRender;
         inline Signals::Signal<void(Camera::Mode mode)> SetCameraMode;
-        
+
+        inline Signals::Signal<void(std::string_view path)> SaveSimulation;
+        inline Signals::Signal<void(std::string_view path)> LoadSimulation;
     }
 }
