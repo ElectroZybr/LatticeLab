@@ -6,6 +6,8 @@
 #include "GUI/interface/panels/io/ioPanel.h"
 #include "GUI/interface/panels/settings/SettingsPanel.h"
 
+#include "App/AppSignals.h"
+
 #define ICON_FA_FLASK       "\uf0c3"
 #define ICON_FA_COG         "\uf013"
 #define ICON_FA_BUG         "\uf188"
@@ -87,7 +89,9 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, 
     {
         is3D = !is3D;
         if (!is3D) isFree = false;
-        pendingResult = is3D ? ToolsCommand::ToggleRenderer3D : ToolsCommand::ToggleRenderer2D;
+        AppSignals::UI::SetRender.emit(
+            is3D ? RendererType::Renderer3D : RendererType::Renderer2D
+        );
     }
     if (is3D) {
         ImGui::SameLine();
