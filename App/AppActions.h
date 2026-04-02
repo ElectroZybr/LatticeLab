@@ -17,7 +17,7 @@ namespace sf {
     class View;
 }
 
-namespace AppEvents {
+namespace AppActions {
     class Handler : public Signals::Trackable {
         void trackIOPanel(Simulation& simulation) {
             track(AppSignals::UI::SaveSimulation.connect([&](std::string_view path) {
@@ -78,10 +78,15 @@ namespace AppEvents {
                 renderer->camera.setMode(mode);
             }));
         }
+
+        void trackSettingsPanel(sf::Window& window) {
+            track(AppSignals::UI::ExitApplication.connect(&sf::Window::close, &window));
+        }
     public:
         Handler(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView) {
             trackIOPanel(simulation);
             trackToolsPanel(simulation, renderer, window, gameView);
+            trackSettingsPanel(window);
         }
     };
 
@@ -89,15 +94,5 @@ namespace AppEvents {
 
     inline void init(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView) {
         instance = new Handler(simulation, renderer, window, gameView);
-    }
-}
-
-inline void processSettingsPanel(sf::RenderWindow& window) {
-    if (auto result = Interface::settingsPanel.popResult()) {
-        switch (result.value()) {
-            case SettingsCommand::ExitApplication:
-                window.close();
-                break;
-        }
     }
 }
