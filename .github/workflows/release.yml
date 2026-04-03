@@ -34,16 +34,18 @@ jobs:
     - name: Check Dependencies (Verification)
       shell: bash
       run: |
-        objdump -p Chemical-simulator.exe | grep "DLL Name"
+        objdump -p LatticeLab.exe | grep "DLL Name"
 
     - name: Prepare Release Artifacts
       shell: bash
       run: |
         mkdir -p release_dist/assets
-        cp Chemical-simulator.exe release_dist/
+        mkdir -p release_dist/demo/scenes
+        cp LatticeLab.exe release_dist/
         cp -r assets/* release_dist/assets/
+        cp -r demo/scenes/* release_dist/demo/scenes/
         cd release_dist
-        7z a ../Chemical-simulator-${{ github.event.inputs.version }}-win64.zip *
+        7z a ../LatticeLab-${{ github.event.inputs.version }}-win64.zip *
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
@@ -51,6 +53,6 @@ jobs:
         tag_name: ${{ github.event.inputs.version }}
         name: Release ${{ github.event.inputs.version }}
         body: ${{ github.event.inputs.release_notes }}
-        files: Chemical-simulator-${{ github.event.inputs.version }}-win64.zip
-        draft: false
+        files: LatticeLab-${{ github.event.inputs.version }}-win64.zip
+        draft: true
         prerelease: false

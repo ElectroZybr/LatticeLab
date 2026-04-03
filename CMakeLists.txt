@@ -197,6 +197,20 @@ endif()
 
 target_link_libraries(${APP_NAME} PRIVATE chemical_simulator_lib)
 
+install(TARGETS ${APP_NAME}
+    RUNTIME DESTINATION .
+)
+
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets"
+    DESTINATION .
+)
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/demo/scenes")
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/demo/scenes"
+        DESTINATION demo
+    )
+endif()
+
 option(BUILD_BENCHMARKS "Build benchmarks" OFF)
 if(BUILD_BENCHMARKS)
     FetchContent_Declare(
