@@ -3,12 +3,12 @@
 #include <memory>
 
 #include "Scenes.h"
+#include "AppStateIO.h"
 #include "Engine/Simulation.h"
 #include "App/interaction/Tools.h"
 #include "GUI/interface/interface.h"
 #include "Rendering/2d/Renderer2D.h"
 #include "Rendering/3d/Renderer3D.h"
-#include "Engine/io/SimulationStateIO.h"
 #include "Engine/metrics/Profiler.h"
 
 #include "AppSignals.h"
@@ -45,10 +45,10 @@ namespace AppActions {
     class Handler : public Signals::Trackable {
         void trackIOPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
             track(AppSignals::UI::SaveSimulation.connect([&](std::string_view path) {
-                SimulationStateIO::save(simulation, path);
+                AppStateIO::save(simulation, *renderer, path);
             }));
             track(AppSignals::UI::LoadSimulation.connect([&](std::string_view path) {
-                SimulationStateIO::load(simulation, path);
+                AppStateIO::load(simulation, *renderer, path);
                 Tools::resetInteractionState();
             }));
             track(AppSignals::UI::ResizeBox.connect([&](const Vec3f& newSize) {

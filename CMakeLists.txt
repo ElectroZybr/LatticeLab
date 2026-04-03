@@ -167,7 +167,11 @@ target_link_libraries(chemical_simulator_lib PUBLIC
     glm::glm
 )
 
-add_executable(${APP_NAME} main.cpp)
+if (WIN32)
+    add_executable(${APP_NAME} WIN32 main.cpp)
+else()
+    add_executable(${APP_NAME} main.cpp)
+endif()
 
 if(OPTIMIZE_FOR_NATIVE)
     target_compile_options(${APP_NAME} PRIVATE -O3 -march=native)
