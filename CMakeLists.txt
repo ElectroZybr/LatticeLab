@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.17)
 cmake_policy(SET CMP0069 NEW)
 project(Chemical-simulator)
 set(APP_NAME LatticeLab)
+set(APP_VERSION_MAJOR 0)
+set(APP_VERSION_MINOR 1)
+set(APP_VERSION_PATCH 0)
+set(APP_VERSION_STRING "${APP_VERSION_MAJOR}.${APP_VERSION_MINOR}.${APP_VERSION_PATCH}")
 option(OPTIMIZE_FOR_NATIVE "Enable -march=native optimization" ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -124,6 +128,15 @@ file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
 )
 list(FILTER CORE_SOURCES EXCLUDE REGEX "build/.*")
 
+set(GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
+file(MAKE_DIRECTORY "${GENERATED_DIR}")
+
+configure_file(
+    "${CMAKE_SOURCE_DIR}/App/AppVersion.h.in"
+    "${GENERATED_DIR}/AppVersion.h"
+    @ONLY
+)
+
 add_library(chemical_simulator_lib STATIC ${CORE_SOURCES})
 
 if(OPTIMIZE_FOR_NATIVE)
@@ -135,6 +148,7 @@ endif()
 
 target_include_directories(chemical_simulator_lib PUBLIC
     ${CMAKE_SOURCE_DIR}
+    ${GENERATED_DIR}
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
     ${imguifiledialog_SOURCE_DIR}
@@ -163,11 +177,21 @@ endif()
 
 if (WIN32)
     set(APP_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/assets/app_icon.rc")
+    set(APP_VERSION_RESOURCE "${GENERATED_DIR}/app_version.rc")
+    configure_file(
+        "${CMAKE_SOURCE_DIR}/assets/app_version.rc.in"
+        "${APP_VERSION_RESOURCE}"
+        @ONLY
+    )
     if(EXISTS "${APP_ICON_RESOURCE}")
         source_group("Resource Files" FILES "${APP_ICON_RESOURCE}")        
         target_sources(${APP_NAME} PRIVATE "${APP_ICON_RESOURCE}")
     else()
         message(WARNING "Resource file not found: ${APP_ICON_RESOURCE}")
+    endif()
+    if(EXISTS "${APP_VERSION_RESOURCE}")
+        source_group("Resource Files" FILES "${APP_VERSION_RESOURCE}")
+        target_sources(${APP_NAME} PRIVATE "${APP_VERSION_RESOURCE}")
     endif()
 endif()
 

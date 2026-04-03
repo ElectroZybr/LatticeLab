@@ -8,6 +8,8 @@
 #include <iostream>
 #endif
 
+#include "AppVersion.h"
+
 #include <SFML/Graphics.hpp>
 
 inline sf::RenderWindow createWindow() {
@@ -19,7 +21,7 @@ inline sf::RenderWindow createWindow() {
     settings.attributeFlags = sf::ContextSettings::Attribute::Core;
 #endif
 
-    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "LatticeLab",
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "LatticeLab " LATTICELAB_VERSION_STRING,
                             sf::State::Fullscreen, settings);
 #ifdef __APPLE__
     const sf::ContextSettings actualSettings = window.getSettings();
