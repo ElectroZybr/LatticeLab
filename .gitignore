@@ -27,7 +27,6 @@ Benchmarks/*.png
 *.lib
 *.pdb
 *.ilk
-*.sim
 
 # Object and intermediate files
 *.o
@@ -72,7 +71,6 @@ cmake-build-*/
 
 # Local app state
 imgui.ini
-*.sim
 
 # Python
 __pycache__/
