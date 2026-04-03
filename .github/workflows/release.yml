@@ -40,10 +40,12 @@ jobs:
       shell: bash
       run: |
         mkdir -p release_dist/assets
-        mkdir -p release_dist/demo/scenes
+        mkdir -p release_dist/demo
         cp LatticeLab.exe release_dist/
         cp -r assets/* release_dist/assets/
-        cp -r demo/scenes/* release_dist/demo/scenes/
+        echo "Contents of demo:"
+        ls -R demo || true
+        cp -r demo/scenes release_dist/demo/
         cd release_dist
         7z a ../LatticeLab-${{ github.event.inputs.version }}-win64.zip *
 
