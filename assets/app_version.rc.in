@@ -1,0 +1,28 @@
+#include <winres.h>
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION @APP_VERSION_MAJOR@,@APP_VERSION_MINOR@,@APP_VERSION_PATCH@,0
+ PRODUCTVERSION @APP_VERSION_MAJOR@,@APP_VERSION_MINOR@,@APP_VERSION_PATCH@,0
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS VOS__WINDOWS32
+ FILETYPE VFT_APP
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "FileDescription", "LatticeLab\0"
+            VALUE "FileVersion", "@APP_VERSION_STRING@\0"
+            VALUE "InternalName", "LatticeLab\0"
+            VALUE "OriginalFilename", "LatticeLab.exe\0"
+            VALUE "ProductName", "LatticeLab\0"
+            VALUE "ProductVersion", "@APP_VERSION_STRING@\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 1200
+    END
+END

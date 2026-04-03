@@ -1,6 +1,7 @@
 #include "SettingsPanel.h"
 #include <imgui.h>
 
+#include "AppVersion.h"
 #include "Engine/Simulation.h"
 #include "GUI/interface/style/ComboStyle.h"
 #include "Rendering/BaseRenderer.h"
@@ -188,11 +189,19 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
     }
 
     const float exitButtonWidth = ImGui::GetContentRegionAvail().x;
-    const float footerHeight = ImGui::GetFrameHeightWithSpacing();
+    const char* versionText = "LatticeLab v" LATTICELAB_VERSION_STRING " demo";
+    const float versionWidth = ImGui::CalcTextSize(versionText).x;
+    const float footerHeight = ImGui::GetFrameHeightWithSpacing() + ImGui::GetTextLineHeightWithSpacing();
     const float remaining = ImGui::GetContentRegionAvail().y - footerHeight;
     if (remaining > 0.0f) {
         ImGui::Dummy(ImVec2(0.0f, remaining));
     }
+
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.72f, 0.76f, 0.80f, 0.85f));
+    ImGui::SetCursorPosX(std::max(0.0f, (ImGui::GetContentRegionAvail().x - versionWidth) * 0.5f));
+    ImGui::TextUnformatted(versionText);
+    ImGui::PopStyleColor();
+
     if (ImGui::Button("Exit", ImVec2(exitButtonWidth, 0.0f))) {
         AppSignals::UI::ExitApplication.emit();
     }
