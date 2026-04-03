@@ -1,13 +1,24 @@
 #include "FileDialogManager.h"
 
+#include <filesystem>
 #include <ImGuiFileDialog.h>
 #include <imgui.h>
 
 #include "App/AppSignals.h"
 
+namespace {
+std::string defaultSimulationPath() {
+    constexpr const char* demoScenesPath = "demo/scenes";
+    if (std::filesystem::exists(demoScenesPath)) {
+        return demoScenesPath;
+    }
+    return ".";
+}
+} // namespace
+
 void FileDialogManager::openSave() {
     IGFD::FileDialogConfig config;
-    config.path = ".";
+    config.path = defaultSimulationPath();
     config.fileName = "simulation";
     config.countSelectionMax = 1;
     config.flags = ImGuiFileDialogFlags_ConfirmOverwrite;
@@ -16,7 +27,7 @@ void FileDialogManager::openSave() {
 
 void FileDialogManager::openLoad() {
     IGFD::FileDialogConfig config;
-    config.path = ".";
+    config.path = defaultSimulationPath();
     config.countSelectionMax = 1;
     ImGuiFileDialog::Instance()->OpenDialog("LoadDlg", "Load simulation", ".sim", config);
 }
