@@ -10,6 +10,9 @@ on:
         description: 'Release notes'
         required: true
 
+permissions:
+  contents: write
+
 jobs:
   build-and-release:
     name: Build and Release (Windows)
