@@ -31,7 +31,7 @@ static float speedToSlider(float speed) {
 
 static float sliderToSpeed(float slider) {
     constexpr float kMinSpeed = 1.0f;
-    constexpr float kMaxSpeed = 3000.0f;
+    constexpr float kMaxSpeed = 8000.0f;
     constexpr float kCurve = 2.2f;
 
     const float normalized = std::pow(std::clamp(slider, 0.0f, 1.0f), kCurve);

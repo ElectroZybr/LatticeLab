@@ -13,6 +13,7 @@ static DebugView* buildDebugSimView(DebugPanel& panel) {
         DebugValue ("Тип интегратора", DebugDrawers::String),
         DebugValue ("Шаги симуляции", DebugDrawers::Int),
         DebugValue ("Шагов/с", DebugDrawers::Float<2>),
+        DebugValue ("Время симуляции (ns)", DebugDrawers::Float<4>),
         DebugValue ("Количество атомов", DebugDrawers::Int),
         DebugSeries("Полная энергия"),
     }));

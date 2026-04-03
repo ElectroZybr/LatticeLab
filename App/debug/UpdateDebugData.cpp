@@ -71,6 +71,7 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     debugViews.sim->add_data("Количество атомов", simulation.atomStorage.size());
     debugViews.sim->add_data("Шаги симуляции", simulation.getSimStep());
     debugViews.sim->add_data("Шагов/с", stepsPerSecond);
+    debugViews.sim->add_data("Время симуляции (ns)", simulation.simTimeFs()/1000000.0);
     debugViews.sim->add_data("Тип интегратора", integratorName);
 
     const std::string gridSize = std::to_string(std::max(0, simulation.sim_box.grid.sizeX - 2))
