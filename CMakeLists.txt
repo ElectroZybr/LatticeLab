@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.17)
 cmake_policy(SET CMP0069 NEW)
 project(Chemical-simulator)
+set(APP_NAME LatticeLab)
 option(OPTIMIZE_FOR_NATIVE "Enable -march=native optimization" ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -152,25 +153,25 @@ target_link_libraries(chemical_simulator_lib PUBLIC
     glm::glm
 )
 
-add_executable(${CMAKE_PROJECT_NAME} main.cpp)
+add_executable(${APP_NAME} main.cpp)
 
 if(OPTIMIZE_FOR_NATIVE)
-    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -O3 -march=native)
+    target_compile_options(${APP_NAME} PRIVATE -O3 -march=native)
 else()
-    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -O3)
+    target_compile_options(${APP_NAME} PRIVATE -O3)
 endif()
 
 if (WIN32)
     set(APP_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/assets/app_icon.rc")
     if(EXISTS "${APP_ICON_RESOURCE}")
         source_group("Resource Files" FILES "${APP_ICON_RESOURCE}")        
-        target_sources(${CMAKE_PROJECT_NAME} PRIVATE "${APP_ICON_RESOURCE}")
+        target_sources(${APP_NAME} PRIVATE "${APP_ICON_RESOURCE}")
     else()
         message(WARNING "Resource file not found: ${APP_ICON_RESOURCE}")
     endif()
 endif()
 
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE chemical_simulator_lib)
+target_link_libraries(${APP_NAME} PRIVATE chemical_simulator_lib)
 
 option(BUILD_BENCHMARKS "Build benchmarks" OFF)
 if(BUILD_BENCHMARKS)

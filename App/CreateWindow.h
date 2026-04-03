@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #ifdef __APPLE__
 #include <iostream>
 #endif
@@ -15,7 +19,7 @@ inline sf::RenderWindow createWindow() {
     settings.attributeFlags = sf::ContextSettings::Attribute::Core;
 #endif
 
-    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Chemical-simulator",
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "LatticeLab",
                             sf::State::Fullscreen, settings);
 #ifdef __APPLE__
     const sf::ContextSettings actualSettings = window.getSettings();
@@ -31,10 +35,22 @@ inline sf::RenderWindow createWindow() {
     }
 #endif
 
+#ifdef _WIN32
+    if (const auto hwnd = static_cast<HWND>(window.getNativeHandle())) {
+        HINSTANCE instance = GetModuleHandleW(nullptr);
+        if (HICON bigIcon = static_cast<HICON>(LoadImageW(instance, MAKEINTRESOURCEW(101), IMAGE_ICON, 256, 256, LR_DEFAULTCOLOR))) {
+            SendMessageW(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(bigIcon));
+        }
+        if (HICON smallIcon = static_cast<HICON>(LoadImageW(instance, MAKEINTRESOURCEW(101), IMAGE_ICON, 32, 32, LR_DEFAULTCOLOR))) {
+            SendMessageW(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(smallIcon));
+        }
+    }
+#else
     sf::Image icon;
     if (icon.loadFromFile("assets/icon.png")) {
         window.setIcon(icon.getSize(), icon.getPixelsPtr());
     }
+#endif
 
     return window;
 }
