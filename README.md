@@ -1,18 +1,10 @@
-# LatticeLab
-
 <p align="center">
-  <img src="demo/logo.png" alt="LatticeLab logo" width="220">
+  <img src="demo/logo.png" alt="LatticeLab logo" width="720">
 </p>
 
 <p align="center">
   Интерактивная симуляция материи на движке <b>LATTICE</b>.
 </p>
-
-<p align="center">
-  <img src="demo/кристалл.gif" alt="LatticeLab demo" width="720">
-</p>
-
----
 
 ## О проекте
 
@@ -26,6 +18,10 @@ LatticeLab — это desktop-приложение, где можно экспе
 Только частицы и силы между ними.
 
 Но этого уже достаточно, чтобы система сама начала вести себя как настоящая материя.
+
+<p align="center">
+  <img src="demo/кристалл.gif" alt="LatticeLab demo" width="720">
+</p>
 
 ---
 
@@ -69,5 +65,4 @@ LatticeLab — это desktop-приложение, где можно экспе
 ## Ссылки
 
 #### [Канал на YouTube](https://www.youtube.com/@ElectroChajnik)
-#### [Проект на GitHub](https://github.com/ElectroZybr/Chemical-simulator)
 #### [Поддержать проект](https://www.donationalerts.com/r/electrozybr)
