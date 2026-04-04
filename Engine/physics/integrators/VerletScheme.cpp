@@ -3,14 +3,14 @@
 #include "Engine/metrics/Profiler.h"
 #include "StepOps.h"
 
-void VerletScheme::pipeline(AtomStorage& atomStorage, Bond::List& bonds, SimBox& box, ForceField& forceField, NeighborList& neighborList, bool allowBondFormation, float accelDamping, float dt) const {
+void VerletScheme::pipeline(StepData& stepData) const {
     PROFILE_SCOPE("VerletScheme::pipeline");
     // Расчет новых позиций
-    StepOps::predictAndSync(atomStorage, box, dt, &predict);
+    StepOps::predictAndSync(stepData, &predict);
     // Расчет сил
-    StepOps::computeForces(atomStorage, bonds, box, forceField, neighborList, allowBondFormation, dt);
+    StepOps::computeForces(stepData);
     // Корректировка скоростей
-    correct(atomStorage, accelDamping, dt);
+    correct(stepData.atomStorage, stepData.accelDamping, stepData.dt);
 }
 
 void VerletScheme::predict(AtomStorage& atomStorage, float dt) {
@@ -23,7 +23,7 @@ void VerletScheme::predict(AtomStorage& atomStorage, float dt) {
     const float* RESTRICT fx  = atomStorage.fxData();
     const float* RESTRICT fy  = atomStorage.fyData();
     const float* RESTRICT fz  = atomStorage.fzData();
-        
+
     const float* RESTRICT vx = atomStorage.vxData();
     const float* RESTRICT vy = atomStorage.vyData();
     const float* RESTRICT vz = atomStorage.vzData();
@@ -46,10 +46,10 @@ void VerletScheme::correct(AtomStorage& atomStorage, float accelDamping, float d
     const float* RESTRICT fy  = atomStorage.fyData();
     const float* RESTRICT fz  = atomStorage.fzData();
 
-    const float* RESTRICT pfx = atomStorage.pfxData();    
+    const float* RESTRICT pfx = atomStorage.pfxData();
     const float* RESTRICT pfy = atomStorage.pfyData();
     const float* RESTRICT pfz = atomStorage.pfzData();
-    
+
     float* RESTRICT vx = atomStorage.vxData();
     float* RESTRICT vy = atomStorage.vyData();
     float* RESTRICT vz = atomStorage.vzData();

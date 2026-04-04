@@ -60,6 +60,19 @@ public:
     }
 
 protected:
+    StepData makeStepData(float accelDamping = 0.9f) {
+        return StepData{
+            .atomStorage = simulation_->atoms(),
+            .bonds = simulation_->bonds(),
+            .box = simulation_->box(),
+            .forceField = simulation_->forceField(),
+            .neighborList = simulation_->neighborList(),
+            .allowBondFormation = simulation_->isBondFormationEnabled(),
+            .accelDamping = accelDamping,
+            .dt = static_cast<float>(Benchmarks::kDt),
+        };
+    }
+
     void rebuildScene() {
         Benchmarks::BenchmarkScenes::build(
             *simulation_,
@@ -70,11 +83,8 @@ protected:
     void prepareForPredict() {
         rebuildScene();
         prepareNeighborList();
-        StepOps::computeForces(
-            simulation_->atoms(), simulation_->bonds(), simulation_->box(),
-            simulation_->forceField(), simulation_->neighborList(),
-            simulation_->isBondFormationEnabled(), Benchmarks::kDt
-        );
+        StepData stepData = makeStepData();
+        StepOps::computeForces(stepData);
     }
 
     void prepareNeighborList() {
@@ -83,15 +93,9 @@ protected:
 
     void prepareForCorrect() {
         prepareForPredict();
-        StepOps::predictAndSync(
-            simulation_->atoms(), simulation_->box(),
-            Benchmarks::kDt, &VerletScheme::predict
-        );
-        StepOps::computeForces(
-            simulation_->atoms(), simulation_->bonds(), simulation_->box(),
-            simulation_->forceField(), simulation_->neighborList(),
-            simulation_->isBondFormationEnabled(), Benchmarks::kDt
-        );
+        StepData stepData = makeStepData();
+        StepOps::predictAndSync(stepData, &VerletScheme::predict);
+        StepOps::computeForces(stepData);
     }
 
     void setCounters(benchmark::State& state) const {

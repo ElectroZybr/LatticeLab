@@ -3,16 +3,16 @@
 #include "Engine/metrics/Profiler.h"
 #include "StepOps.h"
 
-void KDKScheme::pipeline(AtomStorage& atomStorage, Bond::List& bonds, SimBox& box, ForceField& forceField, NeighborList& neighborList, bool allowBondFormation, float accelDamping, float dt) const {
+void KDKScheme::pipeline(StepData& stepData) const {
     PROFILE_SCOPE("KDKScheme::pipeline");
     // Kick: половина шага
-    halfKick(atomStorage, accelDamping, dt);
+    halfKick(stepData.atomStorage, stepData.accelDamping, stepData.dt);
     // Расчет новых позиций
-    StepOps::predictAndSync(atomStorage, box, dt, &drift);
+    StepOps::predictAndSync(stepData, &drift);
     // Расчет сил
-    StepOps::computeForces(atomStorage, bonds, box, forceField, neighborList, allowBondFormation, dt);
+    StepOps::computeForces(stepData);
     // Kick: вторая половина шага
-    halfKick(atomStorage, accelDamping, dt);
+    halfKick(stepData.atomStorage, stepData.accelDamping, stepData.dt);
 }
 
 void KDKScheme::halfKick(AtomStorage& atomStorage, float accelDamping, float dt) {
@@ -53,4 +53,3 @@ void KDKScheme::drift(AtomStorage& atomStorage, float dt) {
         z[i] += vz[i] * dt;
     }
 }
-

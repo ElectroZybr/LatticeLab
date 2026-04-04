@@ -14,13 +14,27 @@ Simulation::Simulation(SimBox& box)
     forceField_.syncWalls(sim_box_);
 }
 
+StepData Simulation::makeStepData() {
+    return StepData{
+        .atomStorage = atomStorage_,
+        .bonds = bonds_,
+        .box = sim_box_,
+        .forceField = forceField_,
+        .neighborList = neighborList_,
+        .allowBondFormation = bondFormationEnabled_,
+        .accelDamping = integrator.accelDamping(),
+        .dt = Dt,
+    };
+}
+
 void Simulation::update() {
     PROFILE_SCOPE("Simulation::update");
     if (!neighborList_.isValid()) {
         neighborList_.build(atomStorage_, sim_box_);
     }
 
-    integrator.step(atomStorage_, bonds_, sim_box_, forceField_, neighborList_, bondFormationEnabled_, Dt);
+    StepData stepData = makeStepData();
+    integrator.step(stepData);
     if (neighborList_.needsRebuild(atomStorage_)) {
         neighborList_.build(atomStorage_, sim_box_);
         neighborList_.recordRebuild(sim_step);
