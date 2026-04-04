@@ -47,6 +47,7 @@ public:
     static bool onRightPressed(sf::Vector2i mousePos);
     static void onFrame(sf::Vector2i mousePos, float deltaTime);
     static void resetInteractionState();
+    static bool isInteractingNow() noexcept;
 
     static Mode currentMode();
     static bool isSelectionMode(Mode mode);
@@ -73,5 +74,6 @@ private:
     static Mode syncedMode;
 
     static sf::Vector2i startMousePos;
+    static sf::Vector2i lastSceneMousePos;
     static bool isInteracting;
 };

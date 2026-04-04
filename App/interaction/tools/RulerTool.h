@@ -15,6 +15,10 @@ public:
 private:
     void clearMeasurement();
     void updateMeasurement(sf::Vector2i mousePos);
+    void syncOverlayFromWorld();
 
     bool dragging_ = false;
+    bool hasMeasurement_ = false;
+    Vec3f startWorld_{};
+    Vec3f endWorld_{};
 };
