@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.17)
 cmake_policy(SET CMP0069 NEW)
-project(Chemical-simulator)
+project(LatticeLab)
 set(APP_NAME LatticeLab)
 set(APP_VERSION_MAJOR 0)
 set(APP_VERSION_MINOR 1)
@@ -137,16 +137,16 @@ configure_file(
     @ONLY
 )
 
-add_library(chemical_simulator_lib STATIC ${CORE_SOURCES})
+add_library(latticelab_lib STATIC ${CORE_SOURCES})
 
 if(OPTIMIZE_FOR_NATIVE)
-    target_compile_options(chemical_simulator_lib PRIVATE -O3 -march=native)
+    target_compile_options(latticelab_lib PRIVATE -O3 -march=native)
     else()
-    target_compile_options(chemical_simulator_lib PRIVATE -O3)
+    target_compile_options(latticelab_lib PRIVATE -O3)
 endif()
 
 
-target_include_directories(chemical_simulator_lib PUBLIC
+target_include_directories(latticelab_lib PUBLIC
     ${CMAKE_SOURCE_DIR}
     ${GENERATED_DIR}
     ${imgui_SOURCE_DIR}
@@ -154,7 +154,7 @@ target_include_directories(chemical_simulator_lib PUBLIC
     ${imguifiledialog_SOURCE_DIR}
 )
 
-target_link_libraries(chemical_simulator_lib PUBLIC
+target_link_libraries(latticelab_lib PUBLIC
     sfml-graphics 
     sfml-window 
     sfml-system 
@@ -199,7 +199,7 @@ if (WIN32)
     endif()
 endif()
 
-target_link_libraries(${APP_NAME} PRIVATE chemical_simulator_lib)
+target_link_libraries(${APP_NAME} PRIVATE latticelab_lib)
 
 install(TARGETS ${APP_NAME}
     RUNTIME DESTINATION .
@@ -230,3 +230,5 @@ if(BUILD_BENCHMARKS)
  
     add_subdirectory(Benchmarks)
 endif()
+
+

@@ -1,7 +1,7 @@
 #!/bin/bash
 printf "Вы воспользовались инсталлером Ds(@e52699v4) \n\n\n\n" 
-REPO_URL="https://github.com/ElectroZybr/Chemical-simulator.git" 
-DIR_NAME="Chemical-simulator" 
+REPO_URL="https://github.com/ElectroZybr/LatticeLab.git" 
+DIR_NAME="LatticeLab" 
 
 show_help() {
     printf " | флаг | расшифровка           | действие                                                 | \n" 
@@ -20,7 +20,7 @@ show_help() {
 
 build_logic() {
     cmake -S . -B build && cmake --build build
-    cp build/Chemical-simulator .
+    cp build/LatticeLab .
     printf "Операция завершена. \n"
 }
 
