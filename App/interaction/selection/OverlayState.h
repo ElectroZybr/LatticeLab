@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+#include <string>
 #include <vector>
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Vector2.hpp>
@@ -13,6 +15,7 @@ struct OverlayState {
     sf::Vector2i boxEnd;
     sf::Vector2i rulerStart;
     sf::Vector2i rulerEnd;
+    std::string rulerLabel;
 
     std::vector<sf::Vector2i> lassoPoints;
 
@@ -20,6 +23,7 @@ struct OverlayState {
         boxVisible   = false;
         lassoVisible = false;
         rulerVisible = false;
+        rulerLabel.clear();
         lassoPoints.clear();
     }
 
@@ -71,6 +75,56 @@ struct OverlayState {
             endPoint.setPosition(sf::Vector2f(rulerEnd.x, rulerEnd.y));
             endPoint.setFillColor(sf::Color(255, 90, 90));
             target.draw(endPoint);
+
+            if (!rulerLabel.empty()) {
+                static sf::Font rulerFont;
+                static bool fontInitialized = false;
+                static bool fontAvailable = false;
+                if (!fontInitialized) {
+                    fontAvailable = rulerFont.openFromFile("assets/fonts/Rubik-VariableFont_wght.ttf");
+                    fontInitialized = true;
+                }
+
+                if (fontAvailable) {
+                    const sf::Vector2f startPos(static_cast<float>(rulerStart.x), static_cast<float>(rulerStart.y));
+                    const sf::Vector2f endPos(static_cast<float>(rulerEnd.x), static_cast<float>(rulerEnd.y));
+                    const sf::Vector2f line = endPos - startPos;
+                    const float lineLength = std::sqrt(line.x * line.x + line.y * line.y);
+
+                    sf::Vector2f labelPos = 0.5f * (startPos + endPos);
+                    float angleDeg = 0.0f;
+                    if (lineLength > 0.001f) {
+                        sf::Vector2f normal(-line.y / lineLength, line.x / lineLength);
+                        if (normal.y > 0.0f) {
+                            normal = -normal;
+                        }
+
+                        constexpr float kLabelOffset = 16.0f;
+                        labelPos += normal * kLabelOffset;
+
+                        angleDeg = std::atan2(line.y, line.x) * 180.0f / std::numbers::pi;
+                        if (angleDeg > 90.0f) {
+                            angleDeg -= 180.0f;
+                        } else if (angleDeg < -90.0f) {
+                            angleDeg += 180.0f;
+                        }
+                    } else {
+                        labelPos.y -= 10.0f;
+                    }
+
+                    labelPos.x = std::round(labelPos.x);
+                    labelPos.y = std::round(labelPos.y);
+
+                    sf::Text label(rulerFont, rulerLabel, 18);
+                    label.setFillColor(sf::Color(235, 235, 235));
+                    const sf::FloatRect bounds = label.getLocalBounds();
+                    label.setOrigin(sf::Vector2f(bounds.position.x + bounds.size.x * 0.5f,
+                                                 bounds.position.y + bounds.size.y * 0.5f));
+                    label.setPosition(labelPos);
+                    label.setRotation(sf::degrees(angleDeg));
+                    target.draw(label);
+                }
+            }
         }
 
         if (boxVisible || lassoVisible || rulerVisible)

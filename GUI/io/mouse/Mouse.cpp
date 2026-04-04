@@ -28,7 +28,7 @@ void Mouse::onEvent(const sf::Event& event) {
             ToolsManager::onLeftPressed(mouse_pos);
         }
 
-        if (e->button == sf::Mouse::Button::Right && !Interface::cursorHovered) {
+        if (e->button == sf::Mouse::Button::Right && !Interface::cursorHovered && !ToolsManager::isInteractingNow()) {
             if (!ToolsManager::onRightPressed(mouse_pos)) {
                 rend->camera.isDragging = true;
                 rend->camera.dragStartPixelPos = mouse_pos;
@@ -67,7 +67,7 @@ void Mouse::onEvent(const sf::Event& event) {
     }
 
     if (const auto* e = event.getIf<sf::Event::MouseWheelScrolled>()) {
-        if (e->wheel == sf::Mouse::Wheel::Vertical && !Interface::cursorHovered) {
+        if (e->wheel == sf::Mouse::Wheel::Vertical && !Interface::cursorHovered && !ToolsManager::isInteractingNow()) {
             if (rend->camera.getMode() == Camera::Mode::Free) {
                 const float wheelStep = rend->camera.moveSpeed * kFreeWheelMoveScale;
                 const float distance = e->delta * wheelStep;

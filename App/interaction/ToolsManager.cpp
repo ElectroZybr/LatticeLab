@@ -38,6 +38,7 @@ ToolContext ToolsManager::toolContext = {};
 std::array<std::unique_ptr<ITool>, ToolsManager::kModeCount> ToolsManager::toolInstances = {};
 ToolsManager::Mode ToolsManager::syncedMode = ToolsManager::Mode::Cursor;
 sf::Vector2i ToolsManager::startMousePos = {};
+sf::Vector2i ToolsManager::lastSceneMousePos = {};
 bool ToolsManager::isInteracting = false;
 
 void ToolsManager::init(sf::RenderWindow* w,
@@ -80,6 +81,8 @@ void ToolsManager::init(sf::RenderWindow* w,
     toolInstances[toIndex(Mode::AddAtom)] = std::make_unique<AddAtomTool>(toolContext);
     toolInstances[toIndex(Mode::RemoveAtom)] = std::make_unique<RemoveAtomTool>(toolContext);
     syncedMode = currentMode();
+    isInteracting = false;
+    lastSceneMousePos = {};
 }
 
 void ToolsManager::resetInteractionState() {
@@ -97,6 +100,11 @@ void ToolsManager::resetInteractionState() {
     Interface::countSelectedAtom = 0;
     Interface::drawToolTrip = false;
     Interface::toolTooltipText.clear();
+    isInteracting = false;
+}
+
+bool ToolsManager::isInteractingNow() noexcept {
+    return isInteracting;
 }
 
 void ToolsManager::onLeftPressed(sf::Vector2i mousePos) {
@@ -106,6 +114,8 @@ void ToolsManager::onLeftPressed(sf::Vector2i mousePos) {
 
     syncToolMode();
     startMousePos = mousePos;
+    lastSceneMousePos = mousePos;
+    isInteracting = true;
 
     if (ITool* tool = activeTool(); tool != nullptr) {
         tool->onLeftPressed(mousePos);
@@ -114,13 +124,22 @@ void ToolsManager::onLeftPressed(sf::Vector2i mousePos) {
 
 void ToolsManager::onLeftReleased(sf::Vector2i mousePos) {
     syncToolMode();
+    if (!isInteracting) {
+        return;
+    }
+
+    const sf::Vector2i releasePos = Interface::cursorHovered ? lastSceneMousePos : mousePos;
 
     if (ITool* tool = activeTool(); tool != nullptr) {
-        tool->onLeftReleased(mousePos);
+        tool->onLeftReleased(releasePos);
     }
+    isInteracting = false;
 }
 
 bool ToolsManager::onRightPressed(sf::Vector2i mousePos) {
+    if (Interface::cursorHovered) {
+        return false;
+    }
     syncToolMode();
 
     if (ITool* tool = activeTool(); tool != nullptr) {
@@ -135,6 +154,11 @@ void ToolsManager::onFrame(sf::Vector2i mousePos, float deltaTime) {
     }
 
     syncToolMode();
+    if (Interface::cursorHovered) {
+        return;
+    }
+
+    lastSceneMousePos = mousePos;
 
     if (ITool* tool = activeTool(); tool != nullptr) {
         tool->onFrame(mousePos, deltaTime);
@@ -180,6 +204,7 @@ void ToolsManager::syncToolMode() noexcept {
     }
     Interface::drawToolTrip = false;
     Interface::toolTooltipText.clear();
+    isInteracting = false;
     syncedMode = mode;
 }
 
