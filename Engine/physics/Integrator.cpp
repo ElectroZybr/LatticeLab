@@ -22,9 +22,9 @@ void Integrator::setAccelDamping(float accelDamping) {
     accelDamping_ = std::clamp(accelDamping, 0.0f, 1.0f);
 }
 
-void Integrator::step(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) {
+void Integrator::step(AtomStorage& atomStorage, Bond::List& bonds, SimBox& box, ForceField& forceField, NeighborList* neighborList, bool allowBondFormation, float dt) {
     std::visit([&](const auto& scheme) {
-        scheme.pipeline(atomStorage, box, forceField, neighborList, accelDamping_, dt);
+        scheme.pipeline(atomStorage, bonds, box, forceField, neighborList, allowBondFormation, accelDamping_, dt);
     }, scheme_impl);
     // Ограничение максимальной скорости атомов
     if (maxParticleSpeed_ > 0.0f) {

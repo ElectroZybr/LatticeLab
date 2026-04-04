@@ -36,6 +36,7 @@ int Application::run() {
 
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView, simulation.box());
     renderer->setAtomStorage(&simulation.atoms());
+    renderer->setBondStorage(&simulation.bonds());
     renderer->drawBonds = true;
     renderer->speedColorMode = IRenderer::SpeedColorMode::GradientClassic;
 

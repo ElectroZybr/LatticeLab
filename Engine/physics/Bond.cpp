@@ -8,18 +8,17 @@
 
 namespace {
 constexpr double kBondBreakDistance = 3.0;
+}
 
-void ensureBondTableInitialized() {
+BondTable Bond::bond_default_props;
+
+void Bond::ensureInitialized() {
     static const bool initialized = [] {
         Bond::bond_default_props.init();
         return true;
     }();
     (void)initialized;
 }
-}
-
-BondTable Bond::bond_default_props;
-std::list<Bond> Bond::bonds_list;
 
 Bond::Bond(size_t aIndex, size_t bIndex, AtomData::Type aType, AtomData::Type bType)
     : aIndex(aIndex), bIndex(bIndex) {
@@ -141,8 +140,8 @@ void Bond::angleForce(AtomStorage& atomStorage, size_t aIndex, size_t bIndex, si
     atomStorage.forceZ(aIndex) += static_cast<float>(force_o_z);
 }
 
-Bond* Bond::CreateBond(size_t aIndex, size_t bIndex, AtomStorage& atomStorage) {
-    ensureBondTableInitialized();
+Bond* Bond::CreateBond(List& bonds, size_t aIndex, size_t bIndex, AtomStorage& atomStorage) {
+    ensureInitialized();
 
     if (aIndex >= atomStorage.size() || bIndex >= atomStorage.size() || aIndex == bIndex) {
         return nullptr;
@@ -152,7 +151,7 @@ Bond* Bond::CreateBond(size_t aIndex, size_t bIndex, AtomStorage& atomStorage) {
         return nullptr;
     }
 
-    if (std::ranges::any_of(bonds_list, [&](const Bond& bond) {
+    if (std::ranges::any_of(bonds, [&](const Bond& bond) {
             return (bond.aIndex == aIndex && bond.bIndex == bIndex)
                 || (bond.aIndex == bIndex && bond.bIndex == aIndex);
         })) {
@@ -164,10 +163,10 @@ Bond* Bond::CreateBond(size_t aIndex, size_t bIndex, AtomStorage& atomStorage) {
         return nullptr;
     }
 
-    bonds_list.emplace_back(aIndex, bIndex, atomStorage.type(aIndex), atomStorage.type(bIndex));
+    bonds.emplace_back(aIndex, bIndex, atomStorage.type(aIndex), atomStorage.type(bIndex));
     --atomStorage.valenceCount(aIndex);
     --atomStorage.valenceCount(bIndex);
-    return &bonds_list.back();
+    return &bonds.back();
 }
 
 void Bond::detach(AtomStorage& atomStorage) {
@@ -179,15 +178,15 @@ void Bond::detach(AtomStorage& atomStorage) {
     }
 }
 
-void Bond::BreakBond(Bond* bond, AtomStorage& atomStorage) {
+void Bond::BreakBond(List& bonds, Bond* bond, AtomStorage& atomStorage) {
     if (!bond) {
         return;
     }
 
     bond->detach(atomStorage);
 
-    if (auto it = std::ranges::find_if(bonds_list, [bond](const Bond& currentBond) { return &currentBond == bond; });
-        it != bonds_list.end()) {
-        bonds_list.erase(it);
+    if (auto it = std::ranges::find_if(bonds, [bond](const Bond& currentBond) { return &currentBond == bond; });
+        it != bonds.end()) {
+        bonds.erase(it);
     }
 }

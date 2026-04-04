@@ -7,13 +7,14 @@
 #include "Engine/math/Vec3f.h"
 #include "AtomData.h"
 #include "AtomStorage.h"
+#include "Bond.h"
 class NeighborList;
 
 class ForceField {
 public:
     ForceField();
 
-    void compute(AtomStorage& atoms, SimBox& box, NeighborList* neighborList, float dt) const;
+    void compute(AtomStorage& atoms, Bond::List& bonds, SimBox& box, NeighborList* neighborList, bool allowBondFormation, float dt) const;
     void syncWalls(const SimBox& box);
 
     void setGravity(Vec3f gravity = Vec3f(0, 5, 0)) { static_force = gravity; }
@@ -37,7 +38,10 @@ private:
     void softWalls(const AtomStorage& atoms, float coordX, float coordY, float coordZ, float& forceX, float& forceY, float& forceZ) const;
     template<bool UseNeighborList>
     void ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList* neighborList) const;
+    template<bool UseNeighborList>
+    void FormBonds(AtomStorage& atoms, Bond::List& bonds, SimBox& box, NeighborList* neighborList) const;
     void pairNonBondedInteraction(AtomStorage& atoms, uint32_t bIndex, const LJPairRow& ljPairRow, float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const;
+    void tryCreateBond(AtomStorage& atoms, Bond::List& bonds, uint32_t aIndex, uint32_t bIndex) const;
     void applyGravityForce(float& forceX, float& forceY, float& forceZ) const;
 
     Vec3f static_force;

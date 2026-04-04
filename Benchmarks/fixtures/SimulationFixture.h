@@ -70,8 +70,8 @@ protected:
     void prepareForPredict() {
         rebuildScene();
         StepOps::computeForces(
-            simulation_->atoms(), simulation_->box(),
-            simulation_->forceField(), nullptr, Benchmarks::kDt
+            simulation_->atoms(), simulation_->bonds(), simulation_->box(),
+            simulation_->forceField(), nullptr, simulation_->isBondFormationEnabled(), Benchmarks::kDt
         );
     }
 
@@ -86,8 +86,8 @@ protected:
             Benchmarks::kDt, &VerletScheme::predict
         );
         StepOps::computeForces(
-            simulation_->atoms(), simulation_->box(),
-            simulation_->forceField(), nullptr, Benchmarks::kDt
+            simulation_->atoms(), simulation_->bonds(), simulation_->box(),
+            simulation_->forceField(), nullptr, simulation_->isBondFormationEnabled(), Benchmarks::kDt
         );
     }
 

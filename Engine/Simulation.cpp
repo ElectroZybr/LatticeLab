@@ -27,7 +27,7 @@ void Simulation::setNeighborListEnabled(bool enabled) {
 
 void Simulation::update() {
     PROFILE_SCOPE("Simulation::update");
-    integrator.step(atomStorage_, sim_box_, forceField_, useNeighborList_ ? &neighborList_ : nullptr, Dt);
+    integrator.step(atomStorage_, bonds_, sim_box_, forceField_, useNeighborList_ ? &neighborList_ : nullptr, bondFormationEnabled_, Dt);
     if (useNeighborList_ && neighborList_.needsRebuild(atomStorage_)) {
         neighborList_.build(atomStorage_, sim_box_);
         neighborList_.recordRebuild(sim_step);
@@ -58,7 +58,7 @@ bool Simulation::removeAtom(size_t atomIndex) {
 
     const size_t lastIndex = atomStorage_.size() - 1;
 
-    for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end();) {
+    for (auto it = bonds_.begin(); it != bonds_.end();) {
         if (it->aIndex == atomIndex || it->bIndex == atomIndex) {
             if (it->aIndex == atomIndex && it->bIndex != atomIndex && it->bIndex < atomStorage_.size()) {
                 ++atomStorage_.valenceCount(it->bIndex);
@@ -66,7 +66,7 @@ bool Simulation::removeAtom(size_t atomIndex) {
             if (it->bIndex == atomIndex && it->aIndex != atomIndex && it->aIndex < atomStorage_.size()) {
                 ++atomStorage_.valenceCount(it->aIndex);
             }
-            it = Bond::bonds_list.erase(it);
+            it = bonds_.erase(it);
             continue;
         }
 
@@ -88,16 +88,16 @@ bool Simulation::removeAtom(size_t atomIndex) {
 }
 
 void Simulation::addBond(size_t aIndex, size_t bIndex) {
-    if (aIndex >= atomStorage_.size() || bIndex >= atomStorage_.size()) {
+    if (!bondFormationEnabled_ || aIndex >= atomStorage_.size() || bIndex >= atomStorage_.size()) {
         return;
     }
 
-    Bond::CreateBond(aIndex, bIndex, atomStorage_);
+    Bond::CreateBond(bonds_, aIndex, bIndex, atomStorage_);
 }
 
 void Simulation::clear() {
     atomStorage_.clear();
-    Bond::bonds_list.clear();
+    bonds_.clear();
     sim_box_.grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
     neighborList_.clear();
     sim_step = 0;

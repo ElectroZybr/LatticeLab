@@ -468,12 +468,12 @@ void RendererGL::drawBox(const SimBox& box) {
 
 void RendererGL::drawBondsGL() {
     PROFILE_SCOPE("RendererGL::drawBondsGL");
-    if (bondShader == 0 || !atomStorage) return;
+    if (bondShader == 0 || !atomStorage || !bondStorage) return;
 
     bondData.clear();
-    bondData.reserve(Bond::bonds_list.size());
+    bondData.reserve(bondStorage->size());
 
-    for (const Bond& bond : Bond::bonds_list) {
+    for (const Bond& bond : *bondStorage) {
         if (bond.aIndex >= atomStorage->size() || bond.bIndex >= atomStorage->size()) {
             continue;
         }

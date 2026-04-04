@@ -4,6 +4,7 @@
 
 #include "Rendering/camera/Camera.h"
 #include "Engine/physics/AtomStorage.h"
+#include "Engine/physics/Bond.h"
 #include "Engine/SimBox.h"
 
 class IRenderer {
@@ -20,6 +21,7 @@ public:
                           const SimBox& box) = 0;
 
     void setAtomStorage(const AtomStorage* storage) { atomStorage = storage; }
+    void setBondStorage(const Bond::List* storage) { bondStorage = storage; }
 
     bool drawGrid           = false;
     bool drawBonds          = false;
@@ -33,4 +35,5 @@ protected:
     IRenderer(sf::View& gv, SimBox& box)
         : camera(&gv, box) {}
     const AtomStorage* atomStorage = nullptr;
+    const Bond::List* bondStorage = nullptr;
 };
