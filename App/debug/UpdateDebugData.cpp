@@ -71,8 +71,7 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
             box.size.z * Units::AngstromToNm);
     debugViews.neighbor->add_data("Размер бокса (nm)", boxSizeNm);
     debugViews.neighbor->add_data("Размер ячейки", box.grid.cellSize);
-    debugViews.neighbor->add_data("NeighborList включен",
-        simulation.isNeighborListEnabled() ? std::string("Да") : std::string("Нет"));
+    debugViews.neighbor->add_data("NeighborList включен", std::string("Да"));
     debugViews.neighbor->add_data("Память AtomStorage (МБ)", static_cast<float>(atoms.memoryBytes()) / 1024.0f / 1024.0f);
     debugViews.neighbor->add_data("Память NeighborList (МБ)", static_cast<float>(neighborList.memoryBytes()) / 1024.0f / 1024.0f);
     debugViews.neighbor->add_data("Память SpatialGrid (МБ)", static_cast<float>(box.grid.memoryBytes()) / 1024.0f / 1024.0f);

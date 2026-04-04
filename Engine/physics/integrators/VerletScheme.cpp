@@ -3,7 +3,7 @@
 #include "Engine/metrics/Profiler.h"
 #include "StepOps.h"
 
-void VerletScheme::pipeline(AtomStorage& atomStorage, Bond::List& bonds, SimBox& box, ForceField& forceField, NeighborList* neighborList, bool allowBondFormation, float accelDamping, float dt) const {
+void VerletScheme::pipeline(AtomStorage& atomStorage, Bond::List& bonds, SimBox& box, ForceField& forceField, NeighborList& neighborList, bool allowBondFormation, float accelDamping, float dt) const {
     PROFILE_SCOPE("VerletScheme::pipeline");
     // Расчет новых позиций
     StepOps::predictAndSync(atomStorage, box, dt, &predict);

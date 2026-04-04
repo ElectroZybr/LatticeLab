@@ -69,9 +69,11 @@ protected:
 
     void prepareForPredict() {
         rebuildScene();
+        prepareNeighborList();
         StepOps::computeForces(
             simulation_->atoms(), simulation_->bonds(), simulation_->box(),
-            simulation_->forceField(), nullptr, simulation_->isBondFormationEnabled(), Benchmarks::kDt
+            simulation_->forceField(), simulation_->neighborList(),
+            simulation_->isBondFormationEnabled(), Benchmarks::kDt
         );
     }
 
@@ -87,7 +89,8 @@ protected:
         );
         StepOps::computeForces(
             simulation_->atoms(), simulation_->bonds(), simulation_->box(),
-            simulation_->forceField(), nullptr, simulation_->isBondFormationEnabled(), Benchmarks::kDt
+            simulation_->forceField(), simulation_->neighborList(),
+            simulation_->isBondFormationEnabled(), Benchmarks::kDt
         );
     }
 

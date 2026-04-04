@@ -32,7 +32,7 @@ public:
     void setAccelDamping(float accelDamping);
     float accelDamping() const { return accelDamping_; }
 
-    void step(AtomStorage& atomStorage, Bond::List& bonds, SimBox& box, ForceField& forceField, NeighborList* neighborList, bool allowBondFormation, float dt);
+    void step(AtomStorage& atomStorage, Bond::List& bonds, SimBox& box, ForceField& forceField, NeighborList& neighborList, bool allowBondFormation, float dt);
 
 private:
     using SchemeVariant = std::variant<VerletScheme, KDKScheme, RK4Scheme, LangevinScheme>;

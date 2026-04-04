@@ -22,7 +22,7 @@ void Integrator::setAccelDamping(float accelDamping) {
     accelDamping_ = std::clamp(accelDamping, 0.0f, 1.0f);
 }
 
-void Integrator::step(AtomStorage& atomStorage, Bond::List& bonds, SimBox& box, ForceField& forceField, NeighborList* neighborList, bool allowBondFormation, float dt) {
+void Integrator::step(AtomStorage& atomStorage, Bond::List& bonds, SimBox& box, ForceField& forceField, NeighborList& neighborList, bool allowBondFormation, float dt) {
     std::visit([&](const auto& scheme) {
         scheme.pipeline(atomStorage, bonds, box, forceField, neighborList, allowBondFormation, accelDamping_, dt);
     }, scheme_impl);

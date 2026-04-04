@@ -19,7 +19,6 @@ void SimulationStateIO::save(const Simulation& simulation, std::string_view path
     file << "integrator " << static_cast<int>(simulation.getIntegrator()) << "\n";
     const Vec3f gravity = simulation.getGravity();
     file << "gravity " << gravity.x << " " << gravity.y << " " << gravity.z << "\n";
-    file << "neighbor_list " << static_cast<int>(simulation.isNeighborListEnabled()) << "\n";
     file << "bond_formation " << static_cast<int>(simulation.isBondFormationEnabled()) << "\n";
     file << "cell_size " << simulation.box().grid.cellSize << "\n";
     file << "cutoff_nl " << simulation.getNeighborListCutoff() << "\n";
@@ -61,7 +60,6 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
     float loadedDt = simulation.getDt();
     int loadedIntegrator = static_cast<int>(simulation.getIntegrator());
     Vec3f loadedGravity = simulation.getGravity();
-    bool loadedNeighborListEnabled = simulation.isNeighborListEnabled();
     bool loadedBondFormationEnabled = simulation.isBondFormationEnabled();
     float loadedMaxSpeed = 0.0f;
     float loadedAccelDamping = simulation.getAccelDamping();
@@ -80,10 +78,6 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
             file >> loadedIntegrator;
         } else if (tag == "gravity") {
             file >> loadedGravity.x >> loadedGravity.y >> loadedGravity.z;
-        } else if (tag == "neighbor_list") {
-            int enabled = 0;
-            file >> enabled;
-            loadedNeighborListEnabled = (enabled != 0);
         } else if (tag == "bond_formation") {
             int enabled = 0;
             file >> enabled;
@@ -128,7 +122,6 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
     simulation.setDt(loadedDt);
     simulation.setIntegrator(static_cast<Integrator::Scheme>(loadedIntegrator));
     simulation.setGravity(loadedGravity);
-    simulation.setNeighborListEnabled(loadedNeighborListEnabled);
     simulation.setBondFormationEnabled(loadedBondFormationEnabled);
 
     for (const LoadedAtomData& data : buffer) {
