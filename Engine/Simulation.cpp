@@ -33,7 +33,7 @@ void Simulation::update() {
         neighborList.recordRebuild(sim_step);
     }
     ++sim_step;
-    sim_time_ns += Dt * kTimeUnitToNs;
+    sim_time_ns += Dt * Units::kTimeUnitToNs;
 }
 
 void Simulation::setSizeBox(Vec3f newSize, int cellSize) {
@@ -102,3 +102,4 @@ void Simulation::clear() {
     neighborList.clear();
     sim_step = 0;
 }
+

@@ -6,7 +6,7 @@
 
 #include <SFML/System/Vector3.hpp>
 
-#include "Engine/math/Consts.h"
+#include "Engine/Consts.h"
 #include "Vec2f.h"
 
 class alignas(32) Vec3f final {
@@ -65,3 +65,4 @@ public:
         return Vec3f(sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta);
     }
 };
+

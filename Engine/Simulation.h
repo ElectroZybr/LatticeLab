@@ -8,15 +8,12 @@
 #include "physics/Integrator.h"
 #include "physics/ForceField.h"
 #include "NeighborSearch/NeighborList.h"
+#include "Consts.h"
+#include "metrics/EnergyMetrics.h"
 
 class Simulation {
 public:
     Simulation(SimBox& sim_box);
-
-    static constexpr double kTimeUnitToFs = 10.1805; // константа для перевода Dt -> Fs (1 Dt = 10.1805 fs)
-    static constexpr double kTimeUnitToNs = 10.1805e-6; // константа для перевода Dt -> Ns (1 Dt = 0.0000101805 ns)
-
-    static constexpr double kAngstremToNm = 0.1; // константа для перевода ангстрем в нанометры
 
     void update();
     void setSizeBox(Vec3f newSize, int cellSize = -1);
@@ -36,6 +33,7 @@ public:
     
     int getSimStep() const { return sim_step; }
     double simTimeNs() const { return sim_time_ns; }
+    double fullEnegryPJ() const { return EnergyMetrics::fullAverageEnergy(atomStorage) * static_cast<double>(atomStorage.size()) * Units::kEvToPJ; }
 
     void setNeighborListEnabled(bool enabled);
     bool isNeighborListEnabled() const { return useNeighborList_; }

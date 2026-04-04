@@ -5,7 +5,7 @@
 
 #include <SFML/System/Vector2.hpp>
 
-#include "Engine/math/Consts.h"
+#include "Engine/Consts.h"
 
 namespace {
 }
@@ -56,3 +56,4 @@ public:
 private:
     static bool isNear(float a, float b) { return std::abs(a - b) < Consts::Epsilon; }
 };
+

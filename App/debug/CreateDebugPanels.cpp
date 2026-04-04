@@ -16,7 +16,8 @@ static DebugView* buildDebugSimView(DebugPanel& panel) {
         DebugValue ("Шагов/с", DebugDrawers::Float<2>),
         DebugValue ("Время симуляции (ns)", DebugDrawers::Float<4>),
         DebugValue ("Количество атомов", DebugDrawers::Int),
-        DebugSeries("Полная энергия"),
+        DebugValue ("Полная энергия (pj)", DebugDrawers::Float<4>),
+        DebugSeries("Полная средняя энергия (eV)"),
     }));
 }
 

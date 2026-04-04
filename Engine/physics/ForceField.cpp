@@ -8,7 +8,7 @@
 #include "AtomData.h"
 #include "Bond.h"
 #include "Engine/metrics/Profiler.h"
-#include "Engine/math/Consts.h"
+#include "Engine/Consts.h"
 #include "Engine/NeighborSearch/NeighborList.h"
 
 ForceField::ForceField() : ljPairTable(buildLJPairTable()) {}
@@ -260,3 +260,4 @@ void ForceField::applyGravityForce(float& forceX, float& forceY, float& forceZ) 
     forceY += static_force.y;
     forceZ += static_force.z;
 }
+
