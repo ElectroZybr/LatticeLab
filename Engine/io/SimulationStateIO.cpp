@@ -20,6 +20,7 @@ void SimulationStateIO::save(const Simulation& simulation, std::string_view path
     const Vec3f gravity = simulation.getGravity();
     file << "gravity " << gravity.x << " " << gravity.y << " " << gravity.z << "\n";
     file << "neighbor_list " << static_cast<int>(simulation.isNeighborListEnabled()) << "\n";
+    file << "bond_formation " << static_cast<int>(simulation.isBondFormationEnabled()) << "\n";
     file << "cell_size " << simulation.box().grid.cellSize << "\n";
     file << "cutoff_nl " << simulation.getNeighborListCutoff() << "\n";
     file << "skin_nl " << simulation.getNeighborListSkin() << "\n";
@@ -61,6 +62,7 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
     int loadedIntegrator = static_cast<int>(simulation.getIntegrator());
     Vec3f loadedGravity = simulation.getGravity();
     bool loadedNeighborListEnabled = simulation.isNeighborListEnabled();
+    bool loadedBondFormationEnabled = simulation.isBondFormationEnabled();
     float loadedMaxSpeed = 0.0f;
     float loadedAccelDamping = simulation.getAccelDamping();
 
@@ -82,6 +84,10 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
             int enabled = 0;
             file >> enabled;
             loadedNeighborListEnabled = (enabled != 0);
+        } else if (tag == "bond_formation") {
+            int enabled = 0;
+            file >> enabled;
+            loadedBondFormationEnabled = (enabled != 0);
         } else if (tag == "cell_size") {
             file >> cellSize;
         } else if (tag == "cutoff_nl") {
@@ -123,6 +129,7 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
     simulation.setIntegrator(static_cast<Integrator::Scheme>(loadedIntegrator));
     simulation.setGravity(loadedGravity);
     simulation.setNeighborListEnabled(loadedNeighborListEnabled);
+    simulation.setBondFormationEnabled(loadedBondFormationEnabled);
 
     for (const LoadedAtomData& data : buffer) {
         simulation.createAtom(data.coords, data.speed, static_cast<AtomData::Type>(data.type), data.fixed);

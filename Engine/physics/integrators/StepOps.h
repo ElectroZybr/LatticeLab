@@ -67,9 +67,9 @@ inline void postProcessVelocities(AtomStorage& atomStorage, float maxSpeed) {
     }
 }
 
-inline void computeForces(AtomStorage& atomStorage, SimBox& box, ForceField& forceField, NeighborList* neighborList, float dt) {
+inline void computeForces(AtomStorage& atomStorage, Bond::List& bonds, SimBox& box, ForceField& forceField, NeighborList* neighborList, bool allowBondFormation, float dt) {
     PROFILE_SCOPE("StepOps::computeForces");
-    forceField.compute(atomStorage, box, neighborList, dt);
+    forceField.compute(atomStorage, bonds, box, neighborList, allowBondFormation, dt);
 }
 
 template<typename StepFn>

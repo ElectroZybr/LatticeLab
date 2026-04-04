@@ -8,6 +8,7 @@
 
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
+#include "Engine/physics/Bond.h"
 #include "Engine/SimBox.h"
 #include "App/interaction/ToolsManager.h"
 
@@ -27,6 +28,7 @@ public:
 
         atomStorage_ = makeGridAtoms(static_cast<int>(state.range(0)));
         renderer_->setAtomStorage(&atomStorage_);
+        renderer_->setBondStorage(&bonds_);
     }
 
     void TearDown(benchmark::State&) override {
@@ -44,6 +46,7 @@ protected:
     std::unique_ptr<IRenderer> renderer_;
     sf::View view_;
     AtomStorage atomStorage_;
+    Bond::List bonds_;
     SimBox box_{ Vec3f(300, 300, 300) };
 
 private:

@@ -4,6 +4,7 @@
 
 #include "physics/AtomData.h"
 #include "physics/AtomStorage.h"
+#include "physics/Bond.h"
 #include "SimBox.h"
 #include "physics/Integrator.h"
 #include "physics/ForceField.h"
@@ -38,6 +39,8 @@ public:
     // API
     void setNeighborListEnabled(bool enabled);
     bool isNeighborListEnabled() const { return useNeighborList_; }
+    void setBondFormationEnabled(bool enabled) { bondFormationEnabled_ = enabled; }
+    bool isBondFormationEnabled() const { return bondFormationEnabled_; }
     void setGravity(const Vec3f& gravity) { forceField_.setGravity(gravity); }
     Vec3f getGravity() const { return forceField_.getGravity(); }
     void setNeighborListCutoff(float cutoff) { neighborList_.setCutoff(cutoff); }
@@ -54,6 +57,8 @@ public:
     const ForceField& forceField() const { return forceField_; }
     NeighborList& neighborList() { return neighborList_; }
     const NeighborList& neighborList() const { return neighborList_; }
+    Bond::List& bonds() { return bonds_; }
+    const Bond::List& bonds() const { return bonds_; }
 
     void clear();
 private:
@@ -64,8 +69,10 @@ private:
     Integrator integrator;
     ForceField forceField_;
     NeighborList neighborList_;
+    Bond::List bonds_;
     float Dt = 0.01;
     int sim_step = 0;
     double sim_time_ns = 0;
     bool useNeighborList_ = true;
+    bool bondFormationEnabled_ = true;
 };

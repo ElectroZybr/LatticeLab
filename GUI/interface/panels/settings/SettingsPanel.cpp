@@ -116,6 +116,12 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
         simulation.setDt(dt);
     }
     ImGui::PopItemWidth();
+
+    bool bondFormationEnabled = simulation.isBondFormationEnabled();
+    if (ImGui::Checkbox("Образовывать связи", &bondFormationEnabled)) {
+        simulation.setBondFormationEnabled(bondFormationEnabled);
+    }
+
     ImGui::SeparatorText("Рендер");
     ImGui::Checkbox("Сетка", &renderer->drawGrid);
     ImGui::Checkbox("Связи", &renderer->drawBonds);
