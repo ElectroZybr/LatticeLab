@@ -36,10 +36,11 @@ void CursorTool::onLeftReleased(sf::Vector2i mousePos) {
 }
 
 void CursorTool::onFrame(sf::Vector2i mousePos, float deltaTime) {
-    (void)deltaTime;
-
     ToolContext& ctx = context();
     if (!atomMoveActive_ || ctx.atomStorage == nullptr || ctx.pickingSystem == nullptr) {
+        return;
+    }
+    if (deltaTime <= 0.0f) {
         return;
     }
     if (selectedMoveAtomIndex_ == InvalidIndex || selectedMoveAtomIndex_ >= ctx.atomStorage->size()) {
@@ -52,24 +53,29 @@ void CursorTool::onFrame(sf::Vector2i mousePos, float deltaTime) {
     const Vec3f worldMouse = screenToWorld(mousePos);
     const auto& selectedIndices = ctx.pickingSystem->getSelectedIndices();
     const Vec3f selectedWorldPos = atoms.pos(selectedMoveAtomIndex_);
-    const Vec3f force = (worldMouse - selectedWorldPos) * 0.05f;
+    const Vec3f displacement = worldMouse - selectedWorldPos;
 
-    auto applyRawForce = [&](size_t idx, const Vec3f& value) {
-        atoms.forceX(idx) += value.x;
-        atoms.forceY(idx) += value.y;
-        atoms.forceZ(idx) += value.z;
+    constexpr float kReferenceFrameRate = 60.0f;
+    constexpr float kDragStrength = 5.f;
+    const float frameScale = deltaTime * kReferenceFrameRate;
+
+    auto applyRawForce = [&](size_t idx, const Vec3f& baseDisplacement) {
+        const Vec3f dragForce = baseDisplacement * (kDragStrength * frameScale);
+        atoms.forceX(idx) += dragForce.x;
+        atoms.forceY(idx) += dragForce.y;
+        atoms.forceZ(idx) += dragForce.z;
     };
 
     if (selectedIndices.contains(selectedMoveAtomIndex_)) {
         for (size_t idx : selectedIndices) {
             if (idx < atoms.size()) {
-                applyRawForce(idx, force);
+                applyRawForce(idx, displacement);
             }
         }
         return;
     }
 
-    applyRawForce(selectedMoveAtomIndex_, force);
+    applyRawForce(selectedMoveAtomIndex_, displacement);
 }
 
 void CursorTool::reset() {
