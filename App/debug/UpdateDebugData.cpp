@@ -1,4 +1,4 @@
-﻿#include "UpdateDebugData.h"
+#include "UpdateDebugData.h"
 #include <algorithm>
 
 #include <string>
@@ -8,6 +8,7 @@
 #include "Engine/metrics/MemoryMetrics.h"
 #include "Engine/metrics/Profiler.h"
 #include "Engine/Simulation.h"
+#include "Engine/Consts.h"
 #include "App/interaction/ToolsManager.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
 
@@ -44,7 +45,8 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     const double nlNeedsRebuildMs = profiler.lastMs("NeighborList::needsRebuild");
     const float stepsPerSecond = static_cast<float>(profiler.counterRate("Simulation::steps"));
 
-    debugViews.sim->add_data("Полная энергия", static_cast<float>(EnergyMetrics::fullAverageEnergy(simulation.atomStorage)));
+    debugViews.sim->add_data("Полная энергия (pj)", simulation.fullEnegryPJ());
+    debugViews.sim->add_data("Полная средняя энергия (eV)", static_cast<float>(EnergyMetrics::fullAverageEnergy(simulation.atomStorage)));
     debugViews.sim->add_data("Память (МБ)", MemoryMetrics::getRSS() / 1024.f / 1024.f);
     debugViews.sim->add_data("Рендер (мс)", renderMs);
     debugViews.sim->add_data("Физика (мс)", physicsMs);
@@ -60,9 +62,9 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     debugViews.neighbor->add_data("Размер сетки", gridSize);
     const std::string boxSizeNm =
         std::format("{:.2f} x {:.2f} x {:.2f}",
-            simulation.sim_box.size.x * simulation.kAngstremToNm,
-            simulation.sim_box.size.y * simulation.kAngstremToNm,
-            simulation.sim_box.size.z * simulation.kAngstremToNm);
+            simulation.sim_box.size.x * Units::AngstromToNm,
+            simulation.sim_box.size.y * Units::AngstromToNm,
+            simulation.sim_box.size.z * Units::AngstromToNm);
     debugViews.neighbor->add_data("Размер бокса (nm)", boxSizeNm);
     debugViews.neighbor->add_data("Размер ячейки", simulation.sim_box.grid.cellSize);
     debugViews.neighbor->add_data("NeighborList включен",
@@ -91,5 +93,3 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
         simulation.sim_box.grid.stats().lastAverageAtomsPerNonEmptyCell());
 
 }
-
-

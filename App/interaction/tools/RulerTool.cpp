@@ -6,9 +6,9 @@
 #include "App/interaction/picking/PickingSystem.h"
 #include "GUI/interface/interface.h"
 #include "Rendering/BaseRenderer.h"
+#include "Engine/Consts.h"
 
 namespace {
-constexpr float kAngstromToNm = 0.1f;
 
 Vec3f mapMouseToRulerWorld(const ToolContext& ctx, sf::Vector2i mousePos) {
     IRenderer* renderer = ctx.activeRenderer();
@@ -28,7 +28,7 @@ Vec3f mapMouseToRulerWorld(const ToolContext& ctx, sf::Vector2i mousePos) {
 
 std::string makeRulerTooltip(const Vec3f& start, const Vec3f& end) {
     const float distanceAngstrom = (end - start).abs();
-    const float distanceNm = distanceAngstrom * kAngstromToNm;
+    const float distanceNm = distanceAngstrom * static_cast<float>(Units::AngstromToNm);
 
     char buffer[128];
     std::snprintf(buffer, sizeof(buffer), "Distance: %.2f A (%.2f nm)", distanceAngstrom, distanceNm);
@@ -155,3 +155,6 @@ void RulerTool::syncOverlayFromWorld() {
     overlay.rulerStart = renderer->camera.worldToScreen(startWorld_);
     overlay.rulerEnd = renderer->camera.worldToScreen(endWorld_);
 }
+
+
+
