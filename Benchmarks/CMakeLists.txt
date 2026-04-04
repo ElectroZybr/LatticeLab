@@ -15,5 +15,6 @@ target_include_directories(benchmarks PRIVATE
 
 target_link_libraries(benchmarks PRIVATE
     benchmark::benchmark_main
-    chemical_simulator_lib
+    latticelab_lib
 )
+
