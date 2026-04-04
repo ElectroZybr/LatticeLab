@@ -173,25 +173,19 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
     ImGui::PopItemWidth();
 
     ImGui::SeparatorText("Список соседей");
-    bool neighborListEnabled = simulation.isNeighborListEnabled();
-    if (ImGui::Checkbox("NeighborList", &neighborListEnabled))
-        simulation.setNeighborListEnabled(neighborListEnabled);
-
     int cellSize = simulation.box().grid.cellSize;
     if (ImGui::SliderInt("Cell size", &cellSize, 1, 32)) {
         simulation.setSizeBox(simulation.box().size, cellSize);
     }
 
-    if (simulation.isNeighborListEnabled()) {
-        float cutoff = simulation.getNeighborListCutoff();
-        if (ImGui::SliderFloat("Cutoff NL", &cutoff, 0.5f, 20.0f, "%.2f")) {
-            simulation.setNeighborListCutoff(cutoff);
-        }
+    float cutoff = simulation.getNeighborListCutoff();
+    if (ImGui::SliderFloat("Cutoff NL", &cutoff, 0.5f, 20.0f, "%.2f")) {
+        simulation.setNeighborListCutoff(cutoff);
+    }
 
-        float skin = simulation.getNeighborListSkin();
-        if (ImGui::SliderFloat("Skin NL", &skin, 0.1f, 10.0f, "%.2f")) {
-            simulation.setNeighborListSkin(skin);
-        }
+    float skin = simulation.getNeighborListSkin();
+    if (ImGui::SliderFloat("Skin NL", &skin, 0.1f, 10.0f, "%.2f")) {
+        simulation.setNeighborListSkin(skin);
     }
 
     const float exitButtonWidth = ImGui::GetContentRegionAvail().x;

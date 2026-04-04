@@ -36,9 +36,6 @@ public:
     double simTimeNs() const { return sim_time_ns; }
     double fullEnegryPJ() const { return EnergyMetrics::fullAverageEnergy(atomStorage_) * static_cast<double>(atomStorage_.size()) * Units::kEvToPJ; }
 
-    // API
-    void setNeighborListEnabled(bool enabled);
-    bool isNeighborListEnabled() const { return useNeighborList_; }
     void setBondFormationEnabled(bool enabled) { bondFormationEnabled_ = enabled; }
     bool isBondFormationEnabled() const { return bondFormationEnabled_; }
     void setGravity(const Vec3f& gravity) { forceField_.setGravity(gravity); }
@@ -73,6 +70,5 @@ private:
     float Dt = 0.01;
     int sim_step = 0;
     double sim_time_ns = 0;
-    bool useNeighborList_ = true;
     bool bondFormationEnabled_ = true;
 };

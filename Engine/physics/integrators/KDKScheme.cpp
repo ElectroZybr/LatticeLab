@@ -3,7 +3,7 @@
 #include "Engine/metrics/Profiler.h"
 #include "StepOps.h"
 
-void KDKScheme::pipeline(AtomStorage& atomStorage, Bond::List& bonds, SimBox& box, ForceField& forceField, NeighborList* neighborList, bool allowBondFormation, float accelDamping, float dt) const {
+void KDKScheme::pipeline(AtomStorage& atomStorage, Bond::List& bonds, SimBox& box, ForceField& forceField, NeighborList& neighborList, bool allowBondFormation, float accelDamping, float dt) const {
     PROFILE_SCOPE("KDKScheme::pipeline");
     // Kick: половина шага
     halfKick(atomStorage, accelDamping, dt);

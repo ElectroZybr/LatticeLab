@@ -14,21 +14,14 @@ Simulation::Simulation(SimBox& box)
     forceField_.syncWalls(sim_box_);
 }
 
-void Simulation::setNeighborListEnabled(bool enabled) {
-    if (useNeighborList_ == enabled) {
-        return;
-    }
-
-    useNeighborList_ = enabled;
-    if (!useNeighborList_) {
-        neighborList_.clear();
-    }
-}
-
 void Simulation::update() {
     PROFILE_SCOPE("Simulation::update");
-    integrator.step(atomStorage_, bonds_, sim_box_, forceField_, useNeighborList_ ? &neighborList_ : nullptr, bondFormationEnabled_, Dt);
-    if (useNeighborList_ && neighborList_.needsRebuild(atomStorage_)) {
+    if (!neighborList_.isValid()) {
+        neighborList_.build(atomStorage_, sim_box_);
+    }
+
+    integrator.step(atomStorage_, bonds_, sim_box_, forceField_, neighborList_, bondFormationEnabled_, Dt);
+    if (neighborList_.needsRebuild(atomStorage_)) {
         neighborList_.build(atomStorage_, sim_box_);
         neighborList_.recordRebuild(sim_step);
     }

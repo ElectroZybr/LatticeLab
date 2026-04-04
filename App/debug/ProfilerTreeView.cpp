@@ -26,7 +26,6 @@ constexpr std::array<ProfileNameAlias, 19> kProfileNameAliases{{
     {"RendererGL::drawGridGL", "drawGrid"},
     {"ForceField::compute", "compute"},
     {"ForceField::ComputeForces(NL)", "forces NL"},
-    {"ForceField::ComputeForces(NoNL)", "forces noNL"},
     {"StepOps::computeForces", "step forces"},
     {"VerletScheme::pipeline", "verlet"},
     {"VerletScheme::correct", "verlet correct"},
