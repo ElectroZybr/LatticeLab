@@ -11,26 +11,6 @@
 #include "App/interaction/Tools.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
 
-namespace {
-void addProfilerMetric(DebugView* view, const Profiler& profiler,
-                       const char* entryName, const char* msLabel, const char* percentLabel,
-                       const char* graphLabel = nullptr) {
-    if (view == nullptr) {
-        return;
-    }
-
-    const ProfileEntry* entry = profiler.findEntry(entryName);
-    const double ms = entry != nullptr ? entry->lastMs : 0.0;
-    const double percent = entry != nullptr ? entry->percentOfFrame : 0.0;
-
-    view->add_data(msLabel, ms);
-    view->add_data(percentLabel, percent);
-    if (graphLabel != nullptr) {
-        view->add_data(graphLabel, static_cast<float>(ms));
-    }
-}
-}
-
 void updateAtomSelectionDebug(const DebugViews& debugViews, const Simulation& simulation) {
     if (Tools::pickingSystem->getSelectedIndices().size() == 1)
     {
@@ -104,46 +84,6 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     debugViews.neighbor->add_data("SG ср. атомов/ячейку",
         simulation.sim_box.grid.stats().lastAverageAtomsPerNonEmptyCell());
 
-    if (debugViews.profiler != nullptr) {
-        const auto& frame = profiler.frameData();
-
-        debugViews.profiler->add_data("Кадр (мс)", frame.frameMs);
-        debugViews.profiler->add_data("Tracked (мс)", frame.totalTrackedMs);
-        debugViews.profiler->add_data("Frame (график)", static_cast<float>(frame.frameMs));
-
-        addProfilerMetric(debugViews.profiler, profiler,
-                          "Application::RenderFrame",
-                          "Application::RenderFrame (мс)",
-                          "Application::RenderFrame (%)");
-        addProfilerMetric(debugViews.profiler, profiler,
-                          "Simulation::update",
-                          "Simulation::update (мс)",
-                          "Simulation::update (%)",
-                          "Simulation::update (график)");
-        addProfilerMetric(debugViews.profiler, profiler,
-                          "ForceField::compute",
-                          "ForceField::compute (мс)",
-                          "ForceField::compute (%)",
-                          "ForceField::compute (график)");
-        addProfilerMetric(debugViews.profiler, profiler,
-                          "NeighborList::build",
-                          "NeighborList::build (мс)",
-                          "NeighborList::build (%)",
-                          "NeighborList::build (график)");
-        addProfilerMetric(debugViews.profiler, profiler,
-                          "NeighborList::needsRebuild",
-                          "NeighborList::needsRebuild (мс)",
-                          "NeighborList::needsRebuild (%)");
-        addProfilerMetric(debugViews.profiler, profiler,
-                          "SpatialGrid::rebuild",
-                          "SpatialGrid::rebuild (мс)",
-                          "SpatialGrid::rebuild (%)");
-        addProfilerMetric(debugViews.profiler, profiler,
-                          "RendererGL::drawShot",
-                          "RendererGL::drawShot (мс)",
-                          "RendererGL::drawShot (%)",
-                          "RendererGL::drawShot (график)");
-    }
 }
 
 
