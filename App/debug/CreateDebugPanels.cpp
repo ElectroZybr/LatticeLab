@@ -1,5 +1,6 @@
-﻿#include "CreateDebugPanels.h"
+#include "CreateDebugPanels.h"
 
+#include "ProfilerTreeView.h"
 #include "GUI/interface/panels/debug/DebugDrawers.h"
 #include "GUI/interface/panels/debug/DebugPanel.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
@@ -62,29 +63,7 @@ static DebugView* buildDebugNeighborView(DebugPanel& panel) {
 }
 
 static DebugView* buildDebugProfilerView(DebugPanel& panel) {
-    return panel.addView(DebugView("Profiler", {
-        DebugValue("Кадр (мс)", DebugDrawers::Float<4>),
-        DebugValue("Tracked (мс)", DebugDrawers::Float<4>),
-        DebugValue("Application::RenderFrame (мс)", DebugDrawers::Float<4>),
-        DebugValue("Application::RenderFrame (%)", DebugDrawers::Float<2>),
-        DebugValue("Simulation::update (мс)", DebugDrawers::Float<4>),
-        DebugValue("Simulation::update (%)", DebugDrawers::Float<2>),
-        DebugValue("ForceField::compute (мс)", DebugDrawers::Float<4>),
-        DebugValue("ForceField::compute (%)", DebugDrawers::Float<2>),
-        DebugValue("NeighborList::build (мс)", DebugDrawers::Float<4>),
-        DebugValue("NeighborList::build (%)", DebugDrawers::Float<2>),
-        DebugValue("NeighborList::needsRebuild (мс)", DebugDrawers::Float<4>),
-        DebugValue("NeighborList::needsRebuild (%)", DebugDrawers::Float<2>),
-        DebugValue("SpatialGrid::rebuild (мс)", DebugDrawers::Float<4>),
-        DebugValue("SpatialGrid::rebuild (%)", DebugDrawers::Float<2>),
-        DebugValue("RendererGL::drawShot (мс)", DebugDrawers::Float<4>),
-        DebugValue("RendererGL::drawShot (%)", DebugDrawers::Float<2>),
-        DebugSeries("Frame (график)"),
-        DebugSeries("Simulation::update (график)"),
-        DebugSeries("ForceField::compute (график)"),
-        DebugSeries("NeighborList::build (график)"),
-        DebugSeries("RendererGL::drawShot (график)"),
-    }));
+    return panel.addView(DebugView("Profiler", drawProfilerTreeView));
 }
 } // namespace
 
@@ -97,5 +76,3 @@ DebugViews createDebugViews(DebugPanel& panel) {
         buildDebugProfilerView(panel),
     };
 }
-
-

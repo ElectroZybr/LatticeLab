@@ -29,7 +29,7 @@ int Application::run() {
     }
     sf::View& gameView = const_cast<sf::View&>(window.getView());
 
-    SimBox box(Vec3f(50, 50, 50));
+    SimBox box(Vec3f(50, 50, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
     Scenes::crystal(simulation, 25, AtomData::Type::Z, false);

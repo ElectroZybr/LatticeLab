@@ -7,14 +7,17 @@
 #include <variant>
 #include <deque>
 #include <any>
+#include <functional>
 
 #include "../DebugEntry.h"
 
 class DebugView {
 public:
     using Storage = std::variant<std::any, std::deque<float>>;
+    using CustomDrawFn = std::function<void(float)>;
 
     DebugView(std::string_view title, std::initializer_list<DebugEntry> entries);
+    DebugView(std::string_view title, CustomDrawFn customDraw);
     const char* getTitle() const { return title.data(); }
     void draw(float uiScale);
 
@@ -32,4 +35,5 @@ private:
     std::string title;
     std::vector<DebugData> data;
     std::unordered_map<std::string, size_t> indicesByLabel;
+    CustomDrawFn customDraw_;
 };

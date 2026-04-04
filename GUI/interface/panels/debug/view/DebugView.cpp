@@ -19,6 +19,10 @@ DebugView::DebugView(std::string_view title, std::initializer_list<DebugEntry> e
     }
 }
 
+DebugView::DebugView(std::string_view title, CustomDrawFn customDraw)
+    : title(title)
+    , customDraw_(std::move(customDraw)) {}
+
 void DebugView::add_data(std::string_view label, std::any value) {
     auto it = indicesByLabel.find(std::string(label));
     if (it == indicesByLabel.end()) return;
@@ -35,6 +39,11 @@ void DebugView::add_data(std::string_view label, std::any value) {
 }
 
 void DebugView::draw(float uiScale) {
+    if (customDraw_) {
+        customDraw_(uiScale);
+        return;
+    }
+
     for (auto& d : data) {
         const std::string& label = d.entry.label;
         if (d.entry.type == DebugDisplayType::Value) {
