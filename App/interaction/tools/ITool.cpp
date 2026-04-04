@@ -15,6 +15,11 @@ void ITool::onLeftReleased(sf::Vector2i mousePos) {
     (void)mousePos;
 }
 
+bool ITool::onRightPressed(sf::Vector2i mousePos) {
+    (void)mousePos;
+    return false;
+}
+
 void ITool::onFrame(sf::Vector2i mousePos, float deltaTime) {
     (void)mousePos;
     (void)deltaTime;

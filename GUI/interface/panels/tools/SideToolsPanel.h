@@ -9,8 +9,9 @@ public:
         Cursor = 0,
         Frame = 1,
         Lasso = 2,
-        AddAtom = 3,
-        RemoveAtom = 4,
+        Ruler = 3,
+        AddAtom = 4,
+        RemoveAtom = 5,
     };
 
     static constexpr ImGuiWindowFlags PANEL_FLAGS =

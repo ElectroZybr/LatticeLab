@@ -1,21 +1,22 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <memory>
 
+#include "App/interaction/tools/ITool.h"
+#include "App/interaction/picking/PickingSystem.h"
+#include "Engine/NeighborSearch/SpatialGrid.h"
 #include "Engine/math/Vec3f.h"
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
-#include "Engine/NeighborSearch/SpatialGrid.h"
 #include "Rendering/BaseRenderer.h"
-
-#include "App/interaction/picking/PickingSystem.h"
 
 class SimBox;
 
-class Tools {
+class ToolsManager {
 public:
     using AtomCreator = std::function<bool(Vec3f, Vec3f, AtomData::Type, bool)>;
     using AtomRemover = std::function<bool(size_t)>;
@@ -24,6 +25,7 @@ public:
         Cursor,
         Frame,
         Lasso,
+        Ruler,
         AddAtom,
         RemoveAtom,
     };
@@ -42,6 +44,7 @@ public:
 
     static void onLeftPressed(sf::Vector2i mousePos);
     static void onLeftReleased(sf::Vector2i mousePos);
+    static bool onRightPressed(sf::Vector2i mousePos);
     static void onFrame(sf::Vector2i mousePos, float deltaTime);
     static void resetInteractionState();
 
@@ -51,10 +54,11 @@ public:
     static PickingSystem* pickingSystem;
 
 private:
-    static constexpr size_t InvalidIndex = static_cast<size_t>(-1);
+    static constexpr size_t kModeCount = 6;
 
-    static bool tryAddAtom(sf::Vector2i mousePos, AtomData::Type atomType);
-    static bool tryRemoveAtom(sf::Vector2i mousePos);
+    static ITool* activeTool() noexcept;
+    static void syncToolMode() noexcept;
+    static size_t toIndex(Mode mode) noexcept;
 
     static sf::RenderWindow* window;
     static sf::View* gameView;
@@ -64,9 +68,10 @@ private:
     static AtomStorage* atomStorage;
     static AtomCreator atomCreator;
     static AtomRemover atomRemover;
+    static ToolContext toolContext;
+    static std::array<std::unique_ptr<ITool>, kModeCount> toolInstances;
+    static Mode syncedMode;
 
     static sf::Vector2i startMousePos;
     static bool isInteracting;
-    static size_t selectedMoveAtomIndex;
-    static bool atomMoveFlag;
 };

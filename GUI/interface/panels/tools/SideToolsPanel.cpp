@@ -1,57 +1,60 @@
 #include "SideToolsPanel.h"
+
 #include <array>
 #include <cmath>
 
 #define ICON_FA_MOUSE_POINTER "\uf245"
 #define ICON_FA_VECTOR_SQUARE "\uf5cb"
 #define ICON_FA_DRAW_POLYGON  "\uf5ee"
+#define ICON_FA_RULER         "\uf545"
 #define ICON_FA_PLUS          "\uf067"
 #define ICON_FA_MINUS         "\uf068"
 
 namespace {
-    constexpr ImVec4 ACTIVE_COLOR = ImVec4(0.06f, 0.53f, 0.98f, 1.00f);
+constexpr ImVec4 ACTIVE_COLOR = ImVec4(0.06f, 0.53f, 0.98f, 1.00f);
 
-    struct ToolItem {
-        SideToolsPanel::Tool tool;
-        const char* icon;
-        const char* tooltip;
-    };
+struct ToolItem {
+    SideToolsPanel::Tool tool;
+    const char* icon;
+    const char* tooltip;
+};
 
-    constexpr std::array<ToolItem, 5> TOOL_ITEMS{{
-        {SideToolsPanel::Tool::Cursor,     ICON_FA_MOUSE_POINTER, "Мышка"},
-        {SideToolsPanel::Tool::Frame,      ICON_FA_VECTOR_SQUARE, "Рамка"},
-        {SideToolsPanel::Tool::Lasso,      ICON_FA_DRAW_POLYGON,  "Лассо"},
-        {SideToolsPanel::Tool::AddAtom,    ICON_FA_PLUS,          "Добавить атом"},
-        {SideToolsPanel::Tool::RemoveAtom, ICON_FA_MINUS,         "Удалить атом"},
-    }};
+constexpr std::array<ToolItem, 6> TOOL_ITEMS{{
+    {SideToolsPanel::Tool::Cursor,     ICON_FA_MOUSE_POINTER, "Cursor"},
+    {SideToolsPanel::Tool::Frame,      ICON_FA_VECTOR_SQUARE, "Frame select"},
+    {SideToolsPanel::Tool::Lasso,      ICON_FA_DRAW_POLYGON,  "Lasso select"},
+    {SideToolsPanel::Tool::Ruler,      ICON_FA_RULER,         "Ruler"},
+    {SideToolsPanel::Tool::AddAtom,    ICON_FA_PLUS,          "Add atom"},
+    {SideToolsPanel::Tool::RemoveAtom, ICON_FA_MINUS,         "Remove atom"},
+}};
 
-    bool drawToolButton(const char* icon, const char* tooltip, bool selected, float buttonSize, ImFont* textFont) {
-        if (selected) {
-            ImGui::PushStyleColor(ImGuiCol_Button,        ACTIVE_COLOR);
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ACTIVE_COLOR);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ACTIVE_COLOR);
-        }
-
-        const bool pressed = ImGui::Button(icon, ImVec2(buttonSize, buttonSize));
-
-        if (selected) {
-            ImGui::PopStyleColor(3);
-        }
-
-        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
-            ImGui::BeginTooltip();
-            if (textFont) {
-                ImGui::PushFont(textFont);
-            }
-            ImGui::TextUnformatted(tooltip);
-            if (textFont) {
-                ImGui::PopFont();
-            }
-            ImGui::EndTooltip();
-        }
-
-        return pressed;
+bool drawToolButton(const char* icon, const char* tooltip, bool selected, float buttonSize, ImFont* textFont) {
+    if (selected) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ACTIVE_COLOR);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ACTIVE_COLOR);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ACTIVE_COLOR);
     }
+
+    const bool pressed = ImGui::Button(icon, ImVec2(buttonSize, buttonSize));
+
+    if (selected) {
+        ImGui::PopStyleColor(3);
+    }
+
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+        ImGui::BeginTooltip();
+        if (textFont) {
+            ImGui::PushFont(textFont);
+        }
+        ImGui::TextUnformatted(tooltip);
+        if (textFont) {
+            ImGui::PopFont();
+        }
+        ImGui::EndTooltip();
+    }
+
+    return pressed;
+}
 }
 
 void SideToolsPanel::draw(float scale, sf::Vector2u windowSize, ImFont* iconFont, ImFont* textFont) {

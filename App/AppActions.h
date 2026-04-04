@@ -5,7 +5,7 @@
 #include "Scenes.h"
 #include "AppStateIO.h"
 #include "Engine/Simulation.h"
-#include "App/interaction/Tools.h"
+#include "App/interaction/ToolsManager.h"
 #include "GUI/interface/interface.h"
 #include "Rendering/2d/Renderer2D.h"
 #include "Rendering/3d/Renderer3D.h"
@@ -49,18 +49,18 @@ namespace AppActions {
             }));
             track(AppSignals::UI::LoadSimulation.connect([&](std::string_view path) {
                 AppStateIO::load(simulation, *renderer, path);
-                Tools::resetInteractionState();
+                ToolsManager::resetInteractionState();
             }));
             track(AppSignals::UI::ResizeBox.connect([&](const Vec3f& newSize) {
                 applyResizeBox(simulation, renderer, newSize);
             }));
             track(AppSignals::UI::ClearSimulation.connect([&]() {
                 simulation.clear();
-                Tools::resetInteractionState();
+                ToolsManager::resetInteractionState();
             }));
             track(AppSignals::UI::CreateGas.connect([&]() {
                 simulation.clear();
-                Tools::resetInteractionState();
+                ToolsManager::resetInteractionState();
                 Scenes::randomGas(simulation,
                                   Interface::ioPanel.gasAtomCount(),
                                   Interface::ioPanel.gasAtomType(),
@@ -71,7 +71,7 @@ namespace AppActions {
             }));
             track(AppSignals::UI::CreateCrystal.connect([&]() {
                 simulation.clear();
-                Tools::resetInteractionState();
+                ToolsManager::resetInteractionState();
                 Scenes::crystal(simulation, Interface::ioPanel.sceneAxisCount(), Interface::ioPanel.atomType(), Interface::ioPanel.sceneIs3D());
             }));
         }

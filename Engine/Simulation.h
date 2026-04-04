@@ -13,7 +13,10 @@ class Simulation {
 public:
     Simulation(SimBox& sim_box);
 
-    static constexpr double kTimeUnitToFs = 10.1805; // константа для перевода Dt -> Fs (1Dt = 10.1805 fs)
+    static constexpr double kTimeUnitToFs = 10.1805; // константа для перевода Dt -> Fs (1 Dt = 10.1805 fs)
+    static constexpr double kTimeUnitToNs = 10.1805e-6; // константа для перевода Dt -> Ns (1 Dt = 0.0000101805 ns)
+
+    static constexpr double kAngstremToNm = 0.1; // константа для перевода ангстрем в нанометры
 
     void update();
     void setSizeBox(Vec3f newSize, int cellSize = -1);
@@ -32,14 +35,11 @@ public:
     float getAccelDamping() const { return integrator.accelDamping(); }
     
     int getSimStep() const { return sim_step; }
-    double simTimeFs() const { return sim_time_fs * kTimeUnitToFs; }
+    double simTimeNs() const { return sim_time_ns; }
 
     void setNeighborListEnabled(bool enabled);
     bool isNeighborListEnabled() const { return useNeighborList_; }
 
-    // io
-    void save(const std::string_view path) const;
-    void load(const std::string_view path);
     void clear();
 
     SimBox& sim_box;
@@ -52,6 +52,6 @@ private:
 
     float Dt = 0.01;
     int sim_step = 0;
-    double sim_time_fs = 0;
+    double sim_time_ns = 0;
     bool useNeighborList_ = true;
 };

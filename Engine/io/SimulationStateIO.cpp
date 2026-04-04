@@ -14,7 +14,7 @@ void SimulationStateIO::save(const Simulation& simulation, std::string_view path
 
     file << "box " << simulation.sim_box.size.x << " " << simulation.sim_box.size.y << " " << simulation.sim_box.size.z << "\n";
     file << "step " << simulation.sim_step << "\n";
-    file << "time_fs " << simulation.sim_time_fs << "\n";
+    file << "time_ns " << simulation.sim_time_ns << "\n";
     file << "dt " << simulation.getDt() << "\n";
     file << "integrator " << static_cast<int>(simulation.getIntegrator()) << "\n";
     const Vec3f gravity = simulation.forceField.getGravity();
@@ -55,7 +55,7 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
     Vec3f boxSize;
     int cellSize = -1;
     int loadedStep = 0;
-    double loadedTimeFs = 0.0;
+    double loadedTimeNs = 0.0;
     float loadedDt = simulation.getDt();
     int loadedIntegrator = static_cast<int>(simulation.getIntegrator());
     Vec3f loadedGravity = simulation.forceField.getGravity();
@@ -69,8 +69,8 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
             file >> boxSize.x >> boxSize.y >> boxSize.z;
         } else if (tag == "step") {
             file >> loadedStep;
-        } else if (tag == "time_fs") {
-            file >> loadedTimeFs;
+        } else if (tag == "time_ns") {
+            file >> loadedTimeNs;
         } else if (tag == "dt") {
             file >> loadedDt;
         } else if (tag == "integrator") {
@@ -128,7 +128,7 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
     }
 
     simulation.sim_step = loadedStep;
-    simulation.sim_time_fs = loadedTimeFs;
+    simulation.sim_time_ns = loadedTimeNs;
     simulation.setMaxParticleSpeed(loadedMaxSpeed);
     simulation.setAccelDamping(loadedAccelDamping);
 }

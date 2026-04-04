@@ -8,15 +8,15 @@
 #include "Engine/metrics/MemoryMetrics.h"
 #include "Engine/metrics/Profiler.h"
 #include "Engine/Simulation.h"
-#include "App/interaction/Tools.h"
+#include "App/interaction/ToolsManager.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
 
 void updateAtomSelectionDebug(const DebugViews& debugViews, const Simulation& simulation) {
-    if (Tools::pickingSystem->getSelectedIndices().size() == 1)
+    if (ToolsManager::pickingSystem->getSelectedIndices().size() == 1)
     {
         debugViews.atomSingle->visible = true;
         debugViews.atomBatch->visible = false;
-        const size_t selectedIndex = *Tools::pickingSystem->getSelectedIndices().begin();
+        const size_t selectedIndex = *ToolsManager::pickingSystem->getSelectedIndices().begin();
         if (selectedIndex < simulation.atomStorage.size()) {
             debugViews.atomSingle->add_data("Позиция", simulation.atomStorage.pos(selectedIndex));
             debugViews.atomSingle->add_data("Скорость", simulation.atomStorage.vel(selectedIndex));
@@ -32,7 +32,7 @@ void updateAtomSelectionDebug(const DebugViews& debugViews, const Simulation& si
     else {
         debugViews.atomBatch->visible = true;
         debugViews.atomSingle->visible = false;
-        debugViews.atomBatch->add_data("Выбрано атомов", Tools::pickingSystem->getSelectedIndices().size());
+        debugViews.atomBatch->add_data("Выбрано атомов", ToolsManager::pickingSystem->getSelectedIndices().size());
     }
 }
 
@@ -51,13 +51,19 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     debugViews.sim->add_data("Количество атомов", simulation.atomStorage.size());
     debugViews.sim->add_data("Шаги симуляции", simulation.getSimStep());
     debugViews.sim->add_data("Шагов/с", stepsPerSecond);
-    debugViews.sim->add_data("Время симуляции (ns)", simulation.simTimeFs()/1000000.0);
+    debugViews.sim->add_data("Время симуляции (ns)", simulation.simTimeNs());
     debugViews.sim->add_data("Тип интегратора", integratorName);
 
     const std::string gridSize = std::to_string(std::max(0, simulation.sim_box.grid.sizeX - 2))
         + " x " + std::to_string(std::max(0, simulation.sim_box.grid.sizeY - 2))
         + " x " + std::to_string(std::max(0, simulation.sim_box.grid.sizeZ - 2));
     debugViews.neighbor->add_data("Размер сетки", gridSize);
+    const std::string boxSizeNm =
+        std::format("{:.2f} x {:.2f} x {:.2f}",
+            simulation.sim_box.size.x * simulation.kAngstremToNm,
+            simulation.sim_box.size.y * simulation.kAngstremToNm,
+            simulation.sim_box.size.z * simulation.kAngstremToNm);
+    debugViews.neighbor->add_data("Размер бокса (nm)", boxSizeNm);
     debugViews.neighbor->add_data("Размер ячейки", simulation.sim_box.grid.cellSize);
     debugViews.neighbor->add_data("NeighborList включен",
         simulation.isNeighborListEnabled() ? std::string("Да") : std::string("Нет"));

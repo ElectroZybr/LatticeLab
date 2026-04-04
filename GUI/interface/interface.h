@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #include <memory>
 
 #include "imgui-SFML.h"
@@ -40,6 +41,7 @@ public:
     static bool cursorHovered;
     static int countSelectedAtom;
     static bool drawToolTrip;
+    static std::string toolTooltipText;
 
     static FontManager fontManager;
 
