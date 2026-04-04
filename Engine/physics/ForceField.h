@@ -1,50 +1,31 @@
 #pragma once
 
-#include <array>
-#include <cstddef>
-
-#include "Engine/SimBox.h"
-#include "Engine/math/Vec3f.h"
-#include "AtomData.h"
 #include "AtomStorage.h"
 #include "Bond.h"
+#include "Engine/SimBox.h"
+#include "Engine/math/Vec3f.h"
+#include "ForceFields/BondForceField.h"
+#include "ForceFields/CoulombForceField.h"
+#include "ForceFields/LJForceField.h"
+#include "ForceFields/WallForceField.h"
+
 class NeighborList;
 
 class ForceField {
 public:
     ForceField();
 
-    void compute(AtomStorage& atoms, Bond::List& bonds, SimBox& box, NeighborList& neighborList, bool allowBondFormation, float dt) const;
+    void compute(AtomStorage& atoms, Bond::List& bonds, SimBox& box,
+                 NeighborList& neighborList, bool allowBondFormation, float dt) const;
     void syncWalls(const SimBox& box);
 
-    void setGravity(Vec3f gravity = Vec3f(0, 5, 0)) { static_force = gravity; }
-    Vec3f getGravity() const { return static_force; }
+    void setGravity(Vec3f gravity = Vec3f(0, 5, 0)) { static_force_ = gravity; }
+    Vec3f getGravity() const { return static_force_; }
 
 private:
-    struct LJParams {
-        float forceC6 = 0.0f;      // 24 * eps * a^6
-        float forceC12 = 0.0f;     // 48 * eps * a^12
-        float potentialC6 = 0.0f;  // 4 * eps * a^6
-        float potentialC12 = 0.0f; // 4 * eps * a^12
-    };
-
-    static constexpr size_t TypeCount = static_cast<size_t>(AtomData::Type::COUNT);
-    using LJPairTable = std::array<std::array<LJParams, TypeCount>, TypeCount>;
-    using LJPairRow = std::array<LJParams, TypeCount>;
-
-    static LJPairTable buildLJPairTable();
-
-    static void applyWall(float coord, float& force, float max);
-    void softWalls(const AtomStorage& atoms, float coordX, float coordY, float coordZ, float& forceX, float& forceY, float& forceZ) const;
-    void ComputeForces(AtomStorage& atoms, SimBox& box, NeighborList& neighborList) const;
-    void FormBonds(AtomStorage& atoms, Bond::List& bonds, SimBox& box, NeighborList& neighborList) const;
-    void pairNonBondedInteraction(AtomStorage& atoms, uint32_t bIndex, const LJPairRow& ljPairRow, float& forceX, float& forceY, float& forceZ, float posX, float posY, float posZ, float& potenE) const;
-    void tryCreateBond(AtomStorage& atoms, Bond::List& bonds, uint32_t aIndex, uint32_t bIndex) const;
-    void applyGravityForce(float& forceX, float& forceY, float& forceZ) const;
-
-    Vec3f static_force;
-    LJPairTable ljPairTable;
-    float wallMaxX = 0.0f;
-    float wallMaxY = 0.0f;
-    float wallMaxZ = 0.0f;
+    Vec3f static_force_;
+    WallForceField wallForceField_;
+    LJForceField ljForceField_;
+    BondForceField bondForceField_;
+    CoulombForceField coulombForceField_;
 };
