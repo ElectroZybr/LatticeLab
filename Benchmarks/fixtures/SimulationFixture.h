@@ -70,30 +70,30 @@ protected:
     void prepareForPredict() {
         rebuildScene();
         StepOps::computeForces(
-            simulation_->atomStorage, simulation_->sim_box,
-            simulation_->forceField, nullptr, Benchmarks::kDt
+            simulation_->atoms(), simulation_->box(),
+            simulation_->forceField(), nullptr, Benchmarks::kDt
         );
     }
 
     void prepareNeighborList() {
-        simulation_->neighborList.build(simulation_->atomStorage, simulation_->sim_box);
+        simulation_->neighborList().build(simulation_->atoms(), simulation_->box());
     }
 
     void prepareForCorrect() {
         prepareForPredict();
         StepOps::predictAndSync(
-            simulation_->atomStorage, simulation_->sim_box,
+            simulation_->atoms(), simulation_->box(),
             Benchmarks::kDt, &VerletScheme::predict
         );
         StepOps::computeForces(
-            simulation_->atomStorage, simulation_->sim_box,
-            simulation_->forceField, nullptr, Benchmarks::kDt
+            simulation_->atoms(), simulation_->box(),
+            simulation_->forceField(), nullptr, Benchmarks::kDt
         );
     }
 
     void setCounters(benchmark::State& state) const {
         const int64_t processedAtoms = simulation_
-            ? static_cast<int64_t>(simulation_->atomStorage.size())
+            ? static_cast<int64_t>(simulation_->atoms().size())
             : static_cast<int64_t>(atomCount_);
         state.SetItemsProcessed(
             state.iterations() * processedAtoms

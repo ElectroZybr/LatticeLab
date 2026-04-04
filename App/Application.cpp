@@ -34,15 +34,15 @@ int Application::run() {
     simulation.setIntegrator(Integrator::Scheme::Verlet);
     Scenes::crystal(simulation, 25, AtomData::Type::Z, false);
 
-    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView, simulation.sim_box);
-    renderer->setAtomStorage(&simulation.atomStorage);
+    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView, simulation.box());
+    renderer->setAtomStorage(&simulation.atoms());
     renderer->drawBonds = true;
     renderer->speedColorMode = IRenderer::SpeedColorMode::GradientClassic;
 
     AppActions::init(simulation, renderer, window, gameView);
     Interface::init(window, simulation, renderer);
-    EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atomStorage);
-    ToolsManager::init(&window, &gameView, &box.grid, &box, renderer, &simulation.atomStorage,
+    EventManager::init(&window, &gameView, renderer, &simulation.box(), &simulation.atoms());
+    ToolsManager::init(&window, &gameView, &box.grid, &box, renderer, &simulation.atoms(),
                 [&](Vec3f coords, Vec3f speed, AtomData::Type type, bool fixed) {
                     return simulation.createAtom(coords, speed, type, fixed);
                 },
@@ -90,7 +90,7 @@ int Application::run() {
             renderAccum -= renderInterval;
             Interface::Update();
             refreshAtomDebugViews(debugViews, simulation);
-            renderer->drawShot(simulation.atomStorage, simulation.sim_box);
+            renderer->drawShot(simulation.atoms(), simulation.box());
             ToolsManager::pickingSystem->getOverlay().draw(window);
             ImGui::SFML::Render(window);
             window.display();

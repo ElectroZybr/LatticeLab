@@ -7,8 +7,8 @@ BENCHMARK_DEFINE_F(SimulationFixture, NeighborListNeedRebuild)(benchmark::State&
     rebuildScene();
 
     for (auto _ : state) {
-        simulation_->neighborList.needsRebuild(simulation_->atomStorage);
-        benchmark::DoNotOptimize(simulation_->neighborList.pairStorageSize());
+        simulation_->neighborList().needsRebuild(simulation_->atoms());
+        benchmark::DoNotOptimize(simulation_->neighborList().pairStorageSize());
         benchmark::ClobberMemory();
     }
 

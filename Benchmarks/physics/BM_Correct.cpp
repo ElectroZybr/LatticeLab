@@ -6,8 +6,8 @@ BENCHMARK_DEFINE_F(SimulationFixture, Correct)(benchmark::State& state) {
     prepareForCorrect();
 
     for (auto _ : state) {
-        VerletScheme::correct(simulation_->atomStorage, 1.0f, Benchmarks::kDt);
-        benchmark::DoNotOptimize(simulation_->atomStorage.size());
+        VerletScheme::correct(simulation_->atoms(), 1.0f, Benchmarks::kDt);
+        benchmark::DoNotOptimize(simulation_->atoms().size());
         benchmark::ClobberMemory();
     }
     setCounters(state);

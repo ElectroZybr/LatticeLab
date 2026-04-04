@@ -7,10 +7,10 @@ BENCHMARK_DEFINE_F(SimulationFixture, PredictAndSync)(benchmark::State& state) {
 
     for (auto _ : state) {
         StepOps::predictAndSync(
-            simulation_->atomStorage, simulation_->sim_box,
+            simulation_->atoms(), simulation_->box(),
             Benchmarks::kDt, &VerletScheme::predict
         );
-        benchmark::DoNotOptimize(simulation_->atomStorage.size());
+        benchmark::DoNotOptimize(simulation_->atoms().size());
         benchmark::ClobberMemory();
     }
     setCounters(state);

@@ -78,7 +78,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
 
     if (animProgress_ < 0.01f) return;
 
-    boxSize_ = simulation.sim_box.size;
+    boxSize_ = simulation.box().size;
 
     const float panelWidth = 300.f * scale;
     const float topOffset = 65.f * scale;

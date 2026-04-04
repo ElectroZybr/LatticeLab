@@ -12,28 +12,29 @@ void SimulationStateIO::save(const Simulation& simulation, std::string_view path
         return;
     }
 
-    file << "box " << simulation.sim_box.size.x << " " << simulation.sim_box.size.y << " " << simulation.sim_box.size.z << "\n";
+    file << "box " << simulation.box().size.x << " " << simulation.box().size.y << " " << simulation.box().size.z << "\n";
     file << "step " << simulation.sim_step << "\n";
     file << "time_ns " << simulation.sim_time_ns << "\n";
     file << "dt " << simulation.getDt() << "\n";
     file << "integrator " << static_cast<int>(simulation.getIntegrator()) << "\n";
-    const Vec3f gravity = simulation.forceField.getGravity();
+    const Vec3f gravity = simulation.getGravity();
     file << "gravity " << gravity.x << " " << gravity.y << " " << gravity.z << "\n";
     file << "neighbor_list " << static_cast<int>(simulation.isNeighborListEnabled()) << "\n";
-    file << "cell_size " << simulation.sim_box.grid.cellSize << "\n";
-    file << "cutoff_nl " << simulation.neighborList.cutoff() << "\n";
-    file << "skin_nl " << simulation.neighborList.skin() << "\n";
+    file << "cell_size " << simulation.box().grid.cellSize << "\n";
+    file << "cutoff_nl " << simulation.getNeighborListCutoff() << "\n";
+    file << "skin_nl " << simulation.getNeighborListSkin() << "\n";
     file << "max_speed " << simulation.getMaxParticleSpeed() << "\n";
     file << "accel_damping " << simulation.getAccelDamping() << "\n";
 
-    for (size_t atomIndex = 0; atomIndex < simulation.atomStorage.size(); ++atomIndex) {
-        const Vec3f pos = simulation.atomStorage.pos(atomIndex);
-        const Vec3f vel = simulation.atomStorage.vel(atomIndex);
+    const AtomStorage& atoms = simulation.atoms();
+    for (size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
+        const Vec3f pos = atoms.pos(atomIndex);
+        const Vec3f vel = atoms.vel(atomIndex);
         file << "atom "
              << pos.x << " " << pos.y << " " << pos.z << " "
              << vel.x << " " << vel.y << " " << vel.z << " "
-             << static_cast<int>(simulation.atomStorage.type(atomIndex)) << " "
-             << simulation.atomStorage.isAtomFixed(atomIndex) << "\n";
+             << static_cast<int>(atoms.type(atomIndex)) << " "
+             << atoms.isAtomFixed(atomIndex) << "\n";
     }
 }
 
@@ -58,7 +59,7 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
     double loadedTimeNs = 0.0;
     float loadedDt = simulation.getDt();
     int loadedIntegrator = static_cast<int>(simulation.getIntegrator());
-    Vec3f loadedGravity = simulation.forceField.getGravity();
+    Vec3f loadedGravity = simulation.getGravity();
     bool loadedNeighborListEnabled = simulation.isNeighborListEnabled();
     float loadedMaxSpeed = 0.0f;
     float loadedAccelDamping = simulation.getAccelDamping();
@@ -84,13 +85,13 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
         } else if (tag == "cell_size") {
             file >> cellSize;
         } else if (tag == "cutoff_nl") {
-            float cutoff = simulation.neighborList.cutoff();
+            float cutoff = simulation.getNeighborListCutoff();
             file >> cutoff;
-            simulation.neighborList.setCutoff(cutoff);
+            simulation.setNeighborListCutoff(cutoff);
         } else if (tag == "skin_nl") {
-            float skin = simulation.neighborList.skin();
+            float skin = simulation.getNeighborListSkin();
             file >> skin;
-            simulation.neighborList.setSkin(skin);
+            simulation.setNeighborListSkin(skin);
         } else if (tag == "max_speed") {
             file >> loadedMaxSpeed;
         } else if (tag == "accel_damping") {
@@ -120,7 +121,7 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
     simulation.setSizeBox(boxSize, cellSize);
     simulation.setDt(loadedDt);
     simulation.setIntegrator(static_cast<Integrator::Scheme>(loadedIntegrator));
-    simulation.forceField.setGravity(loadedGravity);
+    simulation.setGravity(loadedGravity);
     simulation.setNeighborListEnabled(loadedNeighborListEnabled);
 
     for (const LoadedAtomData& data : buffer) {
@@ -132,4 +133,3 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
     simulation.setMaxParticleSpeed(loadedMaxSpeed);
     simulation.setAccelDamping(loadedAccelDamping);
 }
-

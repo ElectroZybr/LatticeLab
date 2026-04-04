@@ -8,10 +8,10 @@
 #include "Engine/restrict.h"
 
 Simulation::Simulation(SimBox& box)
-    : sim_box(box), integrator() {
-    atomStorage.reserve(250000);
-    neighborList.setParams(5.f, 1.f); // параметры отсечки и скин для NL
-    forceField.syncWalls(sim_box);
+    : sim_box_(box), integrator() {
+    atomStorage_.reserve(250000);
+    neighborList_.setParams(5.f, 1.f);
+    forceField_.syncWalls(sim_box_);
 }
 
 void Simulation::setNeighborListEnabled(bool enabled) {
@@ -21,50 +21,50 @@ void Simulation::setNeighborListEnabled(bool enabled) {
 
     useNeighborList_ = enabled;
     if (!useNeighborList_) {
-        neighborList.clear();
+        neighborList_.clear();
     }
 }
 
 void Simulation::update() {
     PROFILE_SCOPE("Simulation::update");
-    integrator.step(atomStorage, sim_box, forceField, useNeighborList_ ? &neighborList : nullptr, Dt);
-    if (useNeighborList_ && neighborList.needsRebuild(atomStorage)) {
-        neighborList.build(atomStorage, sim_box);
-        neighborList.recordRebuild(sim_step);
+    integrator.step(atomStorage_, sim_box_, forceField_, useNeighborList_ ? &neighborList_ : nullptr, Dt);
+    if (useNeighborList_ && neighborList_.needsRebuild(atomStorage_)) {
+        neighborList_.build(atomStorage_, sim_box_);
+        neighborList_.recordRebuild(sim_step);
     }
     ++sim_step;
     sim_time_ns += Dt * Units::kTimeUnitToNs;
 }
 
 void Simulation::setSizeBox(Vec3f newSize, int cellSize) {
-    const bool resized = sim_box.setSizeBox(newSize, cellSize);
+    const bool resized = sim_box_.setSizeBox(newSize, cellSize);
     if (resized) {
-        forceField.syncWalls(sim_box);
-        sim_box.grid.rebuild(atomStorage.xDataSpan(), atomStorage.yDataSpan(), atomStorage.zDataSpan());
-        neighborList.clear();
+        forceField_.syncWalls(sim_box_);
+        sim_box_.grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
+        neighborList_.clear();
     }
 }
 
 bool Simulation::createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Type type, bool fixed) {
-    atomStorage.addAtom(start_coords, start_speed, type, fixed);
-    sim_box.grid.rebuild(atomStorage.xDataSpan(), atomStorage.yDataSpan(), atomStorage.zDataSpan());
+    atomStorage_.addAtom(start_coords, start_speed, type, fixed);
+    sim_box_.grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
     return true;
 }
 
 bool Simulation::removeAtom(size_t atomIndex) {
-    if (atomIndex >= atomStorage.size()) {
+    if (atomIndex >= atomStorage_.size()) {
         return false;
     }
 
-    const size_t lastIndex = atomStorage.size() - 1;
+    const size_t lastIndex = atomStorage_.size() - 1;
 
     for (auto it = Bond::bonds_list.begin(); it != Bond::bonds_list.end();) {
         if (it->aIndex == atomIndex || it->bIndex == atomIndex) {
-            if (it->aIndex == atomIndex && it->bIndex != atomIndex && it->bIndex < atomStorage.size()) {
-                ++atomStorage.valenceCount(it->bIndex);
+            if (it->aIndex == atomIndex && it->bIndex != atomIndex && it->bIndex < atomStorage_.size()) {
+                ++atomStorage_.valenceCount(it->bIndex);
             }
-            if (it->bIndex == atomIndex && it->aIndex != atomIndex && it->aIndex < atomStorage.size()) {
-                ++atomStorage.valenceCount(it->aIndex);
+            if (it->bIndex == atomIndex && it->aIndex != atomIndex && it->aIndex < atomStorage_.size()) {
+                ++atomStorage_.valenceCount(it->aIndex);
             }
             it = Bond::bonds_list.erase(it);
             continue;
@@ -82,24 +82,23 @@ bool Simulation::removeAtom(size_t atomIndex) {
         ++it;
     }
 
-    atomStorage.removeAtom(atomIndex);
-    sim_box.grid.rebuild(atomStorage.xDataSpan(), atomStorage.yDataSpan(), atomStorage.zDataSpan());
+    atomStorage_.removeAtom(atomIndex);
+    sim_box_.grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
     return true;
 }
 
 void Simulation::addBond(size_t aIndex, size_t bIndex) {
-    if (aIndex >= atomStorage.size() || bIndex >= atomStorage.size()) {
+    if (aIndex >= atomStorage_.size() || bIndex >= atomStorage_.size()) {
         return;
     }
 
-    Bond::CreateBond(aIndex, bIndex, atomStorage);
+    Bond::CreateBond(aIndex, bIndex, atomStorage_);
 }
 
 void Simulation::clear() {
-    atomStorage.clear();
+    atomStorage_.clear();
     Bond::bonds_list.clear();
-    sim_box.grid.rebuild(atomStorage.xDataSpan(), atomStorage.yDataSpan(), atomStorage.zDataSpan());
-    neighborList.clear();
+    sim_box_.grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
+    neighborList_.clear();
     sim_step = 0;
 }
-
