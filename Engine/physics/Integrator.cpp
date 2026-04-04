@@ -22,13 +22,14 @@ void Integrator::setAccelDamping(float accelDamping) {
     accelDamping_ = std::clamp(accelDamping, 0.0f, 1.0f);
 }
 
-void Integrator::step(AtomStorage& atomStorage, Bond::List& bonds, SimBox& box, ForceField& forceField, NeighborList& neighborList, bool allowBondFormation, float dt) {
+void Integrator::step(StepData& stepData) {
     std::visit([&](const auto& scheme) {
-        scheme.pipeline(atomStorage, bonds, box, forceField, neighborList, allowBondFormation, accelDamping_, dt);
+        scheme.pipeline(stepData);
     }, scheme_impl);
+
     // Ограничение максимальной скорости атомов
     if (maxParticleSpeed_ > 0.0f) {
-        StepOps::postProcessVelocities(atomStorage, maxParticleSpeed_);
+        StepOps::postProcessVelocities(stepData.atomStorage, maxParticleSpeed_);
     }
 }
 

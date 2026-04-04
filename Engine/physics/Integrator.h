@@ -14,6 +14,17 @@ class SimBox;
 #include "integrators/RK4Scheme.h"
 #include "integrators/VerletScheme.h"
 
+struct StepData {
+    AtomStorage& atomStorage;
+    Bond::List& bonds;
+    SimBox& box;
+    ForceField& forceField;
+    NeighborList& neighborList;
+    bool allowBondFormation;
+    float accelDamping;
+    float dt;
+};
+
 class Integrator {
 public:
     enum class Scheme: uint8_t {
@@ -32,7 +43,7 @@ public:
     void setAccelDamping(float accelDamping);
     float accelDamping() const { return accelDamping_; }
 
-    void step(AtomStorage& atomStorage, Bond::List& bonds, SimBox& box, ForceField& forceField, NeighborList& neighborList, bool allowBondFormation, float dt);
+    void step(StepData& stepData);
 
 private:
     using SchemeVariant = std::variant<VerletScheme, KDKScheme, RK4Scheme, LangevinScheme>;

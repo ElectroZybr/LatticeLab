@@ -60,6 +60,7 @@ public:
     void clear();
 private:
     friend class SimulationStateIO;
+    StepData makeStepData();
 
     SimBox& sim_box_;
     AtomStorage atomStorage_;

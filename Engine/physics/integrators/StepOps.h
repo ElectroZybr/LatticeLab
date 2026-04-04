@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "../Integrator.h"
 #include "../ForceField.h"
 #include "Engine/SimBox.h"
 #include "Engine/metrics/Profiler.h"
@@ -67,21 +68,24 @@ inline void postProcessVelocities(AtomStorage& atomStorage, float maxSpeed) {
     }
 }
 
-inline void computeForces(AtomStorage& atomStorage, Bond::List& bonds, SimBox& box, ForceField& forceField, NeighborList& neighborList, bool allowBondFormation, float dt) {
+inline void computeForces(StepData& stepData) {
     PROFILE_SCOPE("StepOps::computeForces");
-    forceField.compute(atomStorage, bonds, box, neighborList, allowBondFormation, dt);
+    stepData.forceField.compute(
+        stepData.atomStorage, stepData.bonds, stepData.box,
+        stepData.neighborList, stepData.allowBondFormation, stepData.dt
+    );
 }
 
 template<typename StepFn>
 requires AtomStepFunc<StepFn>
-inline void predictAndSync(AtomStorage& atomStorage, SimBox& box, float dt, StepFn predictFn) {
-    predictFn(atomStorage, dt);
-    confineToBox(atomStorage, box);
+inline void predictAndSync(StepData& stepData, StepFn predictFn) {
+    predictFn(stepData.atomStorage, stepData.dt);
+    confineToBox(stepData.atomStorage, stepData.box);
 
-    atomStorage.swapPrevCurrentForces();
-    std::fill_n(atomStorage.fxData(), atomStorage.size(), 0.0f);
-    std::fill_n(atomStorage.fyData(), atomStorage.size(), 0.0f);
-    std::fill_n(atomStorage.fzData(), atomStorage.size(), 0.0f);
-    std::fill_n(atomStorage.energyData(), atomStorage.size(), 0.0f);
+    stepData.atomStorage.swapPrevCurrentForces();
+    std::fill_n(stepData.atomStorage.fxData(), stepData.atomStorage.size(), 0.0f);
+    std::fill_n(stepData.atomStorage.fyData(), stepData.atomStorage.size(), 0.0f);
+    std::fill_n(stepData.atomStorage.fzData(), stepData.atomStorage.size(), 0.0f);
+    std::fill_n(stepData.atomStorage.energyData(), stepData.atomStorage.size(), 0.0f);
 }
 }
