@@ -49,10 +49,10 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
 
     ImGui::TextUnformatted("Гравитация");
     ImGui::SameLine();
-    Vec3f gravity = simulation.forceField.getGravity();
+    Vec3f gravity = simulation.getGravity();
     if (ImGui::Button("Reset##gravity", ImVec2(50.f * uiScale, 0.f))) {
-        simulation.forceField.setGravity(Vec3f(0, 0, 0));
-        gravity = simulation.forceField.getGravity();
+        simulation.setGravity(Vec3f(0, 0, 0));
+        gravity = simulation.getGravity();
     }
 
     float gx = gravity.x;
@@ -63,7 +63,7 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
     gravityChanged |= ImGui::SliderFloat("Gravity Y##gravity_y", &gy, -10.0f, 10.0f, "%.2f");
     gravityChanged |= ImGui::SliderFloat("Gravity Z##gravity_z", &gz, -10.0f, 10.0f, "%.2f");
     if (gravityChanged) {
-        simulation.forceField.setGravity(Vec3f(gx, gy, gz));
+        simulation.setGravity(Vec3f(gx, gy, gz));
     }
 
     Integrator::Scheme currentIntegrator = simulation.getIntegrator();
@@ -171,20 +171,20 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
     if (ImGui::Checkbox("NeighborList", &neighborListEnabled))
         simulation.setNeighborListEnabled(neighborListEnabled);
 
-    int cellSize = simulation.sim_box.grid.cellSize;
+    int cellSize = simulation.box().grid.cellSize;
     if (ImGui::SliderInt("Cell size", &cellSize, 1, 32)) {
-        simulation.sim_box.setSizeBox(simulation.sim_box.size, cellSize);
+        simulation.setSizeBox(simulation.box().size, cellSize);
     }
 
     if (simulation.isNeighborListEnabled()) {
-        float cutoff = simulation.neighborList.cutoff();
+        float cutoff = simulation.getNeighborListCutoff();
         if (ImGui::SliderFloat("Cutoff NL", &cutoff, 0.5f, 20.0f, "%.2f")) {
-            simulation.neighborList.setCutoff(cutoff);
+            simulation.setNeighborListCutoff(cutoff);
         }
 
-        float skin = simulation.neighborList.skin();
+        float skin = simulation.getNeighborListSkin();
         if (ImGui::SliderFloat("Skin NL", &skin, 0.1f, 10.0f, "%.2f")) {
-            simulation.neighborList.setSkin(skin);
+            simulation.setNeighborListSkin(skin);
         }
     }
 

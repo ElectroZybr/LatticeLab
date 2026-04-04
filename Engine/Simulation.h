@@ -33,21 +33,37 @@ public:
     
     int getSimStep() const { return sim_step; }
     double simTimeNs() const { return sim_time_ns; }
-    double fullEnegryPJ() const { return EnergyMetrics::fullAverageEnergy(atomStorage) * static_cast<double>(atomStorage.size()) * Units::kEvToPJ; }
+    double fullEnegryPJ() const { return EnergyMetrics::fullAverageEnergy(atomStorage_) * static_cast<double>(atomStorage_.size()) * Units::kEvToPJ; }
 
+    // API
     void setNeighborListEnabled(bool enabled);
     bool isNeighborListEnabled() const { return useNeighborList_; }
+    void setGravity(const Vec3f& gravity) { forceField_.setGravity(gravity); }
+    Vec3f getGravity() const { return forceField_.getGravity(); }
+    void setNeighborListCutoff(float cutoff) { neighborList_.setCutoff(cutoff); }
+    float getNeighborListCutoff() const { return neighborList_.cutoff(); }
+    void setNeighborListSkin(float skin) { neighborList_.setSkin(skin); }
+    float getNeighborListSkin() const { return neighborList_.skin(); }
+    float getNeighborListRadius() const { return neighborList_.listRadius(); }
+
+    AtomStorage& atoms() { return atomStorage_; }
+    const AtomStorage& atoms() const { return atomStorage_; }
+    SimBox& box() { return sim_box_; }
+    const SimBox& box() const { return sim_box_; }
+    ForceField& forceField() { return forceField_; }
+    const ForceField& forceField() const { return forceField_; }
+    NeighborList& neighborList() { return neighborList_; }
+    const NeighborList& neighborList() const { return neighborList_; }
 
     void clear();
-
-    SimBox& sim_box;
-    AtomStorage atomStorage;
-    Integrator integrator;
-    ForceField forceField;
-    NeighborList neighborList;
 private:
     friend class SimulationStateIO;
 
+    SimBox& sim_box_;
+    AtomStorage atomStorage_;
+    Integrator integrator;
+    ForceField forceField_;
+    NeighborList neighborList_;
     float Dt = 0.01;
     int sim_step = 0;
     double sim_time_ns = 0;

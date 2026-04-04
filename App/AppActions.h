@@ -33,10 +33,10 @@ namespace AppActions {
     }
 
     inline void applyResizeBox(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, const Vec3f& newSize) {
-        const Vec3f oldSize = simulation.sim_box.size;
+        const Vec3f oldSize = simulation.box().size;
         const Vec3f delta = (newSize - oldSize) * 0.5f;
 
-        shiftAtoms(simulation.atomStorage, delta);
+        shiftAtoms(simulation.atoms(), delta);
         renderer->camera.move({delta.x, delta.y});
         renderer->camera.move3D(delta);
         simulation.setSizeBox(newSize);
@@ -81,10 +81,10 @@ namespace AppActions {
                 std::unique_ptr<IRenderer> newRenderer;
                 switch (type) {
                 case RendererType::Renderer2D:
-                    newRenderer = std::make_unique<Renderer2D>(window, gameView, simulation.sim_box);
+                    newRenderer = std::make_unique<Renderer2D>(window, gameView, simulation.box());
                     break;
                 case RendererType::Renderer3D:
-                    newRenderer = std::make_unique<Renderer3D>(window, gameView, simulation.sim_box);
+                    newRenderer = std::make_unique<Renderer3D>(window, gameView, simulation.box());
                     break;
                 }
 
@@ -93,7 +93,7 @@ namespace AppActions {
                     newRenderer->drawBonds = renderer->drawBonds;
                     newRenderer->speedColorMode = renderer->speedColorMode;
                     newRenderer->speedGradientMax = renderer->speedGradientMax;
-                    newRenderer->setAtomStorage(&simulation.atomStorage);
+                    newRenderer->setAtomStorage(&simulation.atoms());
                     renderer = std::move(newRenderer);
                 }
             }));

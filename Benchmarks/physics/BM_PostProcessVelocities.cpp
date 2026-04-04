@@ -13,11 +13,12 @@ struct VelocityPostProcessData {
 
 VelocityPostProcessData prepareVelocityPostProcessData(Simulation& simulation) {
     VelocityPostProcessData data;
-    const std::size_t mobileCount = simulation.atomStorage.mobileCount();
+    const AtomStorage& atomStorage = simulation.atoms();
+    const std::size_t mobileCount = atomStorage.mobileCount();
 
-    data.baseVx.assign(simulation.atomStorage.vxData(), simulation.atomStorage.vxData() + mobileCount);
-    data.baseVy.assign(simulation.atomStorage.vyData(), simulation.atomStorage.vyData() + mobileCount);
-    data.baseVz.assign(simulation.atomStorage.vzData(), simulation.atomStorage.vzData() + mobileCount);
+    data.baseVx.assign(atomStorage.vxData(), atomStorage.vxData() + mobileCount);
+    data.baseVy.assign(atomStorage.vyData(), atomStorage.vyData() + mobileCount);
+    data.baseVz.assign(atomStorage.vzData(), atomStorage.vzData() + mobileCount);
     return data;
 }
 
@@ -35,12 +36,12 @@ BENCHMARK_DEFINE_F(SimulationFixture, PostProcessVelocities)(benchmark::State& s
 
     for (auto _ : state) {
         state.PauseTiming();
-        restoreVelocities(simulation_->atomStorage, data);
+        restoreVelocities(simulation_->atoms(), data);
         state.ResumeTiming();
 
-        StepOps::postProcessVelocities(simulation_->atomStorage, 1.0f);
+        StepOps::postProcessVelocities(simulation_->atoms(), 1.0f);
 
-        benchmark::DoNotOptimize(simulation_->atomStorage.vxData()[0]);
+        benchmark::DoNotOptimize(simulation_->atoms().vxData()[0]);
         benchmark::ClobberMemory();
     }
     setCounters(state);
