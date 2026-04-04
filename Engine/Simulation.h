@@ -71,5 +71,5 @@ private:
     float Dt = 0.01;
     int sim_step = 0;
     double sim_time_ns = 0;
-    bool bondFormationEnabled_ = true;
+    bool bondFormationEnabled_ = false;
 };
