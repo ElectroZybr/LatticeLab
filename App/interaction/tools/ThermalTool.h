@@ -1,6 +1,6 @@
 #pragma once
 
-#include "App/interaction/ITool.h"
+#include "App/interaction/tools/ITool.h"
 
 class ThermalTool final : public ITool {
 public:

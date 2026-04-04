@@ -28,6 +28,7 @@ float Interface::simulationSpeed = 100.f;
 double Interface::averageEnergy = 0.0;
 int Interface::countSelectedAtom = 0;
 bool Interface::drawToolTrip = false;
+std::string Interface::toolTooltipText;
 int Interface::sim_step = 0;
 
 FontManager Interface::fontManager;
@@ -99,7 +100,11 @@ int Interface::Update() {
             ImGui::SetNextWindowPos(ImVec2(mouse.x + 3 * styleManager.getScale(), mouse.y + 3 * styleManager.getScale()));
     
             ImGui::BeginTooltip();
-            ImGui::Text("Selected: %d", countSelectedAtom);
+            if (!toolTooltipText.empty()) {
+                ImGui::TextUnformatted(toolTooltipText.c_str());
+            } else {
+                ImGui::Text("Selected: %d", countSelectedAtom);
+            }
             ImGui::EndTooltip();
         }
     ImGui::PopFont();

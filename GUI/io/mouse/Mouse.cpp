@@ -3,7 +3,7 @@
 
 #include "GUI/io/mouse/Mouse.h"
 
-#include "App/interaction/Tools.h"
+#include "App/interaction/ToolsManager.h"
 #include "GUI/interface/interface.h"
 
 sf::RenderWindow*  Mouse::window = nullptr;
@@ -25,19 +25,21 @@ void Mouse::onEvent(const sf::Event& event) {
 
     if (const auto* e = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (e->button == sf::Mouse::Button::Left) {
-            Tools::onLeftPressed(mouse_pos);
+            ToolsManager::onLeftPressed(mouse_pos);
         }
 
         if (e->button == sf::Mouse::Button::Right && !Interface::cursorHovered) {
-            rend->camera.isDragging = true;
-            rend->camera.dragStartPixelPos = mouse_pos;
-            rend->camera.dragStartCameraPos = rend->camera.position;
+            if (!ToolsManager::onRightPressed(mouse_pos)) {
+                rend->camera.isDragging = true;
+                rend->camera.dragStartPixelPos = mouse_pos;
+                rend->camera.dragStartCameraPos = rend->camera.position;
+            }
         }
     }
 
     if (const auto* e = event.getIf<sf::Event::MouseButtonReleased>()) {
         if (e->button == sf::Mouse::Button::Left) {
-            Tools::onLeftReleased(mouse_pos);
+            ToolsManager::onLeftReleased(mouse_pos);
         }
 
         if (e->button == sf::Mouse::Button::Right) {
@@ -58,8 +60,8 @@ void Mouse::onEvent(const sf::Event& event) {
             rend->camera.dragStartPixelPos = currentPixelPos;
         }
         else {
-            Vec3f deltaWorld = Tools::screenToWorld(rend->camera.dragStartPixelPos) 
-                             - Tools::screenToWorld(currentPixelPos);
+            Vec3f deltaWorld = ToolsManager::screenToWorld(rend->camera.dragStartPixelPos) 
+                             - ToolsManager::screenToWorld(currentPixelPos);
             rend->camera.position = rend->camera.dragStartCameraPos + Vec2f(deltaWorld.x, deltaWorld.y);
         }
     }
@@ -85,12 +87,12 @@ void Mouse::onEvent(const sf::Event& event) {
 
 void Mouse::onFrame(float deltaTime) {
     const sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
-    Tools::onFrame(mouse_pos, deltaTime);
+    ToolsManager::onFrame(mouse_pos, deltaTime);
 }
 
 void Mouse::logMousePos() {
     sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
-    Vec3f world_pos = Tools::screenToWorld(mouse_pos);
+    Vec3f world_pos = ToolsManager::screenToWorld(mouse_pos);
     std::cout << "<Mouse pos>"
               << " Screen: "
               << "X " << mouse_pos.x

@@ -42,6 +42,7 @@ static DebugView* buildDebugAtomBatch(DebugPanel& panel) {
 static DebugView* buildDebugNeighborView(DebugPanel& panel) {
     return panel.addView(DebugView("NL", {
         DebugValue("Размер сетки", DebugDrawers::String),
+        DebugValue("Размер бокса (nm)", DebugDrawers::String),
         DebugValue("Размер ячейки", DebugDrawers::Int),
         DebugValue("NeighborList включен", DebugDrawers::String),
         DebugValue("Память AtomStorage (МБ)", DebugDrawers::Float<3>),

@@ -7,7 +7,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <SFML/Window/Context.hpp>
-#include <App/interaction/Tools.h>
+#include <App/interaction/ToolsManager.h>
 #include <Engine/metrics/Profiler.h>
 
 #include "Engine/physics/Bond.h"
@@ -368,7 +368,7 @@ void RendererGL::drawAtoms(const AtomStorage& atoms, const SimBox& box) {
         selectedDataBuffer.resize(atomCount);
     }
     std::fill_n(selectedDataBuffer.data(), selectedDataBuffer.size(), 0);
-    const auto& selectedIndices = Tools::pickingSystem->getSelectedIndices();
+    const auto& selectedIndices = ToolsManager::pickingSystem->getSelectedIndices();
     for (const size_t idx : selectedIndices) {
         selectedDataBuffer[idx] = 1;
     }

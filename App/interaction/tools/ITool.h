@@ -50,6 +50,7 @@ public:
 
     virtual void onLeftPressed(sf::Vector2i mousePos);
     virtual void onLeftReleased(sf::Vector2i mousePos);
+    virtual bool onRightPressed(sf::Vector2i mousePos);
     virtual void onFrame(sf::Vector2i mousePos, float deltaTime);
     virtual void reset();
 

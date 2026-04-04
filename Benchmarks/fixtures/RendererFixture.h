@@ -9,7 +9,7 @@
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/SimBox.h"
-#include "App/interaction/Tools.h"
+#include "App/interaction/ToolsManager.h"
 
 template <typename TRenderer>
 class RendererFixture : public benchmark::Fixture {
@@ -23,7 +23,7 @@ public:
 
         view_ = renderTexture_->getView();;
         renderer_ = std::make_unique<TRenderer>(*renderTexture_, view_, box_);
-        Tools::init(nullptr, &view_, nullptr, nullptr, renderer_);
+        ToolsManager::init(nullptr, &view_, nullptr, nullptr, renderer_);
 
         atomStorage_ = makeGridAtoms(static_cast<int>(state.range(0)));
         renderer_->setAtomStorage(&atomStorage_);

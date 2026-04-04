@@ -11,7 +11,7 @@
 
 #include "Engine/Simulation.h"
 #include "Engine/metrics/Profiler.h"
-#include "App/interaction/Tools.h"
+#include "App/interaction/ToolsManager.h"
 #include "GUI/interface/interface.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
@@ -42,7 +42,7 @@ int Application::run() {
     AppActions::init(simulation, renderer, window, gameView);
     Interface::init(window, simulation, renderer);
     EventManager::init(&window, &gameView, renderer, &simulation.sim_box, &simulation.atomStorage);
-    Tools::init(&window, &gameView, &box.grid, &box, renderer, &simulation.atomStorage,
+    ToolsManager::init(&window, &gameView, &box.grid, &box, renderer, &simulation.atomStorage,
                 [&](Vec3f coords, Vec3f speed, AtomData::Type type, bool fixed) {
                     return simulation.createAtom(coords, speed, type, fixed);
                 },
@@ -91,7 +91,7 @@ int Application::run() {
             Interface::Update();
             refreshAtomDebugViews(debugViews, simulation);
             renderer->drawShot(simulation.atomStorage, simulation.sim_box);
-            Tools::pickingSystem->getOverlay().draw(window);
+            ToolsManager::pickingSystem->getOverlay().draw(window);
             ImGui::SFML::Render(window);
             window.display();
         }
