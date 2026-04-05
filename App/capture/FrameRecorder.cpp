@@ -11,6 +11,8 @@
 #endif
 
 namespace {
+constexpr int kCaptureFps = 30;
+
 std::string quoteForCmd(const std::filesystem::path& path) {
     return "\"" + path.string() + "\"";
 }
@@ -55,9 +57,9 @@ FrameRecorder::~FrameRecorder() {
     stop();
 }
 
-void FrameRecorder::start(const std::filesystem::path& sessionDir) {
+void FrameRecorder::start(const std::filesystem::path& outputPath) {
     std::lock_guard lock(mutex_);
-    sessionDir_ = sessionDir;
+    outputPath_ = outputPath;
     ffmpegPath_ = findFfmpegExecutable();
     nextFrameIndex_ = 0;
     savedFrameCount_ = 0;
@@ -149,7 +151,7 @@ bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
     frameWidth_ = frame.width;
     frameHeight_ = frame.height;
 
-    const std::filesystem::path outputPath = std::filesystem::absolute(makeVideoPath(sessionDir_));
+    const std::filesystem::path outputPath = std::filesystem::absolute(outputPath_);
     const bool needsPad = (frameWidth_ % 2 != 0) || (frameHeight_ % 2 != 0);
 
     SECURITY_ATTRIBUTES sa{};
@@ -197,19 +199,20 @@ bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
         << " -f rawvideo"
         << " -pix_fmt rgba"
         << " -s " << frameWidth_ << "x" << frameHeight_
-        << " -r 60"
+        << " -r " << kCaptureFps
         << " -i -"
         << " -an"
         << " -c:v libx264"
         << " -preset ultrafast"
-        << " -crf 18";
+        << " -crf 18"
+        << " -profile:v high444";
 
     if (needsPad) {
         command << " -vf pad=ceil(iw/2)*2:ceil(ih/2)*2";
     }
 
     command
-        << " -pix_fmt yuv420p"
+        << " -pix_fmt yuv444p"
         << " " << quoteForCmd(outputPath);
 
     std::string commandLine = command.str();
@@ -266,10 +269,6 @@ void FrameRecorder::closeEncoder() {
 #endif
     frameWidth_ = 0;
     frameHeight_ = 0;
-}
-
-std::filesystem::path FrameRecorder::makeVideoPath(const std::filesystem::path& sessionDir) {
-    return sessionDir / "capture.mp4";
 }
 
 std::filesystem::path FrameRecorder::findFfmpegExecutable() {

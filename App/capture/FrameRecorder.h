@@ -15,7 +15,7 @@ public:
     FrameRecorder(const FrameRecorder&) = delete;
     FrameRecorder& operator=(const FrameRecorder&) = delete;
 
-    void start(const std::filesystem::path& sessionDir);
+    void start(const std::filesystem::path& outputPath);
     void stop();
 
     bool isRecording() const;
@@ -28,11 +28,10 @@ public:
 private:
     bool openEncoder(const CapturedFrame& frame);
     void closeEncoder();
-    static std::filesystem::path makeVideoPath(const std::filesystem::path& sessionDir);
     static std::filesystem::path findFfmpegExecutable();
 
     mutable std::mutex mutex_;
-    std::filesystem::path sessionDir_;
+    std::filesystem::path outputPath_;
     std::filesystem::path ffmpegPath_;
     void* encoderProcess_ = nullptr;
     void* encoderStdinWrite_ = nullptr;

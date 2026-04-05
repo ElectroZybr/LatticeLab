@@ -30,7 +30,10 @@ public:
 
         renderer_->drawShot(atomStorage_, box_);
         renderTexture_->display();
-        capturedFrame_ = RendererCapture::captureRGBA(*renderTexture_);
+        capturedFrame_ = rendererCapture_.captureRGBA_PBO(*renderTexture_);
+        renderer_->drawShot(atomStorage_, box_);
+        renderTexture_->display();
+        capturedFrame_ = rendererCapture_.captureRGBA_PBO(*renderTexture_);
 
         if (capturedFrame_.empty()) {
             state.SkipWithError("Failed to capture benchmark frame");
@@ -59,10 +62,11 @@ protected:
     CapturedFrame capturedFrame_{};
     std::unique_ptr<FrameRecorder> frameRecorder_{};
     std::filesystem::path captureDir_{};
+    RendererCapture rendererCapture_{};
 };
 
-// @bench_meta {"id":"CaptureFixture/CaptureReadback2D","ru":"Снятие кадра из RenderTexture","group":"Рендер/Захват"}
-BENCHMARK_DEFINE_F(CaptureFixture, CaptureReadback2D)(benchmark::State& state) {
+// @bench_meta {"id":"CaptureFixture/CaptureReadback2DSync","ru":"Снятие кадра из RenderTexture (sync)","group":"Рендер/Захват"}
+BENCHMARK_DEFINE_F(CaptureFixture, CaptureReadback2DSync)(benchmark::State& state) {
     for (auto _ : state) {
         renderer_->drawShot(atomStorage_, box_);
         renderTexture_->display();
@@ -73,7 +77,22 @@ BENCHMARK_DEFINE_F(CaptureFixture, CaptureReadback2D)(benchmark::State& state) {
     setCounters(state);
 }
 
-BENCHMARK_REGISTER_F(CaptureFixture, CaptureReadback2D)
+BENCHMARK_REGISTER_F(CaptureFixture, CaptureReadback2DSync)
+    ->RangeMultiplier(8)->Range(125, 8000);
+
+// @bench_meta {"id":"CaptureFixture/CaptureReadback2DPBO","ru":"Снятие кадра из RenderTexture (PBO)","group":"Рендер/Захват"}
+BENCHMARK_DEFINE_F(CaptureFixture, CaptureReadback2DPBO)(benchmark::State& state) {
+    for (auto _ : state) {
+        renderer_->drawShot(atomStorage_, box_);
+        renderTexture_->display();
+        CapturedFrame frame = rendererCapture_.captureRGBA_PBO(*renderTexture_);
+        benchmark::DoNotOptimize(frame);
+        benchmark::ClobberMemory();
+    }
+    setCounters(state);
+}
+
+BENCHMARK_REGISTER_F(CaptureFixture, CaptureReadback2DPBO)
     ->RangeMultiplier(8)->Range(125, 8000);
 
 // @bench_meta {"id":"CaptureFixture/CaptureEncodeFrame","ru":"Кодирование кадра в видео","group":"Рендер/Захват"}
