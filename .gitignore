@@ -19,6 +19,7 @@ Chemical-simulator
 !/Benchmarks/**
 Benchmarks/*.json
 Benchmarks/*.png
+captures
 *.exe
 *.dll
 *.so

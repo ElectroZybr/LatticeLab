@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <memory>
+#include <cstdint>
 
 #include "imgui-SFML.h"
 #include <SFML/Graphics.hpp>
@@ -42,6 +43,8 @@ public:
     static int countSelectedAtom;
     static bool drawToolTrip;
     static std::string toolTooltipText;
+    static bool captureRecording;
+    static uint64_t captureFrameCount;
 
     static FontManager fontManager;
 

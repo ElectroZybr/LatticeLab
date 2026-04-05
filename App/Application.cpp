@@ -1,26 +1,52 @@
 #include "Application.h"
 #include "AppActions.h"
+#include "AppSignals.h"
 #include "CreateWindow.h"
+#include "capture/FrameRecorder.h"
 #include "debug/CreateDebugPanels.h"
 #include "debug/DebugRuntime.h"
+
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
+#include <filesystem>
+#include <iomanip>
+#include <sstream>
 
 #include <SFML/Graphics.hpp>
 #include <imgui-SFML.h>
 
+#include "App/interaction/ToolsManager.h"
 #include "Engine/Simulation.h"
 #include "Engine/metrics/Profiler.h"
-#include "App/interaction/ToolsManager.h"
 #include "GUI/interface/interface.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
 #include "Rendering/2d/Renderer2D.h"
+#include "Rendering/RendererCapture.h"
+#include "Signals/Signals.h"
 
 #include "Scenes.h"
 
 constexpr int FPS = 60;
 constexpr int LPS = 20;
+
+namespace {
+std::filesystem::path makeCaptureSessionDir() {
+    const auto now = std::chrono::system_clock::now();
+    const std::time_t time = std::chrono::system_clock::to_time_t(now);
+    std::tm localTime{};
+    localtime_s(&localTime, &time);
+
+    std::ostringstream folderName;
+    folderName << "session_" << std::put_time(&localTime, "%Y%m%d_%H%M%S");
+
+    const std::filesystem::path dir = std::filesystem::path("captures") / folderName.str();
+    std::filesystem::create_directories(dir);
+    return dir;
+}
+
+}
 
 int Application::run() {
     sf::RenderWindow window = createWindow();
@@ -58,13 +84,24 @@ int Application::run() {
     double renderAccum = 0.0;
     double physicsAccum = 0.0;
     double logAccum = 0.0;
+    bool captureToggleHeld = false;
+    FrameRecorder frameRecorder;
+    Signals::ScopedConnection captureToggleConnection(
+        AppSignals::UI::ToggleCapture.connect([&]() {
+            if (frameRecorder.isRecording()) {
+                frameRecorder.stop();
+            } else {
+                frameRecorder.start(makeCaptureSessionDir());
+            }
+        })
+    );
 
     constexpr double renderInterval = 1.0 / FPS;
     constexpr double logInterval = 1.0 / LPS;
 
     while (window.isOpen()) {
         Profiler::instance().beginFrame();
-        float deltaTime = clock.restart().asSeconds();
+        const float deltaTime = clock.restart().asSeconds();
         physicsAccum += deltaTime;
         renderAccum += deltaTime;
         logAccum += deltaTime;
@@ -72,6 +109,14 @@ int Application::run() {
         renderer->camera.update(window);
         EventManager::poll();
         EventManager::frame(deltaTime);
+        Interface::captureRecording = frameRecorder.isRecording();
+        Interface::captureFrameCount = frameRecorder.savedFrameCount();
+
+        const bool captureKeyPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F8);
+        if (captureKeyPressed && !captureToggleHeld) {
+            AppSignals::UI::ToggleCapture.emit();
+        }
+        captureToggleHeld = captureKeyPressed;
 
         // обновление физики
         const double physicsInterval = 1.0 / Interface::getSimulationSpeed();
@@ -82,7 +127,7 @@ int Application::run() {
                 physicsAccum = 0.0;
             } else {
                 physicsAccum = 0.0;
-            }       
+            }
         }
 
         // отрисовка кадра
@@ -94,12 +139,17 @@ int Application::run() {
             renderer->drawShot(simulation.atoms(), simulation.box());
             ToolsManager::pickingSystem->getOverlay().draw(window);
             ImGui::SFML::Render(window);
+
+            if (frameRecorder.isRecording()) {
+                frameRecorder.submit(RendererCapture::captureRGBA(window));
+            }
+
             window.display();
         }
 
         Profiler::instance().endFrame();
 
-        // обновение логов и данных счетчиков
+        // обновление логов и данных счетчиков
         if (logAccum >= logInterval) {
             logAccum -= logInterval;
             Profiler::instance().updateRates(logInterval);
@@ -107,6 +157,7 @@ int Application::run() {
         }
     }
 
+    frameRecorder.stop();
     Interface::shutdown();
     return 0;
 }
