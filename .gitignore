@@ -12,7 +12,7 @@ Testing/
 .cmake/
 
 # Binaries and libraries
-Chemical-simulator
+LatticeLab
 /benchmarks
 /benchmarks.exe
 !/Benchmarks/
