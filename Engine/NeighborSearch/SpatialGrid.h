@@ -29,16 +29,14 @@ public:
 
     // (warning) нет проверки выхода за границы
     [[nodiscard]] std::span<const uint32_t> atomsInCell(int x, int y, int z) const noexcept {
-        const size_t idx = index(x, y, z);
-        return atomsInCellByLinearIndex(idx);
+        return atomsInCell(index(x, y, z));
     }
 
     // (warning) нет проверки выхода за границы
-    [[nodiscard]] std::span<const uint32_t> atomsInCellByLinearIndex(size_t linearIndex) const noexcept {
-        const size_t idx = linearIndex;
-        const size_t begin = offsets[idx];
-        return std::span<const uint32_t>(atomsInCells.data() + begin, offsets[idx + 1] - begin);
-     }
+    [[nodiscard]] std::span<const uint32_t> atomsInCell(size_t linearIndex) const noexcept {
+        const size_t begin = offsets[linearIndex];
+        return std::span<const uint32_t>(atomsInCells.data() + begin, offsets[linearIndex + 1] - begin);
+    }
 
     int worldToCellX(float x) const { return toCell(x, sizeX); }
     int worldToCellY(float y) const { return toCell(y, sizeY); }
@@ -51,11 +49,13 @@ public:
 
     [[nodiscard]] int linearCellOfAtom(uint32_t atomIndex) const noexcept { return static_cast<int>(cellIndices_[atomIndex]); }
     [[nodiscard]] const std::array<int, 27>& neighborOffsets27() const noexcept { return neighborOffsets27_; }
-    
+
     [[nodiscard]] int index(int x, int y, int z) const noexcept {
         return (z * sizeY + y) * sizeX + x;
     }
 private:
+    static constexpr int kGhostLayers = 1;
+
     // CSR хранение данных
     std::vector<uint32_t> offsets;      // массив оффсетов (каждый оффсет - начало новой ячейки)
     std::vector<uint32_t> atomsInCells; // атомы подряд сгруппированные по ячейкам
