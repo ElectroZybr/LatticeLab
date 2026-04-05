@@ -32,7 +32,6 @@ constexpr std::array<ProfileNameAlias, 19> kProfileNameAliases{{
     {"KDKScheme::pipeline", "kdk"},
     {"KDKScheme::halfKick", "kick"},
     {"KDKScheme::drift", "drift"},
-    {"NeighborList::needsRebuild", "nl check"},
     {"NeighborList::build", "nl build"},
     {"SpatialGrid::rebuild", "sg rebuild"},
 }};

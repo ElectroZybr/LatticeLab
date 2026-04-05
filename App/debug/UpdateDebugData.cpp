@@ -46,7 +46,6 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     const Profiler& profiler = Profiler::instance();
     const double renderMs = profiler.lastMs("Application::RenderFrame");
     const double physicsMs = profiler.lastActiveMs("Simulation::update");
-    const double nlNeedsRebuildMs = profiler.lastMs("NeighborList::needsRebuild");
     const float stepsPerSecond = static_cast<float>(profiler.counterRate("Simulation::steps"));
 
     debugViews.sim->add_data("Полная энергия (pj)", simulation.fullEnegryPJ());
@@ -87,7 +86,6 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     debugViews.neighbor->add_data("Ребилдов NL", neighborList.stats().rebuildCount());
     debugViews.neighbor->add_data("Шагов между ребилдами (recent)", neighborList.stats().recentAverageStepsBetweenRebuilds());
     debugViews.neighbor->add_data("Время ребилда NL (мс)", neighborList.stats().lastRebuildTimeMs());
-    debugViews.neighbor->add_data("Время needsRebuild (мс)", nlNeedsRebuildMs);
     debugViews.neighbor->add_data("SG заполненных ячеек", static_cast<int>(box.grid.stats().lastNonEmptyCellCount()));
     debugViews.neighbor->add_data("SG макс атомов в ячейке", static_cast<int>(box.grid.stats().lastMaxAtomsPerCell()));
     debugViews.neighbor->add_data("SG ср. атомов/ячейку", box.grid.stats().lastAverageAtomsPerNonEmptyCell());

@@ -80,7 +80,6 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
 }
 
 bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
-    PROFILE_SCOPE("NeighborList::needsRebuild");
     const size_t n = atoms.size();
     if (n > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
         return true;
