@@ -12,6 +12,8 @@ class CaptureController {
 public:
     [[nodiscard]] CaptureSettings settings() const noexcept;
     void setSettings(const CaptureSettings& settings) noexcept;
+    [[nodiscard]] std::filesystem::path outputDirectory() const;
+    void setOutputDirectory(const std::filesystem::path& path);
 
     void update(double deltaTime);
     void start();
@@ -25,10 +27,11 @@ public:
     [[nodiscard]] double blinkElapsed() const noexcept;
 
 private:
-    static std::filesystem::path makeCaptureOutputPath();
+    [[nodiscard]] std::filesystem::path makeCaptureOutputPath() const;
     void resetSessionStats();
 
     CaptureSettings settings_{};
+    std::filesystem::path outputDirectory_ = "captures";
     FrameRecorder frameRecorder_{};
     RendererCapture rendererCapture_{};
     int activeSessionFps_ = settings_.fps;

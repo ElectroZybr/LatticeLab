@@ -119,7 +119,7 @@ int Interface::Update() {
     ImGui::PushFont(fontManager.dialog);
         fileDialog.draw(styleManager.getScale());
         debugPanel.draw(styleManager.getScale(), window->getSize());
-        settingsPanel.draw(styleManager.getScale(), window->getSize(), *simulation, *renderer, *captureController);
+        settingsPanel.draw(styleManager.getScale(), window->getSize(), *simulation, *renderer, *captureController, fileDialog);
         ioPanel.draw(styleManager.getScale(), window->getSize(), *simulation, fileDialog);
     ImGui::PopFont();
 
