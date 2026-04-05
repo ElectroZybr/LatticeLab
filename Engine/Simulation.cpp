@@ -5,8 +5,6 @@
 #include "metrics/Profiler.h"
 #include "physics/Bond.h"
 
-#include "Engine/restrict.h"
-
 Simulation::Simulation(SimBox& box)
     : sim_box_(box), integrator() {
     atomStorage_.reserve(250000);
