@@ -47,7 +47,7 @@ void LJForceField::compute(AtomStorage& atoms, NeighborList& neighborList) const
 
     for (size_t atomIndex = 0; atomIndex < atoms.mobileCount(); ++atomIndex) {
         // используем список соседей
-        if (atomIndex + 1 >= offsets.size()) continue;
+        if (atomIndex + 1 >= offsets.size()) break;
 
         const uint32_t begin = offsets[atomIndex];
         const uint32_t end = offsets[atomIndex + 1];
