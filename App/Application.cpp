@@ -30,6 +30,7 @@
 
 constexpr int FPS = 60;
 constexpr int LPS = 20;
+constexpr int CAPTURE_FPS = 30;
 
 namespace {
 std::filesystem::path makeCaptureOutputPath() {
@@ -111,6 +112,7 @@ int Application::run() {
     double physicsAccum = 0.0;
     double logAccum = 0.0;
     double captureRateAccum = 0.0;
+    double captureSubmitAccum = 0.0;
     bool captureToggleHeld = false;
     FrameRecorder frameRecorder;
     RendererCapture rendererCapture;
@@ -121,12 +123,16 @@ int Application::run() {
                 frameRecorder.stop();
                 Interface::captureFps = 0.0f;
                 Interface::captureFrameCount = 0;
+                Interface::captureBlinkStartTime = 0.0;
                 lastCaptureFrameCountSample = 0;
                 captureRateAccum = 0.0;
+                captureSubmitAccum = 0.0;
             } else {
                 frameRecorder.start(makeCaptureOutputPath());
+                Interface::captureBlinkStartTime = ImGui::GetTime();
                 lastCaptureFrameCountSample = 0;
                 captureRateAccum = 0.0;
+                captureSubmitAccum = 0.0;
                 Interface::captureFrameCount = 0;
             }
         })
@@ -148,12 +154,16 @@ int Application::run() {
         Interface::captureRecording = frameRecorder.isRecording();
         Interface::captureFrameCount = frameRecorder.savedFrameCount();
         captureRateAccum += deltaTime;
+        if (frameRecorder.isRecording()) {
+            captureSubmitAccum += deltaTime;
+        }
 
         if (!frameRecorder.isRecording()) {
             Interface::captureFps = 0.0f;
             Interface::captureFrameCount = 0;
             lastCaptureFrameCountSample = 0;
             captureRateAccum = 0.0;
+            captureSubmitAccum = 0.0;
         } else if (captureRateAccum >= 0.5) {
             const uint64_t currentCaptureFrameCount = frameRecorder.savedFrameCount();
             const uint64_t deltaFrames = currentCaptureFrameCount - lastCaptureFrameCountSample;
@@ -191,9 +201,11 @@ int Application::run() {
             ImGui::SFML::Render(window);
 
             if (frameRecorder.isRecording()) {
+                const bool shouldSubmitCaptureFrame = captureSubmitAccum >= (1.0 / CAPTURE_FPS);
                 CapturedFrame frame = rendererCapture.captureRGBA_PBO(window);
-                if (!frame.empty()) {
+                if (shouldSubmitCaptureFrame && !frame.empty()) {
                     frameRecorder.submit(std::move(frame));
+                    captureSubmitAccum -= (1.0 / CAPTURE_FPS);
                 }
             }
 

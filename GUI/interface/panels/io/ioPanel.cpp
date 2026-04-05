@@ -72,27 +72,34 @@ void drawAtomTypeCombo(const char* id, AtomData::Type& atomType, float width, fl
 }
 
 void drawCaptureStatus() {
-    const float blinkPhase = std::fmod(static_cast<float>(ImGui::GetTime()), 1.0f);
+    const double blinkTime = Interface::captureRecording
+        ? (ImGui::GetTime() - Interface::captureBlinkStartTime)
+        : 0.0;
+    const int blinkStep = static_cast<int>(blinkTime);
+    const bool blinkOn = (blinkStep % 2) == 0;
     const float alpha = Interface::captureRecording
-        ? (blinkPhase < 0.5f ? 1.0f : 0.2f)
+        ? (blinkOn ? 0.8f : 0.2f)
         : 0.18f;
-    const float textHeight = ImGui::GetTextLineHeight();
-    const float radius = 5.f;
-    const float dotWidth = radius * 2.0f;
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const float lineHeight = ImGui::GetFrameHeight();
+    const float radius = std::max(4.0f, lineHeight * 0.24f);
+    const float dotWidth = radius * 2.0f + style.ItemInnerSpacing.x * 0.35f;
 
     ImGui::SameLine();
     const ImVec2 cursor = ImGui::GetCursorScreenPos();
-    const ImVec2 center(cursor.x + radius, cursor.y + textHeight * 0.5f + 3.0f);
+    const ImVec2 center(cursor.x + radius, cursor.y + lineHeight * 0.5f);
 
-    ImGui::Dummy(ImVec2(dotWidth, textHeight));
+    ImGui::Dummy(ImVec2(dotWidth, lineHeight));
     ImGui::GetWindowDrawList()->AddCircleFilled(
         center,
         radius,
         ImGui::GetColorU32(ImVec4(0.95f, 0.16f, 0.16f, alpha))
     );
     ImGui::SameLine();
+    ImGui::AlignTextToFramePadding();
     ImGui::Text("fps: %.1f", Interface::captureFps);
     ImGui::SameLine();
+    ImGui::AlignTextToFramePadding();
     ImGui::Text("frame: %llu", static_cast<unsigned long long>(Interface::captureFrameCount));
 }
 } // namespace
