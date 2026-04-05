@@ -15,5 +15,5 @@ void ForceField::compute(AtomStorage& atoms, Bond::List& bonds, SimBox& box,
     wallForceField_.compute(atoms, static_force_);
     ljForceField_.compute(atoms, neighborList);
     coulombForceField_.compute(atoms, box, neighborList);
-    bondForceField_.compute(atoms, bonds, box, neighborList, allowBondFormation, dt);
+    bondForceField_.compute(atoms, bonds, neighborList, allowBondFormation, dt);
 }
