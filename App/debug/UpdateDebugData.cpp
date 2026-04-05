@@ -45,6 +45,8 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     const NeighborList& neighborList = simulation.neighborList();
     const Profiler& profiler = Profiler::instance();
     const double renderMs = profiler.lastMs("Application::RenderFrame");
+    const double captureReadbackMs = profiler.lastMs("Capture::readback");
+    const double captureEncodeMs = profiler.lastMs("Capture::encodeFrame");
     const double physicsMs = profiler.lastActiveMs("Simulation::update");
     const double nlNeedsRebuildMs = profiler.lastMs("NeighborList::needsRebuild");
     const float stepsPerSecond = static_cast<float>(profiler.counterRate("Simulation::steps"));
@@ -53,6 +55,8 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     debugViews.sim->add_data("Полная средняя энергия (eV)", static_cast<float>(EnergyMetrics::fullAverageEnergy(atoms)));
     debugViews.sim->add_data("Память (МБ)", MemoryMetrics::getRSS() / 1024.f / 1024.f);
     debugViews.sim->add_data("Рендер (мс)", renderMs);
+    debugViews.sim->add_data("Capture readback (ms)", captureReadbackMs);
+    debugViews.sim->add_data("Capture encode (ms)", captureEncodeMs);
     debugViews.sim->add_data("Физика (мс)", physicsMs);
     debugViews.sim->add_data("Количество атомов", atoms.size());
     debugViews.sim->add_data("Шаги симуляции", simulation.getSimStep());

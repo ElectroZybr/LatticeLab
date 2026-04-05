@@ -71,7 +71,7 @@ cmake-build-*/
 *.temp
 
 # Local app state
-imgui.ini
+*.ini
 
 # Python
 __pycache__/
