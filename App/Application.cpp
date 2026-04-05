@@ -110,15 +110,24 @@ int Application::run() {
     double renderAccum = 0.0;
     double physicsAccum = 0.0;
     double logAccum = 0.0;
+    double captureRateAccum = 0.0;
     bool captureToggleHeld = false;
     FrameRecorder frameRecorder;
     RendererCapture rendererCapture;
+    uint64_t lastCaptureFrameCountSample = 0;
     Signals::ScopedConnection captureToggleConnection(
         AppSignals::UI::ToggleCapture.connect([&]() {
             if (frameRecorder.isRecording()) {
                 frameRecorder.stop();
+                Interface::captureFps = 0.0f;
+                Interface::captureFrameCount = 0;
+                lastCaptureFrameCountSample = 0;
+                captureRateAccum = 0.0;
             } else {
                 frameRecorder.start(makeCaptureOutputPath());
+                lastCaptureFrameCountSample = 0;
+                captureRateAccum = 0.0;
+                Interface::captureFrameCount = 0;
             }
         })
     );
@@ -138,6 +147,20 @@ int Application::run() {
         EventManager::frame(deltaTime);
         Interface::captureRecording = frameRecorder.isRecording();
         Interface::captureFrameCount = frameRecorder.savedFrameCount();
+        captureRateAccum += deltaTime;
+
+        if (!frameRecorder.isRecording()) {
+            Interface::captureFps = 0.0f;
+            Interface::captureFrameCount = 0;
+            lastCaptureFrameCountSample = 0;
+            captureRateAccum = 0.0;
+        } else if (captureRateAccum >= 0.5) {
+            const uint64_t currentCaptureFrameCount = frameRecorder.savedFrameCount();
+            const uint64_t deltaFrames = currentCaptureFrameCount - lastCaptureFrameCountSample;
+            Interface::captureFps = static_cast<float>(deltaFrames / captureRateAccum);
+            lastCaptureFrameCountSample = currentCaptureFrameCount;
+            captureRateAccum = 0.0;
+        }
 
         const bool captureKeyPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F8);
         if (captureKeyPressed && !captureToggleHeld) {

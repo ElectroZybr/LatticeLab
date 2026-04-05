@@ -70,6 +70,31 @@ void drawAtomTypeCombo(const char* id, AtomData::Type& atomType, float width, fl
 
     ComboStyle::drawCenteredComboPreview(selectedLabel);
 }
+
+void drawCaptureStatus() {
+    const float blinkPhase = std::fmod(static_cast<float>(ImGui::GetTime()), 1.0f);
+    const float alpha = Interface::captureRecording
+        ? (blinkPhase < 0.5f ? 1.0f : 0.2f)
+        : 0.18f;
+    const float textHeight = ImGui::GetTextLineHeight();
+    const float radius = 5.f;
+    const float dotWidth = radius * 2.0f;
+
+    ImGui::SameLine();
+    const ImVec2 cursor = ImGui::GetCursorScreenPos();
+    const ImVec2 center(cursor.x + radius, cursor.y + textHeight * 0.5f + 3.0f);
+
+    ImGui::Dummy(ImVec2(dotWidth, textHeight));
+    ImGui::GetWindowDrawList()->AddCircleFilled(
+        center,
+        radius,
+        ImGui::GetColorU32(ImVec4(0.95f, 0.16f, 0.16f, alpha))
+    );
+    ImGui::SameLine();
+    ImGui::Text("fps: %.1f", Interface::captureFps);
+    ImGui::SameLine();
+    ImGui::Text("frame: %llu", static_cast<unsigned long long>(Interface::captureFrameCount));
+}
 } // namespace
 
 void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation, FileDialogManager& fileDialog) {
@@ -109,7 +134,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     if (ImGui::Button(captureLabel, ImVec2(saveButtonWidth * scale, 0.f))) {
         AppSignals::UI::ToggleCapture.emit();
     }
-    ImGui::Text("Кадры: %llu", static_cast<unsigned long long>(Interface::captureFrameCount));
+    drawCaptureStatus();
 
     ImGui::SeparatorText("Размер бокса");
     bool boxSizeChanged = false;
