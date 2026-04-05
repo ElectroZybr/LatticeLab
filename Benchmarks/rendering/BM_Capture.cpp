@@ -42,7 +42,7 @@ public:
 
         captureDir_ = makeCaptureBenchDir();
         frameRecorder_ = std::make_unique<FrameRecorder>();
-        frameRecorder_->start(captureDir_);
+        frameRecorder_->start(captureDir_, CaptureSettings{});
         if (!frameRecorder_->isRecording()) {
             state.SkipWithError("Failed to start frame recorder");
         }

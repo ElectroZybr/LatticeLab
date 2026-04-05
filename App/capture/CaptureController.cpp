@@ -7,8 +7,12 @@
 #include <iomanip>
 #include <sstream>
 
-namespace {
-constexpr int kCaptureFps = 30;
+CaptureSettings CaptureController::settings() const noexcept {
+    return settings_;
+}
+
+void CaptureController::setSettings(const CaptureSettings& settings) noexcept {
+    settings_ = settings;
 }
 
 void CaptureController::update(double deltaTime) {
@@ -35,7 +39,8 @@ void CaptureController::update(double deltaTime) {
 }
 
 void CaptureController::start() {
-    frameRecorder_.start(makeCaptureOutputPath());
+    activeSessionFps_ = std::max(1, settings_.fps);
+    frameRecorder_.start(makeCaptureOutputPath(), settings_);
     resetSessionStats();
 }
 
@@ -65,11 +70,12 @@ void CaptureController::onFrameRendered(sf::RenderWindow& window) {
         return;
     }
 
-    const bool shouldSubmitCaptureFrame = captureSubmitAccum_ >= (1.0 / kCaptureFps);
+    const double frameInterval = 1.0 / static_cast<double>(activeSessionFps_);
+    const bool shouldSubmitCaptureFrame = captureSubmitAccum_ >= frameInterval;
     CapturedFrame frame = rendererCapture_.captureRGBA_PBO(window);
     if (shouldSubmitCaptureFrame && !frame.empty()) {
         frameRecorder_.submit(std::move(frame));
-        captureSubmitAccum_ -= (1.0 / kCaptureFps);
+        captureSubmitAccum_ -= frameInterval;
     }
 }
 

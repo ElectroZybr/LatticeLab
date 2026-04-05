@@ -7,6 +7,26 @@
 
 #include "Rendering/RendererCapture.h"
 
+struct CaptureSettings {
+    enum class Preset {
+        Ultrafast,
+        Veryfast,
+        Faster,
+        Fast,
+        Medium,
+    };
+
+    enum class PixelFormat {
+        Yuv420p,
+        Yuv444p,
+    };
+
+    int fps = 30;
+    int crf = 20;
+    Preset preset = Preset::Veryfast;
+    PixelFormat pixelFormat = PixelFormat::Yuv444p;
+};
+
 class FrameRecorder {
 public:
     FrameRecorder() = default;
@@ -15,7 +35,7 @@ public:
     FrameRecorder(const FrameRecorder&) = delete;
     FrameRecorder& operator=(const FrameRecorder&) = delete;
 
-    void start(const std::filesystem::path& outputPath);
+    void start(const std::filesystem::path& outputPath, CaptureSettings settings);
     void stop();
 
     bool isRecording() const;
@@ -33,6 +53,7 @@ private:
     mutable std::mutex mutex_;
     std::filesystem::path outputPath_;
     std::filesystem::path ffmpegPath_;
+    CaptureSettings settings_{};
     void* encoderProcess_ = nullptr;
     void* encoderStdinWrite_ = nullptr;
     bool recording_ = false;

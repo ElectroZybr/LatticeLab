@@ -10,6 +10,9 @@
 
 class CaptureController {
 public:
+    [[nodiscard]] CaptureSettings settings() const noexcept;
+    void setSettings(const CaptureSettings& settings) noexcept;
+
     void update(double deltaTime);
     void start();
     void stop(sf::RenderWindow& window);
@@ -25,8 +28,10 @@ private:
     static std::filesystem::path makeCaptureOutputPath();
     void resetSessionStats();
 
+    CaptureSettings settings_{};
     FrameRecorder frameRecorder_{};
     RendererCapture rendererCapture_{};
+    int activeSessionFps_ = settings_.fps;
     double captureRateAccum_ = 0.0;
     double captureSubmitAccum_ = 0.0;
     double blinkElapsed_ = 0.0;

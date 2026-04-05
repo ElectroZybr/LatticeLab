@@ -45,9 +45,10 @@ int Application::run() {
     renderer->setBondStorage(&simulation.bonds());
     renderer->drawBonds = true;
     renderer->speedColorMode = IRenderer::SpeedColorMode::GradientClassic;
+    CaptureController captureController;
 
     AppActions::init(simulation, renderer, window, gameView);
-    Interface::init(window, simulation, renderer);
+    Interface::init(window, simulation, renderer, captureController);
     EventManager::init(&window, &gameView, renderer, &simulation.box(), &simulation.atoms());
     ToolsManager::init(&window, &gameView, &box.grid, &box, renderer, &simulation.atoms(),
                 [&](Vec3f coords, Vec3f speed, AtomData::Type type, bool fixed) {
@@ -65,7 +66,6 @@ int Application::run() {
     double physicsAccum = 0.0;
     double logAccum = 0.0;
     bool captureToggleHeld = false;
-    CaptureController captureController;
     Signals::ScopedConnection captureToggleConnection(
         AppSignals::UI::ToggleCapture.connect([&]() {
             captureController.toggle(window);
