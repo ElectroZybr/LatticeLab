@@ -72,9 +72,7 @@ void drawAtomTypeCombo(const char* id, AtomData::Type& atomType, float width, fl
 }
 
 void drawCaptureStatus() {
-    const double blinkTime = Interface::captureRecording
-        ? (ImGui::GetTime() - Interface::captureBlinkStartTime)
-        : 0.0;
+    const double blinkTime = Interface::captureBlinkElapsed;
     const int blinkStep = static_cast<int>(blinkTime);
     const bool blinkOn = (blinkStep % 2) == 0;
     const float alpha = Interface::captureRecording

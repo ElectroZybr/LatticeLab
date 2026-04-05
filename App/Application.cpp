@@ -2,16 +2,13 @@
 #include "AppActions.h"
 #include "AppSignals.h"
 #include "CreateWindow.h"
+#include "capture/CaptureController.h"
 #include "capture/FrameRecorder.h"
 #include "debug/CreateDebugPanels.h"
 #include "debug/DebugRuntime.h"
 
-#include <chrono>
 #include <cmath>
 #include <cstdlib>
-#include <filesystem>
-#include <iomanip>
-#include <sstream>
 
 #include <SFML/Graphics.hpp>
 #include <imgui-SFML.h>
@@ -30,50 +27,6 @@
 
 constexpr int FPS = 60;
 constexpr int LPS = 20;
-constexpr int CAPTURE_FPS = 30;
-
-namespace {
-std::filesystem::path makeCaptureOutputPath() {
-    const auto now = std::chrono::system_clock::now();
-    const std::time_t time = std::chrono::system_clock::to_time_t(now);
-    std::tm localTime{};
-    localtime_s(&localTime, &time);
-
-    std::ostringstream datePrefix;
-    datePrefix << std::put_time(&localTime, "%Y-%m-%d");
-
-    const std::filesystem::path capturesDir = "captures";
-    std::filesystem::create_directories(capturesDir);
-
-    const std::string prefix = datePrefix.str() + "_";
-    int nextIndex = 1;
-
-    for (const auto& entry : std::filesystem::directory_iterator(capturesDir)) {
-        if (!entry.is_regular_file()) {
-            continue;
-        }
-
-        const std::filesystem::path path = entry.path();
-        if (path.extension() != ".mp4") {
-            continue;
-        }
-
-        const std::string stem = path.stem().string();
-        if (!stem.starts_with(prefix)) {
-            continue;
-        }
-
-        const std::string suffix = stem.substr(prefix.size());
-        try {
-            nextIndex = std::max(nextIndex, std::stoi(suffix) + 1);
-        } catch (...) {
-        }
-    }
-
-    return capturesDir / (prefix + std::to_string(nextIndex) + ".mp4");
-}
-
-}
 
 int Application::run() {
     sf::RenderWindow window = createWindow();
@@ -111,30 +64,11 @@ int Application::run() {
     double renderAccum = 0.0;
     double physicsAccum = 0.0;
     double logAccum = 0.0;
-    double captureRateAccum = 0.0;
-    double captureSubmitAccum = 0.0;
     bool captureToggleHeld = false;
-    FrameRecorder frameRecorder;
-    RendererCapture rendererCapture;
-    uint64_t lastCaptureFrameCountSample = 0;
+    CaptureController captureController;
     Signals::ScopedConnection captureToggleConnection(
         AppSignals::UI::ToggleCapture.connect([&]() {
-            if (frameRecorder.isRecording()) {
-                frameRecorder.stop();
-                Interface::captureFps = 0.0f;
-                Interface::captureFrameCount = 0;
-                Interface::captureBlinkStartTime = 0.0;
-                lastCaptureFrameCountSample = 0;
-                captureRateAccum = 0.0;
-                captureSubmitAccum = 0.0;
-            } else {
-                frameRecorder.start(makeCaptureOutputPath());
-                Interface::captureBlinkStartTime = ImGui::GetTime();
-                lastCaptureFrameCountSample = 0;
-                captureRateAccum = 0.0;
-                captureSubmitAccum = 0.0;
-                Interface::captureFrameCount = 0;
-            }
+            captureController.toggle(window);
         })
     );
 
@@ -151,26 +85,11 @@ int Application::run() {
         renderer->camera.update(window);
         EventManager::poll();
         EventManager::frame(deltaTime);
-        Interface::captureRecording = frameRecorder.isRecording();
-        Interface::captureFrameCount = frameRecorder.savedFrameCount();
-        captureRateAccum += deltaTime;
-        if (frameRecorder.isRecording()) {
-            captureSubmitAccum += deltaTime;
-        }
-
-        if (!frameRecorder.isRecording()) {
-            Interface::captureFps = 0.0f;
-            Interface::captureFrameCount = 0;
-            lastCaptureFrameCountSample = 0;
-            captureRateAccum = 0.0;
-            captureSubmitAccum = 0.0;
-        } else if (captureRateAccum >= 0.5) {
-            const uint64_t currentCaptureFrameCount = frameRecorder.savedFrameCount();
-            const uint64_t deltaFrames = currentCaptureFrameCount - lastCaptureFrameCountSample;
-            Interface::captureFps = static_cast<float>(deltaFrames / captureRateAccum);
-            lastCaptureFrameCountSample = currentCaptureFrameCount;
-            captureRateAccum = 0.0;
-        }
+        captureController.update(deltaTime);
+        Interface::captureRecording = captureController.isRecording();
+        Interface::captureFrameCount = captureController.savedFrameCount();
+        Interface::captureFps = captureController.captureFps();
+        Interface::captureBlinkElapsed = captureController.blinkElapsed();
 
         const bool captureKeyPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F8);
         if (captureKeyPressed && !captureToggleHeld) {
@@ -200,14 +119,7 @@ int Application::run() {
             ToolsManager::pickingSystem->getOverlay().draw(window);
             ImGui::SFML::Render(window);
 
-            if (frameRecorder.isRecording()) {
-                const bool shouldSubmitCaptureFrame = captureSubmitAccum >= (1.0 / CAPTURE_FPS);
-                CapturedFrame frame = rendererCapture.captureRGBA_PBO(window);
-                if (shouldSubmitCaptureFrame && !frame.empty()) {
-                    frameRecorder.submit(std::move(frame));
-                    captureSubmitAccum -= (1.0 / CAPTURE_FPS);
-                }
-            }
+            captureController.onFrameRendered(window);
 
             window.display();
         }
@@ -222,13 +134,7 @@ int Application::run() {
         }
     }
 
-    if (window.setActive(true)) {
-        CapturedFrame pendingFrame = rendererCapture.consumePendingFrame();
-        if (!pendingFrame.empty() && frameRecorder.isRecording()) {
-            frameRecorder.submit(std::move(pendingFrame));
-        }
-    }
-    frameRecorder.stop();
+    captureController.stop(window);
     Interface::shutdown();
     return 0;
 }
