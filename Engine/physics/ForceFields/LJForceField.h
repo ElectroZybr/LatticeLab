@@ -16,8 +16,6 @@ public:
 
 private:
     struct LJParams {
-        float forceC6 = 0.0f;
-        float forceC12 = 0.0f;
         float potentialC6 = 0.0f;
         float potentialC12 = 0.0f;
     };

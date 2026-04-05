@@ -30,8 +30,6 @@ LJForceField::LJPairTable LJForceField::buildLJPairTable() {
             const float a6 = a2 * a2 * a2;
             const float a12 = a6 * a6;
 
-            params.forceC6 = 24.0f * eps * a6;
-            params.forceC12 = 48.0f * eps * a12;
             params.potentialC6 = 4.0f * eps * a6;
             params.potentialC12 = 4.0f * eps * a12;
 
@@ -48,6 +46,13 @@ void LJForceField::compute(AtomStorage& atoms, NeighborList& neighborList) const
     const auto& neighbours = neighborList.neighbors();
 
     for (size_t atomIndex = 0; atomIndex < atoms.mobileCount(); ++atomIndex) {
+        // используем список соседей
+        if (atomIndex + 1 >= offsets.size()) continue;
+
+        const uint32_t begin = offsets[atomIndex];
+        const uint32_t end = offsets[atomIndex + 1];
+        if (begin > end || static_cast<size_t>(end) > neighbours.size()) continue;
+
         // загружаем данные текущего атома из AtomStorage
         float posX = atoms.posX(atomIndex);
         float posY = atoms.posY(atomIndex);
@@ -58,25 +63,6 @@ void LJForceField::compute(AtomStorage& atoms, NeighborList& neighborList) const
         float potenE = atoms.energy(atomIndex);
         // выбираем строку таблицы LJ для данного типа атома
         const LJPairRow& ljPairRow = ljPairTable_[static_cast<size_t>(atoms.type(atomIndex))];
-
-        // используем список соседей
-        if (atomIndex + 1 >= offsets.size()) {
-            atoms.forceX(atomIndex) = forceX;
-            atoms.forceY(atomIndex) = forceY;
-            atoms.forceZ(atomIndex) = forceZ;
-            atoms.energy(atomIndex) = potenE;
-            continue;
-        }
-
-        const uint32_t begin = offsets[atomIndex];
-        const uint32_t end = offsets[atomIndex + 1];
-        if (begin > end || static_cast<size_t>(end) > neighbours.size()) {
-            atoms.forceX(atomIndex) = forceX;
-            atoms.forceY(atomIndex) = forceY;
-            atoms.forceZ(atomIndex) = forceZ;
-            atoms.energy(atomIndex) = potenE;
-            continue;
-        }
 
         for (uint32_t p = begin; p < end; ++p) {
             pairInteraction(atoms, neighbours[p], ljPairRow, forceX, forceY, forceZ, posX, posY, posZ, potenE);
@@ -110,8 +96,13 @@ void LJForceField::pairInteraction(AtomStorage& atoms, uint32_t bIndex, const LJ
     const float invD6 = invD2 * invD2 * invD2;
     const float invD12 = invD6 * invD6;
 
+    const float term6  = params.potentialC6 * invD6;
+    const float term12 = params.potentialC12 * invD12;
+
+    const float forceScale = (12.0f * term12 - 6.0f * term6) * invD2;
+    const float potential  = term12 - term6;
+
     // расчет сил LJ
-    const float forceScale = (params.forceC12 * invD12 - params.forceC6 * invD6) * invD2;
     const float pairForceX = dx * forceScale;
     const float pairForceY = dy * forceScale;
     const float pairForceZ = dz * forceScale;
@@ -126,8 +117,6 @@ void LJForceField::pairInteraction(AtomStorage& atoms, uint32_t bIndex, const LJ
     atoms.forceY(bIndex) += pairForceY;
     atoms.forceZ(bIndex) += pairForceZ;
 
-    // расчет потенциальной энергии
-    const float potential = params.potentialC12 * invD12 - params.potentialC6 * invD6;
     potenE += 0.5f * potential;
     atoms.energy(bIndex) += 0.5f * potential;
 }
