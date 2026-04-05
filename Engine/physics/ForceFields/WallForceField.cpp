@@ -27,21 +27,13 @@ void WallForceField::applyWall(float coord, float& force, float max) {
     constexpr float k = 500.0f;
     constexpr float border = 2.0f;
 
-    if (coord <= 0.0f || coord >= max) {
-        return;
-    }
+    const float penLow  = border - coord;
+    const float penHigh = coord - (max - border);
 
-    if (coord < border) {
-        const float penetration = border - coord;
-        const float p2 = penetration * penetration;
-        const float p4 = p2 * p2;
-        force += k * p4 * p2;
-    } else if (coord > max - border) {
-        const float penetration = coord - (max - border);
-        const float p2 = penetration * penetration;
-        const float p4 = p2 * p2;
-        force -= k * p4 * p2;
-    }
+    const float fLow  = penLow  > 0.0f ? penLow  * penLow  * penLow  * penLow  * penLow  * penLow  * k : 0.0f;
+    const float fHigh = penHigh > 0.0f ? penHigh * penHigh * penHigh * penHigh * penHigh * penHigh * k : 0.0f;
+
+    force += fLow - fHigh;
 }
 
 void WallForceField::softWalls(float coordX, float coordY, float coordZ, float& forceX, float& forceY, float& forceZ) const {

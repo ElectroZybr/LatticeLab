@@ -70,20 +70,17 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
         // запись всех соседей атома в массив
         writeAtomNeighbors(grid, x, y, z, i, xi, yi, zi, neighbors_);
         offsets_[i + 1] = neighbors_.size();
-
-        refPosX_[i] = xi;
-        refPosY_[i] = yi;
-        refPosZ_[i] = zi;
     }
+
+    std::copy(x, x + atoms.mobileCount(), refPosX_.data());
+    std::copy(y, y + atoms.mobileCount(), refPosY_.data());
+    std::copy(z, z + atoms.mobileCount(), refPosZ_.data());
 
     valid_ = true;
 }
 
 bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
-    const size_t n = atoms.size();
-    if (n > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
-        return true;
-    }
+    const size_t n = atoms.mobileCount();
 
     if (!valid_ || n != refPosX_.size()) {
         return true;
@@ -144,9 +141,9 @@ void NeighborList::reserveListBuffers(const AtomStorage& atoms, const SpatialGri
     const size_t prevCapacity = neighbors_.capacity();
     neighbors_.clear();
     offsets_.resize(atoms.size() + 1);
-    refPosX_.resize(atoms.size());
-    refPosY_.resize(atoms.size());
-    refPosZ_.resize(atoms.size());
+    refPosX_.resize(atoms.mobileCount());
+    refPosY_.resize(atoms.mobileCount());
+    refPosZ_.resize(atoms.mobileCount());
 
     // первый build — fallback, потом реальный размер из прошлого раза
     if (prevCapacity > 0)
