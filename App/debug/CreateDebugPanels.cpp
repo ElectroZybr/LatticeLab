@@ -57,7 +57,6 @@ static DebugView* buildDebugNeighborView(DebugPanel& panel) {
         DebugValue("Ребилдов NL", DebugDrawers::Int),
         DebugValue("Шагов между ребилдами (recent)", DebugDrawers::Float<2>),
         DebugValue("Время ребилда NL (мс)", DebugDrawers::Float<4>),
-        DebugValue("Время needsRebuild (мс)", DebugDrawers::Float<4>),
         DebugValue("SG заполненных ячеек", DebugDrawers::Int),
         DebugValue("SG макс атомов в ячейке", DebugDrawers::Int),
         DebugValue("SG ср. атомов/ячейку", DebugDrawers::Float<3>),
