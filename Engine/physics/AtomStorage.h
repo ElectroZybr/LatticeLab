@@ -188,8 +188,6 @@ public:
         atomType_.shrink_to_fit();
         valence_.clear();
         valence_.shrink_to_fit();
-        // floatData_.clear(); TODO разобраться почему если убрать то бенчмарки падают с segfault
-        // bindFloatViews();
     }
 
     void reserve(size_t count) {

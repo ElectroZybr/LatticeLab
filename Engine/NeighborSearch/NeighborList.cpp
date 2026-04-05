@@ -69,7 +69,7 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
         const float zi = z[i];
         // запись всех соседей атома в массив
         writeAtomNeighbors(grid, x, y, z, i, xi, yi, zi, neighbors_);
-        offsets_[i + 1] = static_cast<uint32_t>(neighbors_.size());
+        offsets_[i + 1] = neighbors_.size();
 
         refPosX_[i] = xi;
         refPosY_[i] = yi;
@@ -81,17 +81,17 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
 
 bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
     PROFILE_SCOPE("NeighborList::needsRebuild");
-    const size_t nSize = atoms.size();
-    if (nSize > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
+    const size_t n = atoms.size();
+    if (n > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
         return true;
     }
-    const uint32_t n = static_cast<uint32_t>(nSize);
 
     if (!valid_ || n != refPosX_.size()) {
         return true;
     }
 
-    const float maxDispSqr = (0.5f * skin_) * (0.5f * skin_);
+    const float maxDisp = (0.5f * skin_);
+    const float maxDispSqr = maxDisp * maxDisp;
 
     const float* RESTRICT x = atoms.xData();
     const float* RESTRICT y = atoms.yData();
@@ -117,11 +117,11 @@ uint32_t NeighborList::atomCount() const {
     if (offsets_.empty()) {
         return 0;
     }
-    return static_cast<uint32_t>(offsets_.size() - 1);
+    return offsets_.size() - 1;
 }
 
 uint32_t NeighborList::pairStorageSize() const {
-    return static_cast<uint32_t>(std::min(neighbors_.size(), static_cast<size_t>(std::numeric_limits<uint32_t>::max())));
+    return std::min(neighbors_.size(), static_cast<size_t>(std::numeric_limits<uint32_t>::max()));
 }
 
 uint32_t NeighborList::memoryBytes() const {
@@ -144,7 +144,7 @@ void NeighborList::recordRebuild(int simStep) {
 void NeighborList::reserveListBuffers(const AtomStorage& atoms, const SpatialGrid& grid) {
     const size_t prevCapacity = neighbors_.capacity();
     neighbors_.clear();
-    offsets_.assign(atoms.size() + 1, 0);
+    offsets_.resize(atoms.size() + 1);
     refPosX_.resize(atoms.size());
     refPosY_.resize(atoms.size());
     refPosZ_.resize(atoms.size());

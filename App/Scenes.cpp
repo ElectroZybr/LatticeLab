@@ -124,7 +124,7 @@ int randomGasInCurrentBox(Simulation& sim,
                         continue;
                     }
 
-                    const int cellIndex = box.grid.linearIndex(nx, ny, nz);
+                    const int cellIndex = box.grid.index(nx, ny, nz);
                     const auto& bucket = pendingByCell[static_cast<size_t>(cellIndex)];
                     for (const Vec3f& other : bucket) {
                         if ((coords - other).sqrAbs() < minDistanceSqr) {
@@ -149,7 +149,7 @@ int randomGasInCurrentBox(Simulation& sim,
 
             if (!detail::hasNeighborInStorage(sim, coords, minDistance) && !isTooCloseToPending(coords)) {
                 acceptedPositions.emplace_back(coords);
-                const int cell = box.grid.linearIndex(
+                const int cell = box.grid.index(
                     box.grid.worldToCellX(coords.x),
                     box.grid.worldToCellY(coords.y),
                     box.grid.worldToCellZ(coords.z)

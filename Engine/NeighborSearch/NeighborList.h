@@ -41,7 +41,9 @@ public:
 
         for (int k = 0; k < 27; ++k) {
             for (uint32_t neighborIndex : grid.atomsInCellByLinearIndex(center + offsets27[k])) {
-                if (neighborIndex >= atomIndex) continue;
+                // grid.atomsInCellByLinearIndex возвращает соседей в порядке возрастания индексов
+                if (neighborIndex >= atomIndex) break;
+
                 const float dx = x[neighborIndex] - xi;
                 const float dy = y[neighborIndex] - yi;
                 const float dz = z[neighborIndex] - zi;

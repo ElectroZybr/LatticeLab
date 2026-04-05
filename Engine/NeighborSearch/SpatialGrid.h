@@ -5,6 +5,7 @@
 #include <array>
 #include <span>
 #include <vector>
+#include <algorithm>
 
 #include <Engine/math/Vec3f.h>
 #include "../metrics/SpatialGridStats.h"
@@ -27,18 +28,17 @@ public:
     [[nodiscard]] size_t memoryBytes() const;
 
     // (warning) нет проверки выхода за границы
-    [[nodiscard]] std::span<const size_t> atomsInCell(int x, int y, int z) const noexcept {
-        const size_t idx = static_cast<size_t>(index(x, y, z));
-        const size_t begin = offsets[idx];
-        return std::span<const size_t>(atomsInCells.data() + begin, offsets[idx + 1] - begin);
+    [[nodiscard]] std::span<const uint32_t> atomsInCell(int x, int y, int z) const noexcept {
+        const size_t idx = index(x, y, z);
+        return atomsInCellByLinearIndex(idx);
     }
 
     // (warning) нет проверки выхода за границы
-    [[nodiscard]] std::span<const size_t> atomsInCellByLinearIndex(int linearIndex) const noexcept {
-        const size_t idx = static_cast<size_t>(linearIndex);
+    [[nodiscard]] std::span<const uint32_t> atomsInCellByLinearIndex(size_t linearIndex) const noexcept {
+        const size_t idx = linearIndex;
         const size_t begin = offsets[idx];
-        return std::span<const size_t>(atomsInCells.data() + begin, offsets[idx + 1] - begin);
-    }
+        return std::span<const uint32_t>(atomsInCells.data() + begin, offsets[idx + 1] - begin);
+     }
 
     int worldToCellX(float x) const { return toCell(x, sizeX); }
     int worldToCellY(float y) const { return toCell(y, sizeY); }
@@ -49,27 +49,23 @@ public:
         return static_cast<int>(offsets[idx + 1] - offsets[idx]);
     }
 
-    [[nodiscard]] int linearIndex(int x, int y, int z) const noexcept { return index(x, y, z); }
     [[nodiscard]] int linearCellOfAtom(uint32_t atomIndex) const noexcept { return static_cast<int>(cellIndices_[atomIndex]); }
     [[nodiscard]] const std::array<int, 27>& neighborOffsets27() const noexcept { return neighborOffsets27_; }
     
+    [[nodiscard]] int index(int x, int y, int z) const noexcept {
+        return (z * sizeY + y) * sizeX + x;
+    }
 private:
     // CSR хранение данных
-    std::vector<size_t> offsets;      // массив оффсетов (каждый оффсет - начало новой ячейки)
-    std::vector<size_t> atomsInCells; // атомы подряд сгруппированные по ячейкам
+    std::vector<uint32_t> offsets;      // массив оффсетов (каждый оффсет - начало новой ячейки)
+    std::vector<uint32_t> atomsInCells; // атомы подряд сгруппированные по ячейкам
     std::array<int, 27> neighborOffsets27_{};
     
     // рабочие буферы rebuild — переиспользуются между вызовами
-    std::vector<size_t> cellIndices_;
-    std::vector<size_t> counts_;
-
-    static constexpr int kBorderCells = 2; // запас + 1 клетка с каждой стороны от бокса
+    std::vector<uint32_t> cellIndices_;
+    std::vector<uint32_t> counts_;
 
     SpatialGridStats stats_{};
-
-    [[nodiscard]] int index(int x, int y, int z) const noexcept {
-        return z * sizeY * sizeX + y * sizeX + x;
-    }
 
     void rebuildNeighborOffsets() noexcept;
 
@@ -78,14 +74,7 @@ private:
     }
 
     [[nodiscard]] int toCell(float coord, int size) const {
-        if (size <= 2) {
-            return 1;
-        }
-
-        const int maxInterior = size - 2;
-        int c = static_cast<int>(coord / cellSize) + 1;
-        if (c < 1) c = 1;
-        if (c > maxInterior) c = maxInterior;
-        return c;
+        const int c = static_cast<int>(coord / cellSize) + 1;
+        return std::clamp(c, 1, std::max(1, size - 2));
     }
 };
