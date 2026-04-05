@@ -17,9 +17,9 @@ SpatialGrid::SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize)
     if (this->cellSize <= 0) {
         throw std::invalid_argument("SpatialGrid::SpatialGrid: cellSize must be > 0");
     }
-    const int cellsX = std::max(1, (sizeX + this->cellSize - 1) / this->cellSize);
-    const int cellsY = std::max(1, (sizeY + this->cellSize - 1) / this->cellSize);
-    const int cellsZ = std::max(1, (sizeZ + this->cellSize - 1) / this->cellSize);
+    const int cellsX = std::max(1 + 2*kGhostLayers, (sizeX + this->cellSize - 1) / this->cellSize + 2*kGhostLayers);
+    const int cellsY = std::max(1 + 2*kGhostLayers, (sizeY + this->cellSize - 1) / this->cellSize + 2*kGhostLayers);
+    const int cellsZ = std::max(1 + 2*kGhostLayers, (sizeZ + this->cellSize - 1) / this->cellSize + 2*kGhostLayers);
     this->sizeX = cellsX;
     this->sizeY = cellsY;
     this->sizeZ = cellsZ;
@@ -55,7 +55,7 @@ void SpatialGrid::rebuild(std::span<const float> posX,
         ++counts_[cell];
     }
 
-    offsets.resize(countCells + 1);
+    offsets.resize(countCells + 2);
     uint32_t running = 0;
     size_t nonEmptyCellCount = 0;
     uint32_t maxAtomsPerCell = 0;
@@ -69,7 +69,6 @@ void SpatialGrid::rebuild(std::span<const float> posX,
     }
     offsets[countCells] = running;
 
-    std::copy(offsets.begin(), offsets.begin() + countCells, counts_.begin());
     atomsInCells.resize(n);
     for (size_t i = 0; i < n; ++i) {
         const size_t cell = cellIndices_[i];
@@ -88,9 +87,9 @@ void SpatialGrid::resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSi
     else if (newCellSize != -1)
         throw std::invalid_argument("SpatialGrid::resize: newCellSize must be > 0");
 
-    sizeX = std::max(1, (newSizeX + cellSize - 1) / cellSize);
-    sizeY = std::max(1, (newSizeY + cellSize - 1) / cellSize);
-    sizeZ = std::max(1, (newSizeZ + cellSize - 1) / cellSize);
+    sizeX = std::max(1 + 2*kGhostLayers, (newSizeX + cellSize - 1) / cellSize + 2*kGhostLayers);
+    sizeY = std::max(1 + 2*kGhostLayers, (newSizeY + cellSize - 1) / cellSize + 2*kGhostLayers);
+    sizeZ = std::max(1 + 2*kGhostLayers, (newSizeZ + cellSize - 1) / cellSize + 2*kGhostLayers);
 
     countCells = sizeX * sizeY * sizeZ;
     offsets.assign(countCells + 1, 0);
@@ -112,9 +111,9 @@ void SpatialGrid::rebuildNeighborOffsets() noexcept {
 }
 
 size_t SpatialGrid::memoryBytes() const {
-    return atomsInCells.capacity() * sizeof(size_t)
-        + offsets.capacity() * sizeof(size_t)
+    return atomsInCells.capacity() * sizeof(atomsInCells[0])
+        + offsets.capacity() * sizeof(offsets[0])
         + sizeof(neighborOffsets27_)
-        + cellIndices_.capacity() * sizeof(size_t)
-        + counts_.capacity() * sizeof(size_t);
+        + cellIndices_.capacity() * sizeof(cellIndices_[0])
+        + counts_.capacity() * sizeof(counts_[0]);
 }
