@@ -46,7 +46,7 @@ public:
     static bool captureRecording;
     static uint64_t captureFrameCount;
     static float captureFps;
-    static double captureBlinkStartTime;
+    static double captureBlinkElapsed;
 
     static FontManager fontManager;
 

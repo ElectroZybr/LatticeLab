@@ -32,7 +32,7 @@ std::string Interface::toolTooltipText;
 bool Interface::captureRecording = false;
 uint64_t Interface::captureFrameCount = 0;
 float Interface::captureFps = 0.0f;
-double Interface::captureBlinkStartTime = 0.0;
+double Interface::captureBlinkElapsed = 0.0;
 int Interface::sim_step = 0;
 
 FontManager Interface::fontManager;
