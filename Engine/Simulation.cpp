@@ -29,16 +29,13 @@ StepData Simulation::makeStepData() {
 
 void Simulation::update() {
     PROFILE_SCOPE("Simulation::update");
-    if (!neighborList_.isValid()) {
-        neighborList_.build(atomStorage_, sim_box_);
-    }
-
-    StepData stepData = makeStepData();
-    integrator.step(stepData);
     if (neighborList_.needsRebuild(atomStorage_)) {
         neighborList_.build(atomStorage_, sim_box_);
         neighborList_.recordRebuild(sim_step);
     }
+
+    StepData stepData = makeStepData();
+    integrator.step(stepData);
     ++sim_step;
     sim_time_ns += Dt * Units::kTimeUnitToNs;
 }
