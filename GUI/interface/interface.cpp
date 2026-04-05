@@ -31,6 +31,7 @@ bool Interface::drawToolTrip = false;
 std::string Interface::toolTooltipText;
 bool Interface::captureRecording = false;
 uint64_t Interface::captureFrameCount = 0;
+float Interface::captureFps = 0.0f;
 int Interface::sim_step = 0;
 
 FontManager Interface::fontManager;

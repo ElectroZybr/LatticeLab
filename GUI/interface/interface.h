@@ -45,6 +45,7 @@ public:
     static std::string toolTooltipText;
     static bool captureRecording;
     static uint64_t captureFrameCount;
+    static float captureFps;
 
     static FontManager fontManager;
 
