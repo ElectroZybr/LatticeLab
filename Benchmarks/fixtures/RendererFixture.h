@@ -27,8 +27,6 @@ public:
         ToolsManager::init(nullptr, &view_, nullptr, nullptr, renderer_);
 
         atomStorage_ = makeGridAtoms(static_cast<int>(state.range(0)));
-        renderer_->setAtomStorage(&atomStorage_);
-        renderer_->setBondStorage(&bonds_);
     }
 
     void TearDown(benchmark::State&) override {

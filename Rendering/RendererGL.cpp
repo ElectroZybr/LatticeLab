@@ -291,7 +291,7 @@ GLuint RendererGL::linkProgram(std::string_view vert, std::string_view frag, std
 
 // ------------------------------------------------------------------ draw ---
 
-void RendererGL::drawShot(const AtomStorage& atoms, const SimBox& box)
+void RendererGL::drawShot(const AtomStorage& atoms, const Bond::List& bonds, const SimBox& box)
 {
     PROFILE_SCOPE("RendererGL::drawShot");
     currentBox = &box;
@@ -304,7 +304,7 @@ void RendererGL::drawShot(const AtomStorage& atoms, const SimBox& box)
     glClearColor(0.13f, 0.13f, 0.13f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (drawBonds) drawBondsGL();
+    if (drawBonds) drawBondsGL(atoms, bonds);
     if (drawGrid)  drawGridGL(box.grid);
     drawBox(box);
 
@@ -466,23 +466,23 @@ void RendererGL::drawBox(const SimBox& box) {
     glBindVertexArray(0);
 }
 
-void RendererGL::drawBondsGL() {
+void RendererGL::drawBondsGL(const AtomStorage& atomStorage, const Bond::List& bondStorage) {
     PROFILE_SCOPE("RendererGL::drawBondsGL");
-    if (bondShader == 0 || !atomStorage || !bondStorage) return;
+    if (bondShader == 0) return;
 
     bondData.clear();
-    bondData.reserve(bondStorage->size());
+    bondData.reserve(bondStorage.size());
 
-    for (const Bond& bond : *bondStorage) {
-        if (bond.aIndex >= atomStorage->size() || bond.bIndex >= atomStorage->size()) {
+    for (const Bond& bond : bondStorage) {
+        if (bond.aIndex >= atomStorage.size() || bond.bIndex >= atomStorage.size()) {
             continue;
         }
         const size_t aIndex = bond.aIndex;
         const size_t bIndex = bond.bIndex;
-        const Vec3f aPos = atomStorage->pos(aIndex);
-        const Vec3f bPos = atomStorage->pos(bIndex);
-        const float r = (AtomData::getProps(atomStorage->type(aIndex)).radius +
-                         AtomData::getProps(atomStorage->type(bIndex)).radius) * 0.15f;
+        const Vec3f aPos = atomStorage.pos(aIndex);
+        const Vec3f bPos = atomStorage.pos(bIndex);
+        const float r = (AtomData::getProps(atomStorage.type(aIndex)).radius +
+                         AtomData::getProps(atomStorage.type(bIndex)).radius) * 0.15f;
         bondData.emplace_back(
             glm::vec3(aPos.x, aPos.y, aPos.z),
             glm::vec3(bPos.x, bPos.y, bPos.z),

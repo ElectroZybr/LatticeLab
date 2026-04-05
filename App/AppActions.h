@@ -93,8 +93,6 @@ namespace AppActions {
                     newRenderer->drawBonds = renderer->drawBonds;
                     newRenderer->speedColorMode = renderer->speedColorMode;
                     newRenderer->speedGradientMax = renderer->speedGradientMax;
-                    newRenderer->setAtomStorage(&simulation.atoms());
-                    newRenderer->setBondStorage(&simulation.bonds());
                     renderer = std::move(newRenderer);
                 }
             }));

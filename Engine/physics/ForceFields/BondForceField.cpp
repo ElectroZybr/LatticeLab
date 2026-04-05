@@ -40,13 +40,10 @@ void BondForceField::formBonds(AtomStorage& atoms, Bond::List& bonds, NeighborLi
     const auto& neighbours = neighborList.neighbors();
     for (uint32_t atomIndex = 0; atomIndex < atomCount; ++atomIndex) {
         if (atomIndex + 1 >= offsets.size()) {
-            continue;
+            break;
         }
         const uint32_t begin = offsets[atomIndex];
         const uint32_t end = offsets[atomIndex + 1];
-        if (begin > end || static_cast<size_t>(end) > neighbours.size()) {
-            continue;
-        }
         for (uint32_t p = begin; p < end; ++p) {
             tryCreateBond(atoms, bonds, atomIndex, neighbours[p]);
         }

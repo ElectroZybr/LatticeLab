@@ -6,7 +6,7 @@
 // @bench_meta {"id":"RendererFixture<Renderer3D>/DrawShot3D","ru":"Отрисовка кадра 3D","group":"Рендер/3D"}
 BENCHMARK_TEMPLATE_DEFINE_F(RendererFixture, DrawShot3D, Renderer3D)(benchmark::State& state) {
     for (auto _ : state) {
-        renderer_->drawShot(atomStorage_, box_);
+        renderer_->drawShot(atomStorage_, bonds_, box_);
         benchmark::ClobberMemory();
     }
     setCounters(state);
