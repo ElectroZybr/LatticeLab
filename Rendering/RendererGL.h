@@ -6,13 +6,13 @@
 #include <SFML/Graphics.hpp>
 #include <glad/glad.h>
 
-
 class RendererGL : public IRenderer {
 public:
     RendererGL(sf::RenderTarget& t, sf::View& gv, SimBox& simbox);
     virtual ~RendererGL();
 
     void drawShot(const AtomStorage& atoms,
+                 const Bond::List& bondStorage,
                   const SimBox& box) override;
 
 protected:
@@ -34,9 +34,9 @@ protected:
                        std::string_view geom = "",
                        std::string_view vertDefines = {});
 
-    void drawAtoms(const AtomStorage& atoms, const SimBox& box);
+    void drawAtoms(const AtomStorage& atoms,  const SimBox& box);
     void drawBox(const SimBox& box);
-    void drawBondsGL();
+    void drawBondsGL(const AtomStorage& atomStorage, const Bond::List& bondStorage);
     void drawGridGL(const SpatialGrid& grid);
     GLuint atomShaderForMode(SpeedColorMode mode) const;
 

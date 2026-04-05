@@ -3,9 +3,9 @@
 #include <cstdint>
 
 #include "Rendering/camera/Camera.h"
+#include "Engine/SimBox.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/physics/Bond.h"
-#include "Engine/SimBox.h"
 
 class IRenderer {
 public:
@@ -18,10 +18,8 @@ public:
     virtual ~IRenderer() = default;
 
     virtual void drawShot(const AtomStorage& atoms,
+                          const Bond::List& bonds,
                           const SimBox& box) = 0;
-
-    void setAtomStorage(const AtomStorage* storage) { atomStorage = storage; }
-    void setBondStorage(const Bond::List* storage) { bondStorage = storage; }
 
     bool drawGrid           = false;
     bool drawBonds          = false;
@@ -34,6 +32,4 @@ public:
 protected:
     IRenderer(sf::View& gv, SimBox& box)
         : camera(&gv, box) {}
-    const AtomStorage* atomStorage = nullptr;
-    const Bond::List* bondStorage = nullptr;
 };

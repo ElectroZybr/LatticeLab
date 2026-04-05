@@ -35,8 +35,6 @@ int Application::run() {
     Scenes::crystal(simulation, 25, AtomData::Type::Z, false);
 
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView, simulation.box());
-    renderer->setAtomStorage(&simulation.atoms());
-    renderer->setBondStorage(&simulation.bonds());
     renderer->drawBonds = true;
     renderer->speedColorMode = IRenderer::SpeedColorMode::GradientClassic;
 
@@ -91,7 +89,7 @@ int Application::run() {
             renderAccum -= renderInterval;
             Interface::Update();
             refreshAtomDebugViews(debugViews, simulation);
-            renderer->drawShot(simulation.atoms(), simulation.box());
+            renderer->drawShot(simulation.atoms(), simulation.bonds(), simulation.box());
             ToolsManager::pickingSystem->getOverlay().draw(window);
             ImGui::SFML::Render(window);
             window.display();
