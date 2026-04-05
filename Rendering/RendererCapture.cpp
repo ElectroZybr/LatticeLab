@@ -2,9 +2,12 @@
 
 #include <algorithm>
 
+#include "Engine/metrics/Profiler.h"
 #include <glad/glad.h>
 
 CapturedFrame RendererCapture::captureRGBA(sf::RenderTarget& target, bool flipVertically) {
+    PROFILE_SCOPE("Capture::readback");
+
     CapturedFrame frame;
     const sf::Vector2u size = target.getSize();
     if (size.x == 0 || size.y == 0) {

@@ -26,12 +26,19 @@ public:
     size_t pendingFrameCount() const;
 
 private:
-    static std::filesystem::path makeFramePath(const std::filesystem::path& sessionDir, uint64_t frameIndex);
-    static bool writeBmp(const std::filesystem::path& path, const CapturedFrame& frame);
+    bool openEncoder(const CapturedFrame& frame);
+    void closeEncoder();
+    static std::filesystem::path makeVideoPath(const std::filesystem::path& sessionDir);
+    static std::filesystem::path findFfmpegExecutable();
 
     mutable std::mutex mutex_;
     std::filesystem::path sessionDir_;
+    std::filesystem::path ffmpegPath_;
+    void* encoderProcess_ = nullptr;
+    void* encoderStdinWrite_ = nullptr;
     bool recording_ = false;
+    uint32_t frameWidth_ = 0;
+    uint32_t frameHeight_ = 0;
     uint64_t nextFrameIndex_ = 0;
     uint64_t savedFrameCount_ = 0;
 };
