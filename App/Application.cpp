@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "AppActions.h"
 #include "AppSignals.h"
+#include "UserSettings.h"
 #include "CreateWindow.h"
 #include "capture/CaptureController.h"
 #include "capture/FrameRecorder.h"
@@ -9,6 +10,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <filesystem>
 
 #include <SFML/Graphics.hpp>
 #include <imgui-SFML.h>
@@ -38,14 +40,19 @@ int Application::run() {
     SimBox box(Vec3f(50, 50, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    Scenes::crystal(simulation, 500, AtomData::Type::Z, false);
+    Scenes::crystal(simulation, 50, AtomData::Type::Z, false);
 
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView, simulation.box());
     renderer->setAtomStorage(&simulation.atoms());
     renderer->setBondStorage(&simulation.bonds());
     renderer->drawBonds = true;
     renderer->speedColorMode = IRenderer::SpeedColorMode::GradientClassic;
+
+    // загрузка пользовательских настроек
     CaptureController captureController;
+    const UserSettings userSettings = UserSettingsIO::load();
+    captureController.setSettings(userSettings.captureSettings);
+    captureController.setOutputDirectory(userSettings.captureOutputDirectory);
 
     AppActions::init(simulation, renderer, window, gameView);
     Interface::init(window, simulation, renderer, captureController);
@@ -69,6 +76,11 @@ int Application::run() {
     Signals::ScopedConnection captureToggleConnection(
         AppSignals::UI::ToggleCapture.connect([&]() {
             captureController.toggle(window);
+        })
+    );
+    Signals::ScopedConnection captureDirectoryConnection(
+        AppSignals::UI::SetCaptureDirectory.connect([&](std::string_view path) {
+            captureController.setOutputDirectory(std::filesystem::path(path));
         })
     );
 
@@ -135,6 +147,10 @@ int Application::run() {
     }
 
     captureController.stop(window);
+    UserSettingsIO::save(UserSettings{
+        .captureOutputDirectory = captureController.outputDirectory(),
+        .captureSettings = captureController.settings(),
+    });
     Interface::shutdown();
     return 0;
 }

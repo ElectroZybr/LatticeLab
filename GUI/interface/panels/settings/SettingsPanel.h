@@ -8,6 +8,7 @@
 class Simulation;
 class IRenderer;
 class CaptureController;
+class FileDialogManager;
 
 class SettingsPanel {
 public:
@@ -17,7 +18,7 @@ public:
         ImGuiWindowFlags_NoCollapse |
         ImGuiWindowFlags_NoTitleBar;
 
-    void draw(float uiScale, sf::Vector2u windowSize, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, CaptureController& captureController);
+    void draw(float uiScale, sf::Vector2u windowSize, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, CaptureController& captureController, FileDialogManager& fileDialog);
     void toggle() { visible = !visible; }
     void close() { visible = false; }
     bool isVisible() const { return visible; }

@@ -1,9 +1,12 @@
 #include "SettingsPanel.h"
+#include <array>
+#include <cstdio>
 #include <imgui.h>
 
 #include "AppVersion.h"
 #include "App/capture/CaptureController.h"
 #include "Engine/Simulation.h"
+#include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/style/ComboStyle.h"
 #include "Rendering/BaseRenderer.h"
 #include "App/AppSignals.h"
@@ -48,7 +51,7 @@ const char* capturePixelFormatName(CaptureSettings::PixelFormat pixelFormat) {
 }
 } // namespace
 
-void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, CaptureController& captureController) {
+void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, CaptureController& captureController, FileDialogManager& fileDialog) {
     float target = visible ? 1.f : 0.f;
     float step = ImGui::GetIO().DeltaTime * 12.f;
     animProgress += (target - animProgress) * std::min(step, 1.f);
@@ -211,6 +214,18 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
     ImGui::SeparatorText("Запись");
     CaptureSettings captureSettings = captureController.settings();
     const bool recordingActive = captureController.isRecording();
+    const std::string captureDir = captureController.outputDirectory().string();
+
+    ImGui::TextUnformatted("Папка сохранения видео");
+    std::array<char, 512> captureDirBuffer{};
+    std::snprintf(captureDirBuffer.data(), captureDirBuffer.size(), "%s", captureDir.c_str());
+    const float browseButtonWidth = ImGui::GetFrameHeight();
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseButtonWidth - ImGui::GetStyle().ItemSpacing.x);
+    ImGui::InputText("##capture_dir", captureDirBuffer.data(), captureDirBuffer.size(), ImGuiInputTextFlags_ReadOnly);
+    ImGui::SameLine();
+    if (ImGui::Button("...##capture_dir_browse", ImVec2(browseButtonWidth, 0.0f))) {
+        fileDialog.openCaptureDirectory(captureDir);
+    }
 
     ImGui::BeginDisabled(recordingActive);
 
@@ -286,10 +301,6 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
     }
 
     ImGui::EndDisabled();
-
-    if (recordingActive) {
-        ImGui::TextDisabled("Параметры записи меняются между сессиями.");
-    }
 
     const float exitButtonWidth = ImGui::GetContentRegionAvail().x;
     const char* versionText = "LatticeLab v" LATTICELAB_VERSION_STRING " demo";

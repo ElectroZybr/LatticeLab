@@ -15,6 +15,16 @@ void CaptureController::setSettings(const CaptureSettings& settings) noexcept {
     settings_ = settings;
 }
 
+std::filesystem::path CaptureController::outputDirectory() const {
+    return outputDirectory_;
+}
+
+void CaptureController::setOutputDirectory(const std::filesystem::path& path) {
+    if (!path.empty()) {
+        outputDirectory_ = path;
+    }
+}
+
 void CaptureController::update(double deltaTime) {
     if (!frameRecorder_.isRecording()) {
         captureFps_ = 0.0f;
@@ -95,7 +105,7 @@ double CaptureController::blinkElapsed() const noexcept {
     return frameRecorder_.isRecording() ? blinkElapsed_ : 0.0;
 }
 
-std::filesystem::path CaptureController::makeCaptureOutputPath() {
+std::filesystem::path CaptureController::makeCaptureOutputPath() const {
     const auto now = std::chrono::system_clock::now();
     const std::time_t time = std::chrono::system_clock::to_time_t(now);
     std::tm localTime{};
@@ -104,7 +114,9 @@ std::filesystem::path CaptureController::makeCaptureOutputPath() {
     std::ostringstream datePrefix;
     datePrefix << std::put_time(&localTime, "%Y-%m-%d");
 
-    const std::filesystem::path capturesDir = "captures";
+    const std::filesystem::path capturesDir = outputDirectory_.empty()
+        ? std::filesystem::path("captures")
+        : outputDirectory_;
     std::filesystem::create_directories(capturesDir);
 
     const std::string prefix = datePrefix.str() + "_";
