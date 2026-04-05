@@ -32,18 +32,44 @@ constexpr int FPS = 60;
 constexpr int LPS = 20;
 
 namespace {
-std::filesystem::path makeCaptureSessionDir() {
+std::filesystem::path makeCaptureOutputPath() {
     const auto now = std::chrono::system_clock::now();
     const std::time_t time = std::chrono::system_clock::to_time_t(now);
     std::tm localTime{};
     localtime_s(&localTime, &time);
 
-    std::ostringstream folderName;
-    folderName << "session_" << std::put_time(&localTime, "%Y%m%d_%H%M%S");
+    std::ostringstream datePrefix;
+    datePrefix << std::put_time(&localTime, "%Y-%m-%d");
 
-    const std::filesystem::path dir = std::filesystem::path("captures") / folderName.str();
-    std::filesystem::create_directories(dir);
-    return dir;
+    const std::filesystem::path capturesDir = "captures";
+    std::filesystem::create_directories(capturesDir);
+
+    const std::string prefix = datePrefix.str() + "_";
+    int nextIndex = 1;
+
+    for (const auto& entry : std::filesystem::directory_iterator(capturesDir)) {
+        if (!entry.is_regular_file()) {
+            continue;
+        }
+
+        const std::filesystem::path path = entry.path();
+        if (path.extension() != ".mp4") {
+            continue;
+        }
+
+        const std::string stem = path.stem().string();
+        if (!stem.starts_with(prefix)) {
+            continue;
+        }
+
+        const std::string suffix = stem.substr(prefix.size());
+        try {
+            nextIndex = std::max(nextIndex, std::stoi(suffix) + 1);
+        } catch (...) {
+        }
+    }
+
+    return capturesDir / (prefix + std::to_string(nextIndex) + ".mp4");
 }
 
 }
@@ -58,7 +84,7 @@ int Application::run() {
     SimBox box(Vec3f(50, 50, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    Scenes::crystal(simulation, 25, AtomData::Type::Z, false);
+    Scenes::crystal(simulation, 500, AtomData::Type::Z, false);
 
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView, simulation.box());
     renderer->setAtomStorage(&simulation.atoms());
@@ -86,12 +112,13 @@ int Application::run() {
     double logAccum = 0.0;
     bool captureToggleHeld = false;
     FrameRecorder frameRecorder;
+    RendererCapture rendererCapture;
     Signals::ScopedConnection captureToggleConnection(
         AppSignals::UI::ToggleCapture.connect([&]() {
             if (frameRecorder.isRecording()) {
                 frameRecorder.stop();
             } else {
-                frameRecorder.start(makeCaptureSessionDir());
+                frameRecorder.start(makeCaptureOutputPath());
             }
         })
     );
@@ -141,7 +168,10 @@ int Application::run() {
             ImGui::SFML::Render(window);
 
             if (frameRecorder.isRecording()) {
-                frameRecorder.submit(RendererCapture::captureRGBA(window));
+                CapturedFrame frame = rendererCapture.captureRGBA_PBO(window);
+                if (!frame.empty()) {
+                    frameRecorder.submit(std::move(frame));
+                }
             }
 
             window.display();
@@ -157,6 +187,12 @@ int Application::run() {
         }
     }
 
+    if (window.setActive(true)) {
+        CapturedFrame pendingFrame = rendererCapture.consumePendingFrame();
+        if (!pendingFrame.empty() && frameRecorder.isRecording()) {
+            frameRecorder.submit(std::move(pendingFrame));
+        }
+    }
     frameRecorder.stop();
     Interface::shutdown();
     return 0;
