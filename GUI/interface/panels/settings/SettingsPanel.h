@@ -7,6 +7,7 @@
 
 class Simulation;
 class IRenderer;
+class CaptureController;
 
 class SettingsPanel {
 public:
@@ -16,7 +17,7 @@ public:
         ImGuiWindowFlags_NoCollapse |
         ImGuiWindowFlags_NoTitleBar;
 
-    void draw(float uiScale, sf::Vector2u windowSize, Simulation& simulation, std::unique_ptr<IRenderer>& renderer);
+    void draw(float uiScale, sf::Vector2u windowSize, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, CaptureController& captureController);
     void toggle() { visible = !visible; }
     void close() { visible = false; }
     bool isVisible() const { return visible; }

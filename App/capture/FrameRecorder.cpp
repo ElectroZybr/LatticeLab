@@ -11,10 +11,31 @@
 #endif
 
 namespace {
-constexpr int kCaptureFps = 30;
-
 std::string quoteForCmd(const std::filesystem::path& path) {
     return "\"" + path.string() + "\"";
+}
+
+const char* toPresetArg(CaptureSettings::Preset preset) {
+    switch (preset) {
+        case CaptureSettings::Preset::Ultrafast: return "ultrafast";
+        case CaptureSettings::Preset::Veryfast:  return "veryfast";
+        case CaptureSettings::Preset::Faster:    return "faster";
+        case CaptureSettings::Preset::Fast:      return "fast";
+        case CaptureSettings::Preset::Medium:    return "medium";
+    }
+    return "veryfast";
+}
+
+const char* toPixelFormatArg(CaptureSettings::PixelFormat pixelFormat) {
+    switch (pixelFormat) {
+        case CaptureSettings::PixelFormat::Yuv420p: return "yuv420p";
+        case CaptureSettings::PixelFormat::Yuv444p: return "yuv444p";
+    }
+    return "yuv444p";
+}
+
+bool is444(CaptureSettings::PixelFormat pixelFormat) {
+    return pixelFormat == CaptureSettings::PixelFormat::Yuv444p;
 }
 
 std::filesystem::path tryEnvPath() {
@@ -57,10 +78,11 @@ FrameRecorder::~FrameRecorder() {
     stop();
 }
 
-void FrameRecorder::start(const std::filesystem::path& outputPath) {
+void FrameRecorder::start(const std::filesystem::path& outputPath, CaptureSettings settings) {
     std::lock_guard lock(mutex_);
     outputPath_ = outputPath;
     ffmpegPath_ = findFfmpegExecutable();
+    settings_ = settings;
     nextFrameIndex_ = 0;
     savedFrameCount_ = 0;
     frameWidth_ = 0;
@@ -199,20 +221,23 @@ bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
         << " -f rawvideo"
         << " -pix_fmt rgba"
         << " -s " << frameWidth_ << "x" << frameHeight_
-        << " -r " << kCaptureFps
+        << " -r " << settings_.fps
         << " -i -"
         << " -an"
         << " -c:v libx264"
-        << " -preset ultrafast"
-        << " -crf 18"
-        << " -profile:v high444";
+        << " -preset " << toPresetArg(settings_.preset)
+        << " -crf " << settings_.crf;
+
+    if (is444(settings_.pixelFormat)) {
+        command << " -profile:v high444";
+    }
 
     if (needsPad) {
         command << " -vf pad=ceil(iw/2)*2:ceil(ih/2)*2";
     }
 
     command
-        << " -pix_fmt yuv444p"
+        << " -pix_fmt " << toPixelFormatArg(settings_.pixelFormat)
         << " " << quoteForCmd(outputPath);
 
     std::string commandLine = command.str();
