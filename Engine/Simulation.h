@@ -1,16 +1,17 @@
 #pragma once
 
+#include "Consts.h"
+#include "SimBox.h"
+
 #include <SFML/Graphics.hpp>
 
+#include "NeighborSearch/NeighborList.h"
+#include "metrics/EnergyMetrics.h"
 #include "physics/AtomData.h"
 #include "physics/AtomStorage.h"
 #include "physics/Bond.h"
-#include "SimBox.h"
-#include "physics/Integrator.h"
 #include "physics/ForceField.h"
-#include "NeighborSearch/NeighborList.h"
-#include "Consts.h"
-#include "metrics/EnergyMetrics.h"
+#include "physics/Integrator.h"
 
 class Simulation {
 public:
@@ -31,10 +32,12 @@ public:
     float getMaxParticleSpeed() const { return integrator.maxParticleSpeed(); }
     void setAccelDamping(float accelDamping) { integrator.setAccelDamping(accelDamping); }
     float getAccelDamping() const { return integrator.accelDamping(); }
-    
+
     int getSimStep() const { return sim_step; }
     double simTimeNs() const { return sim_time_ns; }
-    double fullEnegryPJ() const { return EnergyMetrics::fullAverageEnergy(atomStorage_) * static_cast<double>(atomStorage_.size()) * Units::kEvToPJ; }
+    double fullEnegryPJ() const {
+        return EnergyMetrics::fullAverageEnergy(atomStorage_) * static_cast<double>(atomStorage_.size()) * Units::kEvToPJ;
+    }
 
     void setBondFormationEnabled(bool enabled) { bondFormationEnabled_ = enabled; }
     bool isBondFormationEnabled() const { return bondFormationEnabled_; }
@@ -58,6 +61,7 @@ public:
     const Bond::List& bonds() const { return bonds_; }
 
     void clear();
+
 private:
     friend class SimulationStateIO;
     StepData makeStepData();

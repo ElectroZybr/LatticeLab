@@ -1,9 +1,6 @@
 #include "SimBox.h"
 
-SimBox::SimBox(Vec3f size)
-    : size(size),
-      grid(size.x, size.y, size.z)
-{ }
+SimBox::SimBox(Vec3f size) : size(size), grid(size.x, size.y, size.z) {}
 
 bool SimBox::setSizeBox(const Vec3f& newSize, int cellSize) {
     bool resized = false;

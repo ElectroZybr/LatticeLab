@@ -1,32 +1,32 @@
-#include <benchmark/benchmark.h>
-
 #include <vector>
+
+#include <benchmark/benchmark.h>
 
 #include "fixtures/SimulationFixture.h"
 
 namespace {
-struct VelocityPostProcessData {
-    std::vector<float> baseVx;
-    std::vector<float> baseVy;
-    std::vector<float> baseVz;
-};
+    struct VelocityPostProcessData {
+        std::vector<float> baseVx;
+        std::vector<float> baseVy;
+        std::vector<float> baseVz;
+    };
 
-VelocityPostProcessData prepareVelocityPostProcessData(Simulation& simulation) {
-    VelocityPostProcessData data;
-    const AtomStorage& atomStorage = simulation.atoms();
-    const std::size_t mobileCount = atomStorage.mobileCount();
+    VelocityPostProcessData prepareVelocityPostProcessData(Simulation& simulation) {
+        VelocityPostProcessData data;
+        const AtomStorage& atomStorage = simulation.atoms();
+        const std::size_t mobileCount = atomStorage.mobileCount();
 
-    data.baseVx.assign(atomStorage.vxData(), atomStorage.vxData() + mobileCount);
-    data.baseVy.assign(atomStorage.vyData(), atomStorage.vyData() + mobileCount);
-    data.baseVz.assign(atomStorage.vzData(), atomStorage.vzData() + mobileCount);
-    return data;
-}
+        data.baseVx.assign(atomStorage.vxData(), atomStorage.vxData() + mobileCount);
+        data.baseVy.assign(atomStorage.vyData(), atomStorage.vyData() + mobileCount);
+        data.baseVz.assign(atomStorage.vzData(), atomStorage.vzData() + mobileCount);
+        return data;
+    }
 
-void restoreVelocities(AtomStorage& atomStorage, const VelocityPostProcessData& data) {
-    std::copy(data.baseVx.begin(), data.baseVx.end(), atomStorage.vxData());
-    std::copy(data.baseVy.begin(), data.baseVy.end(), atomStorage.vyData());
-    std::copy(data.baseVz.begin(), data.baseVz.end(), atomStorage.vzData());
-}
+    void restoreVelocities(AtomStorage& atomStorage, const VelocityPostProcessData& data) {
+        std::copy(data.baseVx.begin(), data.baseVx.end(), atomStorage.vxData());
+        std::copy(data.baseVy.begin(), data.baseVy.end(), atomStorage.vyData());
+        std::copy(data.baseVz.begin(), data.baseVz.end(), atomStorage.vzData());
+    }
 }
 
 // @bench_meta {"id":"SimulationFixture/PostProcessVelocities","ru":"Post-process скоростей: clamp","group":"Симуляция/Интегратор"}
@@ -47,5 +47,4 @@ BENCHMARK_DEFINE_F(SimulationFixture, PostProcessVelocities)(benchmark::State& s
     setCounters(state);
 }
 
-BENCHMARK_REGISTER_F(SimulationFixture, PostProcessVelocities)
-    ->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);
+BENCHMARK_REGISTER_F(SimulationFixture, PostProcessVelocities)->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);

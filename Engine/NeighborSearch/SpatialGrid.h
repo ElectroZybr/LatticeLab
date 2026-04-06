@@ -1,14 +1,13 @@
 #pragma once
 
+#include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
-#include <array>
 #include <span>
 #include <vector>
-#include <algorithm>
 
-#include <Engine/math/Vec3f.h>
-#include "../metrics/SpatialGridStats.h"
+#include "Engine/metrics/SpatialGridStats.h"
 
 class SpatialGrid {
 public:
@@ -28,9 +27,7 @@ public:
     [[nodiscard]] size_t memoryBytes() const;
 
     // (warning) нет проверки выхода за границы
-    [[nodiscard]] std::span<const uint32_t> atomsInCell(int x, int y, int z) const noexcept {
-        return atomsInCell(index(x, y, z));
-    }
+    [[nodiscard]] std::span<const uint32_t> atomsInCell(int x, int y, int z) const noexcept { return atomsInCell(index(x, y, z)); }
 
     // (warning) нет проверки выхода за границы
     [[nodiscard]] std::span<const uint32_t> atomsInCell(size_t linearIndex) const noexcept {
@@ -50,9 +47,8 @@ public:
     [[nodiscard]] int linearCellOfAtom(uint32_t atomIndex) const noexcept { return static_cast<int>(cellIndices_[atomIndex]); }
     [[nodiscard]] const std::array<int, 27>& neighborOffsets27() const noexcept { return neighborOffsets27_; }
 
-    [[nodiscard]] int index(int x, int y, int z) const noexcept {
-        return (z * sizeY + y) * sizeX + x;
-    }
+    [[nodiscard]] int index(int x, int y, int z) const noexcept { return (z * sizeY + y) * sizeX + x; }
+
 private:
     static constexpr int kGhostLayers = 1;
 
@@ -60,7 +56,7 @@ private:
     std::vector<uint32_t> offsets;      // массив оффсетов (каждый оффсет - начало новой ячейки)
     std::vector<uint32_t> atomsInCells; // атомы подряд сгруппированные по ячейкам
     std::array<int, 27> neighborOffsets27_{};
-    
+
     // рабочие буферы rebuild — переиспользуются между вызовами
     std::vector<uint32_t> cellIndices_;
     std::vector<uint32_t> counts_;

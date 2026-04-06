@@ -15,12 +15,9 @@ class Camera {
 
     friend Renderer2D;
     friend Renderer3D;
+
 public:
-    enum class Mode: uint8_t {
-        Mode2D,
-        Orbit,
-        Free
-    };
+    enum class Mode : uint8_t { Mode2D, Orbit, Free };
 
     Camera(sf::View* view, SimBox& simBox, float moveSpeed = 500.f, float zoomSpeed = 0.1f);
 
@@ -36,20 +33,20 @@ public:
     Mode getMode() const { return mode; }
 
     void orbitDrag(sf::Vector2i delta);
-    void freeDrag(sf::Vector2i delta);  // для Free mode
+    void freeDrag(sf::Vector2i delta); // для Free mode
 
     Vec3f screenToWorld(sf::Vector2i screenPos) const;
     sf::Vector2i worldToScreen(Vec3f worldPos) const;
 
     void zoomAt(float factor, sf::Vector2f mousePos, sf::RenderWindow& target);
     float getZoom() const { return zoom; }
-    void  setZoom(float new_zoom);
+    void setZoom(float new_zoom);
 
-    sf::View&       getView()       { return *view; }
+    sf::View& getView() { return *view; }
     const sf::View& getView() const { return *view; }
 
     glm::vec3 getEyePosition() const;
-    glm::mat4 getViewMatrix()  const;
+    glm::mat4 getViewMatrix() const;
     glm::mat4 getProjectionMatrix() const;
 
     Ray screenToRay(float screenX, float screenY) const;
@@ -74,12 +71,12 @@ private:
     SimBox& simBox;
 
     // Orbit / Free
-    float azimuth   = 0.f;
+    float azimuth = 0.f;
     float elevation = 0.f;
 
     // Перспектива
     static constexpr float FOV_ORBIT = 45.f;
-    static constexpr float FOV_FREE  = 60.f;
-    static constexpr float NEAR     = 0.1f;
-    static constexpr float FAR      = 10000.f;
+    static constexpr float FOV_FREE = 60.f;
+    static constexpr float NEAR = 0.1f;
+    static constexpr float FAR = 10000.f;
 };

@@ -9,6 +9,7 @@ class NeighborList;
 class SimBox;
 
 #include "Bond.h"
+
 #include "integrators/KDKScheme.h"
 #include "integrators/LangevinScheme.h"
 #include "integrators/RK4Scheme.h"
@@ -27,11 +28,11 @@ struct StepData {
 
 class Integrator {
 public:
-    enum class Scheme: uint8_t {
-        Verlet,      // классический Velocity Verlet: устойчивый и быстрый базовый выбор
-        KDK,         // Kick-Drift-Kick: симплектическая схема, удобна для поэтапного обновления сил
-        RK4,         // Runge-Kutta 4-го порядка: высокая точность на шаг, но дороже по вычислениям
-        Langevin,    // стохастический интегратор с термостатом (трение + случайный шум)
+    enum class Scheme : uint8_t {
+        Verlet,   // классический Velocity Verlet: устойчивый и быстрый базовый выбор
+        KDK,      // Kick-Drift-Kick: симплектическая схема, удобна для поэтапного обновления сил
+        RK4,      // Runge-Kutta 4-го порядка: высокая точность на шаг, но дороже по вычислениям
+        Langevin, // стохастический интегратор с термостатом (трение + случайный шум)
     };
 
     Integrator();

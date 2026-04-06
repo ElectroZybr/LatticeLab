@@ -7,8 +7,7 @@
 #include "Engine/physics/AtomStorage.h"
 #include "GUI/interface/interface.h"
 
-RemoveAtomTool::RemoveAtomTool(ToolContext& context) noexcept
-    : ITool(context) {}
+RemoveAtomTool::RemoveAtomTool(ToolContext& context) noexcept : ITool(context) {}
 
 void RemoveAtomTool::onLeftPressed(sf::Vector2i mousePos) {
     ToolContext& ctx = context();
@@ -34,7 +33,8 @@ void RemoveAtomTool::onLeftPressed(sf::Vector2i mousePos) {
                 ctx.pickingSystem->handleAtomRemoval(index);
             }
         }
-    } else if (ctx.atomRemover(target)) {
+    }
+    else if (ctx.atomRemover(target)) {
         ctx.pickingSystem->handleAtomRemoval(target);
     }
 

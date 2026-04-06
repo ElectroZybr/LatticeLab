@@ -1,23 +1,23 @@
-#include "Application.h"
-#include "AppActions.h"
-#include "CreateWindow.h"
-#include "debug/CreateDebugPanels.h"
-#include "debug/DebugRuntime.h"
+#include "App/Application.h"
+
 #include <cmath>
 #include <cstdlib>
 
 #include <SFML/Graphics.hpp>
 #include <imgui-SFML.h>
 
+#include "App/AppActions.h"
+#include "App/CreateWindow.h"
+#include "App/Scenes.h"
+#include "App/debug/CreateDebugPanels.h"
+#include "App/debug/DebugRuntime.h"
+#include "App/interaction/ToolsManager.h"
 #include "Engine/Simulation.h"
 #include "Engine/metrics/Profiler.h"
-#include "App/interaction/ToolsManager.h"
 #include "GUI/interface/interface.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
 #include "Rendering/2d/Renderer2D.h"
-
-#include "Scenes.h"
 
 constexpr int FPS = 60;
 constexpr int LPS = 20;
@@ -41,13 +41,10 @@ int Application::run() {
     AppActions::init(simulation, renderer, window, gameView);
     Interface::init(window, simulation, renderer);
     EventManager::init(&window, &gameView, renderer, &simulation.box(), &simulation.atoms());
-    ToolsManager::init(&window, &gameView, &box.grid, &box, renderer, &simulation.atoms(),
-                [&](Vec3f coords, Vec3f speed, AtomData::Type type, bool fixed) {
-                    return simulation.createAtom(coords, speed, type, fixed);
-                },
-                [&](size_t atomIndex) {
-                    return simulation.removeAtom(atomIndex);
-                });
+    ToolsManager::init(
+        &window, &gameView, &box.grid, &box, renderer, &simulation.atoms(),
+        [&](Vec3f coords, Vec3f speed, AtomData::Type type, bool fixed) { return simulation.createAtom(coords, speed, type, fixed); },
+        [&](size_t atomIndex) { return simulation.removeAtom(atomIndex); });
     Interface::pause = true;
 
     const DebugViews debugViews = createDebugViews(Interface::debugPanel);
@@ -78,9 +75,10 @@ int Application::run() {
                 simulation.update();
                 Profiler::instance().addCount("Simulation::steps");
                 physicsAccum = 0.0;
-            } else {
+            }
+            else {
                 physicsAccum = 0.0;
-            }       
+            }
         }
 
         // отрисовка кадра

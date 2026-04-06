@@ -2,6 +2,7 @@
 
 #include "AtomStorage.h"
 #include "Bond.h"
+
 #include "Engine/SimBox.h"
 #include "Engine/math/Vec3f.h"
 #include "ForceFields/BondForceField.h"
@@ -15,8 +16,7 @@ class ForceField {
 public:
     ForceField();
 
-    void compute(AtomStorage& atoms, Bond::List& bonds, SimBox& box,
-                 NeighborList& neighborList, bool allowBondFormation, float dt) const;
+    void compute(AtomStorage& atoms, Bond::List& bonds, SimBox& box, NeighborList& neighborList, bool allowBondFormation, float dt) const;
     void syncWalls(const SimBox& box);
 
     void setGravity(Vec3f gravity = Vec3f(0, 5, 0)) { static_force_ = gravity; }

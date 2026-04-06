@@ -12,17 +12,23 @@
 #include "GUI/interface/interface.h"
 
 namespace {
-ToolsManager::Mode mapPanelTool(SideToolsPanel::Tool tool) {
-    switch (tool) {
-    case SideToolsPanel::Tool::Cursor:     return ToolsManager::Mode::Cursor;
-    case SideToolsPanel::Tool::Frame:      return ToolsManager::Mode::Frame;
-    case SideToolsPanel::Tool::Lasso:      return ToolsManager::Mode::Lasso;
-    case SideToolsPanel::Tool::Ruler:      return ToolsManager::Mode::Ruler;
-    case SideToolsPanel::Tool::AddAtom:    return ToolsManager::Mode::AddAtom;
-    case SideToolsPanel::Tool::RemoveAtom: return ToolsManager::Mode::RemoveAtom;
+    ToolsManager::Mode mapPanelTool(SideToolsPanel::Tool tool) {
+        switch (tool) {
+        case SideToolsPanel::Tool::Cursor:
+            return ToolsManager::Mode::Cursor;
+        case SideToolsPanel::Tool::Frame:
+            return ToolsManager::Mode::Frame;
+        case SideToolsPanel::Tool::Lasso:
+            return ToolsManager::Mode::Lasso;
+        case SideToolsPanel::Tool::Ruler:
+            return ToolsManager::Mode::Ruler;
+        case SideToolsPanel::Tool::AddAtom:
+            return ToolsManager::Mode::AddAtom;
+        case SideToolsPanel::Tool::RemoveAtom:
+            return ToolsManager::Mode::RemoveAtom;
+        }
+        return ToolsManager::Mode::Cursor;
     }
-    return ToolsManager::Mode::Cursor;
-}
 }
 
 sf::RenderWindow* ToolsManager::window = nullptr;
@@ -41,14 +47,8 @@ sf::Vector2i ToolsManager::startMousePos = {};
 sf::Vector2i ToolsManager::lastSceneMousePos = {};
 bool ToolsManager::isInteracting = false;
 
-void ToolsManager::init(sf::RenderWindow* w,
-                        sf::View* gv,
-                        SpatialGrid* gr,
-                        SimBox* b,
-                        std::unique_ptr<IRenderer>& rend,
-                        AtomStorage* storage,
-                        AtomCreator createAtomFn,
-                        AtomRemover removeAtomFn) {
+void ToolsManager::init(sf::RenderWindow* w, sf::View* gv, SpatialGrid* gr, SimBox* b, std::unique_ptr<IRenderer>& rend,
+                        AtomStorage* storage, AtomCreator createAtomFn, AtomRemover removeAtomFn) {
     window = w;
     gameView = gv;
     grid = gr;
@@ -103,9 +103,7 @@ void ToolsManager::resetInteractionState() {
     isInteracting = false;
 }
 
-bool ToolsManager::isInteractingNow() noexcept {
-    return isInteracting;
-}
+bool ToolsManager::isInteractingNow() noexcept { return isInteracting; }
 
 void ToolsManager::onLeftPressed(sf::Vector2i mousePos) {
     if (Interface::cursorHovered || !renderer || !renderer->get() || !pickingSystem) {
@@ -170,25 +168,15 @@ void ToolsManager::onFrame(sf::Vector2i mousePos, float deltaTime) {
     }
 }
 
-Vec3f ToolsManager::screenToWorld(sf::Vector2i mousePos) {
-    return (*renderer)->camera.screenToWorld(mousePos);
-}
+Vec3f ToolsManager::screenToWorld(sf::Vector2i mousePos) { return (*renderer)->camera.screenToWorld(mousePos); }
 
-sf::Vector2i ToolsManager::worldToScreen(Vec3f pos) {
-    return (*renderer)->camera.worldToScreen(pos);
-}
+sf::Vector2i ToolsManager::worldToScreen(Vec3f pos) { return (*renderer)->camera.worldToScreen(pos); }
 
-ToolsManager::Mode ToolsManager::currentMode() {
-    return mapPanelTool(Interface::sideToolsPanel.getSelectedTool());
-}
+ToolsManager::Mode ToolsManager::currentMode() { return mapPanelTool(Interface::sideToolsPanel.getSelectedTool()); }
 
-bool ToolsManager::isSelectionMode(ToolsManager::Mode mode) {
-    return mode == Mode::Frame || mode == Mode::Lasso;
-}
+bool ToolsManager::isSelectionMode(ToolsManager::Mode mode) { return mode == Mode::Frame || mode == Mode::Lasso; }
 
-ITool* ToolsManager::activeTool() noexcept {
-    return toolInstances[toIndex(currentMode())].get();
-}
+ITool* ToolsManager::activeTool() noexcept { return toolInstances[toIndex(currentMode())].get(); }
 
 void ToolsManager::syncToolMode() noexcept {
     const Mode mode = currentMode();
@@ -208,6 +196,4 @@ void ToolsManager::syncToolMode() noexcept {
     syncedMode = mode;
 }
 
-size_t ToolsManager::toIndex(Mode mode) noexcept {
-    return static_cast<size_t>(mode);
-}
+size_t ToolsManager::toIndex(Mode mode) noexcept { return static_cast<size_t>(mode); }

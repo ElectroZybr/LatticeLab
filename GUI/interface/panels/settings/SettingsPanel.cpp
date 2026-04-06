@@ -1,31 +1,40 @@
 #include "SettingsPanel.h"
-#include <imgui.h>
 
 #include "AppVersion.h"
+
+#include <imgui.h>
+
+#include "App/AppSignals.h"
 #include "Engine/Simulation.h"
 #include "GUI/interface/style/ComboStyle.h"
 #include "Rendering/BaseRenderer.h"
-#include "App/AppSignals.h"
 
 namespace {
-const char* integratorName(Integrator::Scheme scheme) {
-    switch (scheme) {
-        case Integrator::Scheme::Verlet: return "Velocity Verlet";
-        case Integrator::Scheme::KDK: return "KDK";
-        case Integrator::Scheme::RK4: return "Runge-Kutta 4";
-        case Integrator::Scheme::Langevin: return "Langevin";
+    const char* integratorName(Integrator::Scheme scheme) {
+        switch (scheme) {
+        case Integrator::Scheme::Verlet:
+            return "Velocity Verlet";
+        case Integrator::Scheme::KDK:
+            return "KDK";
+        case Integrator::Scheme::RK4:
+            return "Runge-Kutta 4";
+        case Integrator::Scheme::Langevin:
+            return "Langevin";
+        }
+        return "Unknown";
     }
-    return "Unknown";
-}
 
-const char* speedColorModeName(IRenderer::SpeedColorMode mode) {
-    switch (mode) {
-        case IRenderer::SpeedColorMode::AtomColor: return "Обычная раскраска";
-        case IRenderer::SpeedColorMode::GradientClassic: return "Градиент скорости";
-        case IRenderer::SpeedColorMode::GradientTurbo: return "Турбо градиент";
+    const char* speedColorModeName(IRenderer::SpeedColorMode mode) {
+        switch (mode) {
+        case IRenderer::SpeedColorMode::AtomColor:
+            return "Обычная раскраска";
+        case IRenderer::SpeedColorMode::GradientClassic:
+            return "Градиент скорости";
+        case IRenderer::SpeedColorMode::GradientTurbo:
+            return "Турбо градиент";
+        }
+        return "Обычная раскраска";
     }
-    return "Обычная раскраска";
-}
 } // namespace
 
 void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
@@ -33,7 +42,9 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
     float step = ImGui::GetIO().DeltaTime * 12.f;
     animProgress += (target - animProgress) * std::min(step, 1.f);
 
-    if (animProgress < 0.01f) return;
+    if (animProgress < 0.01f) {
+        return;
+    }
 
     const float panelWidth = 300.f * uiScale;
     const float topOffset = 65.f * uiScale;
@@ -90,8 +101,7 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
 
     if (currentIntegrator == Integrator::Scheme::RK4 || currentIntegrator == Integrator::Scheme::Langevin) {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.00f, 0.75f, 0.25f, 1.00f));
-        ImGui::TextWrapped("Внимание: %s пока не реализован и временно работает как Velocity Verlet.",
-                           integratorName(currentIntegrator));
+        ImGui::TextWrapped("Внимание: %s пока не реализован и временно работает как Velocity Verlet.", integratorName(currentIntegrator));
         ImGui::PopStyleColor();
     }
 
@@ -111,8 +121,7 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
 
     float dt = simulation.getDt();
     ImGui::PushItemWidth(150.0f * uiScale);
-    if (ImGui::SliderFloat("Time step (Dt)", &dt, 0.0001f, 0.05f, "%.4f",
-                           ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_Logarithmic)) {
+    if (ImGui::SliderFloat("Time step (Dt)", &dt, 0.0001f, 0.05f, "%.4f", ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_Logarithmic)) {
         simulation.setDt(dt);
     }
     ImGui::PopItemWidth();
@@ -128,7 +137,8 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
 
     ImGui::TextUnformatted("Цветовая схема");
     IRenderer::SpeedColorMode speedMode = renderer->speedColorMode;
-    if (ComboStyle::beginCombo("##speed_color_mode", speedColorModeName(speedMode), 220.0f * uiScale, uiScale, ImGuiComboFlags_HeightLargest)) {
+    if (ComboStyle::beginCombo("##speed_color_mode", speedColorModeName(speedMode), 220.0f * uiScale, uiScale,
+                               ImGuiComboFlags_HeightLargest)) {
         const IRenderer::SpeedColorMode modes[] = {
             IRenderer::SpeedColorMode::AtomColor,
             IRenderer::SpeedColorMode::GradientClassic,
@@ -146,7 +156,7 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
         }
         ImGui::EndCombo();
     }
-    
+
     renderer->speedColorMode = speedMode;
 
     ImGui::TextUnformatted("Макс. скорость градиента");

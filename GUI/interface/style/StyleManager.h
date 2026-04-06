@@ -1,5 +1,6 @@
 #pragma once
 #include "imgui.h"
+
 #include <SFML/System/Vector2.hpp>
 
 class StyleManager {

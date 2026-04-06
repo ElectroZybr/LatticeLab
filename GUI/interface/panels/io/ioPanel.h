@@ -1,7 +1,7 @@
 #pragma once
 
-#include <imgui.h>
 #include <SFML/Graphics.hpp>
+#include <imgui.h>
 
 #include "Engine//math/Vec3f.h"
 #include "Engine/physics/AtomData.h"
@@ -12,10 +12,7 @@ class Simulation;
 class IOPanel {
 public:
     static constexpr ImGuiWindowFlags PANEL_FLAGS =
-        ImGuiWindowFlags_NoMove     |
-        ImGuiWindowFlags_NoResize   |
-        ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoTitleBar;
+        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 
     void draw(float scale, sf::Vector2u windowSize, Simulation& simulation, FileDialogManager& fileDialog);
 

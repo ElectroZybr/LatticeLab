@@ -7,105 +7,102 @@
 #include <string_view>
 #include <vector>
 
+#include <imgui.h>
+
 #include "Engine/metrics/Profiler.h"
-#include "imgui.h"
 
 namespace {
-struct ProfileNameAlias {
-    std::string_view fullName;
-    std::string_view shortName;
-};
+    struct ProfileNameAlias {
+        std::string_view fullName;
+        std::string_view shortName;
+    };
 
-constexpr std::array<ProfileNameAlias, 19> kProfileNameAliases{{
-    {"Application::RenderFrame", "Render"},
-    {"Simulation::update", "Physics"},
-    {"RendererGL::drawShot", "drawShot"},
-    {"RendererGL::drawAtoms", "drawAtoms"},
-    {"RendererGL::drawBox", "drawBox"},
-    {"RendererGL::drawBondsGL", "drawBonds"},
-    {"RendererGL::drawGridGL", "drawGrid"},
-    {"ForceField::compute", "compute"},
-    {"ForceField::ComputeForces(NL)", "forces NL"},
-    {"StepOps::computeForces", "step forces"},
-    {"VerletScheme::pipeline", "verlet"},
-    {"VerletScheme::correct", "verlet correct"},
-    {"KDKScheme::pipeline", "kdk"},
-    {"KDKScheme::halfKick", "kick"},
-    {"KDKScheme::drift", "drift"},
-    {"NeighborList::build", "nl build"},
-    {"SpatialGrid::rebuild", "sg rebuild"},
-}};
+    constexpr std::array<ProfileNameAlias, 19> kProfileNameAliases{{
+        {"Application::RenderFrame", "Render"},
+        {"Simulation::update", "Physics"},
+        {"RendererGL::drawShot", "drawShot"},
+        {"RendererGL::drawAtoms", "drawAtoms"},
+        {"RendererGL::drawBox", "drawBox"},
+        {"RendererGL::drawBondsGL", "drawBonds"},
+        {"RendererGL::drawGridGL", "drawGrid"},
+        {"ForceField::compute", "compute"},
+        {"ForceField::ComputeForces(NL)", "forces NL"},
+        {"StepOps::computeForces", "step forces"},
+        {"VerletScheme::pipeline", "verlet"},
+        {"VerletScheme::correct", "verlet correct"},
+        {"KDKScheme::pipeline", "kdk"},
+        {"KDKScheme::halfKick", "kick"},
+        {"KDKScheme::drift", "drift"},
+        {"NeighborList::build", "nl build"},
+        {"SpatialGrid::rebuild", "sg rebuild"},
+    }};
 
-std::string shortenProfileName(std::string_view name) {
-    for (const ProfileNameAlias& alias : kProfileNameAliases) {
-        if (name == alias.fullName) {
-            return std::string(alias.shortName);
+    std::string shortenProfileName(std::string_view name) {
+        for (const ProfileNameAlias& alias : kProfileNameAliases) {
+            if (name == alias.fullName) {
+                return std::string(alias.shortName);
+            }
+        }
+
+        const size_t lastScope = name.rfind("::");
+        if (lastScope != std::string_view::npos) {
+            return std::string(name.substr(lastScope + 2));
+        }
+        return std::string(name);
+    }
+
+    std::string formatNodeLabel(std::string_view label, double ms, double percent) {
+        char buffer[256];
+        std::snprintf(buffer, sizeof(buffer), "%.*s  %.3f ms | %.1f%%", static_cast<int>(label.size()), label.data(), ms, percent);
+        return buffer;
+    }
+
+    bool isVisibleNode(const ProfileTreeEntry& entry) { return entry.smoothedMs > 0.0001; }
+
+    void drawTreeNode(const std::vector<ProfileTreeEntry>& entries, size_t index, double totalTrackedMs) {
+        if (index >= entries.size()) {
+            return;
+        }
+
+        const ProfileTreeEntry& entry = entries[index];
+        if (!isVisibleNode(entry)) {
+            return;
+        }
+
+        const double percent = totalTrackedMs > 0.0 ? (entry.smoothedMs * 100.0 / totalTrackedMs) : 0.0;
+
+        std::vector<size_t> visibleChildren;
+        visibleChildren.reserve(entry.childIndices.size());
+        for (const size_t childIndex : entry.childIndices) {
+            if (childIndex < entries.size() && isVisibleNode(entries[childIndex])) {
+                visibleChildren.push_back(childIndex);
+            }
+        }
+
+        std::sort(visibleChildren.begin(), visibleChildren.end(),
+                  [&](size_t lhs, size_t rhs) { return entries[lhs].smoothedMs > entries[rhs].smoothedMs; });
+
+        const std::string shortName = shortenProfileName(entry.name);
+        const std::string visibleLabel = formatNodeLabel(shortName, entry.smoothedMs, percent);
+        const std::string nodeLabel = visibleLabel + "###tree_" + std::to_string(index);
+
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_OpenOnArrow;
+        if (entry.parentIndex == ProfileTreeEntry::kNoParent) {
+            flags |= ImGuiTreeNodeFlags_DefaultOpen;
+        }
+        if (visibleChildren.empty()) {
+            flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+            ImGui::TreeNodeEx(nodeLabel.c_str(), flags);
+            return;
+        }
+
+        if (ImGui::TreeNodeEx(nodeLabel.c_str(), flags)) {
+            for (const size_t childIndex : visibleChildren) {
+                drawTreeNode(entries, childIndex, totalTrackedMs);
+            }
+            ImGui::TreePop();
         }
     }
-
-    const size_t lastScope = name.rfind("::");
-    if (lastScope != std::string_view::npos) {
-        return std::string(name.substr(lastScope + 2));
-    }
-    return std::string(name);
-}
-
-std::string formatNodeLabel(std::string_view label, double ms, double percent) {
-    char buffer[256];
-    std::snprintf(buffer, sizeof(buffer), "%.*s  %.3f ms | %.1f%%",
-                  static_cast<int>(label.size()), label.data(), ms, percent);
-    return buffer;
-}
-
-bool isVisibleNode(const ProfileTreeEntry& entry) {
-    return entry.smoothedMs > 0.0001;
-}
-
-void drawTreeNode(const std::vector<ProfileTreeEntry>& entries, size_t index, double totalTrackedMs) {
-    if (index >= entries.size()) {
-        return;
-    }
-
-    const ProfileTreeEntry& entry = entries[index];
-    if (!isVisibleNode(entry)) {
-        return;
-    }
-
-    const double percent = totalTrackedMs > 0.0 ? (entry.smoothedMs * 100.0 / totalTrackedMs) : 0.0;
-
-    std::vector<size_t> visibleChildren;
-    visibleChildren.reserve(entry.childIndices.size());
-    for (const size_t childIndex : entry.childIndices) {
-        if (childIndex < entries.size() && isVisibleNode(entries[childIndex])) {
-            visibleChildren.push_back(childIndex);
-        }
-    }
-
-    std::sort(visibleChildren.begin(), visibleChildren.end(), [&](size_t lhs, size_t rhs) {
-        return entries[lhs].smoothedMs > entries[rhs].smoothedMs;
-    });
-
-    const std::string shortName = shortenProfileName(entry.name);
-    const std::string visibleLabel = formatNodeLabel(shortName, entry.smoothedMs, percent);
-    const std::string nodeLabel = visibleLabel + "###tree_" + std::to_string(index);
-
-    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_OpenOnArrow;
-    if (entry.parentIndex == ProfileTreeEntry::kNoParent) {
-        flags |= ImGuiTreeNodeFlags_DefaultOpen;
-    }
-    if (visibleChildren.empty()) {
-        flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-        ImGui::TreeNodeEx(nodeLabel.c_str(), flags);
-        return;
-    }
-
-    if (ImGui::TreeNodeEx(nodeLabel.c_str(), flags)) {
-        for (const size_t childIndex : visibleChildren) {
-            drawTreeNode(entries, childIndex, totalTrackedMs);
-        }
-        ImGui::TreePop();
-    }
-}
 }
 
 void drawProfilerTreeView(float uiScale) {
@@ -125,9 +122,8 @@ void drawProfilerTreeView(float uiScale) {
         }
     }
 
-    std::sort(rootIndices.begin(), rootIndices.end(), [&](size_t lhs, size_t rhs) {
-        return treeEntries[lhs].smoothedMs > treeEntries[rhs].smoothedMs;
-    });
+    std::sort(rootIndices.begin(), rootIndices.end(),
+              [&](size_t lhs, size_t rhs) { return treeEntries[lhs].smoothedMs > treeEntries[rhs].smoothedMs; });
 
     accountedPercent = std::clamp(accountedPercent, 0.0, 100.0);
     double totalTrackedMs = 0.0;

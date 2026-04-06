@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BondTable.h"
+
 #include <cstddef>
 #include <list>
 
@@ -29,4 +30,3 @@ public:
 
     BondParams params;
 };
-

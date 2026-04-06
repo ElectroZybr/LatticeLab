@@ -1,8 +1,10 @@
 #include "DebugView.h"
+
 #include <algorithm>
 #include <cmath>
 #include <vector>
-#include "imgui.h"
+
+#include <imgui.h>
 
 DebugView::DebugView(std::string_view title, std::initializer_list<DebugEntry> entries) : title(title) {
     data.reserve(entries.size());
@@ -10,27 +12,27 @@ DebugView::DebugView(std::string_view title, std::initializer_list<DebugEntry> e
 
     for (const auto& e : entries) {
         const size_t index = data.size();
-        Storage storage = (e.type == DebugDisplayType::Series)
-            ? Storage{ std::deque<float>{} }
-            : Storage{ std::any{} };
+        Storage storage = (e.type == DebugDisplayType::Series) ? Storage{std::deque<float>{}} : Storage{std::any{}};
 
-        data.emplace_back(DebugData{ e, std::move(storage) });
+        data.emplace_back(DebugData{e, std::move(storage)});
         indicesByLabel.emplace(e.label, index);
     }
 }
 
-DebugView::DebugView(std::string_view title, CustomDrawFn customDraw)
-    : title(title)
-    , customDraw_(std::move(customDraw)) {}
+DebugView::DebugView(std::string_view title, CustomDrawFn customDraw) : title(title), customDraw_(std::move(customDraw)) {}
 
 void DebugView::add_data(std::string_view label, std::any value) {
     auto it = indicesByLabel.find(std::string(label));
-    if (it == indicesByLabel.end()) return;
+    if (it == indicesByLabel.end()) {
+        return;
+    }
 
     auto& d = data[it->second];
     if (d.entry.type == DebugDisplayType::Series) {
         auto& dq = std::get<std::deque<float>>(d.storage);
-        if (dq.size() >= HISTORY_SIZE) dq.pop_front();
+        if (dq.size() >= HISTORY_SIZE) {
+            dq.pop_front();
+        }
         dq.emplace_back(std::any_cast<float>(value));
     }
     else {
@@ -67,9 +69,8 @@ void DebugView::draw(float uiScale) {
 
                 std::vector<float> buf(dq.begin(), dq.end());
                 const std::string plotId = "##plot_" + label;
-                ImGui::PlotLines(
-                    plotId.c_str(), buf.data(), static_cast<int>(buf.size()), 0, nullptr,
-                    minVal - range * 0.1f, maxVal + range * 0.1f, ImVec2(-1, 60 * uiScale));
+                ImGui::PlotLines(plotId.c_str(), buf.data(), static_cast<int>(buf.size()), 0, nullptr, minVal - range * 0.1f,
+                                 maxVal + range * 0.1f, ImVec2(-1, 60 * uiScale));
 
                 ImGui::TextDisabled("%.3f", minVal);
             }

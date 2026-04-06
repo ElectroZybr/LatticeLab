@@ -5,8 +5,7 @@
 #include "App/interaction/picking/PickingSystem.h"
 #include "GUI/interface/interface.h"
 
-LassoTool::LassoTool(ToolContext& context) noexcept
-    : ITool(context) {}
+LassoTool::LassoTool(ToolContext& context) noexcept : ITool(context) {}
 
 void LassoTool::onLeftPressed(sf::Vector2i mousePos) {
     ToolContext& ctx = context();
@@ -26,8 +25,8 @@ void LassoTool::onLeftReleased(sf::Vector2i mousePos) {
         return;
     }
 
-    const bool cumulative = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl)
-        || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
+    const bool cumulative =
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
 
     auto& overlay = ctx.pickingSystem->getOverlay();
     if (overlay.lassoVisible) {

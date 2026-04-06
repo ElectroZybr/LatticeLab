@@ -7,13 +7,9 @@
 #include "Engine/Simulation.h"
 
 namespace Benchmarks {
-    int squareSideFromCount(int atomCount) {
-        return std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<double>(atomCount)))));
-    }
+    int squareSideFromCount(int atomCount) { return std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<double>(atomCount))))); }
 
-    int cubeSideFromCount(int atomCount) {
-        return std::max(1, static_cast<int>(std::ceil(std::cbrt(static_cast<double>(atomCount)))));
-    }
+    int cubeSideFromCount(int atomCount) { return std::max(1, static_cast<int>(std::ceil(std::cbrt(static_cast<double>(atomCount))))); }
 
     void BenchmarkScenes::build(Simulation& simulation, const BenchmarkCase& benchmarkCase) {
         simulation.clear();

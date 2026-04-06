@@ -1,4 +1,5 @@
 #include "DebugPanel.h"
+
 #include "imgui.h"
 
 DebugView* DebugPanel::addView(DebugView view) {
@@ -11,22 +12,20 @@ void DebugPanel::draw(float uiScale, sf::Vector2u windowSize) {
     float step = ImGui::GetIO().DeltaTime * 12.f;
     animProgress += (target - animProgress) * std::min(step, 1.f);
 
-    if (animProgress < 0.01f) return;
+    if (animProgress < 0.01f) {
+        return;
+    }
 
-    const float panelWidth  = 300.f * uiScale;
-    const float topOffset   = 65.f * uiScale;
-    const float rawHeight   = static_cast<float>(windowSize.y) - topOffset;
+    const float panelWidth = 300.f * uiScale;
+    const float topOffset = 65.f * uiScale;
+    const float rawHeight = static_cast<float>(windowSize.y) - topOffset;
     const float panelHeight = (rawHeight > 0.f) ? rawHeight : 0.f;
     const float x = -panelWidth + panelWidth * animProgress;
 
     ImGui::SetNextWindowPos(ImVec2(x, topOffset));
     ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
     ImGui::Begin("##DebugPanel", nullptr,
-        ImGuiWindowFlags_NoMove    |
-        ImGuiWindowFlags_NoResize  |
-        ImGuiWindowFlags_NoCollapse|
-        ImGuiWindowFlags_NoTitleBar
-    );
+                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
 
     if (ImGui::BeginTabBar("##DebugTabs")) {
         for (auto& view : views) {

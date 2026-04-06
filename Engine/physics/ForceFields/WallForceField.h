@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../AtomStorage.h"
 #include "Engine/SimBox.h"
 #include "Engine/math/Vec3f.h"
+#include "Engine/physics/AtomStorage.h"
 
 class WallForceField {
 public:

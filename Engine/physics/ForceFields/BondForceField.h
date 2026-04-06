@@ -4,14 +4,12 @@
 
 #include "../AtomStorage.h"
 #include "../Bond.h"
-#include "Engine/SimBox.h"
 
 class NeighborList;
 
 class BondForceField {
 public:
-    void compute(AtomStorage& atoms, Bond::List& bonds,
-                 NeighborList& neighborList, bool allowBondFormation, float dt) const;
+    void compute(AtomStorage& atoms, Bond::List& bonds, NeighborList& neighborList, bool allowBondFormation, float dt) const;
 
 private:
     void formBonds(AtomStorage& atoms, Bond::List& bonds, NeighborList& neighborList) const;

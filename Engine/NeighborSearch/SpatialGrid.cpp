@@ -6,20 +6,16 @@
 
 #include "../metrics/Profiler.h"
 
-SpatialGrid::SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize)
-    : sizeX(0),
-      sizeY(0),
-      sizeZ(0),
-      cellSize(cellSize) {
+SpatialGrid::SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize) : sizeX(0), sizeY(0), sizeZ(0), cellSize(cellSize) {
     if (sizeX < 0 || sizeY < 0 || sizeZ < 0) {
         throw std::invalid_argument("SpatialGrid::SpatialGrid: size must be > 0");
     }
     if (this->cellSize <= 0) {
         throw std::invalid_argument("SpatialGrid::SpatialGrid: cellSize must be > 0");
     }
-    const int cellsX = std::max(1 + 2*kGhostLayers, (sizeX + this->cellSize - 1) / this->cellSize + 2*kGhostLayers);
-    const int cellsY = std::max(1 + 2*kGhostLayers, (sizeY + this->cellSize - 1) / this->cellSize + 2*kGhostLayers);
-    const int cellsZ = std::max(1 + 2*kGhostLayers, (sizeZ + this->cellSize - 1) / this->cellSize + 2*kGhostLayers);
+    const int cellsX = std::max(1 + 2 * kGhostLayers, (sizeX + this->cellSize - 1) / this->cellSize + 2 * kGhostLayers);
+    const int cellsY = std::max(1 + 2 * kGhostLayers, (sizeY + this->cellSize - 1) / this->cellSize + 2 * kGhostLayers);
+    const int cellsZ = std::max(1 + 2 * kGhostLayers, (sizeZ + this->cellSize - 1) / this->cellSize + 2 * kGhostLayers);
     this->sizeX = cellsX;
     this->sizeY = cellsY;
     this->sizeZ = cellsZ;
@@ -31,9 +27,7 @@ SpatialGrid::SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize)
     atomsInCells.reserve(256);
 }
 
-void SpatialGrid::rebuild(std::span<const float> posX,
-                          std::span<const float> posY,
-                          std::span<const float> posZ) {
+void SpatialGrid::rebuild(std::span<const float> posX, std::span<const float> posY, std::span<const float> posZ) {
     PROFILE_SCOPE("SpatialGrid::rebuild");
     const size_t n = posX.size();
 
@@ -48,9 +42,7 @@ void SpatialGrid::rebuild(std::span<const float> posX,
     counts_.assign(countCells, 0);
 
     for (size_t i = 0; i < n; ++i) {
-        const size_t cell = static_cast<size_t>(
-            index(worldToCellX(posX[i]), worldToCellY(posY[i]), worldToCellZ(posZ[i]))
-        );
+        const size_t cell = static_cast<size_t>(index(worldToCellX(posX[i]), worldToCellY(posY[i]), worldToCellZ(posZ[i])));
         cellIndices_[i] = cell;
         ++counts_[cell];
     }
@@ -75,21 +67,21 @@ void SpatialGrid::rebuild(std::span<const float> posX,
         atomsInCells[counts_[cell]++] = i;
     }
 
-    const float averageAtomsPerNonEmptyCell = nonEmptyCellCount > 0
-        ? static_cast<float>(n) / static_cast<float>(nonEmptyCellCount)
-        : 0.0f;
+    const float averageAtomsPerNonEmptyCell = nonEmptyCellCount > 0 ? static_cast<float>(n) / static_cast<float>(nonEmptyCellCount) : 0.0f;
     stats_.recordRebuild(nonEmptyCellCount, maxAtomsPerCell, averageAtomsPerNonEmptyCell);
 }
 
 void SpatialGrid::resize(int newSizeX, int newSizeY, int newSizeZ, int newCellSize) {
-    if (newCellSize > 0)
+    if (newCellSize > 0) {
         cellSize = newCellSize;
-    else if (newCellSize != -1)
+    }
+    else if (newCellSize != -1) {
         throw std::invalid_argument("SpatialGrid::resize: newCellSize must be > 0");
+    }
 
-    sizeX = std::max(1 + 2*kGhostLayers, (newSizeX + cellSize - 1) / cellSize + 2*kGhostLayers);
-    sizeY = std::max(1 + 2*kGhostLayers, (newSizeY + cellSize - 1) / cellSize + 2*kGhostLayers);
-    sizeZ = std::max(1 + 2*kGhostLayers, (newSizeZ + cellSize - 1) / cellSize + 2*kGhostLayers);
+    sizeX = std::max(1 + 2 * kGhostLayers, (newSizeX + cellSize - 1) / cellSize + 2 * kGhostLayers);
+    sizeY = std::max(1 + 2 * kGhostLayers, (newSizeY + cellSize - 1) / cellSize + 2 * kGhostLayers);
+    sizeZ = std::max(1 + 2 * kGhostLayers, (newSizeZ + cellSize - 1) / cellSize + 2 * kGhostLayers);
 
     countCells = sizeX * sizeY * sizeZ;
     offsets.assign(countCells + 1, 0);
@@ -111,9 +103,6 @@ void SpatialGrid::rebuildNeighborOffsets() noexcept {
 }
 
 size_t SpatialGrid::memoryBytes() const {
-    return atomsInCells.capacity() * sizeof(atomsInCells[0])
-        + offsets.capacity() * sizeof(offsets[0])
-        + sizeof(neighborOffsets27_)
-        + cellIndices_.capacity() * sizeof(cellIndices_[0])
-        + counts_.capacity() * sizeof(counts_[0]);
+    return atomsInCells.capacity() * sizeof(atomsInCells[0]) + offsets.capacity() * sizeof(offsets[0]) + sizeof(neighborOffsets27_) +
+           cellIndices_.capacity() * sizeof(cellIndices_[0]) + counts_.capacity() * sizeof(counts_[0]);
 }

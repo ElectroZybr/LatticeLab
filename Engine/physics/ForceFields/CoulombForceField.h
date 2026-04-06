@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../AtomStorage.h"
 #include "Engine/SimBox.h"
+#include "Engine/physics/AtomStorage.h"
 
 class NeighborList;
 

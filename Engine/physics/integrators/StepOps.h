@@ -2,90 +2,89 @@
 
 #include <cmath>
 
-#include "../Integrator.h"
-#include "../ForceField.h"
 #include "Engine/SimBox.h"
 #include "Engine/metrics/Profiler.h"
+#include "Engine/physics/ForceField.h"
+#include "Engine/physics/Integrator.h"
 #include "Engine/restrict.h"
 
 class NeighborList;
 
 namespace StepOps {
-template<typename T>
-concept AtomStepFunc = requires(T fn, AtomStorage& storage, float dt) {
-    { fn(storage, dt) } -> std::same_as<void>;
-};
-
-inline void confineToBox(AtomStorage& atomStorage, SimBox& box) {
-    constexpr float restitution = 0.8f;
-    const Vec3f max = box.size - Vec3f(1.0, 1.0, 1.0);
-
-    auto confineAxis = [&](float& coord, float& speed, float axisMax) {
-        if (coord < 0.0f) {
-            coord = 0.0f;
-            if (speed < 0.0f) {
-                speed = -speed * restitution;
-            }
-        } else if (coord > axisMax) {
-            coord = axisMax;
-            if (speed > 0.0f) {
-                speed = -speed * restitution;
-            }
-        }
+    template <typename T>
+    concept AtomStepFunc = requires(T fn, AtomStorage& storage, float dt) {
+        { fn(storage, dt) } -> std::same_as<void>;
     };
 
-    for (size_t atomIndex = 0; atomIndex < atomStorage.mobileCount(); ++atomIndex) {
-        confineAxis(atomStorage.posX(atomIndex), atomStorage.velX(atomIndex), static_cast<float>(max.x));
-        confineAxis(atomStorage.posY(atomIndex), atomStorage.velY(atomIndex), static_cast<float>(max.y));
-        confineAxis(atomStorage.posZ(atomIndex), atomStorage.velZ(atomIndex), static_cast<float>(max.z));
-    }
-}
+    inline void confineToBox(AtomStorage& atomStorage, SimBox& box) {
+        constexpr float restitution = 0.8f;
+        const Vec3f max = box.size - Vec3f(1.0, 1.0, 1.0);
 
-inline void postProcessVelocities(AtomStorage& atomStorage, float maxSpeed) {
-    const float maxSpeedSqr = maxSpeed * maxSpeed;
-    float* RESTRICT vx = atomStorage.vxData();
-    float* RESTRICT vy = atomStorage.vyData();
-    float* RESTRICT vz = atomStorage.vzData();
+        auto confineAxis = [&](float& coord, float& speed, float axisMax) {
+            if (coord < 0.0f) {
+                coord = 0.0f;
+                if (speed < 0.0f) {
+                    speed = -speed * restitution;
+                }
+            }
+            else if (coord > axisMax) {
+                coord = axisMax;
+                if (speed > 0.0f) {
+                    speed = -speed * restitution;
+                }
+            }
+        };
 
-    const size_t mobileCount = atomStorage.mobileCount();
-    #pragma GCC ivdep
-    for (size_t atomIndex = 0; atomIndex < mobileCount; ++atomIndex) {
-        float vxValue = vx[atomIndex];
-        float vyValue = vy[atomIndex];
-        float vzValue = vz[atomIndex];
-
-        const float speedSqr = vxValue * vxValue + vyValue * vyValue + vzValue * vzValue;
-        if (speedSqr > maxSpeedSqr) {
-            const float scale = maxSpeed / std::sqrt(speedSqr);
-            vxValue *= scale;
-            vyValue *= scale;
-            vzValue *= scale;
+        for (size_t atomIndex = 0; atomIndex < atomStorage.mobileCount(); ++atomIndex) {
+            confineAxis(atomStorage.posX(atomIndex), atomStorage.velX(atomIndex), static_cast<float>(max.x));
+            confineAxis(atomStorage.posY(atomIndex), atomStorage.velY(atomIndex), static_cast<float>(max.y));
+            confineAxis(atomStorage.posZ(atomIndex), atomStorage.velZ(atomIndex), static_cast<float>(max.z));
         }
-
-        vx[atomIndex] = vxValue;
-        vy[atomIndex] = vyValue;
-        vz[atomIndex] = vzValue;
     }
-}
 
-inline void computeForces(StepData& stepData) {
-    PROFILE_SCOPE("StepOps::computeForces");
-    stepData.forceField.compute(
-        stepData.atomStorage, stepData.bonds, stepData.box,
-        stepData.neighborList, stepData.allowBondFormation, stepData.dt
-    );
-}
+    inline void postProcessVelocities(AtomStorage& atomStorage, float maxSpeed) {
+        const float maxSpeedSqr = maxSpeed * maxSpeed;
+        float* RESTRICT vx = atomStorage.vxData();
+        float* RESTRICT vy = atomStorage.vyData();
+        float* RESTRICT vz = atomStorage.vzData();
 
-template<typename StepFn>
-requires AtomStepFunc<StepFn>
-inline void predictAndSync(StepData& stepData, StepFn predictFn) {
-    predictFn(stepData.atomStorage, stepData.dt);
-    confineToBox(stepData.atomStorage, stepData.box);
+        const size_t mobileCount = atomStorage.mobileCount();
+#pragma GCC ivdep
+        for (size_t atomIndex = 0; atomIndex < mobileCount; ++atomIndex) {
+            float vxValue = vx[atomIndex];
+            float vyValue = vy[atomIndex];
+            float vzValue = vz[atomIndex];
 
-    stepData.atomStorage.swapPrevCurrentForces();
-    std::fill_n(stepData.atomStorage.fxData(), stepData.atomStorage.size(), 0.0f);
-    std::fill_n(stepData.atomStorage.fyData(), stepData.atomStorage.size(), 0.0f);
-    std::fill_n(stepData.atomStorage.fzData(), stepData.atomStorage.size(), 0.0f);
-    std::fill_n(stepData.atomStorage.energyData(), stepData.atomStorage.size(), 0.0f);
-}
+            const float speedSqr = vxValue * vxValue + vyValue * vyValue + vzValue * vzValue;
+            if (speedSqr > maxSpeedSqr) {
+                const float scale = maxSpeed / std::sqrt(speedSqr);
+                vxValue *= scale;
+                vyValue *= scale;
+                vzValue *= scale;
+            }
+
+            vx[atomIndex] = vxValue;
+            vy[atomIndex] = vyValue;
+            vz[atomIndex] = vzValue;
+        }
+    }
+
+    inline void computeForces(StepData& stepData) {
+        PROFILE_SCOPE("StepOps::computeForces");
+        stepData.forceField.compute(stepData.atomStorage, stepData.bonds, stepData.box, stepData.neighborList, stepData.allowBondFormation,
+                                    stepData.dt);
+    }
+
+    template <typename StepFn>
+        requires AtomStepFunc<StepFn>
+    inline void predictAndSync(StepData& stepData, StepFn predictFn) {
+        predictFn(stepData.atomStorage, stepData.dt);
+        confineToBox(stepData.atomStorage, stepData.box);
+
+        stepData.atomStorage.swapPrevCurrentForces();
+        std::fill_n(stepData.atomStorage.fxData(), stepData.atomStorage.size(), 0.0f);
+        std::fill_n(stepData.atomStorage.fyData(), stepData.atomStorage.size(), 0.0f);
+        std::fill_n(stepData.atomStorage.fzData(), stepData.atomStorage.size(), 0.0f);
+        std::fill_n(stepData.atomStorage.energyData(), stepData.atomStorage.size(), 0.0f);
+    }
 }

@@ -4,40 +4,37 @@
 #include <string>
 
 #include "App/interaction/picking/PickingSystem.h"
+#include "Engine/Consts.h"
 #include "GUI/interface/interface.h"
 #include "Rendering/BaseRenderer.h"
-#include "Engine/Consts.h"
 
 namespace {
 
-Vec3f mapMouseToRulerWorld(const ToolContext& ctx, sf::Vector2i mousePos) {
-    IRenderer* renderer = ctx.activeRenderer();
-    if (renderer == nullptr) {
-        return Vec3f();
+    Vec3f mapMouseToRulerWorld(const ToolContext& ctx, sf::Vector2i mousePos) {
+        IRenderer* renderer = ctx.activeRenderer();
+        if (renderer == nullptr) {
+            return Vec3f();
+        }
+
+        if (renderer->camera.getMode() == Camera::Mode::Mode2D && ctx.window != nullptr && ctx.gameView != nullptr) {
+            const sf::Vector2f world = ctx.window->mapPixelToCoords(mousePos, *ctx.gameView);
+            return Vec3f(world.x, world.y, 1.0f);
+        }
+
+        return renderer->camera.screenToWorld(mousePos);
     }
 
-    if (renderer->camera.getMode() == Camera::Mode::Mode2D
-        && ctx.window != nullptr
-        && ctx.gameView != nullptr) {
-        const sf::Vector2f world = ctx.window->mapPixelToCoords(mousePos, *ctx.gameView);
-        return Vec3f(world.x, world.y, 1.0f);
+    std::string makeRulerTooltip(const Vec3f& start, const Vec3f& end) {
+        const float distanceAngstrom = (end - start).abs();
+        const float distanceNm = distanceAngstrom * static_cast<float>(Units::AngstromToNm);
+
+        char buffer[128];
+        std::snprintf(buffer, sizeof(buffer), "Distance: %.2f A (%.2f nm)", distanceAngstrom, distanceNm);
+        return buffer;
     }
-
-    return renderer->camera.screenToWorld(mousePos);
 }
 
-std::string makeRulerTooltip(const Vec3f& start, const Vec3f& end) {
-    const float distanceAngstrom = (end - start).abs();
-    const float distanceNm = distanceAngstrom * static_cast<float>(Units::AngstromToNm);
-
-    char buffer[128];
-    std::snprintf(buffer, sizeof(buffer), "Distance: %.2f A (%.2f nm)", distanceAngstrom, distanceNm);
-    return buffer;
-}
-}
-
-RulerTool::RulerTool(ToolContext& context) noexcept
-    : ITool(context) {}
+RulerTool::RulerTool(ToolContext& context) noexcept : ITool(context) {}
 
 void RulerTool::onLeftPressed(sf::Vector2i mousePos) {
     ToolContext& ctx = context();
@@ -91,7 +88,8 @@ void RulerTool::onFrame(sf::Vector2i mousePos, float deltaTime) {
 
     if (dragging_) {
         updateMeasurement(mousePos);
-    } else {
+    }
+    else {
         syncOverlayFromWorld();
     }
 }
@@ -144,9 +142,7 @@ void RulerTool::syncOverlayFromWorld() {
         return;
     }
 
-    if (renderer->camera.getMode() == Camera::Mode::Mode2D
-        && ctx.window != nullptr
-        && ctx.gameView != nullptr) {
+    if (renderer->camera.getMode() == Camera::Mode::Mode2D && ctx.window != nullptr && ctx.gameView != nullptr) {
         overlay.rulerStart = ctx.window->mapCoordsToPixel(sf::Vector2f(startWorld_.x, startWorld_.y), *ctx.gameView);
         overlay.rulerEnd = ctx.window->mapCoordsToPixel(sf::Vector2f(endWorld_.x, endWorld_.y), *ctx.gameView);
         return;
@@ -155,6 +151,3 @@ void RulerTool::syncOverlayFromWorld() {
     overlay.rulerStart = renderer->camera.worldToScreen(startWorld_);
     overlay.rulerEnd = renderer->camera.worldToScreen(endWorld_);
 }
-
-
-

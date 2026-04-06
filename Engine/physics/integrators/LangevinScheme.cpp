@@ -2,6 +2,4 @@
 
 #include "VerletScheme.h"
 
-void LangevinScheme::pipeline(StepData& stepData) const {
-    VerletScheme{}.pipeline(stepData);
-}
+void LangevinScheme::pipeline(StepData& stepData) const { VerletScheme{}.pipeline(stepData); }

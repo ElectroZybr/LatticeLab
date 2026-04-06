@@ -1,22 +1,20 @@
-#include <cmath>
-
 #include "ToolsPanel.h"
 
+#include <cmath>
+
+#include "App/AppSignals.h"
 #include "GUI/interface/panels/debug/DebugPanel.h"
 #include "GUI/interface/panels/io/ioPanel.h"
 #include "GUI/interface/panels/settings/SettingsPanel.h"
 #include "Rendering/camera/Camera.h"
 
-#include "App/AppSignals.h"
-
-#define ICON_FA_FLASK       "\uf0c3"
-#define ICON_FA_COG         "\uf013"
-#define ICON_FA_BUG         "\uf188"
-#define ICON_FA_SYNC_ALT    "\uf2f1"
+#define ICON_FA_FLASK "\uf0c3"
+#define ICON_FA_COG "\uf013"
+#define ICON_FA_BUG "\uf188"
+#define ICON_FA_SYNC_ALT "\uf2f1"
 #define ICON_FA_STREET_VIEW "\uf21d"
 
-void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, SettingsPanel& settings, IOPanel& ioPanel)
-{
+void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, SettingsPanel& settings, IOPanel& ioPanel) {
     constexpr float baseTopOffset = 0.0f;
     constexpr float baseLeftOffset = 0.0f;
     constexpr float baseSpacing = 4.0f;
@@ -37,12 +35,14 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, 
 
     auto drawActiveButton = [&](const char* icon, bool visible) {
         if (visible) {
-            ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.06f, 0.53f, 0.98f, 1.00f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.06f, 0.53f, 0.98f, 1.00f));
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.53f, 0.98f, 1.00f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.06f, 0.53f, 0.98f, 1.00f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.06f, 0.53f, 0.98f, 1.00f));
         }
         const bool clicked = ImGui::Button(icon, ImVec2(buttonSize, buttonSize));
-        if (visible) ImGui::PopStyleColor(3);
+        if (visible) {
+            ImGui::PopStyleColor(3);
+        }
         return clicked;
     };
 
@@ -56,7 +56,8 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, 
     if (drawActiveButton(ICON_FA_COG, settings.isVisible())) {
         if (settings.isVisible()) {
             settings.close();
-        } else {
+        }
+        else {
             settings.toggle();
             debug.close();
             ioPanel.close();
@@ -67,7 +68,8 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, 
     if (drawActiveButton(ICON_FA_FLASK, ioPanel.isVisible())) {
         if (ioPanel.isVisible()) {
             ioPanel.close();
-        } else {
+        }
+        else {
             ioPanel.toggle();
             settings.close();
             debug.close();
@@ -78,7 +80,8 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, 
     if (drawActiveButton(ICON_FA_BUG, debug.isVisible())) {
         if (debug.isVisible()) {
             debug.close();
-        } else {
+        }
+        else {
             debug.toggle();
             settings.close();
             ioPanel.close();
@@ -86,21 +89,18 @@ void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, 
     }
     ImGui::SameLine();
 
-    if (ImGui::Button(is3D ? "3D" : "2D", ImVec2(buttonSize, buttonSize)))
-    {
+    if (ImGui::Button(is3D ? "3D" : "2D", ImVec2(buttonSize, buttonSize))) {
         is3D = !is3D;
-        if (!is3D) isFree = false;
-        AppSignals::UI::SetRender.emit(
-            is3D ? RendererType::Renderer3D : RendererType::Renderer2D
-        );
+        if (!is3D) {
+            isFree = false;
+        }
+        AppSignals::UI::SetRender.emit(is3D ? RendererType::Renderer3D : RendererType::Renderer2D);
     }
     if (is3D) {
         ImGui::SameLine();
         if (ImGui::Button(isFree ? ICON_FA_STREET_VIEW : ICON_FA_SYNC_ALT, ImVec2(buttonSize, buttonSize))) {
             isFree = !isFree;
-            AppSignals::UI::SetCameraMode.emit(
-                isFree ? Camera::Mode::Free : Camera::Mode::Orbit
-            );
+            AppSignals::UI::SetCameraMode.emit(isFree ? Camera::Mode::Free : Camera::Mode::Orbit);
         }
     }
 

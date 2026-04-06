@@ -5,7 +5,7 @@ class FontManager {
 public:
     bool load(float uiScale = 1.0f);
 
-    ImFont* main   = nullptr;
+    ImFont* main = nullptr;
     ImFont* dialog = nullptr;
-    ImFont* icons  = nullptr;
+    ImFont* icons = nullptr;
 };

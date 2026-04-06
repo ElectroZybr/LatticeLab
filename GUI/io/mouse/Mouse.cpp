@@ -1,12 +1,12 @@
-#include <iostream>
-#include <cmath>
-
 #include "GUI/io/mouse/Mouse.h"
+
+#include <cmath>
+#include <iostream>
 
 #include "App/interaction/ToolsManager.h"
 #include "GUI/interface/interface.h"
 
-sf::RenderWindow*  Mouse::window = nullptr;
+sf::RenderWindow* Mouse::window = nullptr;
 std::unique_ptr<IRenderer>* Mouse::renderer = nullptr;
 SimBox* Mouse::box = nullptr;
 AtomStorage* Mouse::atomStorage = nullptr;
@@ -60,8 +60,7 @@ void Mouse::onEvent(const sf::Event& event) {
             rend->camera.dragStartPixelPos = currentPixelPos;
         }
         else {
-            Vec3f deltaWorld = ToolsManager::screenToWorld(rend->camera.dragStartPixelPos) 
-                             - ToolsManager::screenToWorld(currentPixelPos);
+            Vec3f deltaWorld = ToolsManager::screenToWorld(rend->camera.dragStartPixelPos) - ToolsManager::screenToWorld(currentPixelPos);
             rend->camera.position = rend->camera.dragStartCameraPos + Vec2f(deltaWorld.x, deltaWorld.y);
         }
     }
@@ -72,13 +71,11 @@ void Mouse::onEvent(const sf::Event& event) {
                 const float wheelStep = rend->camera.moveSpeed * kFreeWheelMoveScale;
                 const float distance = e->delta * wheelStep;
 
-                const Vec3f forward(
-                    std::cos(rend->camera.elevation) * std::sin(rend->camera.azimuth),
-                    std::sin(rend->camera.elevation),
-                    std::cos(rend->camera.elevation) * std::cos(rend->camera.azimuth)
-                );
+                const Vec3f forward(std::cos(rend->camera.elevation) * std::sin(rend->camera.azimuth), std::sin(rend->camera.elevation),
+                                    std::cos(rend->camera.elevation) * std::cos(rend->camera.azimuth));
                 rend->camera.move3D(forward * distance);
-            } else {
+            }
+            else {
                 rend->camera.zoomAt(e->delta, sf::Vector2f(e->position), *window);
             }
         }
@@ -95,10 +92,6 @@ void Mouse::logMousePos() {
     Vec3f world_pos = ToolsManager::screenToWorld(mouse_pos);
     std::cout << "<Mouse pos>"
               << " Screen: "
-              << "X " << mouse_pos.x
-              << "Y " << mouse_pos.y
-              << " | World: "
-              << "X " << world_pos.x
-              << "Y " << world_pos.y
-            << std::endl;
+              << "X " << mouse_pos.x << "Y " << mouse_pos.y << " | World: "
+              << "X " << world_pos.x << "Y " << world_pos.y << std::endl;
 }
