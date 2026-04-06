@@ -38,39 +38,43 @@ bool is444(CaptureSettings::PixelFormat pixelFormat) {
     return pixelFormat == CaptureSettings::PixelFormat::Yuv444p;
 }
 
-std::filesystem::path tryEnvPath() {
-    if (const char* envPath = std::getenv("FFMPEG_PATH")) {
-        const std::filesystem::path path(envPath);
-        if (std::filesystem::exists(path)) {
-            return path;
+std::filesystem::path tryWherePath() {
+#ifdef _WIN32
+    std::wstring buffer(MAX_PATH, L'\0');
+    DWORD length = SearchPathW(
+        nullptr,
+        L"ffmpeg.exe",
+        nullptr,
+        static_cast<DWORD>(buffer.size()),
+        buffer.data(),
+        nullptr
+    );
+
+    if (length == 0) {
+        return {};
+    }
+
+    if (length >= buffer.size()) {
+        buffer.resize(length + 1, L'\0');
+        length = SearchPathW(
+            nullptr,
+            L"ffmpeg.exe",
+            nullptr,
+            static_cast<DWORD>(buffer.size()),
+            buffer.data(),
+            nullptr
+        );
+        if (length == 0) {
+            return {};
         }
     }
-    return {};
-}
 
-std::filesystem::path tryWherePath() {
-    FILE* pipe = _popen("where ffmpeg 2>nul", "r");
-    if (pipe == nullptr) {
-        return {};
-    }
-
-    char buffer[1024];
-    std::string firstLine;
-    if (fgets(buffer, static_cast<int>(sizeof(buffer)), pipe) != nullptr) {
-        firstLine = buffer;
-    }
-    _pclose(pipe);
-
-    while (!firstLine.empty() && (firstLine.back() == '\n' || firstLine.back() == '\r')) {
-        firstLine.pop_back();
-    }
-
-    if (firstLine.empty()) {
-        return {};
-    }
-
-    const std::filesystem::path path(firstLine);
+    buffer.resize(length);
+    const std::filesystem::path path(buffer);
     return std::filesystem::exists(path) ? path : std::filesystem::path{};
+#else
+    return {};
+#endif
 }
 }
 
@@ -94,6 +98,10 @@ void FrameRecorder::stop() {
     std::lock_guard lock(mutex_);
     closeEncoder();
     recording_ = false;
+}
+
+bool FrameRecorder::isAvailable() {
+    return !findFfmpegExecutable().empty();
 }
 
 bool FrameRecorder::isRecording() const {
@@ -297,22 +305,6 @@ void FrameRecorder::closeEncoder() {
 }
 
 std::filesystem::path FrameRecorder::findFfmpegExecutable() {
-    const std::vector<std::filesystem::path> fallbackPaths{
-        std::filesystem::current_path() / "assets" / "ffmpeg" / "ffmpeg.exe",
-        std::filesystem::current_path() / "ffmpeg.exe",
-        std::filesystem::current_path() / "tools" / "ffmpeg" / "bin" / "ffmpeg.exe"
-    };
-
-    for (const auto& path : fallbackPaths) {
-        if (std::filesystem::exists(path)) {
-            return path;
-        }
-    }
-
-    if (const std::filesystem::path envPath = tryEnvPath(); !envPath.empty()) {
-        return envPath;
-    }
-
     if (const std::filesystem::path wherePath = tryWherePath(); !wherePath.empty()) {
         return wherePath;
     }

@@ -45,6 +45,7 @@ public:
     static bool drawToolTrip;
     static std::string toolTooltipText;
     static bool captureRecording;
+    static bool captureAvailable;
     static uint64_t captureFrameCount;
     static float captureFps;
     static double captureBlinkElapsed;
