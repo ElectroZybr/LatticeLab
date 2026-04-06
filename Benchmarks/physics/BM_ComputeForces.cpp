@@ -1,6 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include "fixtures/SimulationFixture.h"
+#include "Benchmarks/fixtures/SimulationFixture.h"
 
 // @bench_meta {"id":"SimulationFixture/ComputeForcesWithNeighborList","ru":"Расчет сил с NeighborList","group":"Симуляция/Силы"}
 BENCHMARK_DEFINE_F(SimulationFixture, ComputeForcesWithNeighborList)(benchmark::State& state) {

@@ -1,6 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include "fixtures/SimulationFixture.h"
+#include "Benchmarks/fixtures/SimulationFixture.h"
 
 // @bench_meta {"id":"SimulationFixture/SpatialGridRebuild","ru":"Перестройка SpatialGrid","group":"Симуляция/Сетка и соседи"}
 BENCHMARK_DEFINE_F(SimulationFixture, SpatialGridRebuild)(benchmark::State& state) {

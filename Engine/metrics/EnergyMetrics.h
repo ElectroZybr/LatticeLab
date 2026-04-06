@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../physics/AtomData.h"
-#include "../physics/AtomStorage.h"
+#include "Engine/physics/AtomData.h"
+#include "Engine/physics/AtomStorage.h"
 
 namespace EnergyMetrics {
 

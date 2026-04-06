@@ -1,17 +1,16 @@
 #pragma once
 
-#include "Consts.h"
-#include "SimBox.h"
-
 #include <SFML/Graphics.hpp>
 
-#include "NeighborSearch/NeighborList.h"
-#include "metrics/EnergyMetrics.h"
-#include "physics/AtomData.h"
-#include "physics/AtomStorage.h"
-#include "physics/Bond.h"
-#include "physics/ForceField.h"
-#include "physics/Integrator.h"
+#include "Engine/Consts.h"
+#include "Engine/NeighborSearch/NeighborList.h"
+#include "Engine/SimBox.h"
+#include "Engine/metrics/EnergyMetrics.h"
+#include "Engine/physics/AtomData.h"
+#include "Engine/physics/AtomStorage.h"
+#include "Engine/physics/Bond.h"
+#include "Engine/physics/ForceField.h"
+#include "Engine/physics/Integrator.h"
 
 class Simulation {
 public:

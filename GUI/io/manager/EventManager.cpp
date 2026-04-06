@@ -1,6 +1,6 @@
 #include "EventManager.h"
 
-#include "imgui-SFML.h"
+#include <imgui-SFML.h>
 
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/mouse/Mouse.h"

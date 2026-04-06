@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
 
+#include "Benchmarks/fixtures/RendererFixture.h"
 #include "Rendering/3d/Renderer3D.h"
-#include "fixtures/RendererFixture.h"
 
 // @bench_meta {"id":"RendererFixture<Renderer3D>/DrawShot3D","ru":"Отрисовка кадра
 // 3D","group":"Рендер/3D"}

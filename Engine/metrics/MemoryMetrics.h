@@ -1,5 +1,7 @@
 #pragma once
 
+// clang-format off
+
 #if defined(_WIN32) || defined(_WIN64)
     #include <windows.h>
     #include <psapi.h>
