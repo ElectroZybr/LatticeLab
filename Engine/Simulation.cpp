@@ -12,6 +12,15 @@ Simulation::Simulation(SimBox& box) : sim_box_(box), integrator() {
     forceField_.syncWalls(sim_box_);
 }
 
+void Simulation::refreshMetricsCache() const {
+    if (metricsCacheValid_) {
+        return;
+    }
+
+    metricsCache_ = EnergyMetrics::buildSnapshot(atomStorage_);
+    metricsCacheValid_ = true;
+}
+
 StepData Simulation::makeStepData() {
     return StepData{
         .atomStorage = atomStorage_,
@@ -34,6 +43,7 @@ void Simulation::update() {
 
     StepData stepData = makeStepData();
     integrator.step(stepData);
+    invalidateMetricsCache();
     ++sim_step;
     sim_time_ns += Dt * Units::kTimeUnitToNs;
 }
@@ -49,6 +59,7 @@ void Simulation::setSizeBox(Vec3f newSize, int cellSize) {
 
 bool Simulation::createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Type type, bool fixed) {
     atomStorage_.addAtom(start_coords, start_speed, type, fixed);
+    invalidateMetricsCache();
     sim_box_.grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
     return true;
 }
@@ -85,6 +96,7 @@ bool Simulation::removeAtom(size_t atomIndex) {
     }
 
     atomStorage_.removeAtom(atomIndex);
+    invalidateMetricsCache();
     sim_box_.grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
     return true;
 }
@@ -99,6 +111,7 @@ void Simulation::addBond(size_t aIndex, size_t bIndex) {
 
 void Simulation::clear() {
     atomStorage_.clear();
+    invalidateMetricsCache();
     bonds_.clear();
     sim_box_.grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
     neighborList_.clear();

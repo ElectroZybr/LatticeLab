@@ -20,7 +20,10 @@ void updateAtomSelectionDebug(const DebugViews& debugViews, const Simulation& si
         const size_t selectedIndex = *ToolsManager::pickingSystem->getSelectedIndices().begin();
         if (selectedIndex < atoms.size()) {
             debugViews.atomSingle->add_data("Позиция", atoms.pos(selectedIndex));
-            debugViews.atomSingle->add_data("Скорость", atoms.vel(selectedIndex));
+            const float speed = atoms.vel(selectedIndex).abs();
+            debugViews.atomSingle->add_data("Скорость (A/dt)", speed);
+            debugViews.atomSingle->add_data("Скорость (м/с)", speed * Units::SpeedUnitToMps);
+            debugViews.atomSingle->add_data("Скорость (км/ч)", speed * Units::SpeedUnitToKmph);
             debugViews.atomSingle->add_data("Силы", atoms.force(selectedIndex));
             debugViews.atomSingle->add_data("Пред. силы", atoms.prevForce(selectedIndex));
             debugViews.atomSingle->add_data("Потенциальная энергия", atoms.energy(selectedIndex));
@@ -29,8 +32,7 @@ void updateAtomSelectionDebug(const DebugViews& debugViews, const Simulation& si
             debugViews.atomSingle->add_data("Радиус", AtomData::getProps(atomType).radius);
             debugViews.atomSingle->add_data("Тип", static_cast<int>(atomType));
         }
-    }
-    else {
+    } else {
         debugViews.atomBatch->visible = true;
         debugViews.atomSingle->visible = false;
         debugViews.atomBatch->add_data("Выбрано атомов", ToolsManager::pickingSystem->getSelectedIndices().size());
@@ -48,8 +50,11 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     const double physicsMs = profiler.lastActiveMs("Simulation::update");
     const float stepsPerSecond = static_cast<float>(profiler.counterRate("Simulation::steps"));
 
+    debugViews.sim->add_data("Средняя скорость (км/ч)", simulation.averageSpeedKmPerHour());
     debugViews.sim->add_data("Полная энергия (pj)", simulation.fullEnegryPJ());
-    debugViews.sim->add_data("Полная средняя энергия (eV)", static_cast<float>(EnergyMetrics::fullAverageEnergy(atoms)));
+    debugViews.sim->add_data("Полная средняя энергия (eV)", simulation.fullAverageEnergyEv());
+    debugViews.sim->add_data("Температура (K)", simulation.temperatureK());
+    debugViews.sim->add_data("Температура (°C)", simulation.temperatureC());
     debugViews.sim->add_data("Память (МБ)", MemoryMetrics::getRSS() / 1024.f / 1024.f);
     debugViews.sim->add_data("Рендер (мс)", renderMs);
     debugViews.sim->add_data("Capture readback (ms)", captureReadbackMs);
@@ -73,9 +78,9 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     debugViews.neighbor->add_data("Память NeighborList (МБ)", static_cast<float>(neighborList.memoryBytes()) / 1024.0f / 1024.0f);
     debugViews.neighbor->add_data("Память SpatialGrid (МБ)", static_cast<float>(box.grid.memoryBytes()) / 1024.0f / 1024.0f);
     debugViews.neighbor->add_data("Пар в NL", neighborList.pairStorageSize());
-    const float avgNeighborsPerAtom = neighborList.atomCount() > 0 ? (2.0f * static_cast<float>(neighborList.pairStorageSize())) /
-                                                                         static_cast<float>(neighborList.atomCount())
-                                                                   : 0.0f;
+    const float avgNeighborsPerAtom = neighborList.atomCount() > 0
+        ? (2.0f * static_cast<float>(neighborList.pairStorageSize())) / static_cast<float>(neighborList.atomCount())
+        : 0.0f;
     debugViews.neighbor->add_data("Ср. соседей на атом", avgNeighborsPerAtom);
     debugViews.neighbor->add_data("Cutoff", neighborList.cutoff());
     debugViews.neighbor->add_data("Skin", neighborList.skin());

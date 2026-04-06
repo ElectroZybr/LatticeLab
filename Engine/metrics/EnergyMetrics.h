@@ -4,37 +4,62 @@
 #include "Engine/physics/AtomStorage.h"
 
 namespace EnergyMetrics {
+    struct Snapshot {
+        float averageKineticEnergyEv = 0.0f;
+        float averagePotentialEnergyEv = 0.0f;
+        float averageSpeedSim = 0.0f;
+
+        float fullAverageEnergyEv() const {
+            return averageKineticEnergyEv + averagePotentialEnergyEv;
+        }
+
+        float temperatureK() const {
+            return 2.0f * averageKineticEnergyEv / (3.0f * Units::kboltzmann);
+        }
+
+        float temperatureC() const {
+            return temperatureK() - 273.15f;
+        }
+
+        float averageSpeedKmPerHour() const {
+            return averageSpeedSim * Units::SpeedUnitToKmph;
+        }
+    };
 
     inline float kineticEnergy(AtomData::Type type, const Vec3f& speed) { return 0.5f * AtomData::getProps(type).mass * speed.sqrAbs(); }
 
-    inline float averageKineticEnergy(const AtomStorage& atomStorage) {
+    inline Snapshot buildSnapshot(const AtomStorage& atomStorage) {
+        Snapshot snapshot;
         if (atomStorage.empty()) {
-            return 0.0f;
+            return snapshot;
         }
 
-        double totalEnergy = 0.0;
+        float totalKineticEnergy = 0.0f;
+        float totalPotentialEnergy = 0.0f;
+        float totalSpeed = 0.0f;
         for (size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
-            totalEnergy += kineticEnergy(atomStorage.type(atomIndex), atomStorage.vel(atomIndex));
+            totalKineticEnergy += kineticEnergy(atomStorage.type(atomIndex), atomStorage.vel(atomIndex));
+            totalPotentialEnergy += atomStorage.energy(atomIndex);
+            totalSpeed += atomStorage.vel(atomIndex).abs();
         }
 
-        return static_cast<float>(totalEnergy / static_cast<double>(atomStorage.size()));
+        const float invAtomCount = 1.0f / atomStorage.size();
+        snapshot.averageKineticEnergyEv = totalKineticEnergy * invAtomCount;
+        snapshot.averagePotentialEnergyEv = totalPotentialEnergy * invAtomCount;
+        snapshot.averageSpeedSim = totalSpeed * invAtomCount;
+        return snapshot;
+    }
+
+    inline float averageKineticEnergy(const AtomStorage& atomStorage) {
+        return buildSnapshot(atomStorage).averageKineticEnergyEv;
     }
 
     inline float averagePotentialEnergy(const AtomStorage& atomStorage) {
-        if (atomStorage.empty()) {
-            return 0.0f;
-        }
-
-        double totalEnergy = 0.0;
-        for (size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
-            totalEnergy += atomStorage.energy(atomIndex);
-        }
-
-        return static_cast<float>(totalEnergy / static_cast<double>(atomStorage.size()));
+        return buildSnapshot(atomStorage).averagePotentialEnergyEv;
     }
 
     inline float fullAverageEnergy(const AtomStorage& atomStorage) {
-        return averageKineticEnergy(atomStorage) + averagePotentialEnergy(atomStorage);
+        return buildSnapshot(atomStorage).fullAverageEnergyEv();
     }
 
 } // namespace EnergyMetrics
