@@ -32,6 +32,13 @@ void FileDialogManager::openLoad() {
     ImGuiFileDialog::Instance()->OpenDialog("LoadDlg", "Load simulation", ".sim", config);
 }
 
+void FileDialogManager::openCaptureDirectory(const std::string& currentPath) {
+    IGFD::FileDialogConfig config;
+    config.path = currentPath.empty() ? "." : currentPath;
+    config.countSelectionMax = 1;
+    ImGuiFileDialog::Instance()->OpenDialog("CaptureDirDlg", "Select capture directory", nullptr, config);
+}
+
 void FileDialogManager::draw(float scale) {
     ImVec2 dlgSize(400 * scale, 300 * scale);
 
@@ -45,6 +52,13 @@ void FileDialogManager::draw(float scale) {
     if (ImGuiFileDialog::Instance()->Display("LoadDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             AppSignals::UI::LoadSimulation.emit(ImGuiFileDialog::Instance()->GetFilePathName());
+        }
+        ImGuiFileDialog::Instance()->Close();
+    }
+
+    if (ImGuiFileDialog::Instance()->Display("CaptureDirDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
+        if (ImGuiFileDialog::Instance()->IsOk()) {
+            AppSignals::UI::SetCaptureDirectory.emit(ImGuiFileDialog::Instance()->GetCurrentPath());
         }
         ImGuiFileDialog::Instance()->Close();
     }
