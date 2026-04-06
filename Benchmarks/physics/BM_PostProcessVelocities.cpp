@@ -2,7 +2,7 @@
 
 #include <benchmark/benchmark.h>
 
-#include "fixtures/SimulationFixture.h"
+#include "Benchmarks/fixtures/SimulationFixture.h"
 
 namespace {
     struct VelocityPostProcessData {

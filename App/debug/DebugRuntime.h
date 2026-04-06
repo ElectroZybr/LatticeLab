@@ -1,10 +1,9 @@
 #pragma once
 
-#include "CreateDebugPanels.h"
-#include "UpdateDebugData.h"
-
 #include <string_view>
 
+#include "App/debug/CreateDebugPanels.h"
+#include "App/debug/UpdateDebugData.h"
 #include "Engine/Simulation.h"
 #include "Engine/physics/Integrator.h"
 

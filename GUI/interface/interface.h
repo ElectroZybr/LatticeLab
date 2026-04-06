@@ -1,22 +1,21 @@
 #pragma once
-#include "imgui-SFML.h"
-
 #include <memory>
 #include <string>
 
 #include <SFML/Graphics.hpp>
+#include <imgui-SFML.h>
 
-#include "file_dialog/FileDialogManager.h"
-#include "font_manager/FontManager.h"
-#include "panels/debug/DebugPanel.h"
-#include "panels/io/ioPanel.h"
-#include "panels/periodic/PeriodicPanel.h"
-#include "panels/settings/SettingsPanel.h"
-#include "panels/sim_control/SimControlPanel.h"
-#include "panels/stats/StatsPanel.h"
-#include "panels/tools/SideToolsPanel.h"
-#include "panels/tools/ToolsPanel.h"
-#include "style/StyleManager.h"
+#include "GUI/interface/file_dialog/FileDialogManager.h"
+#include "GUI/interface/font_manager/FontManager.h"
+#include "GUI/interface/panels/debug/DebugPanel.h"
+#include "GUI/interface/panels/io/ioPanel.h"
+#include "GUI/interface/panels/periodic/PeriodicPanel.h"
+#include "GUI/interface/panels/settings/SettingsPanel.h"
+#include "GUI/interface/panels/sim_control/SimControlPanel.h"
+#include "GUI/interface/panels/stats/StatsPanel.h"
+#include "GUI/interface/panels/tools/SideToolsPanel.h"
+#include "GUI/interface/panels/tools/ToolsPanel.h"
+#include "GUI/interface/style/StyleManager.h"
 
 class Interface {
 private:

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "BaseRenderer.h"
-
 #include <array>
 
 #include <SFML/Graphics.hpp>
 #include <glad/glad.h>
+
+#include "Rendering/BaseRenderer.h"
 
 class RendererGL : public IRenderer {
 public:

@@ -1,6 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include "fixtures/SimulationFixture.h"
+#include "Benchmarks/fixtures/SimulationFixture.h"
 
 // @bench_meta {"id":"SimulationFixture/FullStepWithNeighborList","ru":"Полный шаг с NeighborList","group":"Симуляция/Шаг симуляции"}
 BENCHMARK_DEFINE_F(SimulationFixture, FullStepWithNeighborList)(benchmark::State& state) {

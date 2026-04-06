@@ -1,10 +1,9 @@
 #include "UpdateDebugData.h"
 
-#include "CreateDebugPanels.h"
-
 #include <algorithm>
 #include <string>
 
+#include "App/debug/CreateDebugPanels.h"
 #include "App/interaction/ToolsManager.h"
 #include "Engine/Consts.h"
 #include "Engine/Simulation.h"

@@ -3,7 +3,7 @@
 #include <SFML/Graphics.hpp>
 #include <imgui.h>
 
-#include "Engine//math/Vec3f.h"
+#include "Engine/math/Vec3f.h"
 #include "Engine/physics/AtomData.h"
 
 class FileDialogManager;

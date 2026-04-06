@@ -5,23 +5,23 @@
 #include <string_view>
 
 namespace {
-bool profileNameEquals(const char* lhs, const char* rhs) noexcept {
-    if (lhs == rhs) {
-        return true;
+    bool profileNameEquals(const char* lhs, const char* rhs) noexcept {
+        if (lhs == rhs) {
+            return true;
+        }
+        if (lhs == nullptr || rhs == nullptr) {
+            return false;
+        }
+        return std::string_view(lhs) == std::string_view(rhs);
     }
-    if (lhs == nullptr || rhs == nullptr) {
-        return false;
-    }
-    return std::string_view(lhs) == std::string_view(rhs);
-}
 
-double smoothingAlpha(double sampleSeconds) noexcept {
-    constexpr double kSmoothingWindowSeconds = 0.35;
-    if (sampleSeconds <= 0.0) {
-        return 1.0;
+    double smoothingAlpha(double sampleSeconds) noexcept {
+        constexpr double kSmoothingWindowSeconds = 0.35;
+        if (sampleSeconds <= 0.0) {
+            return 1.0;
+        }
+        return 1.0 - std::exp(-sampleSeconds / kSmoothingWindowSeconds);
     }
-    return 1.0 - std::exp(-sampleSeconds / kSmoothingWindowSeconds);
-}
 }
 
 Profiler& Profiler::instance() {
@@ -73,7 +73,8 @@ void Profiler::endFrame() {
         frameData_.smoothedTrackedMs = frameData_.totalTrackedMs;
         frameData_.smoothedTrackedPercent = frameMs > 0.0 ? (frameData_.totalTrackedMs * 100.0 / frameMs) : 0.0;
         frameData_.hasSmoothedSample = true;
-    } else {
+    }
+    else {
         frameData_.smoothedFrameMs += alpha * (frameData_.frameMs - frameData_.smoothedFrameMs);
         frameData_.smoothedTrackedMs += alpha * (frameData_.totalTrackedMs - frameData_.smoothedTrackedMs);
         const double trackedPercent = frameMs > 0.0 ? (frameData_.totalTrackedMs * 100.0 / frameMs) : 0.0;
@@ -85,7 +86,8 @@ void Profiler::endFrame() {
             entry.smoothedMs = entry.lastMs;
             entry.smoothedPercentOfFrame = entry.percentOfFrame;
             entry.hasSmoothedSample = true;
-        } else {
+        }
+        else {
             entry.smoothedMs += alpha * (entry.lastMs - entry.smoothedMs);
             entry.smoothedPercentOfFrame += alpha * (entry.percentOfFrame - entry.smoothedPercentOfFrame);
         }
@@ -97,7 +99,8 @@ void Profiler::endFrame() {
             entry.smoothedMs = entry.lastMs;
             entry.smoothedPercentOfFrame = entry.percentOfFrame;
             entry.hasSmoothedSample = true;
-        } else {
+        }
+        else {
             entry.smoothedMs += alpha * (entry.lastMs - entry.smoothedMs);
             entry.smoothedPercentOfFrame += alpha * (entry.percentOfFrame - entry.smoothedPercentOfFrame);
         }
@@ -126,16 +129,12 @@ void Profiler::addSample(const char* name, double ms) {
     entry.maxMs = std::max(entry.maxMs, ms);
     ++entry.callCount;
     ++entry.totalCallCount;
-    entry.averageMs = entry.totalCallCount > 0
-        ? (entry.totalMs / static_cast<double>(entry.totalCallCount))
-        : 0.0;
+    entry.averageMs = entry.totalCallCount > 0 ? (entry.totalMs / static_cast<double>(entry.totalCallCount)) : 0.0;
     entry.touchedThisFrame = true;
 }
 
 size_t Profiler::beginScope(const char* name) noexcept {
-    const size_t parentIndex = activeTreeStack_.empty()
-        ? ProfileTreeEntry::kNoParent
-        : activeTreeStack_.back();
+    const size_t parentIndex = activeTreeStack_.empty() ? ProfileTreeEntry::kNoParent : activeTreeStack_.back();
     ProfileTreeEntry& entry = treeEntryFor(name, parentIndex);
     const size_t treeIndex = static_cast<size_t>(&entry - treeEntries_.data());
     activeTreeStack_.push_back(treeIndex);
@@ -145,7 +144,8 @@ size_t Profiler::beginScope(const char* name) noexcept {
 void Profiler::endScope(size_t treeIndex, const char* name, double ms) noexcept {
     if (!activeTreeStack_.empty() && activeTreeStack_.back() == treeIndex) {
         activeTreeStack_.pop_back();
-    } else {
+    }
+    else {
         for (auto it = activeTreeStack_.rbegin(); it != activeTreeStack_.rend(); ++it) {
             if (*it == treeIndex) {
                 activeTreeStack_.erase(std::next(it).base());
@@ -167,9 +167,7 @@ void Profiler::endScope(size_t treeIndex, const char* name, double ms) noexcept 
     entry.maxMs = std::max(entry.maxMs, ms);
     ++entry.callCount;
     ++entry.totalCallCount;
-    entry.averageMs = entry.totalCallCount > 0
-        ? (entry.totalMs / static_cast<double>(entry.totalCallCount))
-        : 0.0;
+    entry.averageMs = entry.totalCallCount > 0 ? (entry.totalMs / static_cast<double>(entry.totalCallCount)) : 0.0;
     entry.touchedThisFrame = true;
 }
 
@@ -191,7 +189,8 @@ void Profiler::updateRates(double intervalSeconds) {
         if (!counter.hasRateSample) {
             counter.ratePerSecond = instantRate;
             counter.hasRateSample = true;
-        } else {
+        }
+        else {
             counter.ratePerSecond += alpha * (instantRate - counter.ratePerSecond);
         }
         counter.pendingCount = 0;
@@ -248,7 +247,8 @@ ProfileTreeEntry& Profiler::treeEntryFor(const char* name, size_t parentIndex) {
                 return child;
             }
         }
-    } else {
+    }
+    else {
         for (ProfileTreeEntry& entry : treeEntries_) {
             if (entry.parentIndex == ProfileTreeEntry::kNoParent && profileNameEquals(entry.name, name)) {
                 return entry;
@@ -281,9 +281,7 @@ ProfileCounter& Profiler::counterFor(const char* name) {
 }
 
 ProfileScope::ProfileScope(const char* name) noexcept
-    : name_(name)
-    , treeIndex_(Profiler::instance().beginScope(name))
-    , start_(Clock::now()) {}
+    : name_(name), treeIndex_(Profiler::instance().beginScope(name)), start_(Clock::now()) {}
 
 ProfileScope::~ProfileScope() {
     const double ms = std::chrono::duration<double, std::milli>(Clock::now() - start_).count();

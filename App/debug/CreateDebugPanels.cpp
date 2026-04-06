@@ -1,7 +1,6 @@
 #include "CreateDebugPanels.h"
 
-#include "ProfilerTreeView.h"
-
+#include "App/debug/ProfilerTreeView.h"
 #include "GUI/interface/panels/debug/DebugDrawers.h"
 #include "GUI/interface/panels/debug/DebugPanel.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
