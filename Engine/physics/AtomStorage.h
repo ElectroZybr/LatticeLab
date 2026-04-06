@@ -12,7 +12,7 @@
 
 class AtomStorage {
 private:
-    static constexpr size_t kFloatFieldCount = 14;
+    static constexpr size_t kFloatFieldCount = 15;
 
     size_t count_ = 0;
     size_t capacity_ = 0;
@@ -27,6 +27,7 @@ private:
     float* vy_ = nullptr;
     float* vz_ = nullptr;
     float* invMass_ = nullptr;
+    float* charge_ = nullptr;
     float* fx_ = nullptr;
     float* fy_ = nullptr;
     float* fz_ = nullptr;
@@ -44,7 +45,7 @@ private:
             vx_ = vy_ = vz_ = nullptr;
             fx_ = fy_ = fz_ = nullptr;
             pfx_ = pfy_ = pfz_ = nullptr;
-            pe_ = invMass_ = nullptr;
+            pe_ = invMass_ = charge_ = nullptr;
             return;
         }
 
@@ -60,9 +61,10 @@ private:
         vy_ = base + 8 * capacity_;
         vz_ = base + 9 * capacity_;
         invMass_ = base + 10 * capacity_;
-        pfx_ = base + 11 * capacity_;
-        pfy_ = base + 12 * capacity_;
-        pfz_ = base + 13 * capacity_;
+        charge_ = base + 11 * capacity_;
+        pfx_ = base + 12 * capacity_;
+        pfy_ = base + 13 * capacity_;
+        pfz_ = base + 14 * capacity_;
     }
 
     void ensureCapacity(size_t requiredCount) {
@@ -82,8 +84,9 @@ private:
 
             auto getNewFieldPtr = [&](size_t fieldIndex) { return newBase + (fieldIndex * newCapacity); };
 
-            const std::array<float*, kFloatFieldCount> oldFields = {x_,  y_,  z_,  fx_,      fy_,  fz_,  pe_,
-                                                                    vx_, vy_, vz_, invMass_, pfx_, pfy_, pfz_};
+            const std::array<float*, kFloatFieldCount> oldFields = {
+                x_, y_, z_, fx_, fy_, fz_, pe_, vx_, vy_, vz_, invMass_, charge_, pfx_, pfy_, pfz_,
+            };
 
             for (size_t i = 0; i < oldFields.size(); ++i) {
                 std::copy_n(oldFields[i], count_, getNewFieldPtr(i));
@@ -117,6 +120,8 @@ public:
 
     float* energyData() { return pe_; }
     float* invMassData() { return invMass_; }
+    float* chargeData() { return charge_; }
+    const float* chargeData() const { return charge_; }
 
     AtomData::Type* atomTypeData() { return atomType_.data(); }
 
@@ -199,6 +204,14 @@ public:
 
         invMass_[count_] = 1.0f / AtomData::getProps(type).mass;
 
+        charge_[count_] = 0.0f;
+        if (type == AtomData::Type::Cl) {
+            charge_[count_] = -1.0f;
+        }
+        else if (type == AtomData::Type::Na) {
+            charge_[count_] = 1.0f;
+        }
+
         fx_[count_] = 0.0f;
         fy_[count_] = 0.0f;
         fz_[count_] = 0.0f;
@@ -234,6 +247,7 @@ public:
         std::swap(vz_[aIndex], vz_[bIndex]);
 
         std::swap(invMass_[aIndex], invMass_[bIndex]);
+        std::swap(charge_[aIndex], charge_[bIndex]);
 
         std::swap(fx_[aIndex], fx_[bIndex]);
         std::swap(fy_[aIndex], fy_[bIndex]);
@@ -286,6 +300,9 @@ public:
 
     float& invMass(size_t i) { return invMass_[i]; }
     const float& invMass(size_t i) const { return invMass_[i]; }
+
+    float& charge(size_t i) { return charge_[i]; }
+    const float& charge(size_t i) const { return charge_[i]; }
 
     float& forceX(size_t i) { return fx_[i]; }
     float& forceY(size_t i) { return fy_[i]; }

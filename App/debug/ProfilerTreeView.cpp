@@ -37,6 +37,7 @@ constexpr std::array<ProfileNameAlias, 21> kProfileNameAliases{{
     {"KDKScheme::drift", "drift"},
     {"NeighborList::build", "nl build"},
     {"SpatialGrid::rebuild", "sg rebuild"},
+    {"ForceField::Coulomb", "coulomb"},
 }};
 
     std::string shortenProfileName(std::string_view name) {

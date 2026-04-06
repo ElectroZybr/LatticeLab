@@ -7,5 +7,5 @@ class NeighborList;
 
 class CoulombForceField {
 public:
-    void compute(AtomStorage& atoms, SimBox& box, NeighborList& neighborList) const;
+    void compute(AtomStorage& atoms, NeighborList& neighborList) const;
 };
