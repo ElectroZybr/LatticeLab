@@ -1,6 +1,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "interface.h"
+#include "App/capture/CaptureController.h"
 #include "imgui_impl_opengl3.h"
 
 #define ICON_MIN_FA 0xf000
@@ -19,6 +20,7 @@
 sf::RenderWindow* Interface::window = nullptr;
 Simulation* Interface::simulation = nullptr;
 std::unique_ptr<IRenderer>* Interface::renderer = nullptr;
+CaptureController* Interface::captureController = nullptr;
 
 sf::Clock Interface::clock;
 int Interface::selectedAtom = 0;
@@ -29,6 +31,11 @@ double Interface::averageEnergy = 0.0;
 int Interface::countSelectedAtom = 0;
 bool Interface::drawToolTrip = false;
 std::string Interface::toolTooltipText;
+bool Interface::captureRecording = false;
+bool Interface::captureAvailable = false;
+uint64_t Interface::captureFrameCount = 0;
+float Interface::captureFps = 0.0f;
+double Interface::captureBlinkElapsed = 0.0;
 int Interface::sim_step = 0;
 
 FontManager Interface::fontManager;
@@ -44,10 +51,11 @@ PeriodicPanel Interface::periodicPanel;
 StatsPanel Interface::statsPanel;
 SettingsPanel Interface::settingsPanel;
 
-int Interface::init(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r) {
+int Interface::init(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r, CaptureController& c) {
     window = &w;
     simulation = &s;
     renderer = &r;
+    captureController = &c;
 
     if (!ImGui::SFML::Init(*window, false)) return EXIT_FAILURE;
 
@@ -112,7 +120,7 @@ int Interface::Update() {
     ImGui::PushFont(fontManager.dialog);
         fileDialog.draw(styleManager.getScale());
         debugPanel.draw(styleManager.getScale(), window->getSize());
-        settingsPanel.draw(styleManager.getScale(), window->getSize(), *simulation, *renderer);
+        settingsPanel.draw(styleManager.getScale(), window->getSize(), *simulation, *renderer, *captureController, fileDialog);
         ioPanel.draw(styleManager.getScale(), window->getSize(), *simulation, fileDialog);
     ImGui::PopFont();
 

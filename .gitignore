@@ -75,3 +75,6 @@ cmake-build-*/
 
 # Python
 __pycache__/
+
+# user settings
+user_settings.cfg

@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <memory>
+#include <cstdint>
 
 #include "imgui-SFML.h"
 #include <SFML/Graphics.hpp>
@@ -22,6 +23,7 @@ private:
     static sf::RenderWindow* window;
     static Simulation* simulation;
     static std::unique_ptr<IRenderer>* renderer;
+    static class CaptureController* captureController;
     static sf::Clock clock;
     static int selectedAtom;
     static float simulationSpeed;
@@ -29,7 +31,7 @@ private:
     static int sim_step;
 public:
     static bool pause;
-    static int init(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r);
+    static int init(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r, CaptureController& c);
     static void shutdown();
     static int Update();
     static bool getPause();
@@ -42,6 +44,11 @@ public:
     static int countSelectedAtom;
     static bool drawToolTrip;
     static std::string toolTooltipText;
+    static bool captureRecording;
+    static bool captureAvailable;
+    static uint64_t captureFrameCount;
+    static float captureFps;
+    static double captureBlinkElapsed;
 
     static FontManager fontManager;
 

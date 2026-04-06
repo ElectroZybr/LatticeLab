@@ -16,8 +16,10 @@ struct ProfileNameAlias {
     std::string_view shortName;
 };
 
-constexpr std::array<ProfileNameAlias, 19> kProfileNameAliases{{
+constexpr std::array<ProfileNameAlias, 21> kProfileNameAliases{{
     {"Application::RenderFrame", "Render"},
+    {"Capture::readback", "capture"},
+    {"Capture::encodeFrame", "encode"},
     {"Simulation::update", "Physics"},
     {"RendererGL::drawShot", "drawShot"},
     {"RendererGL::drawAtoms", "drawAtoms"},

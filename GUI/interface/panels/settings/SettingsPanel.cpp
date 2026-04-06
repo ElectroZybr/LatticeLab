@@ -1,8 +1,12 @@
 #include "SettingsPanel.h"
+#include <array>
+#include <cstdio>
 #include <imgui.h>
 
 #include "AppVersion.h"
+#include "App/capture/CaptureController.h"
 #include "Engine/Simulation.h"
+#include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/style/ComboStyle.h"
 #include "Rendering/BaseRenderer.h"
 #include "App/AppSignals.h"
@@ -26,9 +30,28 @@ const char* speedColorModeName(IRenderer::SpeedColorMode mode) {
     }
     return "Обычная раскраска";
 }
+
+const char* capturePresetName(CaptureSettings::Preset preset) {
+    switch (preset) {
+        case CaptureSettings::Preset::Ultrafast: return "ultrafast";
+        case CaptureSettings::Preset::Veryfast:  return "veryfast";
+        case CaptureSettings::Preset::Faster:    return "faster";
+        case CaptureSettings::Preset::Fast:      return "fast";
+        case CaptureSettings::Preset::Medium:    return "medium";
+    }
+    return "veryfast";
+}
+
+const char* capturePixelFormatName(CaptureSettings::PixelFormat pixelFormat) {
+    switch (pixelFormat) {
+        case CaptureSettings::PixelFormat::Yuv420p: return "I420";
+        case CaptureSettings::PixelFormat::Yuv444p: return "I444";
+    }
+    return "I444";
+}
 } // namespace
 
-void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
+void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, CaptureController& captureController, FileDialogManager& fileDialog) {
     float target = visible ? 1.f : 0.f;
     float step = ImGui::GetIO().DeltaTime * 12.f;
     animProgress += (target - animProgress) * std::min(step, 1.f);
@@ -186,6 +209,99 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
     float skin = simulation.getNeighborListSkin();
     if (ImGui::SliderFloat("Skin NL", &skin, 0.1f, 10.0f, "%.2f")) {
         simulation.setNeighborListSkin(skin);
+    }
+
+    if (captureController.isAvailable()) {
+    ImGui::SeparatorText("Запись");
+    CaptureSettings captureSettings = captureController.settings();
+    const bool recordingActive = captureController.isRecording();
+    const std::string captureDir = captureController.outputDirectory().string();
+
+    ImGui::TextUnformatted("Папка сохранения видео");
+    std::array<char, 512> captureDirBuffer{};
+    std::snprintf(captureDirBuffer.data(), captureDirBuffer.size(), "%s", captureDir.c_str());
+    const float browseButtonWidth = ImGui::GetFrameHeight();
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseButtonWidth - ImGui::GetStyle().ItemSpacing.x);
+    ImGui::InputText("##capture_dir", captureDirBuffer.data(), captureDirBuffer.size(), ImGuiInputTextFlags_ReadOnly);
+    ImGui::SameLine();
+    if (ImGui::Button("...##capture_dir_browse", ImVec2(browseButtonWidth, 0.0f))) {
+        fileDialog.openCaptureDirectory(captureDir);
+    }
+
+    ImGui::BeginDisabled(recordingActive);
+
+    if (ImGui::BeginTable("##capture_settings_table", 2, ImGuiTableFlags_SizingStretchSame)) {
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        int captureFps = captureSettings.fps;
+        if (ImGui::SliderInt("FPS##capture_fps", &captureFps, 10, 60)) {
+            captureSettings.fps = captureFps;
+            captureController.setSettings(captureSettings);
+        }
+
+        ImGui::TableSetColumnIndex(1);
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        int crf = captureSettings.crf;
+        if (ImGui::SliderInt("CRF##capture_crf", &crf, 12, 30)) {
+            captureSettings.crf = crf;
+            captureController.setSettings(captureSettings);
+        }
+
+        ImGui::TableNextRow();
+
+        ImGui::TableSetColumnIndex(0);
+        CaptureSettings::Preset preset = captureSettings.preset;
+        if (ComboStyle::beginCombo("Preset##capture_preset", capturePresetName(preset), -FLT_MIN, uiScale)) {
+            const CaptureSettings::Preset presets[] = {
+                CaptureSettings::Preset::Ultrafast,
+                CaptureSettings::Preset::Veryfast,
+                CaptureSettings::Preset::Faster,
+                CaptureSettings::Preset::Fast,
+                CaptureSettings::Preset::Medium,
+            };
+
+            for (CaptureSettings::Preset candidate : presets) {
+                const bool isSelected = (candidate == preset);
+                if (ImGui::Selectable(capturePresetName(candidate), isSelected)) {
+                    captureSettings.preset = candidate;
+                    captureController.setSettings(captureSettings);
+                    preset = candidate;
+                }
+                if (isSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        ImGui::TableSetColumnIndex(1);
+        CaptureSettings::PixelFormat pixelFormat = captureSettings.pixelFormat;
+        if (ComboStyle::beginCombo("Цвет##capture_color", capturePixelFormatName(pixelFormat), -FLT_MIN, uiScale)) {
+        const CaptureSettings::PixelFormat pixelFormats[] = {
+            CaptureSettings::PixelFormat::Yuv444p,
+            CaptureSettings::PixelFormat::Yuv420p,
+        };
+
+        for (CaptureSettings::PixelFormat candidate : pixelFormats) {
+            const bool isSelected = (candidate == pixelFormat);
+            if (ImGui::Selectable(capturePixelFormatName(candidate), isSelected)) {
+                captureSettings.pixelFormat = candidate;
+                captureController.setSettings(captureSettings);
+                pixelFormat = candidate;
+            }
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+        }
+
+        ImGui::EndTable();
+    }
+
+    ImGui::EndDisabled();
     }
 
     const float exitButtonWidth = ImGui::GetContentRegionAvail().x;
