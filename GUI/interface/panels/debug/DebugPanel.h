@@ -3,7 +3,7 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "view/DebugView.h"
+#include "GUI/interface/panels/debug/view/DebugView.h"
 
 class DebugPanel {
     std::deque<DebugView> views;

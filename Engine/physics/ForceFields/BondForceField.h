@@ -2,8 +2,8 @@
 
 #include <cstdint>
 
-#include "../AtomStorage.h"
-#include "../Bond.h"
+#include "Engine/physics/AtomStorage.h"
+#include "Engine/physics/Bond.h"
 
 class NeighborList;
 

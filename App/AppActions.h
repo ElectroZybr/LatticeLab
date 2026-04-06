@@ -1,11 +1,10 @@
 #pragma once
 
-#include "AppSignals.h"
-#include "AppStateIO.h"
-#include "Scenes.h"
-
 #include <memory>
 
+#include "App/AppSignals.h"
+#include "App/AppStateIO.h"
+#include "App/Scenes.h"
 #include "App/interaction/ToolsManager.h"
 #include "Engine/Simulation.h"
 #include "Engine/metrics/Profiler.h"

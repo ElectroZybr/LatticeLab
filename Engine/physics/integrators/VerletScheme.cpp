@@ -1,8 +1,7 @@
 #include "VerletScheme.h"
 
-#include "StepOps.h"
-
 #include "Engine/metrics/Profiler.h"
+#include "Engine/physics/integrators/StepOps.h"
 
 void VerletScheme::pipeline(StepData& stepData) const {
     PROFILE_SCOPE("VerletScheme::pipeline");

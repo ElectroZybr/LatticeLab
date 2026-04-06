@@ -9,7 +9,7 @@
 #include <variant>
 #include <vector>
 
-#include "../DebugEntry.h"
+#include "GUI/interface/panels/debug/DebugEntry.h"
 
 class DebugView {
 public:

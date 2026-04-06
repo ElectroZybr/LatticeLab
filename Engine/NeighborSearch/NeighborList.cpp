@@ -1,15 +1,14 @@
 #include "NeighborList.h"
 
-#include "SpatialGrid.h"
-
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <vector>
 
-#include "../SimBox.h"
-#include "../metrics/Profiler.h"
-#include "../physics/AtomStorage.h"
+#include "Engine/NeighborSearch/SpatialGrid.h"
+#include "Engine/SimBox.h"
+#include "Engine/metrics/Profiler.h"
+#include "Engine/physics/AtomStorage.h"
 #include "Engine/restrict.h"
 
 void NeighborList::setCutoff(float cutoff) {

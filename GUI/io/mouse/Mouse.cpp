@@ -1,4 +1,4 @@
-#include "GUI/io/mouse/Mouse.h"
+#include "Mouse.h"
 
 #include <cmath>
 #include <iostream>

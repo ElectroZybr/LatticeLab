@@ -5,12 +5,12 @@
 #include <sstream>
 #include <stdexcept>
 
-#include <App/interaction/ToolsManager.h>
-#include <Engine/metrics/Profiler.h>
 #include <SFML/Window/Context.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "App/interaction/ToolsManager.h"
+#include "Engine/metrics/Profiler.h"
 #include "Engine/physics/Bond.h"
 
 #ifdef __APPLE__

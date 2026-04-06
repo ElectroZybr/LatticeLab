@@ -1,4 +1,4 @@
-#include "App/Application.h"
+#include "Application.h"
 
 #include <cmath>
 #include <cstdlib>

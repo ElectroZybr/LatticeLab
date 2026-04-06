@@ -1,6 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include "fixtures/SimulationFixture.h"
+#include "Benchmarks/fixtures/SimulationFixture.h"
 
 // @bench_meta {"id":"SimulationFixture/NeighborListNeedRebuild","ru":"Проверка NeighborList::needsRebuild","group":"Симуляция/Сетка и
 // соседи"}

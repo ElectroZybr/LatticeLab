@@ -73,6 +73,7 @@ add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
+include_directories(${imgui_SOURCE_DIR})
 
 # --- Настройка ImGui-SFML ---
 FetchContent_Declare(

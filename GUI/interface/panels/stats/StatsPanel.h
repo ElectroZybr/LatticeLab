@@ -1,7 +1,6 @@
 #pragma once
-#include "imgui.h"
-
 #include <SFML/Graphics.hpp>
+#include <imgui.h>
 
 class StatsPanel {
 public:

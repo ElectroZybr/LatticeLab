@@ -1,14 +1,13 @@
 #pragma once
 
-#include "BenchmarkCase.h"
-#include "BenchmarkScenes.h"
-
 #include <cstdlib>
 #include <memory>
 #include <string>
 
 #include <benchmark/benchmark.h>
 
+#include "Benchmarks/BenchmarkCase.h"
+#include "Benchmarks/BenchmarkScenes.h"
 #include "Engine/Simulation.h"
 #include "Engine/physics/integrators/StepOps.h"
 #include "Engine/physics/integrators/VerletScheme.h"

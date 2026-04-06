@@ -34,10 +34,9 @@ public:
         }
         if (rebuildCount_ == 0) {
             averageRebuildTimeMs_ = rebuildTimeMs;
-        } else {
-            averageRebuildTimeMs_ +=
-                (rebuildTimeMs - averageRebuildTimeMs_) /
-                static_cast<float>(rebuildCount_ + 1);
+        }
+        else {
+            averageRebuildTimeMs_ += (rebuildTimeMs - averageRebuildTimeMs_) / static_cast<float>(rebuildCount_ + 1);
         }
 
         lastRebuildStep_ = simStep;
@@ -50,8 +49,7 @@ public:
         if (rebuildCount_ <= 1) {
             return 0.0f;
         }
-        return static_cast<float>(rebuildIntervalsSum_) /
-            static_cast<float>(rebuildCount_ - 1);
+        return static_cast<float>(rebuildIntervalsSum_) / static_cast<float>(rebuildCount_ - 1);
     }
 
     [[nodiscard]] float recentAverageStepsBetweenRebuilds() const {

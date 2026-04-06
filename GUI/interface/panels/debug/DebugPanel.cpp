@@ -1,6 +1,6 @@
 #include "DebugPanel.h"
 
-#include "imgui.h"
+#include <imgui.h>
 
 DebugView* DebugPanel::addView(DebugView view) {
     views.emplace_back(std::move(view));

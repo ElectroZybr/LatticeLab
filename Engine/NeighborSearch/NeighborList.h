@@ -1,12 +1,11 @@
 ﻿#pragma once
 
-#include "SpatialGrid.h"
-
 #include <cstdint>
 #include <vector>
 
-#include "../metrics/NeighborListStats.h"
-#include "../physics/AtomStorage.h"
+#include "Engine/NeighborSearch/SpatialGrid.h"
+#include "Engine/metrics/NeighborListStats.h"
+#include "Engine/physics/AtomStorage.h"
 
 class SimBox;
 

@@ -1,14 +1,13 @@
 #pragma once
 
-#include "AtomStorage.h"
-#include "Bond.h"
-
 #include "Engine/SimBox.h"
 #include "Engine/math/Vec3f.h"
-#include "ForceFields/BondForceField.h"
-#include "ForceFields/CoulombForceField.h"
-#include "ForceFields/LJForceField.h"
-#include "ForceFields/WallForceField.h"
+#include "Engine/physics/AtomStorage.h"
+#include "Engine/physics/Bond.h"
+#include "Engine/physics/ForceFields/BondForceField.h"
+#include "Engine/physics/ForceFields/CoulombForceField.h"
+#include "Engine/physics/ForceFields/LJForceField.h"
+#include "Engine/physics/ForceFields/WallForceField.h"
 
 class NeighborList;
 

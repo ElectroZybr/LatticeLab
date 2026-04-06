@@ -1,8 +1,7 @@
 #pragma once
 
-#include "imgui.h"
-
 #include <SFML/System/Vector2.hpp>
+#include <imgui.h>
 
 class SideToolsPanel {
 public:

@@ -8,12 +8,11 @@ class ForceField;
 class NeighborList;
 class SimBox;
 
-#include "Bond.h"
-
-#include "integrators/KDKScheme.h"
-#include "integrators/LangevinScheme.h"
-#include "integrators/RK4Scheme.h"
-#include "integrators/VerletScheme.h"
+#include "Engine/physics/Bond.h"
+#include "Engine/physics/integrators/KDKScheme.h"
+#include "Engine/physics/integrators/LangevinScheme.h"
+#include "Engine/physics/integrators/RK4Scheme.h"
+#include "Engine/physics/integrators/VerletScheme.h"
 
 struct StepData {
     AtomStorage& atomStorage;

@@ -1,10 +1,9 @@
 #pragma once
-#include "imgui.h"
-
 #include <cstdint>
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
+#include <imgui.h>
 
 enum class RendererType : uint8_t {
     Renderer2D,

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "AtomData.h"
-
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -10,6 +8,7 @@
 #include <vector>
 
 #include "Engine/math/Vec3f.h"
+#include "Engine/physics/AtomData.h"
 
 class AtomStorage {
 private:

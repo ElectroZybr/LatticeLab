@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include "../metrics/Profiler.h"
+#include "Engine/metrics/Profiler.h"
 
 SpatialGrid::SpatialGrid(int sizeX, int sizeY, int sizeZ, int cellSize) : sizeX(0), sizeY(0), sizeZ(0), cellSize(cellSize) {
     if (sizeX < 0 || sizeY < 0 || sizeZ < 0) {

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "DebugDrawers.h"
-
 #include <any>
 #include <cstdint>
 #include <string>
 #include <string_view>
+
+#include "GUI/interface/panels/debug/DebugDrawers.h"
 
 enum class DebugDisplayType : uint8_t { Series, Value };
 

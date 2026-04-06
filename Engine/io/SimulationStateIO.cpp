@@ -4,7 +4,7 @@
 #include <sstream>
 #include <vector>
 
-#include "../Simulation.h"
+#include "Engine/Simulation.h"
 
 void SimulationStateIO::save(const Simulation& simulation, std::string_view path) {
     std::ofstream file(path.data());

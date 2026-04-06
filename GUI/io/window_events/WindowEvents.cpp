@@ -1,6 +1,6 @@
 #include "WindowEvents.h"
 
-#include "imgui-SFML.h"
+#include <imgui-SFML.h>
 
 #include "GUI/interface/interface.h"
 
