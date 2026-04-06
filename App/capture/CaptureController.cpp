@@ -11,6 +11,10 @@ CaptureSettings CaptureController::settings() const noexcept {
     return settings_;
 }
 
+bool CaptureController::isAvailable() const {
+    return available_;
+}
+
 void CaptureController::setSettings(const CaptureSettings& settings) noexcept {
     settings_ = settings;
 }
@@ -49,6 +53,9 @@ void CaptureController::update(double deltaTime) {
 }
 
 void CaptureController::start() {
+    if (!isAvailable()) {
+        return;
+    }
     activeSessionFps_ = std::max(1, settings_.fps);
     frameRecorder_.start(makeCaptureOutputPath(), settings_);
     resetSessionStats();

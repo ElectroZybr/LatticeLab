@@ -98,13 +98,14 @@ int Application::run() {
         EventManager::poll();
         EventManager::frame(deltaTime);
         captureController.update(deltaTime);
+        Interface::captureAvailable = captureController.isAvailable();
         Interface::captureRecording = captureController.isRecording();
         Interface::captureFrameCount = captureController.savedFrameCount();
         Interface::captureFps = captureController.captureFps();
         Interface::captureBlinkElapsed = captureController.blinkElapsed();
 
         const bool captureKeyPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F8);
-        if (captureKeyPressed && !captureToggleHeld) {
+        if (Interface::captureAvailable && captureKeyPressed && !captureToggleHeld) {
             AppSignals::UI::ToggleCapture.emit();
         }
         captureToggleHeld = captureKeyPressed;

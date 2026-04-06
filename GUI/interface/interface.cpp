@@ -32,6 +32,7 @@ int Interface::countSelectedAtom = 0;
 bool Interface::drawToolTrip = false;
 std::string Interface::toolTooltipText;
 bool Interface::captureRecording = false;
+bool Interface::captureAvailable = false;
 uint64_t Interface::captureFrameCount = 0;
 float Interface::captureFps = 0.0f;
 double Interface::captureBlinkElapsed = 0.0;

@@ -135,11 +135,13 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
         AppSignals::UI::ClearSimulation.emit();
     }
 
-    const char* captureLabel = Interface::captureRecording ? "Стоп" : "Запись";
-    if (ImGui::Button(captureLabel, ImVec2(saveButtonWidth * scale, 0.f))) {
-        AppSignals::UI::ToggleCapture.emit();
+    if (Interface::captureAvailable) {
+        const char* captureLabel = Interface::captureRecording ? "Стоп" : "Запись";
+        if (ImGui::Button(captureLabel, ImVec2(saveButtonWidth * scale, 0.f))) {
+            AppSignals::UI::ToggleCapture.emit();
+        }
+        drawCaptureStatus();
     }
-    drawCaptureStatus();
 
     ImGui::SeparatorText("Размер бокса");
     bool boxSizeChanged = false;

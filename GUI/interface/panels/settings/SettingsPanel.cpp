@@ -211,6 +211,7 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
         simulation.setNeighborListSkin(skin);
     }
 
+    if (captureController.isAvailable()) {
     ImGui::SeparatorText("Запись");
     CaptureSettings captureSettings = captureController.settings();
     const bool recordingActive = captureController.isRecording();
@@ -301,6 +302,7 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
     }
 
     ImGui::EndDisabled();
+    }
 
     const float exitButtonWidth = ImGui::GetContentRegionAvail().x;
     const char* versionText = "LatticeLab v" LATTICELAB_VERSION_STRING " demo";

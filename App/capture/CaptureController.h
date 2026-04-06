@@ -10,6 +10,7 @@
 
 class CaptureController {
 public:
+    [[nodiscard]] bool isAvailable() const;
     [[nodiscard]] CaptureSettings settings() const noexcept;
     void setSettings(const CaptureSettings& settings) noexcept;
     [[nodiscard]] std::filesystem::path outputDirectory() const;
@@ -30,6 +31,7 @@ private:
     [[nodiscard]] std::filesystem::path makeCaptureOutputPath() const;
     void resetSessionStats();
 
+    bool available_ = FrameRecorder::isAvailable();
     CaptureSettings settings_{};
     std::filesystem::path outputDirectory_ = "captures";
     FrameRecorder frameRecorder_{};

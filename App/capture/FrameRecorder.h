@@ -38,6 +38,7 @@ public:
     void start(const std::filesystem::path& outputPath, CaptureSettings settings);
     void stop();
 
+    [[nodiscard]] static bool isAvailable();
     bool isRecording() const;
     bool submit(CapturedFrame frame);
 
