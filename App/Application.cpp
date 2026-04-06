@@ -37,11 +37,13 @@ int Application::run() {
     SimBox box(Vec3f(50, 50, 6));
     Simulation simulation(box);
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    Scenes::crystal(simulation, 50, AtomData::Type::Z, false);
+    // Scenes::crystal(simulation, 50, AtomData::Type::Z, false);
+    // simulation.createAtom(Vec3f(24, 25, 3), Vec3f(1, 0, 0), AtomData::Type::Na);
+    // simulation.createAtom(Vec3f(28, 25, 3), Vec3f(-1, 0, 0), AtomData::Type::Na);
 
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView, simulation.box());
     renderer->drawBonds = true;
-    renderer->speedColorMode = IRenderer::SpeedColorMode::GradientClassic;
+    renderer->speedColorMode = IRenderer::SpeedColorMode::AtomColor;
 
     // загрузка пользовательских настроек
     CaptureController captureController;
