@@ -2,17 +2,21 @@
 
 #include <string_view>
 
-#include "CreateDebugPanels.h"
-#include "UpdateDebugData.h"
+#include "App/debug/CreateDebugPanels.h"
+#include "App/debug/UpdateDebugData.h"
 #include "Engine/Simulation.h"
 #include "Engine/physics/Integrator.h"
 
 inline std::string_view integratorSchemeName(Integrator::Scheme scheme) {
     switch (scheme) {
-        case Integrator::Scheme::Verlet:   return "Velocity Verlet";
-        case Integrator::Scheme::KDK:      return "KDK (Kick-Drift-Kick)";
-        case Integrator::Scheme::RK4:      return "Runge-Kutta 4";
-        case Integrator::Scheme::Langevin: return "Langevin";
+    case Integrator::Scheme::Verlet:
+        return "Velocity Verlet";
+    case Integrator::Scheme::KDK:
+        return "KDK (Kick-Drift-Kick)";
+    case Integrator::Scheme::RK4:
+        return "Runge-Kutta 4";
+    case Integrator::Scheme::Langevin:
+        return "Langevin";
     }
     return "Unknown";
 }

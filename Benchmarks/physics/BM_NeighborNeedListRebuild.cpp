@@ -1,8 +1,9 @@
 #include <benchmark/benchmark.h>
 
-#include "fixtures/SimulationFixture.h"
+#include "Benchmarks/fixtures/SimulationFixture.h"
 
-// @bench_meta {"id":"SimulationFixture/NeighborListNeedRebuild","ru":"Проверка NeighborList::needsRebuild","group":"Симуляция/Сетка и соседи"}
+// @bench_meta {"id":"SimulationFixture/NeighborListNeedRebuild","ru":"Проверка NeighborList::needsRebuild","group":"Симуляция/Сетка и
+// соседи"}
 BENCHMARK_DEFINE_F(SimulationFixture, NeighborListNeedRebuild)(benchmark::State& state) {
     rebuildScene();
 
@@ -15,5 +16,4 @@ BENCHMARK_DEFINE_F(SimulationFixture, NeighborListNeedRebuild)(benchmark::State&
     setCounters(state);
 }
 
-BENCHMARK_REGISTER_F(SimulationFixture, NeighborListNeedRebuild)
-    ->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);
+BENCHMARK_REGISTER_F(SimulationFixture, NeighborListNeedRebuild)->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);

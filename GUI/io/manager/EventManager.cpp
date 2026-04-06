@@ -1,8 +1,9 @@
 #include "EventManager.h"
-#include "imgui-SFML.h"
 
-#include "GUI/io/mouse/Mouse.h"
+#include <imgui-SFML.h>
+
 #include "GUI/io/keyboard/Keyboard.h"
+#include "GUI/io/mouse/Mouse.h"
 #include "GUI/io/window_events/WindowEvents.h"
 
 sf::RenderWindow* EventManager::window = nullptr;

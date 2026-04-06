@@ -6,8 +6,7 @@
 #include "Engine/physics/AtomStorage.h"
 #include "GUI/interface/interface.h"
 
-CursorTool::CursorTool(ToolContext& context) noexcept
-    : ITool(context) {}
+CursorTool::CursorTool(ToolContext& context) noexcept : ITool(context) {}
 
 void CursorTool::onLeftPressed(sf::Vector2i mousePos) {
     ToolContext& ctx = context();
@@ -15,8 +14,8 @@ void CursorTool::onLeftPressed(sf::Vector2i mousePos) {
         return;
     }
 
-    const bool cumulative = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl)
-        || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
+    const bool cumulative =
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
 
     ctx.pickingSystem->processClick(mousePos, cumulative);
 

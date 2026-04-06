@@ -4,7 +4,7 @@
 #include <sstream>
 #include <vector>
 
-#include "../Simulation.h"
+#include "Engine/Simulation.h"
 
 void SimulationStateIO::save(const Simulation& simulation, std::string_view path) {
     std::ofstream file(path.data());
@@ -30,11 +30,8 @@ void SimulationStateIO::save(const Simulation& simulation, std::string_view path
     for (size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
         const Vec3f pos = atoms.pos(atomIndex);
         const Vec3f vel = atoms.vel(atomIndex);
-        file << "atom "
-             << pos.x << " " << pos.y << " " << pos.z << " "
-             << vel.x << " " << vel.y << " " << vel.z << " "
-             << static_cast<int>(atoms.type(atomIndex)) << " "
-             << atoms.isAtomFixed(atomIndex) << "\n";
+        file << "atom " << pos.x << " " << pos.y << " " << pos.z << " " << vel.x << " " << vel.y << " " << vel.z << " "
+             << static_cast<int>(atoms.type(atomIndex)) << " " << atoms.isAtomFixed(atomIndex) << "\n";
     }
 }
 
@@ -68,43 +65,54 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
     while (file >> tag) {
         if (tag == "box") {
             file >> boxSize.x >> boxSize.y >> boxSize.z;
-        } else if (tag == "step") {
+        }
+        else if (tag == "step") {
             file >> loadedStep;
-        } else if (tag == "time_ns") {
+        }
+        else if (tag == "time_ns") {
             file >> loadedTimeNs;
-        } else if (tag == "dt") {
+        }
+        else if (tag == "dt") {
             file >> loadedDt;
-        } else if (tag == "integrator") {
+        }
+        else if (tag == "integrator") {
             file >> loadedIntegrator;
-        } else if (tag == "gravity") {
+        }
+        else if (tag == "gravity") {
             file >> loadedGravity.x >> loadedGravity.y >> loadedGravity.z;
-        } else if (tag == "bond_formation") {
+        }
+        else if (tag == "bond_formation") {
             int enabled = 0;
             file >> enabled;
             loadedBondFormationEnabled = (enabled != 0);
-        } else if (tag == "cell_size") {
+        }
+        else if (tag == "cell_size") {
             file >> cellSize;
-        } else if (tag == "cutoff_nl") {
+        }
+        else if (tag == "cutoff_nl") {
             float cutoff = simulation.getNeighborListCutoff();
             file >> cutoff;
             simulation.setNeighborListCutoff(cutoff);
-        } else if (tag == "skin_nl") {
+        }
+        else if (tag == "skin_nl") {
             float skin = simulation.getNeighborListSkin();
             file >> skin;
             simulation.setNeighborListSkin(skin);
-        } else if (tag == "max_speed") {
+        }
+        else if (tag == "max_speed") {
             file >> loadedMaxSpeed;
-        } else if (tag == "accel_damping") {
+        }
+        else if (tag == "accel_damping") {
             file >> loadedAccelDamping;
-        } else if (tag == "atom") {
+        }
+        else if (tag == "atom") {
             LoadedAtomData data{Vec3f(0.f, 0.f, 0.f), Vec3f(0.f, 0.f, 0.f), 0, false};
             std::string atomLine;
             std::getline(file, atomLine);
             std::istringstream atomStream(atomLine);
 
-            if (!(atomStream >> data.coords.x >> data.coords.y >> data.coords.z
-                             >> data.speed.x  >> data.speed.y  >> data.speed.z
-                             >> data.type)) {
+            if (!(atomStream >> data.coords.x >> data.coords.y >> data.coords.z >> data.speed.x >> data.speed.y >> data.speed.z >>
+                  data.type)) {
                 continue;
             }
 

@@ -1,10 +1,10 @@
 #include "Application.h"
 #include "AppActions.h"
 #include "AppSignals.h"
-#include "UserSettings.h"
 #include "CreateWindow.h"
+#include "Scenes.h"
+#include "UserSettings.h"
 #include "capture/CaptureController.h"
-#include "capture/FrameRecorder.h"
 #include "debug/CreateDebugPanels.h"
 #include "debug/DebugRuntime.h"
 
@@ -22,10 +22,7 @@
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
 #include "Rendering/2d/Renderer2D.h"
-#include "Rendering/RendererCapture.h"
 #include "Signals/Signals.h"
-
-#include "Scenes.h"
 
 constexpr int FPS = 60;
 constexpr int LPS = 20;
@@ -55,13 +52,10 @@ int Application::run() {
     AppActions::init(simulation, renderer, window, gameView);
     Interface::init(window, simulation, renderer, captureController);
     EventManager::init(&window, &gameView, renderer, &simulation.box(), &simulation.atoms());
-    ToolsManager::init(&window, &gameView, &box.grid, &box, renderer, &simulation.atoms(),
-                [&](Vec3f coords, Vec3f speed, AtomData::Type type, bool fixed) {
-                    return simulation.createAtom(coords, speed, type, fixed);
-                },
-                [&](size_t atomIndex) {
-                    return simulation.removeAtom(atomIndex);
-                });
+    ToolsManager::init(
+        &window, &gameView, &box.grid, &box, renderer, &simulation.atoms(),
+        [&](Vec3f coords, Vec3f speed, AtomData::Type type, bool fixed) { return simulation.createAtom(coords, speed, type, fixed); },
+        [&](size_t atomIndex) { return simulation.removeAtom(atomIndex); });
     Interface::pause = true;
 
     const DebugViews debugViews = createDebugViews(Interface::debugPanel);
@@ -115,7 +109,8 @@ int Application::run() {
                 simulation.update();
                 Profiler::instance().addCount("Simulation::steps");
                 physicsAccum = 0.0;
-            } else {
+            }
+            else {
                 physicsAccum = 0.0;
             }
         }

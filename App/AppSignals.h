@@ -2,11 +2,10 @@
 
 #include <string_view>
 
-#include "Signals/Signals.h"
 #include "Engine/math/Vec3f.h"
-
 #include "GUI/interface/panels/tools/ToolsPanel.h"
 #include "Rendering/camera/Camera.h"
+#include "Signals/Signals.h"
 
 namespace AppSignals {
     namespace UI {

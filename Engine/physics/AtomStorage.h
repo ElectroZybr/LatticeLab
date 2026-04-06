@@ -1,14 +1,14 @@
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <utility>
 #include <vector>
-#include <span>
-#include <algorithm>
-#include "Engine/math/Vec3f.h"
 
-#include "AtomData.h"
+#include "Engine/math/Vec3f.h"
+#include "Engine/physics/AtomData.h"
 
 class AtomStorage {
 private:
@@ -49,20 +49,20 @@ private:
         }
 
         float* base = floatData_.data();
-        x_       = base +  0 * capacity_;
-        y_       = base +  1 * capacity_;
-        z_       = base +  2 * capacity_;
-        fx_      = base +  3 * capacity_;
-        fy_      = base +  4 * capacity_;
-        fz_      = base +  5 * capacity_;
-        pe_      = base +  6 * capacity_;
-        vx_      = base +  7 * capacity_;
-        vy_      = base +  8 * capacity_;
-        vz_      = base +  9 * capacity_;
+        x_ = base + 0 * capacity_;
+        y_ = base + 1 * capacity_;
+        z_ = base + 2 * capacity_;
+        fx_ = base + 3 * capacity_;
+        fy_ = base + 4 * capacity_;
+        fz_ = base + 5 * capacity_;
+        pe_ = base + 6 * capacity_;
+        vx_ = base + 7 * capacity_;
+        vy_ = base + 8 * capacity_;
+        vz_ = base + 9 * capacity_;
         invMass_ = base + 10 * capacity_;
-        pfx_     = base + 11 * capacity_;
-        pfy_     = base + 12 * capacity_;
-        pfz_     = base + 13 * capacity_;
+        pfx_ = base + 11 * capacity_;
+        pfy_ = base + 12 * capacity_;
+        pfz_ = base + 13 * capacity_;
     }
 
     void ensureCapacity(size_t requiredCount) {
@@ -80,16 +80,10 @@ private:
         if (count_ > 0) {
             float* newBase = newFloatData.data();
 
-            auto getNewFieldPtr = [&](size_t fieldIndex) {
-                return newBase + (fieldIndex * newCapacity);
-            };
+            auto getNewFieldPtr = [&](size_t fieldIndex) { return newBase + (fieldIndex * newCapacity); };
 
-            const std::array<float*, kFloatFieldCount> oldFields = {
-                x_, y_, z_, 
-                fx_, fy_, fz_, pe_, 
-                vx_, vy_, vz_, invMass_, 
-                pfx_, pfy_, pfz_
-            };
+            const std::array<float*, kFloatFieldCount> oldFields = {x_,  y_,  z_,  fx_,      fy_,  fz_,  pe_,
+                                                                    vx_, vy_, vz_, invMass_, pfx_, pfy_, pfz_};
 
             for (size_t i = 0; i < oldFields.size(); ++i) {
                 std::copy_n(oldFields[i], count_, getNewFieldPtr(i));
@@ -135,13 +129,8 @@ public:
     AtomStorage& operator=(const AtomStorage&) = delete;
 
     AtomStorage(AtomStorage&& other) noexcept
-        : count_(other.count_)
-        , capacity_(other.capacity_)
-        , mobileCount_(other.mobileCount_)
-        , floatData_(std::move(other.floatData_))
-        , atomType_(std::move(other.atomType_))
-        , valence_(std::move(other.valence_))
-    {
+        : count_(other.count_), capacity_(other.capacity_), mobileCount_(other.mobileCount_), floatData_(std::move(other.floatData_)),
+          atomType_(std::move(other.atomType_)), valence_(std::move(other.valence_)) {
         bindFloatViews();
         other.count_ = 0;
         other.capacity_ = 0;
@@ -149,7 +138,9 @@ public:
         other.bindFloatViews();
     }
     AtomStorage& operator=(AtomStorage&& other) noexcept {
-        if (this == &other) return *this;
+        if (this == &other) {
+            return *this;
+        }
         count_ = other.count_;
         capacity_ = other.capacity_;
         mobileCount_ = other.mobileCount_;
@@ -170,9 +161,8 @@ public:
     size_t mobileCount() const { return mobileCount_; }
     bool empty() const { return count_ == 0; }
     size_t memoryBytes() const {
-        return floatData_.capacity() * sizeof(float)
-            + atomType_.capacity() * sizeof(AtomData::Type)
-            + valence_.capacity() * sizeof(uint8_t);
+        return floatData_.capacity() * sizeof(float) + atomType_.capacity() * sizeof(AtomData::Type) +
+               valence_.capacity() * sizeof(uint8_t);
     }
 
     void clear() {
@@ -216,7 +206,7 @@ public:
         pfx_[count_] = 0.0f;
         pfy_[count_] = 0.0f;
         pfz_[count_] = 0.0f;
-        pe_[count_]  = 0.0f;
+        pe_[count_] = 0.0f;
 
         atomType_.emplace_back(type);
         valence_.emplace_back(AtomData::getProps(type).maxValence);
@@ -259,7 +249,9 @@ public:
     }
 
     void removeAtom(size_t index) {
-        if (index >= count_) return;
+        if (index >= count_) {
+            return;
+        }
 
         const size_t lastIndex = count_ - 1;
         if (index < mobileCount_) {
@@ -321,12 +313,16 @@ public:
     bool isAtomFixed(size_t i) const { return i >= mobileCount_; }
     void setFixed(size_t i, bool fixed) {
         if (fixed) {
-            if (i >= mobileCount_) return;
+            if (i >= mobileCount_) {
+                return;
+            }
             --mobileCount_;
             swapAtoms(i, mobileCount_); // последний мобильный встаёт на место i
         }
         else {
-            if (i < mobileCount_) return;
+            if (i < mobileCount_) {
+                return;
+            }
             swapAtoms(i, mobileCount_); // первый фиксированный встаёт на место i
             ++mobileCount_;
         }

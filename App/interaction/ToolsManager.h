@@ -1,13 +1,14 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
 #include <array>
 #include <cstdint>
 #include <functional>
 #include <memory>
 
-#include "App/interaction/tools/ITool.h"
+#include <SFML/Graphics.hpp>
+
 #include "App/interaction/picking/PickingSystem.h"
+#include "App/interaction/tools/ITool.h"
 #include "Engine/NeighborSearch/SpatialGrid.h"
 #include "Engine/math/Vec3f.h"
 #include "Engine/physics/AtomData.h"
@@ -30,14 +31,8 @@ public:
         RemoveAtom,
     };
 
-    static void init(sf::RenderWindow* window,
-                     sf::View* gameView,
-                     SpatialGrid* grid,
-                     SimBox* box,
-                     std::unique_ptr<IRenderer>& renderer,
-                     AtomStorage* atomStorage = nullptr,
-                     AtomCreator atomCreator = {},
-                     AtomRemover atomRemover = {});
+    static void init(sf::RenderWindow* window, sf::View* gameView, SpatialGrid* grid, SimBox* box, std::unique_ptr<IRenderer>& renderer,
+                     AtomStorage* atomStorage = nullptr, AtomCreator atomCreator = {}, AtomRemover atomRemover = {});
 
     static Vec3f screenToWorld(sf::Vector2i mousePos);
     static sf::Vector2i worldToScreen(Vec3f pos);

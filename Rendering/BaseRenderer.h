@@ -2,10 +2,10 @@
 
 #include <cstdint>
 
-#include "Rendering/camera/Camera.h"
 #include "Engine/SimBox.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/physics/Bond.h"
+#include "Rendering/camera/Camera.h"
 
 class IRenderer {
 public:
@@ -17,19 +17,16 @@ public:
 
     virtual ~IRenderer() = default;
 
-    virtual void drawShot(const AtomStorage& atoms,
-                          const Bond::List& bonds,
-                          const SimBox& box) = 0;
+    virtual void drawShot(const AtomStorage& atoms, const Bond::List& bonds, const SimBox& box) = 0;
 
-    bool drawGrid           = false;
-    bool drawBonds          = false;
+    bool drawGrid = false;
+    bool drawBonds = false;
     SpeedColorMode speedColorMode = SpeedColorMode::AtomColor;
-    float speedGradientMax  = 5.0f;
-    float alpha             = 0.05f;
+    float speedGradientMax = 5.0f;
+    float alpha = 0.05f;
 
     Camera camera;
 
 protected:
-    IRenderer(sf::View& gv, SimBox& box)
-        : camera(&gv, box) {}
+    IRenderer(sf::View& gv, SimBox& box) : camera(&gv, box) {}
 };

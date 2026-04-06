@@ -1,16 +1,14 @@
-#include <cmath>
+#include "Camera.h"
+
 #include <algorithm>
-#include <Engine/SimBox.h>
+#include <cmath>
 
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "Camera.h"
+#include "Engine/SimBox.h"
 
-Camera::Camera(sf::View* view, SimBox& simBox, float moveSpeed, float zoomSpeed) 
-    : view(view), simBox(simBox), 
-    moveSpeed(moveSpeed), zoomSpeed(zoomSpeed),
-    isDragging(false), lastMousePos(0, 0)
-{}
+Camera::Camera(sf::View* view, SimBox& simBox, float moveSpeed, float zoomSpeed)
+    : view(view), simBox(simBox), moveSpeed(moveSpeed), zoomSpeed(zoomSpeed), isDragging(false), lastMousePos(0, 0) {}
 
 void Camera::update(sf::RenderTarget& target) {
     screenSize = sf::Vector2f(target.getSize());
@@ -39,14 +37,14 @@ void Camera::zoomAt(float factor, sf::Vector2f mousePos, sf::RenderWindow& windo
 
 void Camera::orbitDrag(sf::Vector2i delta) {
     constexpr float sensitivity = 0.005f;
-    azimuth   -= delta.x * sensitivity;
+    azimuth -= delta.x * sensitivity;
     elevation += delta.y * sensitivity;
     elevation = std::clamp(elevation, -1.5f, 1.5f);
 }
 
 void Camera::freeDrag(sf::Vector2i delta) {
     constexpr float sensitivity = 0.003f;
-    azimuth   -= delta.x * sensitivity;
+    azimuth -= delta.x * sensitivity;
     elevation -= delta.y * sensitivity;
     elevation = std::clamp(elevation, -1.5f, 1.5f);
 }
@@ -54,7 +52,7 @@ void Camera::freeDrag(sf::Vector2i delta) {
 // Для 3д режимов возвращает cameraPos + cameraDir * 10
 Vec3f Camera::screenToWorld(sf::Vector2i screenPos) const {
     if (mode == Mode::Mode2D) {
-        const sf::Vector2f viewSize   = view->getSize();
+        const sf::Vector2f viewSize = view->getSize();
         const sf::Vector2f viewCenter = view->getCenter();
         const float wx = viewCenter.x + (screenPos.x - screenSize.x * 0.5f) * (viewSize.x / screenSize.x);
         const float wy = viewCenter.y + (screenPos.y - screenSize.y * 0.5f) * (viewSize.y / screenSize.y);
@@ -67,49 +65,39 @@ Vec3f Camera::screenToWorld(sf::Vector2i screenPos) const {
 
 sf::Vector2i Camera::worldToScreen(Vec3f worldPos) const {
     if (mode == Mode::Mode2D) {
-        const sf::Vector2f viewSize   = view->getSize();
+        const sf::Vector2f viewSize = view->getSize();
         const sf::Vector2f viewCenter = view->getCenter();
         const float sx = (worldPos.x - viewCenter.x) * (screenSize.x / viewSize.x) + screenSize.x * 0.5f;
         const float sy = (worldPos.y - viewCenter.y) * (screenSize.y / viewSize.y) + screenSize.y * 0.5f;
         return sf::Vector2i(static_cast<int>(sx), static_cast<int>(sy));
     }
 
-    const glm::vec4 clip = getProjectionMatrix()
-                         * getViewMatrix()
-                         * glm::vec4(worldPos.x, worldPos.y, worldPos.z, 1.f);
+    const glm::vec4 clip = getProjectionMatrix() * getViewMatrix() * glm::vec4(worldPos.x, worldPos.y, worldPos.z, 1.f);
 
-    if (clip.w <= 0.f) return { -1, -1 };
+    if (clip.w <= 0.f) {
+        return {-1, -1};
+    }
 
     const float ndcX = clip.x / clip.w;
     const float ndcY = clip.y / clip.w;
 
-    return sf::Vector2i(
-        static_cast<int>(( ndcX + 1.f) * 0.5f * screenSize.x),
-        static_cast<int>((-ndcY + 1.f) * 0.5f * screenSize.y)
-    );
+    return sf::Vector2i(static_cast<int>((ndcX + 1.f) * 0.5f * screenSize.x), static_cast<int>((-ndcY + 1.f) * 0.5f * screenSize.y));
 }
 
 glm::vec3 Camera::getEyePosition() const {
-    if (mode == Mode::Free)
+    if (mode == Mode::Free) {
         return glm::vec3(freePosition.x, freePosition.y, freePosition.z);
+    }
 
     const Vec3f center = simBox.size / 2.f;
     const glm::vec3 glmCenter(center.x, center.y, center.z);
     const float r = moveSpeed / zoom;
-    return glmCenter + r * glm::vec3(
-        std::cos(elevation) * std::sin(azimuth),
-        std::sin(elevation),
-        std::cos(elevation) * std::cos(azimuth)
-    );
+    return glmCenter + r * glm::vec3(std::cos(elevation) * std::sin(azimuth), std::sin(elevation), std::cos(elevation) * std::cos(azimuth));
 }
 
 glm::mat4 Camera::getViewMatrix() const {
     if (mode == Mode::Free) {
-        const glm::vec3 forward(
-            std::cos(elevation) * std::sin(azimuth),
-            std::sin(elevation),
-            std::cos(elevation) * std::cos(azimuth)
-        );
+        const glm::vec3 forward(std::cos(elevation) * std::sin(azimuth), std::sin(elevation), std::cos(elevation) * std::cos(azimuth));
         const glm::vec3 eye(freePosition.x, freePosition.y, freePosition.z);
         return glm::lookAt(eye, eye + forward, glm::vec3(0.f, 1.f, 0.f));
     }
@@ -122,12 +110,7 @@ glm::mat4 Camera::getViewMatrix() const {
 
 glm::mat4 Camera::getProjectionMatrix() const {
     const float fov = (mode == Mode::Free) ? FOV_FREE : FOV_ORBIT;
-    return glm::perspective(
-        glm::radians(fov),
-        screenSize.x / screenSize.y,
-        NEAR,
-        FAR
-    );
+    return glm::perspective(glm::radians(fov), screenSize.x / screenSize.y, NEAR, FAR);
 }
 
 Ray Camera::screenToRay(float screenX, float screenY) const {
@@ -139,14 +122,9 @@ Ray Camera::screenToRay(float screenX, float screenY) const {
     glm::vec4 rayEye = glm::inverse(getProjectionMatrix()) * rayClip;
     rayEye = glm::vec4(rayEye.x / rayEye.w, rayEye.y / rayEye.w, -1.f, 0.f);
 
-    const glm::vec3 rayDirGLM = glm::normalize(
-        glm::vec3(glm::inverse(getViewMatrix()) * rayEye)
-    );
+    const glm::vec3 rayDirGLM = glm::normalize(glm::vec3(glm::inverse(getViewMatrix()) * rayEye));
 
     const glm::vec3 eye = getEyePosition();
 
-    return Ray(
-        Vec3f(eye.x, eye.y, eye.z),
-        Vec3f(rayDirGLM.x, rayDirGLM.y, rayDirGLM.z)
-    );
+    return Ray(Vec3f(eye.x, eye.y, eye.z), Vec3f(rayDirGLM.x, rayDirGLM.y, rayDirGLM.z));
 }

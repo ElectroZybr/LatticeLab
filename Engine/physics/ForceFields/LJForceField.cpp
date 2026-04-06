@@ -47,11 +47,15 @@ void LJForceField::compute(AtomStorage& atoms, NeighborList& neighborList) const
 
     for (size_t atomIndex = 0; atomIndex < atoms.mobileCount(); ++atomIndex) {
         // используем список соседей
-        if (atomIndex + 1 >= offsets.size()) break;
+        if (atomIndex + 1 >= offsets.size()) {
+            break;
+        }
 
         const uint32_t begin = offsets[atomIndex];
         const uint32_t end = offsets[atomIndex + 1];
-        if (begin > end || static_cast<size_t>(end) > neighbours.size()) continue;
+        if (begin > end || static_cast<size_t>(end) > neighbours.size()) {
+            continue;
+        }
 
         // загружаем данные текущего атома из AtomStorage
         float posX = atoms.posX(atomIndex);
@@ -76,9 +80,8 @@ void LJForceField::compute(AtomStorage& atoms, NeighborList& neighborList) const
     }
 }
 
-void LJForceField::pairInteraction(AtomStorage& atoms, uint32_t bIndex, const LJPairRow& ljPairRow,
-                                   float& forceX, float& forceY, float& forceZ,
-                                   float posX, float posY, float posZ, float& potenE) const {
+void LJForceField::pairInteraction(AtomStorage& atoms, uint32_t bIndex, const LJPairRow& ljPairRow, float& forceX, float& forceY,
+                                   float& forceZ, float posX, float posY, float posZ, float& potenE) const {
     // расчет вектора между атомами
     const float dx = atoms.posX(bIndex) - posX;
     const float dy = atoms.posY(bIndex) - posY;
@@ -96,11 +99,11 @@ void LJForceField::pairInteraction(AtomStorage& atoms, uint32_t bIndex, const LJ
     const float invD6 = invD2 * invD2 * invD2;
     const float invD12 = invD6 * invD6;
 
-    const float term6  = params.potentialC6 * invD6;
+    const float term6 = params.potentialC6 * invD6;
     const float term12 = params.potentialC12 * invD12;
 
     const float forceScale = (12.0f * term12 - 6.0f * term6) * invD2;
-    const float potential  = term12 - term6;
+    const float potential = term12 - term6;
 
     // расчет сил LJ
     const float pairForceX = dx * forceScale;

@@ -4,8 +4,7 @@
 #include "Engine/physics/AtomStorage.h"
 #include "GUI/interface/interface.h"
 
-AddAtomTool::AddAtomTool(ToolContext& context) noexcept
-    : ITool(context) {}
+AddAtomTool::AddAtomTool(ToolContext& context) noexcept : ITool(context) {}
 
 void AddAtomTool::onLeftPressed(sf::Vector2i mousePos) {
     ToolContext& ctx = context();
@@ -16,9 +15,8 @@ void AddAtomTool::onLeftPressed(sf::Vector2i mousePos) {
     const AtomData::Type atomType = static_cast<AtomData::Type>(Interface::getSelectedAtom());
     const Vec3f spawnPos = screenToWorld(mousePos);
 
-    if (!(1 <= spawnPos.x && spawnPos.x <= ctx.box->size.x - 1 &&
-          1 <= spawnPos.y && spawnPos.y <= ctx.box->size.y - 1 &&
-          1 <= spawnPos.z && spawnPos.z <= ctx.box->size.z - 1)) {
+    if (!(1 <= spawnPos.x && spawnPos.x <= ctx.box->size.x - 1 && 1 <= spawnPos.y && spawnPos.y <= ctx.box->size.y - 1 && 1 <= spawnPos.z &&
+          spawnPos.z <= ctx.box->size.z - 1)) {
         return;
     }
 

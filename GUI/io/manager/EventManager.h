@@ -1,7 +1,8 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
 #include <vector>
+
+#include <SFML/Graphics.hpp>
 
 class IRenderer;
 class SimBox;

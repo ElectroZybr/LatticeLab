@@ -3,7 +3,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
-#include "imgui.h"
+#include <imgui.h>
 
 enum class RendererType : uint8_t {
     Renderer2D,
@@ -17,14 +17,11 @@ class IOPanel;
 
 class ToolsPanel {
 public:
-    static constexpr ImGuiWindowFlags PANEL_FLAGS =
-        ImGuiWindowFlags_NoMove     |
-        ImGuiWindowFlags_NoResize   |
-        ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoScrollbar;
+    static constexpr ImGuiWindowFlags PANEL_FLAGS = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse |
+                                                    ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
 
     void draw(float scale, sf::RenderWindow& window, DebugPanel& debug, SettingsPanel& settings, IOPanel& ioPanel);
+
 private:
     bool is3D = false;
     bool isFree = false;

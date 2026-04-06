@@ -8,11 +8,11 @@ class ForceField;
 class NeighborList;
 class SimBox;
 
-#include "Bond.h"
-#include "integrators/KDKScheme.h"
-#include "integrators/LangevinScheme.h"
-#include "integrators/RK4Scheme.h"
-#include "integrators/VerletScheme.h"
+#include "Engine/physics/Bond.h"
+#include "Engine/physics/integrators/KDKScheme.h"
+#include "Engine/physics/integrators/LangevinScheme.h"
+#include "Engine/physics/integrators/RK4Scheme.h"
+#include "Engine/physics/integrators/VerletScheme.h"
 
 struct StepData {
     AtomStorage& atomStorage;
@@ -27,11 +27,11 @@ struct StepData {
 
 class Integrator {
 public:
-    enum class Scheme: uint8_t {
-        Verlet,      // классический Velocity Verlet: устойчивый и быстрый базовый выбор
-        KDK,         // Kick-Drift-Kick: симплектическая схема, удобна для поэтапного обновления сил
-        RK4,         // Runge-Kutta 4-го порядка: высокая точность на шаг, но дороже по вычислениям
-        Langevin,    // стохастический интегратор с термостатом (трение + случайный шум)
+    enum class Scheme : uint8_t {
+        Verlet,   // классический Velocity Verlet: устойчивый и быстрый базовый выбор
+        KDK,      // Kick-Drift-Kick: симплектическая схема, удобна для поэтапного обновления сил
+        RK4,      // Runge-Kutta 4-го порядка: высокая точность на шаг, но дороже по вычислениям
+        Langevin, // стохастический интегратор с термостатом (трение + случайный шум)
     };
 
     Integrator();

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../RendererGL.h"
+#include "Rendering/RendererGL.h"
 
 class Renderer3D : public RendererGL {
 public:

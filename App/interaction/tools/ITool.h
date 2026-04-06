@@ -1,8 +1,9 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
 #include <functional>
 #include <memory>
+
+#include <SFML/Graphics.hpp>
 
 #include "Engine/math/Vec3f.h"
 #include "Engine/physics/AtomData.h"
@@ -28,16 +29,10 @@ struct ToolContext {
     AtomRemover atomRemover{};
 
     [[nodiscard]] bool isValid() const noexcept {
-        return window != nullptr
-            && gameView != nullptr
-            && box != nullptr
-            && renderer != nullptr
-            && atomStorage != nullptr;
+        return window != nullptr && gameView != nullptr && box != nullptr && renderer != nullptr && atomStorage != nullptr;
     }
 
-    [[nodiscard]] IRenderer* activeRenderer() const noexcept {
-        return (renderer != nullptr) ? renderer->get() : nullptr;
-    }
+    [[nodiscard]] IRenderer* activeRenderer() const noexcept { return (renderer != nullptr) ? renderer->get() : nullptr; }
 };
 
 class ITool {

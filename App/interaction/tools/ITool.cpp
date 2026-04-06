@@ -2,18 +2,13 @@
 
 #include "Rendering/BaseRenderer.h"
 
-ITool::ITool(ToolContext& context) noexcept
-    : context_(context) {}
+ITool::ITool(ToolContext& context) noexcept : context_(context) {}
 
 ITool::~ITool() = default;
 
-void ITool::onLeftPressed(sf::Vector2i mousePos) {
-    (void)mousePos;
-}
+void ITool::onLeftPressed(sf::Vector2i mousePos) { (void)mousePos; }
 
-void ITool::onLeftReleased(sf::Vector2i mousePos) {
-    (void)mousePos;
-}
+void ITool::onLeftReleased(sf::Vector2i mousePos) { (void)mousePos; }
 
 bool ITool::onRightPressed(sf::Vector2i mousePos) {
     (void)mousePos;

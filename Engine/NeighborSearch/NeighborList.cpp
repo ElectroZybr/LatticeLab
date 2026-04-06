@@ -5,11 +5,10 @@
 #include <limits>
 #include <vector>
 
-#include "../physics/AtomStorage.h"
-#include "../metrics/Profiler.h"
-#include "SpatialGrid.h"
-#include "../SimBox.h"
-
+#include "Engine/NeighborSearch/SpatialGrid.h"
+#include "Engine/SimBox.h"
+#include "Engine/metrics/Profiler.h"
+#include "Engine/physics/AtomStorage.h"
 #include "Engine/restrict.h"
 
 void NeighborList::setCutoff(float cutoff) {
@@ -98,7 +97,7 @@ bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
     const float* RESTRICT refZ = refPosZ_.data();
 
     int rebuild = false;
-    #pragma GCC ivdep
+#pragma GCC ivdep
     for (uint32_t i = 0; i < n; ++i) {
         const float dx = x[i] - refX[i];
         const float dy = y[i] - refY[i];
@@ -121,16 +120,11 @@ uint32_t NeighborList::pairStorageSize() const {
 }
 
 uint32_t NeighborList::memoryBytes() const {
-    return neighbors_.capacity() * sizeof(uint32_t)
-        + offsets_.capacity() * sizeof(uint32_t)
-        + refPosX_.capacity() * sizeof(float)
-        + refPosY_.capacity() * sizeof(float)
-        + refPosZ_.capacity() * sizeof(float);
+    return neighbors_.capacity() * sizeof(uint32_t) + offsets_.capacity() * sizeof(uint32_t) + refPosX_.capacity() * sizeof(float) +
+           refPosY_.capacity() * sizeof(float) + refPosZ_.capacity() * sizeof(float);
 }
 
-void NeighborList::resetStats() {
-    stats_.reset();
-}
+void NeighborList::resetStats() { stats_.reset(); }
 
 void NeighborList::recordRebuild(int simStep) {
     const float rebuildTimeMs = static_cast<float>(Profiler::instance().lastMs("NeighborList::build"));
@@ -146,8 +140,10 @@ void NeighborList::reserveListBuffers(const AtomStorage& atoms, const SpatialGri
     refPosZ_.resize(atoms.mobileCount());
 
     // первый build — fallback, потом реальный размер из прошлого раза
-    if (prevCapacity > 0)
+    if (prevCapacity > 0) {
         neighbors_.reserve(prevCapacity);
-    else
+    }
+    else {
         neighbors_.reserve(atoms.size() * 64);
+    }
 }

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstddef>
-
 class AtomStorage;
 struct StepData;
 

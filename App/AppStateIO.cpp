@@ -42,20 +42,26 @@ void AppStateIO::load(Simulation& simulation, IRenderer& renderer, std::string_v
             int value = 0;
             file >> value;
             loadedDrawGrid = (value != 0);
-        } else if (tag == "draw_bonds") {
+        }
+        else if (tag == "draw_bonds") {
             int value = 0;
             file >> value;
             loadedDrawBonds = (value != 0);
-        } else if (tag == "speed_color_mode") {
+        }
+        else if (tag == "speed_color_mode") {
             file >> loadedSpeedColorMode;
-        } else if (tag == "speed_gradient_max") {
+        }
+        else if (tag == "speed_gradient_max") {
             file >> loadedSpeedGradientMax;
-        } else if (tag == "renderer_alpha") {
+        }
+        else if (tag == "renderer_alpha") {
             file >> loadedRendererAlpha;
-        } else if (tag == "atom") {
+        }
+        else if (tag == "atom") {
             std::string atomLine;
             std::getline(file, atomLine);
-        } else {
+        }
+        else {
             std::string ignoredLine;
             std::getline(file, ignoredLine);
         }
