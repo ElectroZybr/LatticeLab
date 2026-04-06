@@ -1,7 +1,7 @@
 #include "KDKScheme.h"
 
 #include "Engine/metrics/Profiler.h"
-#include "StepOps.h"
+#include "Engine/physics/integrators/StepOps.h"
 
 void KDKScheme::pipeline(StepData& stepData) const {
     PROFILE_SCOPE("KDKScheme::pipeline");
@@ -17,9 +17,9 @@ void KDKScheme::pipeline(StepData& stepData) const {
 
 void KDKScheme::halfKick(AtomStorage& atomStorage, float accelDamping, float dt) {
     PROFILE_SCOPE("KDKScheme::halfKick");
-    const float* RESTRICT fx  = atomStorage.fxData();
-    const float* RESTRICT fy  = atomStorage.fyData();
-    const float* RESTRICT fz  = atomStorage.fzData();
+    const float* RESTRICT fx = atomStorage.fxData();
+    const float* RESTRICT fy = atomStorage.fyData();
+    const float* RESTRICT fz = atomStorage.fzData();
 
     float* RESTRICT vx = atomStorage.vxData();
     float* RESTRICT vy = atomStorage.vyData();

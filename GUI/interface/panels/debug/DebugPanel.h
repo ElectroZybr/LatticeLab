@@ -3,12 +3,13 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "view/DebugView.h"
+#include "GUI/interface/panels/debug/view/DebugView.h"
 
 class DebugPanel {
     std::deque<DebugView> views;
     bool visible = false;
     float animProgress = 0.f;
+
 public:
     DebugView* addView(DebugView view);
 

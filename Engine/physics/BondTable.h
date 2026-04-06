@@ -1,11 +1,11 @@
 #pragma once
 
-#include "AtomData.h"
+#include "Engine/physics/AtomData.h"
 
 struct BondParams {
-    float r0=0;
-    float De=0;
-    float a=0;
+    float r0 = 0;
+    float De = 0;
+    float a = 0;
 };
 
 struct BondTable {
@@ -20,9 +20,7 @@ struct BondTable {
     }
 
     // получить параметры
-    const BondParams& get(AtomData::Type a, AtomData::Type b) const {
-        return table[(int)a][(int)b];
-    }
+    const BondParams& get(AtomData::Type a, AtomData::Type b) const { return table[(int)a][(int)b]; }
 };
 
 struct AngleTable {
@@ -37,7 +35,5 @@ struct AngleTable {
     }
 
     // получить параметры
-    const BondParams& get(AtomData::Type a, AtomData::Type b) const {
-        return table[(int)a][(int)b];
-    }
+    const BondParams& get(AtomData::Type a, AtomData::Type b) const { return table[(int)a][(int)b]; }
 };

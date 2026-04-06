@@ -1,19 +1,18 @@
 #pragma once
 
-#include "BaseRenderer.h"
-
 #include <array>
+
 #include <SFML/Graphics.hpp>
 #include <glad/glad.h>
+
+#include "Rendering/BaseRenderer.h"
 
 class RendererGL : public IRenderer {
 public:
     RendererGL(sf::RenderTarget& t, sf::View& gv, SimBox& simbox);
     virtual ~RendererGL();
 
-    void drawShot(const AtomStorage& atoms,
-                 const Bond::List& bondStorage,
-                  const SimBox& box) override;
+    void drawShot(const AtomStorage& atoms, const Bond::List& bondStorage, const SimBox& box) override;
 
 protected:
     virtual bool useLighting() { return true; }
@@ -30,11 +29,9 @@ protected:
 
     GLuint loadShader(GLenum type, std::string_view path, std::string_view defines = {});
     GLuint compileShader(GLenum type, std::string_view src);
-    GLuint linkProgram(std::string_view vert, std::string_view frag,
-                       std::string_view geom = "",
-                       std::string_view vertDefines = {});
+    GLuint linkProgram(std::string_view vert, std::string_view frag, std::string_view geom = "", std::string_view vertDefines = {});
 
-    void drawAtoms(const AtomStorage& atoms,  const SimBox& box);
+    void drawAtoms(const AtomStorage& atoms, const SimBox& box);
     void drawBox(const SimBox& box);
     void drawBondsGL(const AtomStorage& atomStorage, const Bond::List& bondStorage);
     void drawGridGL(const SpatialGrid& grid);
@@ -47,11 +44,11 @@ protected:
 
     // GL handles
     GLuint quadVbo = 0;
-    GLuint atomVao{0},    atomVbo{0},     atomShader{0};
+    GLuint atomVao{0}, atomVbo{0}, atomShader{0};
     std::array<GLuint, 3> atomShaders{{0, 0, 0}};
-    GLuint boxVao{0},     boxVbo{0},      boxShader{0};
-    GLuint bondVao{0},    bondVbo{0},     bondShader{0};
-    GLuint gridVao{0},    gridLineVbo{0}, gridInstVbo{0},  gridShader{0};
+    GLuint boxVao{0}, boxVbo{0}, boxShader{0};
+    GLuint bondVao{0}, bondVbo{0}, bondShader{0};
+    GLuint gridVao{0}, gridLineVbo{0}, gridInstVbo{0}, gridShader{0};
 
     // Атомы
     std::vector<float> radii;

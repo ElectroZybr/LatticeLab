@@ -2,7 +2,7 @@
 
 void BondTable::init() {
     // H–H (ковалентный)
-    set(AtomData::Type::H, AtomData::Type::H, BondParams{0.7414, 100, 1.99});//0.6, 0.5, 1.0, 2.5
+    set(AtomData::Type::H, AtomData::Type::H, BondParams{0.7414, 100, 1.99}); // 0.6, 0.5, 1.0, 2.5
 
     // O–H (водородная связь)
     set(AtomData::Type::O, AtomData::Type::H, BondParams{0.9572, 100, 2.63});

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "BenchmarkCase.h"
+#include "Benchmarks/BenchmarkCase.h"
 
 class Simulation;
 

@@ -2,16 +2,15 @@
 
 #include <memory>
 
-#include "Scenes.h"
-#include "AppStateIO.h"
-#include "Engine/Simulation.h"
+#include "App/AppSignals.h"
+#include "App/AppStateIO.h"
+#include "App/Scenes.h"
 #include "App/interaction/ToolsManager.h"
+#include "Engine/Simulation.h"
+#include "Engine/metrics/Profiler.h"
 #include "GUI/interface/interface.h"
 #include "Rendering/2d/Renderer2D.h"
 #include "Rendering/3d/Renderer3D.h"
-#include "Engine/metrics/Profiler.h"
-
-#include "AppSignals.h"
 
 namespace sf {
     class RenderWindow;
@@ -44,16 +43,12 @@ namespace AppActions {
 
     class Handler : public Signals::Trackable {
         void trackIOPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
-            track(AppSignals::UI::SaveSimulation.connect([&](std::string_view path) {
-                AppStateIO::save(simulation, *renderer, path);
-            }));
+            track(AppSignals::UI::SaveSimulation.connect([&](std::string_view path) { AppStateIO::save(simulation, *renderer, path); }));
             track(AppSignals::UI::LoadSimulation.connect([&](std::string_view path) {
                 AppStateIO::load(simulation, *renderer, path);
                 ToolsManager::resetInteractionState();
             }));
-            track(AppSignals::UI::ResizeBox.connect([&](const Vec3f& newSize) {
-                applyResizeBox(simulation, renderer, newSize);
-            }));
+            track(AppSignals::UI::ResizeBox.connect([&](const Vec3f& newSize) { applyResizeBox(simulation, renderer, newSize); }));
             track(AppSignals::UI::ClearSimulation.connect([&]() {
                 simulation.clear();
                 ToolsManager::resetInteractionState();
@@ -61,18 +56,14 @@ namespace AppActions {
             track(AppSignals::UI::CreateGas.connect([&]() {
                 simulation.clear();
                 ToolsManager::resetInteractionState();
-                Scenes::randomGas(simulation,
-                                  Interface::ioPanel.gasAtomCount(),
-                                  Interface::ioPanel.gasAtomType(),
-                                  Interface::ioPanel.gasIs3D(),
-                                  6.0,
-                                  6.0,
-                                  Interface::ioPanel.gasDensity());
+                Scenes::randomGas(simulation, Interface::ioPanel.gasAtomCount(), Interface::ioPanel.gasAtomType(),
+                                  Interface::ioPanel.gasIs3D(), 6.0, 6.0, Interface::ioPanel.gasDensity());
             }));
             track(AppSignals::UI::CreateCrystal.connect([&]() {
                 simulation.clear();
                 ToolsManager::resetInteractionState();
-                Scenes::crystal(simulation, Interface::ioPanel.sceneAxisCount(), Interface::ioPanel.atomType(), Interface::ioPanel.sceneIs3D());
+                Scenes::crystal(simulation, Interface::ioPanel.sceneAxisCount(), Interface::ioPanel.atomType(),
+                                Interface::ioPanel.sceneIs3D());
             }));
         }
 
@@ -97,14 +88,10 @@ namespace AppActions {
                 }
             }));
 
-            track(AppSignals::UI::SetCameraMode.connect([&](Camera::Mode mode) {
-                renderer->camera.setMode(mode);
-            }));
+            track(AppSignals::UI::SetCameraMode.connect([&](Camera::Mode mode) { renderer->camera.setMode(mode); }));
         }
 
-        void trackSettingsPanel(sf::Window& window) {
-            track(AppSignals::UI::ExitApplication.connect(&sf::Window::close, &window));
-        }
+        void trackSettingsPanel(sf::Window& window) { track(AppSignals::UI::ExitApplication.connect(&sf::Window::close, &window)); }
 
         void trackKeyboard(Simulation& simulation) {
             track(AppSignals::Keyboard::StepPhysics.connect([&]() {
@@ -119,6 +106,7 @@ namespace AppActions {
                 Profiler::instance().addCount("Simulation::steps");
             }));
         }
+
     public:
         Handler(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView) {
             trackIOPanel(simulation, renderer);

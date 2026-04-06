@@ -1,8 +1,8 @@
-#include <SFML/Graphics.hpp>
-
 #include "interface.h"
 #include "App/capture/CaptureController.h"
 #include "imgui_impl_opengl3.h"
+
+#include <SFML/Graphics.hpp>
 
 #define ICON_MIN_FA 0xf000
 #define ICON_MAX_FA 0xf897
@@ -57,13 +57,21 @@ int Interface::init(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRendere
     renderer = &r;
     captureController = &c;
 
-    if (!ImGui::SFML::Init(*window, false)) return EXIT_FAILURE;
+    if (!ImGui::SFML::Init(*window, false)) {
+        return EXIT_FAILURE;
+    }
 
     styleManager.applyCustomStyle();
 
-    if (!fontManager.load(styleManager.getScale())) return EXIT_FAILURE;
-    if (!ImGui_ImplOpenGL3_Init("#version 150")) return EXIT_FAILURE;
-    if (!ImGui_ImplOpenGL3_CreateFontsTexture()) return EXIT_FAILURE;
+    if (!fontManager.load(styleManager.getScale())) {
+        return EXIT_FAILURE;
+    }
+    if (!ImGui_ImplOpenGL3_Init("#version 150")) {
+        return EXIT_FAILURE;
+    }
+    if (!ImGui_ImplOpenGL3_CreateFontsTexture()) {
+        return EXIT_FAILURE;
+    }
     return EXIT_SUCCESS;
 }
 
@@ -73,58 +81,50 @@ void Interface::shutdown() {
     ImGui::SFML::Shutdown();
 }
 
-float Interface::getSimulationSpeed() {
-    return simulationSpeed;
-}
+float Interface::getSimulationSpeed() { return simulationSpeed; }
 
-void Interface::setAverageEnergy(double energy) {
-    averageEnergy = energy;
-}
+void Interface::setAverageEnergy(double energy) { averageEnergy = energy; }
 
-void Interface::setSimStep(int step) {
-    sim_step = step;
-}
+void Interface::setSimStep(int step) { sim_step = step; }
 
-bool Interface::getPause() {
-    return pause;
-}
+bool Interface::getPause() { return pause; }
 
-int Interface::getSelectedAtom() {
-    return PeriodicPanel::decodeAtom(selectedAtom);
-}
+int Interface::getSelectedAtom() { return PeriodicPanel::decodeAtom(selectedAtom); }
 
 int Interface::Update() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::SFML::Update(*window, clock.restart());
 
     ImGui::PushFont(fontManager.main);
-        toolsPanel.draw(styleManager.getScale(), *window, debugPanel, settingsPanel, ioPanel);
-        periodicPanel.draw(styleManager.getScale(), window->getSize(), selectedAtom);
-        simControlPanel.draw(styleManager.getScale(), window->getSize(), pause, simulationSpeed);
-        sideToolsPanel.draw(styleManager.getScale(), window->getSize(), fontManager.icons, fontManager.dialog);
-        statsPanel.draw(styleManager.getScale(), window->getSize());
-        if (drawToolTrip) {
-            ImVec2 mouse = ImGui::GetMousePos();
-            ImGui::SetNextWindowPos(ImVec2(mouse.x + 3 * styleManager.getScale(), mouse.y + 3 * styleManager.getScale()));
-    
-            ImGui::BeginTooltip();
-            if (!toolTooltipText.empty()) {
-                ImGui::TextUnformatted(toolTooltipText.c_str());
-            } else {
-                ImGui::Text("Selected: %d", countSelectedAtom);
-            }
-            ImGui::EndTooltip();
+    toolsPanel.draw(styleManager.getScale(), *window, debugPanel, settingsPanel, ioPanel);
+    periodicPanel.draw(styleManager.getScale(), window->getSize(), selectedAtom);
+    simControlPanel.draw(styleManager.getScale(), window->getSize(), pause, simulationSpeed);
+    sideToolsPanel.draw(styleManager.getScale(), window->getSize(), fontManager.icons, fontManager.dialog);
+    statsPanel.draw(styleManager.getScale(), window->getSize());
+    if (drawToolTrip) {
+        ImVec2 mouse = ImGui::GetMousePos();
+        ImGui::SetNextWindowPos(ImVec2(mouse.x + 3 * styleManager.getScale(), mouse.y + 3 * styleManager.getScale()));
+
+        ImGui::BeginTooltip();
+        if (!toolTooltipText.empty()) {
+            ImGui::TextUnformatted(toolTooltipText.c_str());
         }
+        else {
+            ImGui::Text("Selected: %d", countSelectedAtom);
+        }
+        ImGui::EndTooltip();
+    }
     ImGui::PopFont();
 
     ImGui::PushFont(fontManager.dialog);
-        fileDialog.draw(styleManager.getScale());
-        debugPanel.draw(styleManager.getScale(), window->getSize());
-        settingsPanel.draw(styleManager.getScale(), window->getSize(), *simulation, *renderer, *captureController, fileDialog);
-        ioPanel.draw(styleManager.getScale(), window->getSize(), *simulation, fileDialog);
+    fileDialog.draw(styleManager.getScale());
+    debugPanel.draw(styleManager.getScale(), window->getSize());
+    settingsPanel.draw(styleManager.getScale(), window->getSize(), *simulation, *renderer, *captureController, fileDialog);
+    ioPanel.draw(styleManager.getScale(), window->getSize(), *simulation, fileDialog);
     ImGui::PopFont();
 
     // Проверка на вхождение курсора в область
-    cursorHovered = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup);
+    cursorHovered = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) ||
+                    ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup);
     return EXIT_SUCCESS;
 }

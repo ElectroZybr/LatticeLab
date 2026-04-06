@@ -1,4 +1,5 @@
 #include "StyleManager.h"
+
 #include <algorithm>
 
 void StyleManager::applyCustomStyle() {
@@ -60,9 +61,7 @@ void StyleManager::applyCustomStyle() {
 }
 
 void StyleManager::onResize(sf::Vector2u newSize) {
-    sf::Vector2f s = sf::Vector2f(newSize).componentWiseDiv(
-        sf::Vector2f(BASE_W, BASE_H)
-    );
+    sf::Vector2f s = sf::Vector2f(newSize).componentWiseDiv(sf::Vector2f(BASE_W, BASE_H));
     scale = std::min(s.x, s.y);
 
     ImGui::GetStyle() = baseStyle;

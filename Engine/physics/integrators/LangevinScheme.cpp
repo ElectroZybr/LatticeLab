@@ -1,7 +1,5 @@
 #include "LangevinScheme.h"
 
-#include "VerletScheme.h"
+#include "Engine/physics/integrators/VerletScheme.h"
 
-void LangevinScheme::pipeline(StepData& stepData) const {
-    VerletScheme{}.pipeline(stepData);
-}
+void LangevinScheme::pipeline(StepData& stepData) const { VerletScheme{}.pipeline(stepData); }

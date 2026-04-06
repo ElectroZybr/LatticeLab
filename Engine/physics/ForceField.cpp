@@ -4,12 +4,10 @@
 
 ForceField::ForceField() = default;
 
-void ForceField::syncWalls(const SimBox& box) {
-    wallForceField_.syncWalls(box);
-}
+void ForceField::syncWalls(const SimBox& box) { wallForceField_.syncWalls(box); }
 
-void ForceField::compute(AtomStorage& atoms, Bond::List& bonds, SimBox& box,
-                         NeighborList& neighborList, bool allowBondFormation, float dt) const {
+void ForceField::compute(AtomStorage& atoms, Bond::List& bonds, SimBox& box, NeighborList& neighborList, bool allowBondFormation,
+                         float dt) const {
     PROFILE_SCOPE("ForceField::compute");
 
     wallForceField_.compute(atoms, static_force_);

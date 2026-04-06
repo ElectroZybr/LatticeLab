@@ -11,103 +11,91 @@
 #include "GUI/interface/style/ComboStyle.h"
 
 namespace {
-struct AtomTypeOption {
-    const char* label;
-    AtomData::Type type;
-};
+    struct AtomTypeOption {
+        const char* label;
+        AtomData::Type type;
+    };
 
-constexpr std::array<AtomTypeOption, 19> kAtomTypeOptions{{
-    {"Zerium", AtomData::Type::Z},
-    {"H", AtomData::Type::H},
-    {"He", AtomData::Type::He},
-    {"Li", AtomData::Type::Li},
-    {"Be", AtomData::Type::Be},
-    {"B", AtomData::Type::B},
-    {"C", AtomData::Type::C},
-    {"N", AtomData::Type::N},
-    {"O", AtomData::Type::O},
-    {"F", AtomData::Type::F},
-    {"Ne", AtomData::Type::Ne},
-    {"Na", AtomData::Type::Na},
-    {"Mg", AtomData::Type::Mg},
-    {"Al", AtomData::Type::Al},
-    {"Si", AtomData::Type::Si},
-    {"P", AtomData::Type::P},
-    {"S", AtomData::Type::S},
-    {"Cl", AtomData::Type::Cl},
-    {"Ar", AtomData::Type::Ar},
-}};
+    constexpr std::array<AtomTypeOption, 19> kAtomTypeOptions{{
+        {"Zerium", AtomData::Type::Z}, {"H", AtomData::Type::H},   {"He", AtomData::Type::He}, {"Li", AtomData::Type::Li},
+        {"Be", AtomData::Type::Be},    {"B", AtomData::Type::B},   {"C", AtomData::Type::C},   {"N", AtomData::Type::N},
+        {"O", AtomData::Type::O},      {"F", AtomData::Type::F},   {"Ne", AtomData::Type::Ne}, {"Na", AtomData::Type::Na},
+        {"Mg", AtomData::Type::Mg},    {"Al", AtomData::Type::Al}, {"Si", AtomData::Type::Si}, {"P", AtomData::Type::P},
+        {"S", AtomData::Type::S},      {"Cl", AtomData::Type::Cl}, {"Ar", AtomData::Type::Ar},
+    }};
 
-int findTypeIndex(AtomData::Type type) {
-    for (int i = 0; i < static_cast<int>(kAtomTypeOptions.size()); ++i) {
-        if (kAtomTypeOptions[static_cast<size_t>(i)].type == type) {
-            return i;
-        }
-    }
-    return 0;
-}
-
-void drawAtomTypeCombo(const char* id, AtomData::Type& atomType, float width, float uiScale) {
-    int selectedTypeIndex = findTypeIndex(atomType);
-    const char* selectedLabel = kAtomTypeOptions[static_cast<size_t>(selectedTypeIndex)].label;
-
-    if (ComboStyle::beginCenteredCombo(id, width, uiScale)) {
-        ComboStyle::pushCenteredSelectableText();
+    int findTypeIndex(AtomData::Type type) {
         for (int i = 0; i < static_cast<int>(kAtomTypeOptions.size()); ++i) {
-            const bool selected = (i == selectedTypeIndex);
-            if (ImGui::Selectable(kAtomTypeOptions[static_cast<size_t>(i)].label, selected)) {
-                atomType = kAtomTypeOptions[static_cast<size_t>(i)].type;
-                selectedTypeIndex = i;
-                selectedLabel = kAtomTypeOptions[static_cast<size_t>(i)].label;
-            }
-            if (selected) {
-                ImGui::SetItemDefaultFocus();
+            if (kAtomTypeOptions[static_cast<size_t>(i)].type == type) {
+                return i;
             }
         }
-        ComboStyle::popCenteredSelectableText();
-        ImGui::EndCombo();
+        return 0;
     }
 
-    ComboStyle::drawCenteredComboPreview(selectedLabel);
+    void drawAtomTypeCombo(const char* id, AtomData::Type& atomType, float width, float uiScale) {
+        int selectedTypeIndex = findTypeIndex(atomType);
+        const char* selectedLabel = kAtomTypeOptions[static_cast<size_t>(selectedTypeIndex)].label;
+
+        if (ComboStyle::beginCenteredCombo(id, width, uiScale)) {
+            ComboStyle::pushCenteredSelectableText();
+            for (int i = 0; i < static_cast<int>(kAtomTypeOptions.size()); ++i) {
+                const bool selected = (i == selectedTypeIndex);
+                if (ImGui::Selectable(kAtomTypeOptions[static_cast<size_t>(i)].label, selected)) {
+                    atomType = kAtomTypeOptions[static_cast<size_t>(i)].type;
+                    selectedTypeIndex = i;
+                    selectedLabel = kAtomTypeOptions[static_cast<size_t>(i)].label;
+                }
+                if (selected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ComboStyle::popCenteredSelectableText();
+            ImGui::EndCombo();
+        }
+
+        ComboStyle::drawCenteredComboPreview(selectedLabel);
+    }
+
+    void drawCaptureStatus() {
+        const double blinkTime = Interface::captureBlinkElapsed;
+        const int blinkStep = static_cast<int>(blinkTime);
+        const bool blinkOn = (blinkStep % 2) == 0;
+        const float alpha = Interface::captureRecording
+            ? (blinkOn ? 0.8f : 0.2f)
+            : 0.18f;
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const float lineHeight = ImGui::GetFrameHeight();
+        const float radius = std::max(4.0f, lineHeight * 0.24f);
+        const float dotWidth = radius * 2.0f + style.ItemInnerSpacing.x * 0.35f;
+
+        ImGui::SameLine();
+        const ImVec2 cursor = ImGui::GetCursorScreenPos();
+        const ImVec2 center(cursor.x + radius, cursor.y + lineHeight * 0.5f);
+
+        ImGui::Dummy(ImVec2(dotWidth, lineHeight));
+        ImGui::GetWindowDrawList()->AddCircleFilled(
+            center,
+            radius,
+            ImGui::GetColorU32(ImVec4(0.95f, 0.16f, 0.16f, alpha))
+        );
+        ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("fps: %.1f", Interface::captureFps);
+        ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("frame: %llu", static_cast<unsigned long long>(Interface::captureFrameCount));
+    }
 }
-
-void drawCaptureStatus() {
-    const double blinkTime = Interface::captureBlinkElapsed;
-    const int blinkStep = static_cast<int>(blinkTime);
-    const bool blinkOn = (blinkStep % 2) == 0;
-    const float alpha = Interface::captureRecording
-        ? (blinkOn ? 0.8f : 0.2f)
-        : 0.18f;
-    const ImGuiStyle& style = ImGui::GetStyle();
-    const float lineHeight = ImGui::GetFrameHeight();
-    const float radius = std::max(4.0f, lineHeight * 0.24f);
-    const float dotWidth = radius * 2.0f + style.ItemInnerSpacing.x * 0.35f;
-
-    ImGui::SameLine();
-    const ImVec2 cursor = ImGui::GetCursorScreenPos();
-    const ImVec2 center(cursor.x + radius, cursor.y + lineHeight * 0.5f);
-
-    ImGui::Dummy(ImVec2(dotWidth, lineHeight));
-    ImGui::GetWindowDrawList()->AddCircleFilled(
-        center,
-        radius,
-        ImGui::GetColorU32(ImVec4(0.95f, 0.16f, 0.16f, alpha))
-    );
-    ImGui::SameLine();
-    ImGui::AlignTextToFramePadding();
-    ImGui::Text("fps: %.1f", Interface::captureFps);
-    ImGui::SameLine();
-    ImGui::AlignTextToFramePadding();
-    ImGui::Text("frame: %llu", static_cast<unsigned long long>(Interface::captureFrameCount));
-}
-} // namespace
 
 void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation, FileDialogManager& fileDialog) {
     const float target = visible_ ? 1.f : 0.f;
     const float step = ImGui::GetIO().DeltaTime * 12.f;
     animProgress_ += (target - animProgress_) * std::min(step, 1.f);
 
-    if (animProgress_ < 0.01f) return;
+    if (animProgress_ < 0.01f) {
+        return;
+    }
 
     boxSize_ = simulation.box().size;
 
@@ -161,9 +149,15 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     boxSizeChanged |= ImGui::InputFloat("##box_size_z_input", &boxSize_.z, 0.0f, 0.0f, "%.1f");
 
     if (boxSizeChanged) {
-        if (boxSize_.x < 1.f) boxSize_.x = 1.f;
-        if (boxSize_.y < 1.f) boxSize_.y = 1.f;
-        if (boxSize_.z < 1.f) boxSize_.z = 1.f;
+        if (boxSize_.x < 1.f) {
+            boxSize_.x = 1.f;
+        }
+        if (boxSize_.y < 1.f) {
+            boxSize_.y = 1.f;
+        }
+        if (boxSize_.z < 1.f) {
+            boxSize_.z = 1.f;
+        }
         AppSignals::UI::ResizeBox.emit(boxSize_);
     }
 

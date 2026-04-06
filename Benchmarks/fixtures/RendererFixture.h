@@ -1,19 +1,18 @@
 #pragma once
 
-#include <benchmark/benchmark.h>
-#include <memory>
 #include <cmath>
+#include <memory>
 
 #include <SFML/Graphics.hpp>
+#include <benchmark/benchmark.h>
 
+#include "App/interaction/ToolsManager.h"
+#include "Engine/SimBox.h"
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/physics/Bond.h"
-#include "Engine/SimBox.h"
-#include "App/interaction/ToolsManager.h"
 
-template <typename TRenderer>
-class RendererFixture : public benchmark::Fixture {
+template <typename TRenderer> class RendererFixture : public benchmark::Fixture {
 public:
     void SetUp(benchmark::State& state) override {
         renderTexture_ = std::make_unique<sf::RenderTexture>();
@@ -22,22 +21,19 @@ public:
             return;
         }
 
-        view_ = renderTexture_->getView();;
+        view_ = renderTexture_->getView();
+        ;
         renderer_ = std::make_unique<TRenderer>(*renderTexture_, view_, box_);
         ToolsManager::init(nullptr, &view_, nullptr, nullptr, renderer_);
 
         atomStorage_ = makeGridAtoms(static_cast<int>(state.range(0)));
     }
 
-    void TearDown(benchmark::State&) override {
-        renderer_.reset();
-    }
+    void TearDown(benchmark::State&) override { renderer_.reset(); }
 
 protected:
     void setCounters(benchmark::State& state) const {
-        state.SetItemsProcessed(
-            state.iterations() * static_cast<int64_t>(atomStorage_.size())
-        );
+        state.SetItemsProcessed(state.iterations() * static_cast<int64_t>(atomStorage_.size()));
     }
 
     std::unique_ptr<sf::RenderTexture> renderTexture_;
@@ -45,7 +41,7 @@ protected:
     sf::View view_;
     AtomStorage atomStorage_;
     Bond::List bonds_;
-    SimBox box_{ Vec3f(300, 300, 300) };
+    SimBox box_{Vec3f(300, 300, 300)};
 
 private:
     static AtomStorage makeGridAtoms(int count) {
@@ -53,15 +49,8 @@ private:
         atoms.reserve(count);
         const int side = static_cast<int>(std::cbrt(count)) + 1;
         for (int i = 0; i < count; ++i) {
-            atoms.addAtom(
-                Vec3f(
-                    (i % side) * 3.0,
-                    ((i / side) % side) * 3.0,
-                    (i / static_cast<double>(side * side)) * 3.0
-                ),
-                Vec3f::Random() * 0.5,
-                AtomData::Type::H
-            );
+            atoms.addAtom(Vec3f((i % side) * 3.0, ((i / side) % side) * 3.0, (i / static_cast<double>(side * side)) * 3.0),
+                          Vec3f::Random() * 0.5, AtomData::Type::H);
         }
         return atoms;
     }

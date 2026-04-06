@@ -3,9 +3,9 @@
 #include <cstdint>
 #include <vector>
 
-#include "../metrics/NeighborListStats.h"
-#include "../physics/AtomStorage.h"
-#include "SpatialGrid.h"
+#include "Engine/NeighborSearch/SpatialGrid.h"
+#include "Engine/metrics/NeighborListStats.h"
+#include "Engine/physics/AtomStorage.h"
 
 class SimBox;
 
@@ -31,18 +31,19 @@ public:
     [[nodiscard]] const NeighborListStats& stats() const { return stats_; }
     void resetStats();
     void recordRebuild(int simStep);
-    
+
     // Hot-path helper для записи соседей одного атома.
-    inline void writeAtomNeighbors(const SpatialGrid& grid, const float* x, const float* y, const float* z,
-                                   const uint32_t atomIndex, const float xi, const float yi, const float zi,
-                                   std::vector<uint32_t>& outNeighbors) const {
+    inline void writeAtomNeighbors(const SpatialGrid& grid, const float* x, const float* y, const float* z, const uint32_t atomIndex,
+                                   const float xi, const float yi, const float zi, std::vector<uint32_t>& outNeighbors) const {
         const auto& offsets27 = grid.neighborOffsets27();
         const int center = grid.linearCellOfAtom(atomIndex); // центральная ячейка атома i
 
         for (int k = 0; k < 27; ++k) {
             for (uint32_t neighborIndex : grid.atomsInCell(center + offsets27[k])) {
                 // grid.atomsInCellByLinearIndex возвращает соседей в порядке возрастания индексов
-                if (neighborIndex >= atomIndex) break;
+                if (neighborIndex >= atomIndex) {
+                    break;
+                }
 
                 const float dx = x[neighborIndex] - xi;
                 const float dy = y[neighborIndex] - yi;

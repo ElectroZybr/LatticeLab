@@ -1,29 +1,31 @@
 #pragma once
 
 #if defined(_WIN32) || defined(_WIN64)
-    #include <windows.h>
-    #include <psapi.h>
-    #ifdef NEAR
-        #undef NEAR
-    #endif
-    #ifdef FAR
-        #undef FAR
-    #endif
-    #ifdef near
-        #undef near
-    #endif
-    #ifdef far
-        #undef far
-    #endif
+#include <windows.h>
+#include <psapi.h>
+#ifdef NEAR
+#undef NEAR
+#endif
+#ifdef FAR
+#undef FAR
+#endif
+#ifdef near
+#undef near
+#endif
+#ifdef far
+#undef far
+#endif
 #elif defined(__APPLE__) && defined(__MACH__)
-    #include <mach/mach.h>
-    #include <unistd.h>
-    #include <sys/resource.h>
-    #include <cstdio>
+#include <cstdio>
+
+#include <mach/mach.h>
+#include <sys/resource.h>
+#include <unistd.h>
 #elif defined(__unix__) || defined(__unix) || defined(unix)
-    #include <unistd.h>
-    #include <sys/resource.h>
-    #include <cstdio>
+#include <cstdio>
+
+#include <sys/resource.h>
+#include <unistd.h>
 #endif
 
 class MemoryMetrics {

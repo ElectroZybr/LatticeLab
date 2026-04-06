@@ -1,0 +1,39 @@
+BasedOnStyle:    LLVM
+
+IndentWidth:     4
+TabWidth:        4
+UseTab:          Never
+
+NamespaceIndentation: All
+FixNamespaceComments: false
+PointerAlignment: Left
+ColumnLimit: 140
+InsertBraces:    true
+AccessModifierOffset: -4
+
+AllowShortEnumsOnASingleLine: true
+KeepEmptyLinesAtTheStartOfBlocks: true
+MaxEmptyLinesToKeep: 1
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterControlStatement: false
+  AfterFunction:         false
+  AfterClass:            false
+  AfterNamespace:        false
+  BeforeElse:            true
+
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex:           '^"[^/]+"'
+    Priority:        1
+    SortPriority:    1
+  - Regex:           '^<[a-z_]+>'
+    Priority:        2
+    SortPriority:    2
+  - Regex:           '^<.+>'
+    Priority:        3
+    SortPriority:    3
+  - Regex:           '^".+"'
+    Priority:        4
+    SortPriority:    4

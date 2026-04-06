@@ -1,12 +1,13 @@
 #include "SimControlPanel.h"
-#include "Engine/metrics/Profiler.h"
-#include "App/AppSignals.h"
 
 #include <algorithm>
 #include <cmath>
 
-#define ICON_FA_PAUSE        "\uf04c"
-#define ICON_FA_PLAY         "\uf04b"
+#include "App/AppSignals.h"
+#include "Engine/metrics/Profiler.h"
+
+#define ICON_FA_PAUSE "\uf04c"
+#define ICON_FA_PLAY "\uf04b"
 #define ICON_FA_STEP_FORWARD "\uf051"
 
 static const ImVec4 ACTIVE_COLOR = ImVec4(0.06f, 0.53f, 0.98f, 1.00f);
@@ -15,8 +16,8 @@ static const ImVec4 DISABLED_BUTTON_HOVERED_COLOR = ImVec4(0.26f, 0.28f, 0.31f, 
 static const ImVec4 DISABLED_BUTTON_ACTIVE_COLOR = ImVec4(0.26f, 0.28f, 0.31f, 1.00f);
 
 static void pushActiveColor() {
-    ImGui::PushStyleColor(ImGuiCol_Button,        ACTIVE_COLOR);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ACTIVE_COLOR);
+    ImGui::PushStyleColor(ImGuiCol_Button, ACTIVE_COLOR);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ACTIVE_COLOR);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ACTIVE_COLOR);
 }
 
@@ -38,11 +39,9 @@ static float sliderToSpeed(float slider) {
     return kMinSpeed + (kMaxSpeed - kMinSpeed) * normalized;
 }
 
-void SimControlPanel::draw(float scale, sf::Vector2u windowSize,
-                           bool& pause, float& simulationSpeed)
-{
-    ImGui::SetNextWindowPos(ImVec2(windowSize.x - 122*scale, 0));
-    ImGui::SetNextWindowSize(ImVec2(122*scale, 111*scale));
+void SimControlPanel::draw(float scale, sf::Vector2u windowSize, bool& pause, float& simulationSpeed) {
+    ImGui::SetNextWindowPos(ImVec2(windowSize.x - 122 * scale, 0));
+    ImGui::SetNextWindowSize(ImVec2(122 * scale, 111 * scale));
     ImGui::Begin("SimControl", nullptr, PANEL_FLAGS);
 
     if (!pause) {
@@ -51,21 +50,29 @@ void SimControlPanel::draw(float scale, sf::Vector2u windowSize,
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, DISABLED_BUTTON_ACTIVE_COLOR);
     }
     ImGui::BeginDisabled(!pause);
-    if (ImGui::Button(ICON_FA_STEP_FORWARD, ImVec2(50*scale, 50*scale))) {
+    if (ImGui::Button(ICON_FA_STEP_FORWARD, ImVec2(50 * scale, 50 * scale))) {
         AppSignals::UI::StepPhysics.emit();
     }
     ImGui::EndDisabled();
-    if (!pause) ImGui::PopStyleColor(3);
+    if (!pause) {
+        ImGui::PopStyleColor(3);
+    }
 
     ImGui::SameLine();
 
     const bool playButtonHighlighted = pause;
-    if (playButtonHighlighted) pushActiveColor();
-    if (ImGui::Button(pause ? ICON_FA_PLAY : ICON_FA_PAUSE,  ImVec2(50*scale, 50*scale))) pause = !pause;
-    if (playButtonHighlighted) ImGui::PopStyleColor(3);
+    if (playButtonHighlighted) {
+        pushActiveColor();
+    }
+    if (ImGui::Button(pause ? ICON_FA_PLAY : ICON_FA_PAUSE, ImVec2(50 * scale, 50 * scale))) {
+        pause = !pause;
+    }
+    if (playButtonHighlighted) {
+        ImGui::PopStyleColor(3);
+    }
 
     float speedSlider = speedToSlider(simulationSpeed);
-    ImGui::PushItemWidth(106*scale);
+    ImGui::PushItemWidth(106 * scale);
     if (ImGui::SliderFloat("##Speed", &speedSlider, 0.0f, 1.0f, "", ImGuiSliderFlags_AlwaysClamp)) {
         simulationSpeed = sliderToSpeed(speedSlider);
     }
@@ -82,10 +89,8 @@ void SimControlPanel::draw(float scale, sf::Vector2u windowSize,
     }
 
     const ImVec2 textSize = ImGui::CalcTextSize(valueText);
-    const ImVec2 textPos(
-        sliderMin.x + (sliderMax.x - sliderMin.x - textSize.x) * 0.5f,
-        sliderMin.y + (sliderMax.y - sliderMin.y - textSize.y) * 0.5f
-    );
+    const ImVec2 textPos(sliderMin.x + (sliderMax.x - sliderMin.x - textSize.x) * 0.5f,
+                         sliderMin.y + (sliderMax.y - sliderMin.y - textSize.y) * 0.5f);
     ImGui::GetWindowDrawList()->AddText(textPos, IM_COL32(235, 235, 235, 255), valueText);
 
     ImGui::End();

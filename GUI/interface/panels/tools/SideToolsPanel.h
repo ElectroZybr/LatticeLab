@@ -1,25 +1,14 @@
 #pragma once
 
-#include "imgui.h"
 #include <SFML/System/Vector2.hpp>
+#include <imgui.h>
 
 class SideToolsPanel {
 public:
-    enum class Tool : uint8_t {
-        Cursor = 0,
-        Frame = 1,
-        Lasso = 2,
-        Ruler = 3,
-        AddAtom = 4,
-        RemoveAtom = 5,
-    };
+    enum class Tool : uint8_t { Cursor, Frame, Lasso, Ruler, AddAtom, RemoveAtom };
 
-    static constexpr ImGuiWindowFlags PANEL_FLAGS =
-        ImGuiWindowFlags_NoMove     |
-        ImGuiWindowFlags_NoResize   |
-        ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoScrollbar;
+    static constexpr ImGuiWindowFlags PANEL_FLAGS = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse |
+                                                    ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
 
     void draw(float scale, sf::Vector2u windowSize, ImFont* iconFont, ImFont* textFont = nullptr);
 
