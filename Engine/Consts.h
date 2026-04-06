@@ -6,15 +6,22 @@ namespace Consts {
 
 namespace Units {
     // время
-    inline constexpr double kTimeUnitToFs = 10.1805;    // константа для перевода Dt -> Fs (1 Dt = 10.1805 fs)
-    inline constexpr double kTimeUnitToNs = 10.1805e-6; // константа для перевода Dt -> Ns (1 Dt = 0.0000101805 ns)
+    inline constexpr float kTimeUnitToFs = 10.1805f;    // константа для перевода Dt -> Fs (1 Dt = 10.1805 fs)
+    inline constexpr float kTimeUnitToNs = 10.1805e-6f; // константа для перевода Dt -> Ns (1 Dt = 0.0000101805 ns)
 
     // единицы измерения
-    inline constexpr double AngstromToNm = 0.1;  // константа для перевода ангстрем в нанометры
-    inline constexpr double NmToAngstrom = 10.0; // константа для перевода нанометров в ангстремы
+    inline constexpr float AngstromToNm = 0.1f;  // константа для перевода ангстрем в нанометры
+    inline constexpr float NmToAngstrom = 10.0f; // константа для перевода нанометров в ангстремы
 
     // энергия
-    inline constexpr double kEnergyUnitToEv = 1.0;    // константа для перевода единиц энергии в электрон-вольты
-    inline constexpr double kEvToJ = 1.602176634e-19; // константа для перевода электрон-вольт в джоули
-    inline constexpr double kEvToPJ = kEvToJ * 10e12; // константа для перевода электрон-вольт в пико джоули
+    inline constexpr float kEnergyUnitToEv = 1.0f;       // константа для перевода единиц энергии в электрон-вольты
+    inline constexpr float kEvToJ = 1.602176634e-19f;    // константа для перевода электрон-вольт в джоули
+    inline constexpr float kEvToPJ = kEvToJ * 10e12f;    // константа для перевода электрон-вольт в пико джоули
+
+    // температура
+    inline constexpr float kboltzmann = 8.617333262e-5f; // постоянная Больцмана в электрон-вольтах на кельвин
+
+    // скорость
+    inline constexpr float SpeedUnitToMps = 9822.7f;     // коэффициент перевода ангстрем/dt в м/с
+    inline constexpr float SpeedUnitToKmph = 35361.7f;   // коэффициент перевода ангстрем/dt в км/ч
 }

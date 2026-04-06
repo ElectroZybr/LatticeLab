@@ -33,9 +33,40 @@ public:
     float getAccelDamping() const { return integrator.accelDamping(); }
 
     int getSimStep() const { return sim_step; }
-    double simTimeNs() const { return sim_time_ns; }
-    double fullEnegryPJ() const {
-        return EnergyMetrics::fullAverageEnergy(atomStorage_) * static_cast<double>(atomStorage_.size()) * Units::kEvToPJ;
+    float simTimeNs() const { return sim_time_ns; }
+
+    float averageKineticEnergyEv() const {
+        refreshMetricsCache();
+        return metricsCache_.averageKineticEnergyEv;
+    }
+
+    float averagePotentialEnergyEv() const {
+        refreshMetricsCache();
+        return metricsCache_.averagePotentialEnergyEv;
+    }
+
+    float fullAverageEnergyEv() const {
+        refreshMetricsCache();
+        return metricsCache_.fullAverageEnergyEv();
+    }
+
+    float fullEnegryPJ() const {
+        return fullAverageEnergyEv() * atomStorage_.size() * Units::kEvToPJ;
+    }
+
+    float temperatureK() const {
+        refreshMetricsCache();
+        return metricsCache_.temperatureK();
+    }
+
+    float temperatureC() const {
+        refreshMetricsCache();
+        return metricsCache_.temperatureC();
+    }
+
+    float averageSpeedKmPerHour() const {
+        refreshMetricsCache();
+        return metricsCache_.averageSpeedKmPerHour();
     }
 
     void setBondFormationEnabled(bool enabled) { bondFormationEnabled_ = enabled; }
@@ -48,7 +79,10 @@ public:
     float getNeighborListSkin() const { return neighborList_.skin(); }
     float getNeighborListRadius() const { return neighborList_.listRadius(); }
 
-    AtomStorage& atoms() { return atomStorage_; }
+    AtomStorage& atoms() {
+        invalidateMetricsCache();
+        return atomStorage_;
+    }
     const AtomStorage& atoms() const { return atomStorage_; }
     SimBox& box() { return sim_box_; }
     const SimBox& box() const { return sim_box_; }
@@ -64,6 +98,8 @@ public:
 private:
     friend class SimulationStateIO;
     StepData makeStepData();
+    void invalidateMetricsCache() const { metricsCacheValid_ = false; }
+    void refreshMetricsCache() const;
 
     SimBox& sim_box_;
     AtomStorage atomStorage_;
@@ -71,8 +107,10 @@ private:
     ForceField forceField_;
     NeighborList neighborList_;
     Bond::List bonds_;
-    float Dt = 0.01;
+    float Dt = 0.01f;
     int sim_step = 0;
-    double sim_time_ns = 0;
+    float sim_time_ns = 0.0f;
     bool bondFormationEnabled_ = false;
+    mutable bool metricsCacheValid_ = false;
+    mutable EnergyMetrics::Snapshot metricsCache_{};
 };
