@@ -21,17 +21,16 @@ inline sf::RenderWindow createWindow() {
     settings.attributeFlags = sf::ContextSettings::Attribute::Core;
 #endif
 
-    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "LatticeLab " LATTICELAB_VERSION_STRING,
-                            sf::State::Fullscreen, settings);
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "LatticeLab " LATTICELAB_VERSION_STRING, sf::State::Fullscreen, settings);
 #ifdef __APPLE__
     const sf::ContextSettings actualSettings = window.getSettings();
-    const bool hasModernContext = actualSettings.majorVersion > 4
-        || (actualSettings.majorVersion == 4 && actualSettings.minorVersion >= 1)
-        || (actualSettings.majorVersion == 3 && actualSettings.minorVersion >= 2);
+    const bool hasModernContext = actualSettings.majorVersion > 4 ||
+                                  (actualSettings.majorVersion == 4 && actualSettings.minorVersion >= 1) ||
+                                  (actualSettings.majorVersion == 3 && actualSettings.minorVersion >= 2);
     const bool isCoreContext = (actualSettings.attributeFlags & sf::ContextSettings::Attribute::Core) != 0;
     if (!hasModernContext || !isCoreContext) {
-        std::cerr << "Failed to create modern OpenGL core context on macOS. Actual context: "
-                  << actualSettings.majorVersion << "." << actualSettings.minorVersion << std::endl;
+        std::cerr << "Failed to create modern OpenGL core context on macOS. Actual context: " << actualSettings.majorVersion << "."
+                  << actualSettings.minorVersion << std::endl;
         window.close();
         return window;
     }

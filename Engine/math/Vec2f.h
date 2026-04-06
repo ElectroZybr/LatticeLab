@@ -7,9 +7,6 @@
 
 #include "Engine/Consts.h"
 
-namespace {
-}
-
 class Vec2f {
 public:
     float x, y;
@@ -29,18 +26,25 @@ public:
     [[nodiscard]] Vec2f operator+(float num) const { return Vec2f(x + num, y + num); }
     [[nodiscard]] Vec2f operator-(float num) const { return Vec2f(x - num, y - num); }
 
-    void operator+=(const Vec2f& vec) { x += vec.x; y += vec.y; }
-    void operator-=(const Vec2f& vec) { x -= vec.x; y -= vec.y; }
+    void operator+=(const Vec2f& vec) {
+        x += vec.x;
+        y += vec.y;
+    }
+    void operator-=(const Vec2f& vec) {
+        x -= vec.x;
+        y -= vec.y;
+    }
 
     [[nodiscard]] Vec2f operator*(float number) const { return Vec2f(x * number, y * number); }
     [[nodiscard]] Vec2f operator/(float number) const {
-        if (std::abs(number) > Consts::Epsilon)
+        if (std::abs(number) > Consts::Epsilon) {
             return Vec2f(x / number, y / number);
+        }
         throw std::domain_error("Vec2f::operator/: division by zero");
     }
 
-    [[nodiscard]] float sqrAbs()               const { return x * x + y * y; }
-    [[nodiscard]] float abs()                  const { return std::sqrt(sqrAbs()); }
+    [[nodiscard]] float sqrAbs() const { return x * x + y * y; }
+    [[nodiscard]] float abs() const { return std::sqrt(sqrAbs()); }
     [[nodiscard]] float dot(const Vec2f& vec) const { return x * vec.x + y * vec.y; }
 
     [[nodiscard]] Vec2f normalized() const {
@@ -56,4 +60,3 @@ public:
 private:
     static bool isNear(float a, float b) { return std::abs(a - b) < Consts::Epsilon; }
 };
-

@@ -1,13 +1,13 @@
+#include "PickingSystem.h"
+
 #include <limits>
 
-#include "PickingSystem.h"
-#include "Engine/math/Ray.h"
 #include "Engine/SimBox.h"
+#include "Engine/math/Ray.h"
 #include "Rendering/BaseRenderer.h"
 
 PickingSystem::PickingSystem(AtomStorage& atomStorage, SimBox& box, std::unique_ptr<IRenderer>& renderer)
-    : atomStorage(atomStorage), box(box), renderer(&renderer)
-{}
+    : atomStorage(atomStorage), box(box), renderer(&renderer) {}
 
 void PickingSystem::clearSelection() {
     overlay.reset();
@@ -27,7 +27,7 @@ void PickingSystem::processClick(sf::Vector2i screenPos, bool cumulative) {
         // Если атом уже был выбран и зажат Ctrl — инвертируем (снимаем выделение)
         if (cumulative && selectedIndices.contains(hit.index)) {
             selectedIndices.erase(hit.index);
-        } 
+        }
         else {
             // Иначе — добавляем в набор
             selectedIndices.insert(hit.index);
@@ -35,13 +35,16 @@ void PickingSystem::processClick(sf::Vector2i screenPos, bool cumulative) {
     }
     else {
         // Клик в пустоту без Ctrl — сбрасываем всё
-        if (!cumulative) clearSelection();
+        if (!cumulative) {
+            clearSelection();
+        }
     }
 }
 
-
 void PickingSystem::processRect(sf::Vector2i start, sf::Vector2i end, bool cumulative) {
-    if (!cumulative) clearSelection();
+    if (!cumulative) {
+        clearSelection();
+    }
     IRenderer* rend = renderer->get();
 
     const sf::Vector2f vSize = rend->camera.getView().getSize();
@@ -57,8 +60,12 @@ void PickingSystem::processRect(sf::Vector2i start, sf::Vector2i end, bool cumul
 }
 
 void PickingSystem::processLasso(std::span<sf::Vector2i> points, bool cumulative) {
-    if (points.size() < 3) return;
-    if (!cumulative) clearSelection();
+    if (points.size() < 3) {
+        return;
+    }
+    if (!cumulative) {
+        clearSelection();
+    }
     IRenderer* rend = renderer->get();
 
     for (size_t i = 0; i < atomStorage.size(); ++i) {
@@ -72,7 +79,7 @@ void PickingSystem::processLasso(std::span<sf::Vector2i> points, bool cumulative
 
 void PickingSystem::handleAtomRemoval(size_t index) {
     selectedIndices.erase(index);
-    
+
     size_t movedFrom = atomStorage.size();
 
     if (index < movedFrom) {
@@ -85,11 +92,11 @@ void PickingSystem::handleAtomRemoval(size_t index) {
 bool PickingSystem::pickAtom(sf::Vector2i screenPos, float tolerance, AtomHit& hit) const {
     IRenderer* rend = renderer->get();
     switch (rend->camera.getMode()) {
-        case Camera::Mode::Mode2D:
-            return pickAtom2D(screenPos, tolerance, hit);
-        case Camera::Mode::Orbit:
-        case Camera::Mode::Free:
-            return pickAtom3D(screenPos, hit);
+    case Camera::Mode::Mode2D:
+        return pickAtom2D(screenPos, tolerance, hit);
+    case Camera::Mode::Orbit:
+    case Camera::Mode::Free:
+        return pickAtom3D(screenPos, hit);
     }
     return false;
 }
@@ -114,19 +121,17 @@ bool PickingSystem::pickAtom2D(sf::Vector2i screenPos, float tolerance, AtomHit&
         }
     }
 
-    if (bestIndex == static_cast<size_t>(-1))
+    if (bestIndex == static_cast<size_t>(-1)) {
         return false;
+    }
 
-    hit = { bestIndex, std::sqrt(bestDistSqr) };
+    hit = {bestIndex, std::sqrt(bestDistSqr)};
     return true;
 }
 
 // 3D: ray cast — ищем ближайший атом вдоль луча
 bool PickingSystem::pickAtom3D(sf::Vector2i screenPos, AtomHit& hit) const {
-    const Ray ray = (*renderer)->camera.screenToRay(
-        static_cast<float>(screenPos.x),
-        static_cast<float>(screenPos.y)
-    );
+    const Ray ray = (*renderer)->camera.screenToRay(static_cast<float>(screenPos.x), static_cast<float>(screenPos.y));
 
     float bestT = std::numeric_limits<float>::max();
     size_t bestIndex = static_cast<size_t>(-1);
@@ -144,10 +149,11 @@ bool PickingSystem::pickAtom3D(sf::Vector2i screenPos, AtomHit& hit) const {
         }
     }
 
-    if (bestIndex == static_cast<size_t>(-1))
+    if (bestIndex == static_cast<size_t>(-1)) {
         return false;
+    }
 
-    hit = { bestIndex, bestT };
+    hit = {bestIndex, bestT};
     return true;
 }
 
@@ -162,10 +168,10 @@ bool PickingSystem::pointInPolygon(sf::Vector2i point, std::span<sf::Vector2i> p
         const int xi = polygon[i].x, yi = polygon[i].y;
         const int xj = polygon[j].x, yj = polygon[j].y;
 
-        const bool intersects = ((yi > y) != (yj > y)) &&
-                                (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-        if (intersects)
+        const bool intersects = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersects) {
             inside = !inside;
+        }
     }
 
     return inside;

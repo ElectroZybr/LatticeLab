@@ -1,20 +1,21 @@
 #include "FileDialogManager.h"
 
 #include <filesystem>
+
 #include <ImGuiFileDialog.h>
 #include <imgui.h>
 
 #include "App/AppSignals.h"
 
 namespace {
-std::string defaultSimulationPath() {
-    constexpr const char* demoScenesPath = "demo/scenes";
-    if (std::filesystem::exists(demoScenesPath)) {
-        return demoScenesPath;
+    std::string defaultSimulationPath() {
+        constexpr const char* demoScenesPath = "demo/scenes";
+        if (std::filesystem::exists(demoScenesPath)) {
+            return demoScenesPath;
+        }
+        return ".";
     }
-    return ".";
 }
-} // namespace
 
 void FileDialogManager::openSave() {
     IGFD::FileDialogConfig config;

@@ -8,7 +8,9 @@
 
 void BondForceField::compute(AtomStorage& atoms, Bond::List& bonds, NeighborList& neighborList, bool allowBondFormation, float dt) const {
     PROFILE_SCOPE("ForceField::Bonded");
-    if (bonds.empty() && !allowBondFormation) return;
+    if (bonds.empty() && !allowBondFormation) {
+        return;
+    }
 
     // проверка образования и разрыва связей, а также расчет сил
     std::erase_if(bonds, [&](Bond& bond) {

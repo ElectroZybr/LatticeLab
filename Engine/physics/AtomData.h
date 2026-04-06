@@ -1,9 +1,10 @@
 #pragma once
 
-#include <SFML/Graphics/Color.hpp>
 #include <array>
 #include <cstddef>
 #include <cstdint>
+
+#include <SFML/Graphics/Color.hpp>
 
 struct StaticAtomicData {
     const float mass;
@@ -17,6 +18,7 @@ struct StaticAtomicData {
 
 class AtomData {
 public:
+    // clang-format off
     enum class Type : uint8_t {
         Z,
 
@@ -24,17 +26,17 @@ public:
 
         Li, Be, B, C, N, O, F, Ne,
 
-        Na, Mg, Al, Si, P, S, Cl, Ar,
+        Na, Mg, Al, Si, P, S, Cl, Ar, 
 
         K, Ca, Sc, Ti, V, Cr, Mn, Fe,
         Co, Ni, Cu, Zn, Ga, Ge, As, Se, Br, Kr,
 
-        Rb, Sr, Y, Zr, Nb, Mo, Tc, Ru,
+        Rb, Sr, Y, Zr, Nb, Mo, Tc, Ru, 
         Rh, Pd, Ag, Cd, In, Sn, Sb, Te, I, Xe,
 
         Cs, Ba, La, Ce, Pr, Nd, Pm, Sm,
         Eu, Gd, Tb, Dy, Ho, Er, Tm, Yb,
-        Lu, Hf, Ta, W, Re, Os, Ir, Pt,
+        Lu, Hf, Ta, W, Re, Os, Ir, Pt, 
         Au, Hg, Tl, Pb, Bi, Po, At, Rn,
 
         Fr, Ra, Ac, Th, Pa, U, Np, Pu,
@@ -43,11 +45,11 @@ public:
         Rg, Cn, Nh, Fl, Mc, Lv, Ts, Og,
         COUNT
     };
+    // clang-format on
 
 private:
-static const std::array<StaticAtomicData, static_cast<size_t>(Type::COUNT)> properties;
+    static const std::array<StaticAtomicData, static_cast<size_t>(Type::COUNT)> properties;
+
 public:
-    static const StaticAtomicData& getProps(Type type) {
-        return properties.at(static_cast<int>(type));
-    }
+    static const StaticAtomicData& getProps(Type type) { return properties.at(static_cast<int>(type)); }
 };

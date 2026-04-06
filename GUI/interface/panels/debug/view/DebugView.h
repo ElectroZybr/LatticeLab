@@ -1,13 +1,13 @@
 #pragma once
+#include <any>
+#include <deque>
+#include <functional>
+#include <initializer_list>
 #include <string>
 #include <string_view>
-#include <vector>
 #include <unordered_map>
-#include <initializer_list>
 #include <variant>
-#include <deque>
-#include <any>
-#include <functional>
+#include <vector>
 
 #include "../DebugEntry.h"
 
@@ -24,6 +24,7 @@ public:
     void add_data(std::string_view label, std::any value);
 
     bool visible = true;
+
 private:
     static constexpr int HISTORY_SIZE = 300;
 

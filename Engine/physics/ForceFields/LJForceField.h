@@ -4,8 +4,9 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "../AtomData.h"
-#include "../AtomStorage.h"
+#include "Engine/physics/AtomData.h"
+#include "Engine/physics/AtomStorage.h"
+
 class NeighborList;
 
 class LJForceField {
@@ -25,8 +26,7 @@ private:
     using LJPairRow = std::array<LJParams, TypeCount>;
 
     static LJPairTable buildLJPairTable();
-    void pairInteraction(AtomStorage& atoms, uint32_t bIndex, const LJPairRow& ljPairRow,
-                         float& forceX, float& forceY, float& forceZ,
+    void pairInteraction(AtomStorage& atoms, uint32_t bIndex, const LJPairRow& ljPairRow, float& forceX, float& forceY, float& forceZ,
                          float posX, float posY, float posZ, float& potenE) const;
 
     LJPairTable ljPairTable_;

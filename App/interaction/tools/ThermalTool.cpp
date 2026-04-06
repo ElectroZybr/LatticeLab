@@ -8,14 +8,13 @@
 #include "Rendering/camera/Camera.h"
 
 namespace {
-constexpr float kMinRadius = 0.25f;
-constexpr float kMaxRadius = 100.0f;
-constexpr float kMinStrength = 0.0f;
-constexpr float kMaxStrength = 10.0f;
+    constexpr float kMinRadius = 0.25f;
+    constexpr float kMaxRadius = 100.0f;
+    constexpr float kMinStrength = 0.0f;
+    constexpr float kMaxStrength = 10.0f;
 }
 
-ThermalTool::ThermalTool(ToolContext& context) noexcept
-    : ITool(context) {}
+ThermalTool::ThermalTool(ToolContext& context) noexcept : ITool(context) {}
 
 void ThermalTool::onLeftPressed(sf::Vector2i mousePos) {
     active_ = true;
@@ -34,17 +33,11 @@ void ThermalTool::onFrame(sf::Vector2i mousePos, float deltaTime) {
     applyAt(mousePos, deltaTime);
 }
 
-void ThermalTool::reset() {
-    active_ = false;
-}
+void ThermalTool::reset() { active_ = false; }
 
-void ThermalTool::setRadius(float radius) noexcept {
-    radius_ = std::clamp(radius, kMinRadius, kMaxRadius);
-}
+void ThermalTool::setRadius(float radius) noexcept { radius_ = std::clamp(radius, kMinRadius, kMaxRadius); }
 
-void ThermalTool::setStrength(float strength) noexcept {
-    strength_ = std::clamp(strength, kMinStrength, kMaxStrength);
-}
+void ThermalTool::setStrength(float strength) noexcept { strength_ = std::clamp(strength, kMinStrength, kMaxStrength); }
 
 void ThermalTool::applyAt(sf::Vector2i mousePos, float deltaTime) {
     ToolContext& ctx = context();

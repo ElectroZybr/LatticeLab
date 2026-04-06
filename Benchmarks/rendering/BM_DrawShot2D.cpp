@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
-#include "fixtures/RendererFixture.h"
 
 #include "Rendering/2d/Renderer2D.h"
+#include "fixtures/RendererFixture.h"
 
 // @bench_meta {"id":"RendererFixture<Renderer2D>/DrawShot2D","ru":"Отрисовка кадра 2D","group":"Рендер/2D"}
 BENCHMARK_TEMPLATE_DEFINE_F(RendererFixture, DrawShot2D, Renderer2D)(benchmark::State& state) {
@@ -12,5 +12,4 @@ BENCHMARK_TEMPLATE_DEFINE_F(RendererFixture, DrawShot2D, Renderer2D)(benchmark::
     setCounters(state);
 }
 
-BENCHMARK_REGISTER_F(RendererFixture, DrawShot2D)
-    ->RangeMultiplier(8)->Range(125, 8000);
+BENCHMARK_REGISTER_F(RendererFixture, DrawShot2D)->RangeMultiplier(8)->Range(125, 8000);

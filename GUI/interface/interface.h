@@ -1,21 +1,22 @@
 #pragma once
-#include <string>
-#include <memory>
-
 #include "imgui-SFML.h"
+
+#include <memory>
+#include <string>
+
 #include <SFML/Graphics.hpp>
 
 #include "file_dialog/FileDialogManager.h"
-#include "style/StyleManager.h"
-#include "panels/debug/DebugPanel.h"
-#include "panels/settings/SettingsPanel.h"
-#include "panels/io/ioPanel.h"
-#include "panels/tools/ToolsPanel.h"
-#include "panels/tools/SideToolsPanel.h"
-#include "panels/sim_control/SimControlPanel.h"
-#include "panels/periodic/PeriodicPanel.h"
-#include "panels/stats/StatsPanel.h"
 #include "font_manager/FontManager.h"
+#include "panels/debug/DebugPanel.h"
+#include "panels/io/ioPanel.h"
+#include "panels/periodic/PeriodicPanel.h"
+#include "panels/settings/SettingsPanel.h"
+#include "panels/sim_control/SimControlPanel.h"
+#include "panels/stats/StatsPanel.h"
+#include "panels/tools/SideToolsPanel.h"
+#include "panels/tools/ToolsPanel.h"
+#include "style/StyleManager.h"
 
 class Interface {
 private:
@@ -27,6 +28,7 @@ private:
     static float simulationSpeed;
     static double averageEnergy;
     static int sim_step;
+
 public:
     static bool pause;
     static int init(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r);

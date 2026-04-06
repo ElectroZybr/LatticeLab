@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cstddef>
-#include <unordered_set>
 #include <span>
+#include <unordered_set>
 
 #include <SFML/System/Vector2.hpp>
 
@@ -33,12 +33,13 @@ public:
 
     const std::unordered_set<size_t>& getSelectedIndices() const { return selectedIndices; }
     const OverlayState& getOverlay() const { return overlay; }
-    OverlayState&       getOverlay()       { return overlay; }
+    OverlayState& getOverlay() { return overlay; }
+
 private:
     std::unique_ptr<IRenderer>* renderer;
-    AtomStorage&  atomStorage;
+    AtomStorage& atomStorage;
     SimBox& box;
-    OverlayState  overlay;
+    OverlayState overlay;
     std::unordered_set<size_t> selectedIndices;
 
     // 2D пикинг одного атома — расстояние в экранных координатах

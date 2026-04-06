@@ -1,4 +1,5 @@
 #include <benchmark/benchmark.h>
+
 #include "fixtures/SimulationFixture.h"
 
 // @bench_meta {"id":"SimulationFixture/FullStepWithNeighborList","ru":"Полный шаг с NeighborList","group":"Симуляция/Шаг симуляции"}
@@ -22,9 +23,7 @@ BENCHMARK_DEFINE_F(SimulationFixture, FullStepWithNeighborList)(benchmark::State
     const double iterCount = static_cast<double>(state.iterations());
 
     state.counters["nl_rebuild_count"] = static_cast<double>(rebuildCount);
-    state.counters["nl_rebuilds_per_step"] = (iterCount > 0.0)
-        ? static_cast<double>(rebuildCount) / iterCount
-        : 0.0;
+    state.counters["nl_rebuilds_per_step"] = (iterCount > 0.0) ? static_cast<double>(rebuildCount) / iterCount : 0.0;
     state.counters["nl_avg_steps_between_rebuilds"] =
         static_cast<double>(simulation_->neighborList().stats().averageStepsBetweenRebuilds());
     state.counters["nl_steps_since_last_rebuild"] =
@@ -33,5 +32,4 @@ BENCHMARK_DEFINE_F(SimulationFixture, FullStepWithNeighborList)(benchmark::State
     setCounters(state);
 }
 
-BENCHMARK_REGISTER_F(SimulationFixture, FullStepWithNeighborList)
-    ->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);
+BENCHMARK_REGISTER_F(SimulationFixture, FullStepWithNeighborList)->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);

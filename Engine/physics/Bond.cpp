@@ -1,13 +1,13 @@
-#include <algorithm>
-#include <cmath>
-#include <ranges>
-
 #include "Bond.h"
+
 #include "AtomData.h"
 #include "AtomStorage.h"
 
+#include <algorithm>
+#include <cmath>
+
 namespace {
-constexpr double kBondBreakDistance = 3.0;
+    constexpr double kBondBreakDistance = 3.0;
 }
 
 BondTable Bond::bond_default_props;
@@ -20,8 +20,7 @@ void Bond::ensureInitialized() {
     (void)initialized;
 }
 
-Bond::Bond(size_t aIndex, size_t bIndex, AtomData::Type aType, AtomData::Type bType)
-    : aIndex(aIndex), bIndex(bIndex) {
+Bond::Bond(size_t aIndex, size_t bIndex, AtomData::Type aType, AtomData::Type bType) : aIndex(aIndex), bIndex(bIndex) {
     const BondParams bondParams = bond_default_props.get(aType, bType);
     params.r0 = bondParams.r0;
     params.a = bondParams.a;
@@ -93,11 +92,13 @@ void Bond::angleForce(AtomStorage& atomStorage, size_t aIndex, size_t bIndex, si
     const double delta_oc_y = cy - oy;
     const double delta_oc_z = cz - oz;
 
-    const double len_ob = std::sqrt(delta_ob_x * delta_ob_x + delta_ob_y * delta_ob_y + delta_ob_z * delta_ob_z); 
+    const double len_ob = std::sqrt(delta_ob_x * delta_ob_x + delta_ob_y * delta_ob_y + delta_ob_z * delta_ob_z);
     const double len_oc = std::sqrt(delta_oc_x * delta_oc_x + delta_oc_y * delta_oc_y + delta_oc_z * delta_oc_z);
-    if (len_ob <= 1e-12 || len_oc <= 1e-12) return;
+    if (len_ob <= 1e-12 || len_oc <= 1e-12) {
+        return;
+    }
 
-    const double ob_hat_x = delta_ob_x / len_ob; 
+    const double ob_hat_x = delta_ob_x / len_ob;
     const double ob_hat_y = delta_ob_y / len_ob;
     const double ob_hat_z = delta_ob_z / len_ob;
     const double oc_hat_x = delta_oc_x / len_oc;
@@ -106,8 +107,10 @@ void Bond::angleForce(AtomStorage& atomStorage, size_t aIndex, size_t bIndex, si
 
     double cos_theta = ob_hat_x * oc_hat_x + ob_hat_y * oc_hat_y + ob_hat_z * oc_hat_z;
     cos_theta = std::clamp(cos_theta, -1.0, 1.0);
-    double sin_theta_sqr = 1.0-cos_theta*cos_theta;
-    if (sin_theta_sqr < 1e-12) return;
+    double sin_theta_sqr = 1.0 - cos_theta * cos_theta;
+    if (sin_theta_sqr < 1e-12) {
+        return;
+    }
 
     double angle_theta = std::acos(cos_theta);
     constexpr double theta_0 = 60.0 / 180.0 * std::numbers::pi;
@@ -152,8 +155,7 @@ Bond* Bond::CreateBond(List& bonds, size_t aIndex, size_t bIndex, AtomStorage& a
     }
 
     if (std::ranges::any_of(bonds, [&](const Bond& bond) {
-            return (bond.aIndex == aIndex && bond.bIndex == bIndex)
-                || (bond.aIndex == bIndex && bond.bIndex == aIndex);
+            return (bond.aIndex == aIndex && bond.bIndex == bIndex) || (bond.aIndex == bIndex && bond.bIndex == aIndex);
         })) {
         return nullptr;
     }
@@ -185,8 +187,7 @@ void Bond::BreakBond(List& bonds, Bond* bond, AtomStorage& atomStorage) {
 
     bond->detach(atomStorage);
 
-    if (auto it = std::ranges::find_if(bonds, [bond](const Bond& currentBond) { return &currentBond == bond; });
-        it != bonds.end()) {
+    if (auto it = std::ranges::find_if(bonds, [bond](const Bond& currentBond) { return &currentBond == bond; }); it != bonds.end()) {
         bonds.erase(it);
     }
 }

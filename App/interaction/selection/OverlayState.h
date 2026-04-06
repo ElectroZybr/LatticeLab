@@ -1,14 +1,15 @@
 #pragma once
 
 #include <cmath>
+#include <numbers>
 #include <string>
 #include <vector>
-#include <numbers>
+
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Vector2.hpp>
 
 struct OverlayState {
-    bool boxVisible   = false;
+    bool boxVisible = false;
     bool lassoVisible = false;
     bool rulerVisible = false;
 
@@ -21,21 +22,19 @@ struct OverlayState {
     std::vector<sf::Vector2i> lassoPoints;
 
     void reset() {
-        boxVisible   = false;
+        boxVisible = false;
         lassoVisible = false;
         rulerVisible = false;
         rulerLabel.clear();
         lassoPoints.clear();
     }
 
-    void draw(sf::RenderTarget& target) const
-    {
-        if (boxVisible || lassoVisible || rulerVisible)
-        {
+    void draw(sf::RenderTarget& target) const {
+        if (boxVisible || lassoVisible || rulerVisible) {
             target.pushGLStates();
             target.setView(target.getDefaultView());
         }
-        
+
         if (boxVisible) {
             sf::VertexArray box(sf::PrimitiveType::LineStrip, 5);
             box[0].position = sf::Vector2f(boxStart.x, boxStart.y);
@@ -44,12 +43,14 @@ struct OverlayState {
             box[3].position = sf::Vector2f(boxStart.x, boxEnd.y);
             box[4].position = box[0].position;
 
-            for (size_t i = 0; i < 5; ++i) box[i].color = sf::Color::Red;
+            for (size_t i = 0; i < 5; ++i) {
+                box[i].color = sf::Color::Red;
+            }
 
             target.draw(box);
         }
         if (lassoVisible && !lassoPoints.empty()) {
-            sf::VertexArray lasso(sf::PrimitiveType::LineStrip, lassoPoints.size()+1);
+            sf::VertexArray lasso(sf::PrimitiveType::LineStrip, lassoPoints.size() + 1);
             for (size_t i = 0; i < lassoPoints.size(); ++i) {
                 lasso[i].position = sf::Vector2f(lassoPoints[i].x, lassoPoints[i].y);
                 lasso[i].color = sf::Color::Red;
@@ -106,10 +107,12 @@ struct OverlayState {
                         angleDeg = std::atan2(line.y, line.x) * 180.0f / std::numbers::pi;
                         if (angleDeg > 90.0f) {
                             angleDeg -= 180.0f;
-                        } else if (angleDeg < -90.0f) {
+                        }
+                        else if (angleDeg < -90.0f) {
                             angleDeg += 180.0f;
                         }
-                    } else {
+                    }
+                    else {
                         labelPos.y -= 10.0f;
                     }
 
@@ -119,8 +122,7 @@ struct OverlayState {
                     sf::Text label(rulerFont, rulerLabel, 18);
                     label.setFillColor(sf::Color(235, 235, 235));
                     const sf::FloatRect bounds = label.getLocalBounds();
-                    label.setOrigin(sf::Vector2f(bounds.position.x + bounds.size.x * 0.5f,
-                                                 bounds.position.y + bounds.size.y * 0.5f));
+                    label.setOrigin(sf::Vector2f(bounds.position.x + bounds.size.x * 0.5f, bounds.position.y + bounds.size.y * 0.5f));
                     label.setPosition(labelPos);
                     label.setRotation(sf::degrees(angleDeg));
                     target.draw(label);
@@ -128,7 +130,8 @@ struct OverlayState {
             }
         }
 
-        if (boxVisible || lassoVisible || rulerVisible)
+        if (boxVisible || lassoVisible || rulerVisible) {
             target.popGLStates();
+        }
     }
 };

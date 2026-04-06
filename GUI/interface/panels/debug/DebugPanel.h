@@ -9,6 +9,7 @@ class DebugPanel {
     std::deque<DebugView> views;
     bool visible = false;
     float animProgress = 0.f;
+
 public:
     DebugView* addView(DebugView view);
 
