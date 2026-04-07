@@ -71,6 +71,10 @@ public:
 
     void setBondFormationEnabled(bool enabled) { bondFormationEnabled_ = enabled; }
     bool isBondFormationEnabled() const { return bondFormationEnabled_; }
+    void setLJEnabled(bool enabled) { forceField_.setLJEnabled(enabled); }
+    bool isLJEnabled() const { return forceField_.isLJEnabled(); }
+    void setCoulombEnabled(bool enabled) { forceField_.setCoulombEnabled(enabled); }
+    bool isCoulombEnabled() const { return forceField_.isCoulombEnabled(); }
     void setGravity(const Vec3f& gravity) { forceField_.setGravity(gravity); }
     Vec3f getGravity() const { return forceField_.getGravity(); }
     void setNeighborListCutoff(float cutoff) { neighborList_.setCutoff(cutoff); }
