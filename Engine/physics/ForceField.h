@@ -20,11 +20,19 @@ public:
 
     void setGravity(Vec3f gravity = Vec3f(0, 5, 0)) { static_force_ = gravity; }
     Vec3f getGravity() const { return static_force_; }
+    void setLJEnabled(bool enabled) { enableLJ_ = enabled; }
+    void setCoulombEnabled(bool enabled) { enableCoulomb_ = enabled; }
+    [[nodiscard]] bool isLJEnabled() const { return enableLJ_; }
+    [[nodiscard]] bool isCoulombEnabled() const { return enableCoulomb_; }
 
 private:
+    void computePairInteractions(AtomStorage& atoms, NeighborList& neighborList) const;
+
     Vec3f static_force_;
     WallForceField wallForceField_;
     LJForceField ljForceField_;
     BondForceField bondForceField_;
     CoulombForceField coulombForceField_;
+    bool enableLJ_ = true;
+    bool enableCoulomb_ = true;
 };

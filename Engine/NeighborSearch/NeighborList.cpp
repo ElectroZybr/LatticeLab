@@ -49,9 +49,9 @@ void NeighborList::clear() {
 }
 
 void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
-    PROFILE_SCOPE("NeighborList::build");
     // перестройка пространственной сетки
     box.grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
+    PROFILE_SCOPE("NeighborList::build");
 
     const SpatialGrid& grid = box.grid;
     const uint32_t atomCount = static_cast<uint32_t>(atoms.size());
@@ -97,7 +97,7 @@ bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
     const float* RESTRICT refZ = refPosZ_.data();
 
     int rebuild = false;
-#pragma GCC ivdep
+    #pragma GCC ivdep
     for (uint32_t i = 0; i < n; ++i) {
         const float dx = x[i] - refX[i];
         const float dy = y[i] - refY[i];
