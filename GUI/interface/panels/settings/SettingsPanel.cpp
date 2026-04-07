@@ -157,6 +157,16 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
         simulation.setBondFormationEnabled(bondFormationEnabled);
     }
 
+    bool ljEnabled = simulation.isLJEnabled();
+    if (ImGui::Checkbox("LJ", &ljEnabled)) {
+        simulation.setLJEnabled(ljEnabled);
+    }
+    ImGui::SameLine();
+    bool coulombEnabled = simulation.isCoulombEnabled();
+    if (ImGui::Checkbox("Coulomb", &coulombEnabled)) {
+        simulation.setCoulombEnabled(coulombEnabled);
+    }
+
     ImGui::SeparatorText("Рендер");
     ImGui::Checkbox("Сетка", &renderer->drawGrid);
     ImGui::Checkbox("Связи", &renderer->drawBonds);
