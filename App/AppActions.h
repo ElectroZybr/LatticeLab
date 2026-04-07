@@ -80,6 +80,7 @@ namespace AppActions {
                 }
 
                 if (newRenderer) {
+                    ToolsManager::resetInteractionState();
                     newRenderer->drawGrid = renderer->drawGrid;
                     newRenderer->drawBonds = renderer->drawBonds;
                     newRenderer->speedColorMode = renderer->speedColorMode;

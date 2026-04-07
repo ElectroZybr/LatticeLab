@@ -59,7 +59,7 @@ RendererGL::RendererGL(sf::RenderTarget& t, sf::View& gv, SimBox& simbox) : IRen
 
 RendererGL::~RendererGL() {
     glDeleteVertexArrays(1, &atomVao);
-    glDeleteVertexArrays(1, &atomVbo);
+    glDeleteBuffers(1, &atomVbo);
     glDeleteBuffers(1, &quadVbo);
     for (GLuint shader : atomShaders) {
         if (shader != 0) {
