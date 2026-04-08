@@ -1,5 +1,7 @@
 #include "Keyboard.h"
 
+#include <imgui.h>
+
 #include "App/AppSignals.h"
 #include "GUI/interface/interface.h"
 
@@ -17,7 +19,22 @@ void Keyboard::onEvent(const sf::Event& event) {
             return;
         }
 
+        if (ImGui::GetIO().WantTextInput) {
+            return;
+        }
+
         UiState& uiState = appInterface->state();
+        const bool ctrlHeld =
+            sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
+
+        if (ctrlHeld && e->code == sf::Keyboard::Key::S) {
+            appInterface->fileDialog.openSave();
+            return;
+        }
+        if (ctrlHeld && e->code == sf::Keyboard::Key::O) {
+            appInterface->fileDialog.openLoad();
+            return;
+        }
 
         if (e->code == sf::Keyboard::Key::P) {
             appInterface->debugPanel.toggle();
