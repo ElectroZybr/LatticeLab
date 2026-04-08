@@ -4,7 +4,6 @@
 #include <cmath>
 
 #include "App/AppSignals.h"
-#include "Engine/metrics/Profiler.h"
 
 #define ICON_FA_PAUSE "\uf04c"
 #define ICON_FA_PLAY "\uf04b"
@@ -39,7 +38,15 @@ static float sliderToSpeed(float slider) {
     return kMinSpeed + (kMaxSpeed - kMinSpeed) * normalized;
 }
 
-void SimControlPanel::draw(float scale, sf::Vector2u windowSize, bool& pause, float& simulationSpeed) {
+void SimControlPanel::draw(float scale, sf::Vector2u windowSize, bool& pause, float& simulationSpeed, int simStep, float deltaTime) {
+    sampleAccum_ += deltaTime;
+    if (sampleAccum_ >= 0.25f) {
+        const int deltaSteps = simStep - lastSimStepSample_;
+        displayedStepsPerSecond_ = sampleAccum_ > 0.0f ? static_cast<float>(deltaSteps) / sampleAccum_ : 0.0f;
+        lastSimStepSample_ = simStep;
+        sampleAccum_ = 0.0f;
+    }
+
     ImGui::SetNextWindowPos(ImVec2(windowSize.x - 122 * scale, 0));
     ImGui::SetNextWindowSize(ImVec2(122 * scale, 111 * scale));
     ImGui::Begin("SimControl", nullptr, PANEL_FLAGS);
@@ -80,11 +87,10 @@ void SimControlPanel::draw(float scale, sf::Vector2u windowSize, bool& pause, fl
     const ImVec2 sliderMax = ImGui::GetItemRectMax();
     ImGui::PopItemWidth();
 
-    const float actualStepsPerSecond = Profiler::instance().counterRate("Simulation::steps");
     const char* valueText = pause ? "pause" : nullptr;
     char valueBuffer[32]{};
     if (valueText == nullptr) {
-        std::snprintf(valueBuffer, sizeof(valueBuffer), "%.0f", actualStepsPerSecond);
+        std::snprintf(valueBuffer, sizeof(valueBuffer), "%.0f", displayedStepsPerSecond_);
         valueText = valueBuffer;
     }
 

@@ -6,11 +6,11 @@
 #include <SFML/Graphics.hpp>
 #include <benchmark/benchmark.h>
 
-#include "App/interaction/ToolsManager.h"
 #include "Engine/SimBox.h"
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/physics/Bond.h"
+#include "Rendering/BaseRenderer.h"
 
 template <typename TRenderer> class RendererFixture : public benchmark::Fixture {
 public:
@@ -22,9 +22,7 @@ public:
         }
 
         view_ = renderTexture_->getView();
-        ;
         renderer_ = std::make_unique<TRenderer>(*renderTexture_, view_, box_);
-        ToolsManager::init(nullptr, &view_, nullptr, nullptr, renderer_);
 
         atomStorage_ = makeGridAtoms(static_cast<int>(state.range(0)));
     }

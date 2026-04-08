@@ -47,12 +47,14 @@ void Interface::shutdown() {
 
 int Interface::update() {
     ImGui_ImplOpenGL3_NewFrame();
-    ImGui::SFML::Update(*window_, clock_.restart());
+    const sf::Time delta = clock_.restart();
+    ImGui::SFML::Update(*window_, delta);
 
     ImGui::PushFont(fontManager.main);
     toolsPanel.draw(styleManager.getScale(), *window_, debugPanel, settingsPanel, ioPanel);
     periodicPanel.draw(styleManager.getScale(), window_->getSize(), uiState_.selectedAtom);
-    simControlPanel.draw(styleManager.getScale(), window_->getSize(), uiState_.pause, uiState_.simulationSpeed);
+    simControlPanel.draw(styleManager.getScale(), window_->getSize(), uiState_.pause, uiState_.simulationSpeed, uiState_.simStep,
+                         delta.asSeconds());
     sideToolsPanel.draw(styleManager.getScale(), window_->getSize(), fontManager.icons, fontManager.dialog);
     statsPanel.draw(styleManager.getScale(), window_->getSize());
     if (uiState_.drawToolTrip) {
