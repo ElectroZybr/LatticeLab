@@ -7,12 +7,16 @@
 #include <imgui.h>
 
 #include "App/AppSignals.h"
+#include "App/AppPaths.h"
 
 namespace {
-    std::string defaultSimulationPath() {
-        constexpr const char* demoScenesPath = "demo/scenes";
-        if (std::filesystem::exists(demoScenesPath)) {
-            return demoScenesPath;
+    std::string defaultSimulationPath(const std::string& currentPath) {
+        if (!currentPath.empty() && std::filesystem::exists(currentPath)) {
+            return currentPath;
+        }
+        constexpr std::string_view defaultScenesPath = AppPaths::kDefaultScenesDirectory;
+        if (std::filesystem::exists(defaultScenesPath)) {
+            return std::string(defaultScenesPath);
         }
         return ".";
     }
@@ -20,7 +24,7 @@ namespace {
 
 void FileDialogManager::openSave() {
     IGFD::FileDialogConfig config;
-    config.path = defaultSimulationPath();
+    config.path = defaultSimulationPath(simulationDirectory_);
     config.fileName = "scene";
     config.countSelectionMax = 1;
     config.flags = ImGuiFileDialogFlags_ConfirmOverwrite;
@@ -30,7 +34,7 @@ void FileDialogManager::openSave() {
 
 void FileDialogManager::openLoad() {
     IGFD::FileDialogConfig config;
-    config.path = defaultSimulationPath();
+    config.path = defaultSimulationPath(simulationDirectory_);
     config.countSelectionMax = 1;
     ImGuiFileDialog::Instance()->OpenDialog("LoadDlg", "Load scene", ".lat,.sim", config);
 }
@@ -49,9 +53,18 @@ void FileDialogManager::openSceneDirectory(const std::string& currentPath) {
     ImGuiFileDialog::Instance()->OpenDialog("SceneDirDlg", "Select scenes directory", nullptr, config);
 }
 
+void FileDialogManager::setSimulationDirectory(const std::string& currentPath) {
+    simulationDirectory_ = currentPath;
+}
+
 std::string FileDialogManager::consumeSelectedSceneDirectory() {
     sceneDirectorySelected_ = false;
     return std::exchange(selectedSceneDirectory_, {});
+}
+
+std::string FileDialogManager::consumeSavedSimulationPath() {
+    savedSimulationPathReady_ = false;
+    return std::exchange(savedSimulationPath_, {});
 }
 
 void FileDialogManager::draw(float scale) {
@@ -59,7 +72,10 @@ void FileDialogManager::draw(float scale) {
 
     if (ImGuiFileDialog::Instance()->Display("SaveDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
-            AppSignals::UI::SaveSimulation.emit(ImGuiFileDialog::Instance()->GetFilePathName());
+            simulationDirectory_ = ImGuiFileDialog::Instance()->GetCurrentPath();
+            savedSimulationPath_ = ImGuiFileDialog::Instance()->GetFilePathName();
+            savedSimulationPathReady_ = true;
+            AppSignals::UI::SaveSimulation.emit(savedSimulationPath_);
         }
         ImGuiFileDialog::Instance()->Close();
         saveDialogOpen_ = false;
@@ -67,6 +83,7 @@ void FileDialogManager::draw(float scale) {
 
     if (ImGuiFileDialog::Instance()->Display("LoadDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
+            simulationDirectory_ = ImGuiFileDialog::Instance()->GetCurrentPath();
             AppSignals::UI::LoadSimulation.emit(ImGuiFileDialog::Instance()->GetFilePathName());
         }
         ImGuiFileDialog::Instance()->Close();
@@ -83,6 +100,7 @@ void FileDialogManager::draw(float scale) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             selectedSceneDirectory_ = ImGuiFileDialog::Instance()->GetCurrentPath();
             sceneDirectorySelected_ = true;
+            simulationDirectory_ = selectedSceneDirectory_;
         }
         ImGuiFileDialog::Instance()->Close();
     }

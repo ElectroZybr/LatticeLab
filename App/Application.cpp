@@ -50,6 +50,7 @@ int Application::run() {
     const UserSettings userSettings = UserSettingsIO::load();
     captureController.setSettings(userSettings.captureSettings);
     captureController.setOutputDirectory(userSettings.captureOutputDirectory);
+    appInterface.setScenesDirectory(userSettings.scenesDirectory);
     renderer->drawGrid = userSettings.rendererDrawGrid;
     renderer->drawBonds = userSettings.rendererDrawBonds;
     renderer->speedColorMode = userSettings.rendererSpeedColorMode;
@@ -127,6 +128,7 @@ int Application::run() {
     captureController.stop(window);
     UserSettingsIO::save(UserSettings{
         .captureOutputDirectory = captureController.outputDirectory(),
+        .scenesDirectory = appInterface.scenesDirectory(),
         .captureSettings = captureController.settings(),
         .rendererDrawGrid = renderer->drawGrid,
         .rendererDrawBonds = renderer->drawBonds,
