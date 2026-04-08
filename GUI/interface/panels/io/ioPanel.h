@@ -3,11 +3,13 @@
 #include <SFML/Graphics.hpp>
 #include <imgui.h>
 
+#include <filesystem>
 #include <string>
 #include <vector>
 
 #include "Engine/math/Vec3f.h"
 #include "Engine/physics/AtomData.h"
+#include "GUI/interface/panels/io/ioPanelSceneCatalog.h"
 
 class FileDialogManager;
 class Simulation;
@@ -33,15 +35,9 @@ public:
     [[nodiscard]] Vec3f boxSize() const { return boxSize_; }
 
 private:
-    struct SceneTile {
-        std::string path;
-        std::string title;
-        std::string description;
-        sf::Texture previewTexture;
-        bool hasPreview = false;
-    };
-
     void ensureSceneCatalogLoaded();
+    void clearPendingDeleteState();
+    void removeSceneTileByPath(std::string_view path);
 
     bool visible_ = false;
     bool sceneCatalogLoaded_ = false;
@@ -54,5 +50,10 @@ private:
     Vec3f boxSize_ = Vec3f(100.0f, 100.0f, 6.0f);
     AtomData::Type atomType_ = AtomData::Type::Z;
     AtomData::Type gasAtomType_ = AtomData::Type::Z;
-    std::vector<SceneTile> sceneTiles_;
+    std::filesystem::path scenesDirectory_ = "demo/scenes";
+    std::vector<IOPanelSceneTile> sceneTiles_;
+    std::string pendingDeleteScenePath_;
+    std::string pendingDeleteSceneTitle_;
+    std::string pendingDeleteError_;
+    ImVec2 pendingDeletePopupPos_ = ImVec2(0.0f, 0.0f);
 };
