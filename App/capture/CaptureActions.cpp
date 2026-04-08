@@ -7,8 +7,8 @@
 
 namespace CaptureActions {
     Handler::Handler(sf::RenderWindow& window, CaptureController& captureController) {
-        track(AppSignals::UI::ToggleCapture.connect([&]() { captureController.toggle(window); }));
-        track(AppSignals::UI::SetCaptureDirectory.connect([&](std::string_view path) {
+        track(AppSignals::Capture::ToggleRecording.connect([&]() { captureController.toggle(window); }));
+        track(AppSignals::Capture::SetOutputDirectory.connect([&](std::string_view path) {
             captureController.setOutputDirectory(std::filesystem::path(path));
         }));
     }

@@ -37,6 +37,38 @@ CaptureSettings::PixelFormat pixelFormatFromString(const std::string& value) {
     if (value == "yuv420p") return CaptureSettings::PixelFormat::Yuv420p;
     return CaptureSettings::PixelFormat::Yuv444p;
 }
+
+const char* speedColorModeToString(IRenderer::SpeedColorMode mode) {
+    switch (mode) {
+        case IRenderer::SpeedColorMode::AtomColor: return "atom_color";
+        case IRenderer::SpeedColorMode::GradientClassic: return "gradient_classic";
+        case IRenderer::SpeedColorMode::GradientTurbo: return "gradient_turbo";
+    }
+    return "atom_color";
+}
+
+IRenderer::SpeedColorMode speedColorModeFromString(const std::string& value) {
+    if (value == "gradient_classic") return IRenderer::SpeedColorMode::GradientClassic;
+    if (value == "gradient_turbo") return IRenderer::SpeedColorMode::GradientTurbo;
+    return IRenderer::SpeedColorMode::AtomColor;
+}
+
+const char* integratorToString(Integrator::Scheme scheme) {
+    switch (scheme) {
+        case Integrator::Scheme::Verlet: return "verlet";
+        case Integrator::Scheme::KDK: return "kdk";
+        case Integrator::Scheme::RK4: return "rk4";
+        case Integrator::Scheme::Langevin: return "langevin";
+    }
+    return "verlet";
+}
+
+Integrator::Scheme integratorFromString(const std::string& value) {
+    if (value == "kdk") return Integrator::Scheme::KDK;
+    if (value == "rk4") return Integrator::Scheme::RK4;
+    if (value == "langevin") return Integrator::Scheme::Langevin;
+    return Integrator::Scheme::Verlet;
+}
 }
 
 std::filesystem::path UserSettingsIO::defaultPath() {
@@ -70,6 +102,26 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
             std::string value;
             file >> value;
             settings.captureSettings.pixelFormat = pixelFormatFromString(value);
+        } else if (tag == "renderer_draw_grid") {
+            file >> settings.rendererDrawGrid;
+        } else if (tag == "renderer_draw_bonds") {
+            file >> settings.rendererDrawBonds;
+        } else if (tag == "renderer_speed_color_mode") {
+            std::string value;
+            file >> value;
+            settings.rendererSpeedColorMode = speedColorModeFromString(value);
+        } else if (tag == "renderer_speed_gradient_max") {
+            file >> settings.rendererSpeedGradientMax;
+        } else if (tag == "simulation_integrator") {
+            std::string value;
+            file >> value;
+            settings.simulationIntegrator = integratorFromString(value);
+        } else if (tag == "simulation_bond_formation") {
+            file >> settings.simulationBondFormationEnabled;
+        } else if (tag == "simulation_lj_enabled") {
+            file >> settings.simulationLJEnabled;
+        } else if (tag == "simulation_coulomb_enabled") {
+            file >> settings.simulationCoulombEnabled;
         } else {
             std::string ignoredLine;
             std::getline(file, ignoredLine);
@@ -83,6 +135,7 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
     if (settings.captureOutputDirectory.empty()) {
         settings.captureOutputDirectory = "captures";
     }
+    settings.rendererSpeedGradientMax = std::max(0.0f, settings.rendererSpeedGradientMax);
 
     return settings;
 }
@@ -98,4 +151,12 @@ void UserSettingsIO::save(const UserSettings& settings, const std::filesystem::p
     file << "capture_crf " << settings.captureSettings.crf << "\n";
     file << "capture_preset " << presetToString(settings.captureSettings.preset) << "\n";
     file << "capture_pixel_format " << pixelFormatToString(settings.captureSettings.pixelFormat) << "\n";
+    file << "renderer_draw_grid " << static_cast<int>(settings.rendererDrawGrid) << "\n";
+    file << "renderer_draw_bonds " << static_cast<int>(settings.rendererDrawBonds) << "\n";
+    file << "renderer_speed_color_mode " << speedColorModeToString(settings.rendererSpeedColorMode) << "\n";
+    file << "renderer_speed_gradient_max " << settings.rendererSpeedGradientMax << "\n";
+    file << "simulation_integrator " << integratorToString(settings.simulationIntegrator) << "\n";
+    file << "simulation_bond_formation " << static_cast<int>(settings.simulationBondFormationEnabled) << "\n";
+    file << "simulation_lj_enabled " << static_cast<int>(settings.simulationLJEnabled) << "\n";
+    file << "simulation_coulomb_enabled " << static_cast<int>(settings.simulationCoulombEnabled) << "\n";
 }

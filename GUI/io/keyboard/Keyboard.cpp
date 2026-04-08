@@ -22,6 +22,9 @@ void Keyboard::onEvent(const sf::Event& event) {
         if (e->code == sf::Keyboard::Key::P) {
             appInterface->debugPanel.toggle();
         }
+        else if (e->code == sf::Keyboard::Key::Escape) {
+            AppSignals::UI::ExitApplication.emit();
+        }
         else if (e->code == sf::Keyboard::Key::Space) {
             uiState.pause = !uiState.pause;
         }

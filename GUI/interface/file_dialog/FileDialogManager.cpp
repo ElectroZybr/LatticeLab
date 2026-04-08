@@ -59,7 +59,7 @@ void FileDialogManager::draw(float scale) {
 
     if (ImGuiFileDialog::Instance()->Display("CaptureDirDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
-            AppSignals::UI::SetCaptureDirectory.emit(ImGuiFileDialog::Instance()->GetCurrentPath());
+            AppSignals::Capture::SetOutputDirectory.emit(ImGuiFileDialog::Instance()->GetCurrentPath());
         }
         ImGuiFileDialog::Instance()->Close();
     }

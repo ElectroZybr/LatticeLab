@@ -4,6 +4,7 @@
 #include <imgui.h>
 
 #include "AppVersion.h"
+#include "App/UserSettings.h"
 #include "App/capture/CaptureController.h"
 
 #include "AppVersion.h"
@@ -325,6 +326,22 @@ void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& sim
     }
 
     ImGui::EndDisabled();
+    }
+
+    if (ImGui::Button("Reset settings", ImVec2(ImGui::GetContentRegionAvail().x, 0.0f))) {
+        const UserSettings defaults;
+        captureController.setOutputDirectory(defaults.captureOutputDirectory);
+        captureController.setSettings(defaults.captureSettings);
+
+        renderer->drawGrid = defaults.rendererDrawGrid;
+        renderer->drawBonds = defaults.rendererDrawBonds;
+        renderer->speedColorMode = defaults.rendererSpeedColorMode;
+        renderer->speedGradientMax = defaults.rendererSpeedGradientMax;
+
+        simulation.setIntegrator(defaults.simulationIntegrator);
+        simulation.setBondFormationEnabled(defaults.simulationBondFormationEnabled);
+        simulation.setLJEnabled(defaults.simulationLJEnabled);
+        simulation.setCoulombEnabled(defaults.simulationCoulombEnabled);
     }
 
     const float exitButtonWidth = ImGui::GetContentRegionAvail().x;

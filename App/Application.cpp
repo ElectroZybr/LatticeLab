@@ -52,13 +52,19 @@ int Application::run() {
     captureController.setOutputDirectory(userSettings.captureOutputDirectory);
 
     // начальная настройка симуляции и рендерера
-    renderer->drawBonds = true;
-    renderer->speedColorMode = IRenderer::SpeedColorMode::AtomColor;
-    simulation.setIntegrator(Integrator::Scheme::Verlet);
+    renderer->drawGrid = userSettings.rendererDrawGrid;
+    renderer->drawBonds = userSettings.rendererDrawBonds;
+    renderer->speedColorMode = userSettings.rendererSpeedColorMode;
+    renderer->speedGradientMax = userSettings.rendererSpeedGradientMax;
+    simulation.setIntegrator(userSettings.simulationIntegrator);
+    simulation.setBondFormationEnabled(userSettings.simulationBondFormationEnabled);
+    simulation.setLJEnabled(userSettings.simulationLJEnabled);
+    simulation.setCoulombEnabled(userSettings.simulationCoulombEnabled);
+    appInterface.state().simulationSpeed = 100.0f;
     appInterface.state().pause = true;
 
     // создание сцены
-    // Scenes::crystal(simulation, 50, AtomData::Type::Z, false);
+    Scenes::crystal(simulation, 50, AtomData::Type::Z, false);
     // simulation.createAtom(Vec3f(24, 25, 3), Vec3f(1, 0, 0), AtomData::Type::Na);
     // simulation.createAtom(Vec3f(28, 25, 3), Vec3f(-1, 0, 0), AtomData::Type::Na);
 
@@ -124,6 +130,14 @@ int Application::run() {
     UserSettingsIO::save(UserSettings{
         .captureOutputDirectory = captureController.outputDirectory(),
         .captureSettings = captureController.settings(),
+        .rendererDrawGrid = renderer->drawGrid,
+        .rendererDrawBonds = renderer->drawBonds,
+        .rendererSpeedColorMode = renderer->speedColorMode,
+        .rendererSpeedGradientMax = renderer->speedGradientMax,
+        .simulationIntegrator = simulation.getIntegrator(),
+        .simulationBondFormationEnabled = simulation.isBondFormationEnabled(),
+        .simulationLJEnabled = simulation.isLJEnabled(),
+        .simulationCoulombEnabled = simulation.isCoulombEnabled(),
     });
     appInterface.shutdown();
     return 0;

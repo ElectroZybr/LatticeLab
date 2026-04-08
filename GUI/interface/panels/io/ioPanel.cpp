@@ -127,7 +127,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     if (uiState.captureAvailable) {
         const char* captureLabel = uiState.captureRecording ? "Стоп" : "Запись";
         if (ImGui::Button(captureLabel, ImVec2(saveButtonWidth * scale, 0.f))) {
-            AppSignals::UI::ToggleCapture.emit();
+            AppSignals::Capture::ToggleRecording.emit();
         }
         drawCaptureStatus(uiState);
     }
