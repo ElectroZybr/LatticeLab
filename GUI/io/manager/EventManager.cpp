@@ -2,6 +2,7 @@
 
 #include <imgui-SFML.h>
 
+#include "Engine/Simulation.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/mouse/Mouse.h"
 #include "GUI/io/window_events/WindowEvents.h"
@@ -9,14 +10,13 @@
 sf::RenderWindow* EventManager::window = nullptr;
 std::unique_ptr<IRenderer>* EventManager::renderer = nullptr;
 
-void EventManager::init(sf::RenderWindow* w, sf::View* uiView, std::unique_ptr<IRenderer>& r, SimBox* b, AtomStorage* atomStorage,
-                        Interface* ui) {
-    window = w;
+void EventManager::init(sf::RenderWindow& w, sf::View& uiView, Simulation& simulation, std::unique_ptr<IRenderer>& r, Interface& ui) {
+    window = &w;
     renderer = &r;
 
     WindowEvents::init(w, uiView, ui);
     Keyboard::init(r, ui);
-    Mouse::init(w, r, b, atomStorage, ui);
+    Mouse::init(w, r, simulation, ui);
 }
 
 void EventManager::poll() {

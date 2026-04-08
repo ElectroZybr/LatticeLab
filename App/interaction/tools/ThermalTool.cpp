@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "Engine/physics/AtomStorage.h"
+#include "Engine/Simulation.h"
 #include "Rendering/BaseRenderer.h"
 #include "Rendering/camera/Camera.h"
 
@@ -50,7 +50,7 @@ void ThermalTool::applyAt(sf::Vector2i mousePos, float deltaTime) {
         return;
     }
 
-    AtomStorage& atoms = *ctx.atomStorage;
+    AtomStorage& atoms = ctx.simulation->atoms();
     if (atoms.empty()) {
         return;
     }

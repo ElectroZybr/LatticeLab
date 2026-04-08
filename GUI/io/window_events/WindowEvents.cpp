@@ -8,10 +8,10 @@ sf::RenderWindow* WindowEvents::window = nullptr;
 sf::View* WindowEvents::gameView = nullptr;
 Interface* WindowEvents::ui = nullptr;
 
-void WindowEvents::init(sf::RenderWindow* w, sf::View* gv, Interface* ui) {
-    window = w;
-    gameView = gv;
-    WindowEvents::ui = ui;
+void WindowEvents::init(sf::RenderWindow& w, sf::View& gv, Interface& ui) {
+    window = &w;
+    gameView = &gv;
+    WindowEvents::ui = &ui;
 }
 
 void WindowEvents::onEvent(const sf::Event& event) {

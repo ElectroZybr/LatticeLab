@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "App/interaction/picking/PickingSystem.h"
+#include "Engine/Simulation.h"
 #include "Engine/physics/AtomStorage.h"
 #include "GUI/interface/UiState.h"
 
@@ -11,7 +12,7 @@ RemoveAtomTool::RemoveAtomTool(ToolContext& context) noexcept : ITool(context) {
 
 void RemoveAtomTool::onLeftPressed(sf::Vector2i mousePos) {
     ToolContext& ctx = context();
-    if (ctx.atomStorage == nullptr || ctx.atomStorage->empty() || !ctx.atomRemover || ctx.pickingSystem == nullptr) {
+    if (ctx.simulation == nullptr || ctx.simulation->atoms().empty() || ctx.pickingSystem == nullptr) {
         return;
     }
 
@@ -29,12 +30,12 @@ void RemoveAtomTool::onLeftPressed(sf::Vector2i mousePos) {
         std::sort(toRemove.begin(), toRemove.end(), std::greater<>());
 
         for (size_t index : toRemove) {
-            if (ctx.atomRemover(index)) {
+            if (ctx.simulation->removeAtom(index)) {
                 ctx.pickingSystem->handleAtomRemoval(index);
             }
         }
     }
-    else if (ctx.atomRemover(target)) {
+    else if (ctx.simulation->removeAtom(target)) {
         ctx.pickingSystem->handleAtomRemoval(target);
     }
 

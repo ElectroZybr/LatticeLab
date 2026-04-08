@@ -5,7 +5,7 @@ class WindowEvents {
     friend class EventManager;
 
 public:
-    static void init(sf::RenderWindow* w, sf::View* uiView, class Interface* ui);
+    static void init(sf::RenderWindow& w, sf::View& uiView, class Interface& ui);
     static void onEvent(const sf::Event& event);
 
 private:

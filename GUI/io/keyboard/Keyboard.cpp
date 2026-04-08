@@ -6,9 +6,9 @@
 std::unique_ptr<IRenderer>* Keyboard::render = nullptr;
 Interface* Keyboard::ui = nullptr;
 
-void Keyboard::init(std::unique_ptr<IRenderer>& r, Interface* ui) {
+void Keyboard::init(std::unique_ptr<IRenderer>& r, Interface& ui) {
     render = &r;
-    Keyboard::ui = ui;
+    Keyboard::ui = &ui;
 }
 
 void Keyboard::onEvent(const sf::Event& event) {

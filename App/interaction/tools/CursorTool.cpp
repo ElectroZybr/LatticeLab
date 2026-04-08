@@ -3,14 +3,14 @@
 #include <SFML/Window/Keyboard.hpp>
 
 #include "App/interaction/picking/PickingSystem.h"
-#include "Engine/physics/AtomStorage.h"
+#include "Engine/Simulation.h"
 #include "GUI/interface/UiState.h"
 
 CursorTool::CursorTool(ToolContext& context) noexcept : ITool(context) {}
 
 void CursorTool::onLeftPressed(sf::Vector2i mousePos) {
     ToolContext& ctx = context();
-    if (ctx.pickingSystem == nullptr || ctx.atomStorage == nullptr) {
+    if (ctx.pickingSystem == nullptr || ctx.simulation == nullptr) {
         return;
     }
 
@@ -38,19 +38,19 @@ void CursorTool::onLeftReleased(sf::Vector2i mousePos) {
 
 void CursorTool::onFrame(sf::Vector2i mousePos, float deltaTime) {
     ToolContext& ctx = context();
-    if (!atomMoveActive_ || ctx.atomStorage == nullptr || ctx.pickingSystem == nullptr) {
+    if (!atomMoveActive_ || ctx.simulation == nullptr || ctx.pickingSystem == nullptr) {
         return;
     }
     if (deltaTime <= 0.0f) {
         return;
     }
-    if (selectedMoveAtomIndex_ == InvalidIndex || selectedMoveAtomIndex_ >= ctx.atomStorage->size()) {
+    AtomStorage& atoms = ctx.simulation->atoms();
+    if (selectedMoveAtomIndex_ == InvalidIndex || selectedMoveAtomIndex_ >= atoms.size()) {
         atomMoveActive_ = false;
         selectedMoveAtomIndex_ = InvalidIndex;
         return;
     }
 
-    AtomStorage& atoms = *ctx.atomStorage;
     const Vec3f worldMouse = screenToWorld(mousePos);
     const auto& selectedIndices = ctx.pickingSystem->getSelectedIndices();
     const Vec3f selectedWorldPos = atoms.pos(selectedMoveAtomIndex_);
