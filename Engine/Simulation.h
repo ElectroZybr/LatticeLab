@@ -106,6 +106,16 @@ public:
     Bond::List& bonds() { return bonds_; }
     const Bond::List& bonds() const { return bonds_; }
 
+    // методы для быстрого создания большого количества атомов
+    void reserveAtoms(size_t count) { atomStorage_.reserve(count); }
+    void appendAtomFast(Vec3f startCoords, Vec3f startSpeed, AtomData::Type type, bool fixed = false) {
+        atomStorage_.addAtom(startCoords, startSpeed, type, fixed);
+        invalidateMetricsCache();
+    }
+    void finalizeAtomBatch() {
+        sim_box_.grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
+        neighborList_.clear();
+    }
     void clear();
 
 private:

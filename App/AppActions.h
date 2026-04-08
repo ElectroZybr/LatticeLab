@@ -18,7 +18,7 @@ namespace AppActions {
         Handler(sf::RenderWindow& window, sf::View& sceneView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer);
 
     private:
-        void trackIOPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer);
+        void trackIOPanel(sf::RenderWindow& window, Simulation& simulation, std::unique_ptr<IRenderer>& renderer);
         void trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& sceneView);
         void trackSettingsPanel(sf::Window& window);
         void trackKeyboard(Simulation& simulation);

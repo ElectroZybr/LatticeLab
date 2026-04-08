@@ -50,22 +50,20 @@ namespace Scenes {
 
         sim.setSizeBox(Vec3f(side, side, is3d ? side : sim.box().size.z));
 
-        AtomStorage& atoms = sim.atoms();
         const Vec3f vecMargin(margin, margin, is3d ? margin : 0.0);
         const int zMax = is3d ? n : 1;
         const size_t atomTotal = static_cast<size_t>(n) * static_cast<size_t>(n) * static_cast<size_t>(zMax);
-        atoms.reserve(atoms.size() + atomTotal);
+        sim.reserveAtoms(sim.atoms().size() + atomTotal);
 
         for (int x = 1; x <= n; ++x) {
             for (int y = 1; y <= n; ++y) {
                 for (int z = 1; z <= zMax; ++z) {
-                    atoms.addAtom(Vec3f(x, y, z) * padding + vecMargin, Vec3f::Random() * 0.5f, type);
+                    sim.appendAtomFast(Vec3f(x, y, z) * padding + vecMargin, Vec3f::Random() * 0.5f, type);
                 }
             }
         }
 
-        sim.box().grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
-        sim.neighborList().clear();
+        sim.finalizeAtomBatch();
     }
 
     int randomGasInCurrentBox(Simulation& sim, int atomCount, AtomData::Type type, bool is3d, float minDistance, float speedScale,
@@ -79,10 +77,9 @@ namespace Scenes {
         std::srand(static_cast<unsigned>(detail::resolveSeed(seed)));
 
         const SimBox& box = sim.box();
-        AtomStorage& atoms = sim.atoms();
         const float minDistanceSqr = minDistance * minDistance;
 
-        const size_t oldSize = atoms.size();
+        const size_t oldSize = sim.atoms().size();
         std::vector<Vec3f> acceptedPositions;
         acceptedPositions.reserve(static_cast<size_t>(atomCount));
 
@@ -142,14 +139,13 @@ namespace Scenes {
             return 0;
         }
 
-        atoms.reserve(oldSize + acceptedPositions.size());
+        sim.reserveAtoms(oldSize + acceptedPositions.size());
         for (const Vec3f& pos : acceptedPositions) {
             const Vec3f randomSpeed = Vec3f::Random() * speedScale;
-            atoms.addAtom(pos, is3d ? randomSpeed : Vec3f(randomSpeed.x, randomSpeed.y, 0.0f), type);
+            sim.appendAtomFast(pos, is3d ? randomSpeed : Vec3f(randomSpeed.x, randomSpeed.y, 0.0f), type);
         }
 
-        sim.box().grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
-        sim.neighborList().clear();
+        sim.finalizeAtomBatch();
         return static_cast<int>(acceptedPositions.size());
     }
 
