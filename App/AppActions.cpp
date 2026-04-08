@@ -5,8 +5,6 @@
 #include "App/Scenes.h"
 #include "App/interaction/ToolsManager.h"
 #include "Engine/Simulation.h"
-#include "GUI/interface/interface.h"
-#include "GUI/interface/panels/io/ioPanel.h"
 #include "Rendering/2d/Renderer2D.h"
 #include "Rendering/3d/Renderer3D.h"
 
@@ -36,7 +34,7 @@ namespace {
 }
 
 namespace AppActions {
-    void Handler::trackIOPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, Interface& ui) {
+    void Handler::trackIOPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
         track(AppSignals::UI::SaveSimulation.connect([&](std::string_view path) { AppStateIO::save(simulation, *renderer, path); }));
         track(AppSignals::UI::LoadSimulation.connect([&](std::string_view path) {
             AppStateIO::load(simulation, *renderer, path);
@@ -47,29 +45,28 @@ namespace AppActions {
             simulation.clear();
             ToolsManager::resetInteractionState();
         }));
-        track(AppSignals::UI::CreateGas.connect([&]() {
+        track(AppSignals::UI::CreateGas.connect([&](int atomCount, AtomData::Type atomType, bool is3D, float density) {
             simulation.clear();
             ToolsManager::resetInteractionState();
-            IOPanel& ioPanel = ui.ioPanel;
-            Scenes::randomGas(simulation, ioPanel.gasAtomCount(), ioPanel.gasAtomType(), ioPanel.gasIs3D(), 6.0, 6.0, ioPanel.gasDensity());
+            Scenes::randomGas(simulation, atomCount, atomType, is3D, 6.0f, 6.0f, density);
         }));
-        track(AppSignals::UI::CreateCrystal.connect([&]() {
+        track(AppSignals::UI::CreateCrystal.connect([&](int axisCount, AtomData::Type atomType, bool is3D) {
             simulation.clear();
             ToolsManager::resetInteractionState();
-            IOPanel& ioPanel = ui.ioPanel;
-            Scenes::crystal(simulation, ioPanel.sceneAxisCount(), ioPanel.atomType(), ioPanel.sceneIs3D());
+            Scenes::crystal(simulation, axisCount, atomType, is3D);
         }));
     }
 
-    void Handler::trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView) {
+    void Handler::trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window,
+                                  sf::View& sceneView) {
         track(AppSignals::UI::SetRender.connect([&](RendererType type) {
             std::unique_ptr<IRenderer> newRenderer;
             switch (type) {
             case RendererType::Renderer2D:
-                newRenderer = std::make_unique<Renderer2D>(window, gameView, simulation.box());
+                newRenderer = std::make_unique<Renderer2D>(window, sceneView, simulation.box());
                 break;
             case RendererType::Renderer3D:
-                newRenderer = std::make_unique<Renderer3D>(window, gameView, simulation.box());
+                newRenderer = std::make_unique<Renderer3D>(window, sceneView, simulation.box());
                 break;
             }
 
@@ -102,9 +99,9 @@ namespace AppActions {
         }));
     }
 
-    Handler::Handler(sf::RenderWindow& window, sf::View& gameView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, Interface& ui) {
-        trackIOPanel(simulation, renderer, ui);
-        trackToolsPanel(simulation, renderer, window, gameView);
+    Handler::Handler(sf::RenderWindow& window, sf::View& sceneView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
+        trackIOPanel(simulation, renderer);
+        trackToolsPanel(simulation, renderer, window, sceneView);
         trackSettingsPanel(window);
         trackSimControlPanel(simulation);
         trackKeyboard(simulation);

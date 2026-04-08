@@ -31,20 +31,20 @@ int Application::run() {
     // создание окна
     sf::RenderWindow window = createWindow();
     if (!window.isOpen()) { return EXIT_FAILURE; }
-    sf::View& gameView = const_cast<sf::View&>(window.getView());    
+    sf::View& sceneView = const_cast<sf::View&>(window.getView());    
     
     // инициализация систем
     SimBox box(Vec3f(50, 50, 6));
     Simulation simulation(box);
     CaptureController captureController;
-    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, gameView, simulation.box());
-    Interface ui(window, simulation, renderer, captureController);
-    AppActions::Handler appActions(window, gameView, simulation, renderer, ui);
+    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, sceneView, simulation.box());
+    Interface appInterface(window, simulation, renderer, captureController);
+    AppActions::Handler appActions(window, sceneView, simulation, renderer);
     CaptureActions::Handler captureActions(window, captureController);
-    if (ui.init() != EXIT_SUCCESS) { return EXIT_FAILURE; }
-    EventManager::init(window, gameView, simulation, renderer, ui);
-    ToolsManager::init(window, gameView, simulation, renderer, ui);
-    const DebugViews debugViews = createDebugViews(ui.debugPanel);
+    if (appInterface.init() != EXIT_SUCCESS) { return EXIT_FAILURE; }
+    EventManager::init(window, sceneView, simulation, renderer, appInterface);
+    ToolsManager::init(window, sceneView, simulation, renderer, appInterface);
+    const DebugViews debugViews = createDebugViews(appInterface.debugPanel);
     
     // загрузка пользовательских настроек
     const UserSettings userSettings = UserSettingsIO::load();
@@ -55,7 +55,7 @@ int Application::run() {
     renderer->drawBonds = true;
     renderer->speedColorMode = IRenderer::SpeedColorMode::AtomColor;
     simulation.setIntegrator(Integrator::Scheme::Verlet);
-    ui.state().pause = true;
+    appInterface.state().pause = true;
 
     // создание сцены
     // Scenes::crystal(simulation, 50, AtomData::Type::Z, false);
@@ -73,7 +73,7 @@ int Application::run() {
     while (window.isOpen()) {
         Profiler::instance().beginFrame();
         const float deltaTime = clock.restart().asSeconds();
-        UiState& uiState = ui.state();
+        UiState& uiState = appInterface.state();
         physicsAccum += deltaTime;
         renderAccum += deltaTime;
         logAccum += deltaTime;
@@ -99,7 +99,7 @@ int Application::run() {
             PROFILE_SCOPE("Application::RenderFrame");
             renderAccum -= renderInterval;
             uiState.simStep = simulation.getSimStep();
-            ui.update();
+            appInterface.update();
             refreshAtomDebugViews(debugViews, simulation);
             renderer->drawShot(simulation.atoms(), simulation.bonds(), simulation.box());
             ToolsManager::pickingSystem->getOverlay().draw(window);
@@ -125,6 +125,6 @@ int Application::run() {
         .captureOutputDirectory = captureController.outputDirectory(),
         .captureSettings = captureController.settings(),
     });
-    ui.shutdown();
+    appInterface.shutdown();
     return 0;
 }

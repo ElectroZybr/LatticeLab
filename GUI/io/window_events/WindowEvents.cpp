@@ -6,12 +6,12 @@
 
 sf::RenderWindow* WindowEvents::window = nullptr;
 sf::View* WindowEvents::gameView = nullptr;
-Interface* WindowEvents::ui = nullptr;
+Interface* WindowEvents::appInterface = nullptr;
 
-void WindowEvents::init(sf::RenderWindow& w, sf::View& gv, Interface& ui) {
+void WindowEvents::init(sf::RenderWindow& w, sf::View& sceneView, Interface& appInterface) {
     window = &w;
-    gameView = &gv;
-    WindowEvents::ui = &ui;
+    gameView = &sceneView;
+    WindowEvents::appInterface = &appInterface;
 }
 
 void WindowEvents::onEvent(const sf::Event& event) {
@@ -22,12 +22,12 @@ void WindowEvents::onEvent(const sf::Event& event) {
     if (const auto* e = event.getIf<sf::Event::Resized>()) {
         gameView->setSize(sf::Vector2f(e->size));
         gameView->setCenter(sf::Vector2f(e->size) / 2.f);
-        if (ui == nullptr) {
+        if (appInterface == nullptr) {
             return;
         }
 
-        ui->styleManager.onResize(e->size);
-        if (ui->fontManager.load(ui->styleManager.getScale())) {
+        appInterface->styleManager.onResize(e->size);
+        if (appInterface->fontManager.load(appInterface->styleManager.getScale())) {
             if (!ImGui::SFML::UpdateFontTexture()) {
                 // Keep current font pointers if texture update failed.
             }
