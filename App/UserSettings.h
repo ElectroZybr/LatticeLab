@@ -3,10 +3,23 @@
 #include <filesystem>
 
 #include "App/capture/FrameRecorder.h"
+#include "Engine/physics/Integrator.h"
+#include "Rendering/BaseRenderer.h"
 
 struct UserSettings {
     std::filesystem::path captureOutputDirectory = "captures";
     CaptureSettings captureSettings{};
+
+    bool rendererDrawGrid = false;
+    bool rendererDrawBonds = true;
+    IRenderer::SpeedColorMode rendererSpeedColorMode = IRenderer::SpeedColorMode::AtomColor;
+    float rendererSpeedGradientMax = 5.0f;
+
+    Integrator::Scheme simulationIntegrator = Integrator::Scheme::Verlet;
+    bool simulationBondFormationEnabled = false;
+    bool simulationLJEnabled = true;
+    bool simulationCoulombEnabled = true;
+
 };
 
 class UserSettingsIO {
