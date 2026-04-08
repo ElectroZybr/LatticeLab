@@ -1,6 +1,7 @@
 #include "UpdateDebugData.h"
 
 #include <algorithm>
+#include <chrono>
 #include <string>
 
 #include "App/debug/CreateDebugPanels.h"
@@ -40,6 +41,14 @@ void updateAtomSelectionDebug(const DebugViews& debugViews, const Simulation& si
 }
 
 void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simulation, std::string_view integratorName) {
+    struct StepsRateSample {
+        int lastStep = 0;
+        std::chrono::steady_clock::time_point lastTime = std::chrono::steady_clock::now();
+        float rate = 0.0f;
+    };
+
+    static StepsRateSample stepsRateSample{};
+
     const AtomStorage& atoms = simulation.atoms();
     const SimBox& box = simulation.box();
     const NeighborList& neighborList = simulation.neighborList();
@@ -48,7 +57,15 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     const double captureReadbackMs = profiler.lastMs("Capture::readback");
     const double captureEncodeMs = profiler.lastMs("Capture::encodeFrame");
     const double physicsMs = profiler.lastActiveMs("Simulation::update");
-    const float stepsPerSecond = static_cast<float>(profiler.counterRate("Simulation::steps"));
+    const int simStep = simulation.getSimStep();
+    const auto now = std::chrono::steady_clock::now();
+    const float elapsedSeconds = std::chrono::duration<float>(now - stepsRateSample.lastTime).count();
+    if (elapsedSeconds >= 0.25f) {
+        stepsRateSample.rate = elapsedSeconds > 0.0f ? static_cast<float>(simStep - stepsRateSample.lastStep) / elapsedSeconds : 0.0f;
+        stepsRateSample.lastStep = simStep;
+        stepsRateSample.lastTime = now;
+    }
+    const float stepsPerSecond = stepsRateSample.rate;
 
     debugViews.sim->add_data("Средняя скорость (км/ч)", simulation.averageSpeedKmPerHour());
     debugViews.sim->add_data("Полная энергия (pj)", simulation.fullEnegryPJ());
@@ -61,7 +78,7 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     debugViews.sim->add_data("Capture encode (ms)", captureEncodeMs);
     debugViews.sim->add_data("Физика (мс)", physicsMs);
     debugViews.sim->add_data("Количество атомов", atoms.size());
-    debugViews.sim->add_data("Шаги симуляции", simulation.getSimStep());
+    debugViews.sim->add_data("Шаги симуляции", simStep);
     debugViews.sim->add_data("Шагов/с", stepsPerSecond);
     debugViews.sim->add_data("Время симуляции (ns)", simulation.simTimeNs());
     debugViews.sim->add_data("Тип интегратора", integratorName);

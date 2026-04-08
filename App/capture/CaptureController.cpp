@@ -7,6 +7,8 @@
 #include <iomanip>
 #include <sstream>
 
+#include <SFML/Window/Keyboard.hpp>
+
 CaptureSettings CaptureController::settings() const noexcept {
     return settings_;
 }
@@ -52,6 +54,22 @@ void CaptureController::update(double deltaTime) {
     }
 }
 
+void CaptureController::syncUiState(UiState& uiState) const {
+    uiState.captureAvailable = isAvailable();
+    uiState.captureRecording = isRecording();
+    uiState.captureFrameCount = savedFrameCount();
+    uiState.captureFps = captureFps();
+    uiState.captureBlinkElapsed = blinkElapsed();
+}
+
+void CaptureController::handleToggleShortcut(sf::RenderWindow& window) {
+    const bool captureKeyPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F8);
+    if (isAvailable() && captureKeyPressed && !toggleShortcutHeld_) {
+        toggle(window);
+    }
+    toggleShortcutHeld_ = captureKeyPressed;
+}
+
 void CaptureController::start() {
     if (!isAvailable()) {
         return;
@@ -72,6 +90,7 @@ void CaptureController::stop(sf::RenderWindow& window) {
     frameRecorder_.stop();
     captureFps_ = 0.0f;
     blinkElapsed_ = 0.0;
+    toggleShortcutHeld_ = false;
 }
 
 void CaptureController::toggle(sf::RenderWindow& window) {

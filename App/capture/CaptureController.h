@@ -6,6 +6,7 @@
 #include <SFML/Graphics/RenderWindow.hpp>
 
 #include "FrameRecorder.h"
+#include "GUI/interface/UiState.h"
 #include "Rendering/RendererCapture.h"
 
 class CaptureController {
@@ -17,6 +18,8 @@ public:
     void setOutputDirectory(const std::filesystem::path& path);
 
     void update(double deltaTime);
+    void syncUiState(UiState& uiState) const;
+    void handleToggleShortcut(sf::RenderWindow& window);
     void start();
     void stop(sf::RenderWindow& window);
     void toggle(sf::RenderWindow& window);
@@ -42,4 +45,5 @@ private:
     double blinkElapsed_ = 0.0;
     uint64_t lastCaptureFrameCountSample_ = 0;
     float captureFps_ = 0.0f;
+    bool toggleShortcutHeld_ = false;
 };

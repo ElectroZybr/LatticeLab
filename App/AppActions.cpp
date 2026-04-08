@@ -5,7 +5,6 @@
 #include "App/Scenes.h"
 #include "App/interaction/ToolsManager.h"
 #include "Engine/Simulation.h"
-#include "Engine/metrics/Profiler.h"
 #include "GUI/interface/interface.h"
 #include "GUI/interface/panels/io/ioPanel.h"
 #include "Rendering/2d/Renderer2D.h"
@@ -94,14 +93,12 @@ namespace AppActions {
     void Handler::trackKeyboard(Simulation& simulation) {
         track(AppSignals::Keyboard::StepPhysics.connect([&]() {
             simulation.update();
-            Profiler::instance().addCount("Simulation::steps");
         }));
     }
 
     void Handler::trackSimControlPanel(Simulation& simulation) {
         track(AppSignals::UI::StepPhysics.connect([&]() {
             simulation.update();
-            Profiler::instance().addCount("Simulation::steps");
         }));
     }
 
