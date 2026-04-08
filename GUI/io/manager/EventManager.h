@@ -10,7 +10,8 @@ class Interface;
 
 class EventManager {
 public:
-    static void init(sf::RenderWindow& window, sf::View& uiView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, Interface& ui);
+    static void init(sf::RenderWindow& window, sf::View& sceneView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
+                     Interface& appInterface);
     static void poll();
     static void frame(float deltaTime);
 

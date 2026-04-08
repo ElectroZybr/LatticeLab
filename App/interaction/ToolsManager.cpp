@@ -46,23 +46,24 @@ sf::Vector2i ToolsManager::startMousePos = {};
 sf::Vector2i ToolsManager::lastSceneMousePos = {};
 bool ToolsManager::isInteracting = false;
 
-void ToolsManager::init(sf::RenderWindow& w, sf::View& gv, Simulation& sim, std::unique_ptr<IRenderer>& rend, Interface& ui) {
+void ToolsManager::init(sf::RenderWindow& w, sf::View& sceneView, Simulation& sim, std::unique_ptr<IRenderer>& rend,
+                        Interface& appInterface) {
     window = &w;
-    gameView = &gv;
+    gameView = &sceneView;
     simulation = &sim;
     renderer = &rend;
-    uiState = &ui.state();
-    sideToolsPanel = &ui.sideToolsPanel;
+    uiState = &appInterface.state();
+    sideToolsPanel = &appInterface.sideToolsPanel;
 
     delete pickingSystem;
     pickingSystem = new PickingSystem(simulation->atoms(), simulation->box(), *renderer);
 
     toolContext.window = &w;
-    toolContext.gameView = &gv;
+    toolContext.gameView = &sceneView;
     toolContext.simulation = &sim;
     toolContext.renderer = &rend;
     toolContext.pickingSystem = pickingSystem;
-    toolContext.uiState = &ui.state();
+    toolContext.uiState = &appInterface.state();
 
     for (auto& tool : toolInstances) {
         tool.reset();

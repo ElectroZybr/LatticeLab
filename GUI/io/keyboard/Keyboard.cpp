@@ -4,23 +4,23 @@
 #include "GUI/interface/interface.h"
 
 std::unique_ptr<IRenderer>* Keyboard::render = nullptr;
-Interface* Keyboard::ui = nullptr;
+Interface* Keyboard::appInterface = nullptr;
 
-void Keyboard::init(std::unique_ptr<IRenderer>& r, Interface& ui) {
+void Keyboard::init(std::unique_ptr<IRenderer>& r, Interface& appInterface) {
     render = &r;
-    Keyboard::ui = &ui;
+    Keyboard::appInterface = &appInterface;
 }
 
 void Keyboard::onEvent(const sf::Event& event) {
     if (const auto* e = event.getIf<sf::Event::KeyPressed>()) {
-        if (ui == nullptr) {
+        if (appInterface == nullptr) {
             return;
         }
 
-        UiState& uiState = ui->state();
+        UiState& uiState = appInterface->state();
 
         if (e->code == sf::Keyboard::Key::P) {
-            ui->debugPanel.toggle();
+            appInterface->debugPanel.toggle();
         }
         else if (e->code == sf::Keyboard::Key::Space) {
             uiState.pause = !uiState.pause;

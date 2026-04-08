@@ -31,7 +31,8 @@ public:
         RemoveAtom,
     };
 
-    static void init(sf::RenderWindow& window, sf::View& gameView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, Interface& ui);
+    static void init(sf::RenderWindow& window, sf::View& sceneView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
+                     Interface& appInterface);
 
     static Vec3f screenToWorld(sf::Vector2i mousePos);
     static sf::Vector2i worldToScreen(Vec3f pos);

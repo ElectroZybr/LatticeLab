@@ -168,7 +168,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     drawAtomTypeCombo("##atom_type", atomType_, 80.f * scale, scale);
 
     if (ImGui::Button("Создать##crystal", ImVec2(buttonWidth * scale, 0.f))) {
-        AppSignals::UI::CreateCrystal.emit();
+        AppSignals::UI::CreateCrystal.emit(sceneAxisCount_, atomType_, sceneIs3D_);
     }
     ImGui::SameLine();
     ImGui::Checkbox("3D", &sceneIs3D_);
@@ -178,7 +178,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     ImGui::SameLine();
     drawAtomTypeCombo("##atom_type_gas", gasAtomType_, 80.f * scale, scale);
     if (ImGui::Button("Создать##gas", ImVec2(buttonWidth * scale, 0.f))) {
-        AppSignals::UI::CreateGas.emit();
+        AppSignals::UI::CreateGas.emit(gasAtomCount_, gasAtomType_, gasIs3D_, gasDensity_);
     }
     ImGui::SameLine();
     ImGui::Checkbox("3D##gas", &gasIs3D_);
