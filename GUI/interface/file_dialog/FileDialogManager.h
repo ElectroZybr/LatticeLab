@@ -8,4 +8,8 @@ public:
     void openLoad();
     void openCaptureDirectory(const std::string& currentPath);
     void draw(float scale);
+    [[nodiscard]] bool isSaveDialogOpen() const { return saveDialogOpen_; }
+
+private:
+    bool saveDialogOpen_ = false;
 };

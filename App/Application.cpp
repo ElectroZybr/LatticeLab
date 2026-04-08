@@ -50,8 +50,6 @@ int Application::run() {
     const UserSettings userSettings = UserSettingsIO::load();
     captureController.setSettings(userSettings.captureSettings);
     captureController.setOutputDirectory(userSettings.captureOutputDirectory);
-
-    // начальная настройка симуляции и рендерера
     renderer->drawGrid = userSettings.rendererDrawGrid;
     renderer->drawBonds = userSettings.rendererDrawBonds;
     renderer->speedColorMode = userSettings.rendererSpeedColorMode;
