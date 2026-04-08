@@ -24,6 +24,7 @@ void FileDialogManager::openSave() {
     config.countSelectionMax = 1;
     config.flags = ImGuiFileDialogFlags_ConfirmOverwrite;
     ImGuiFileDialog::Instance()->OpenDialog("SaveDlg", "Save scene", ".lat", config);
+    saveDialogOpen_ = true;
 }
 
 void FileDialogManager::openLoad() {
@@ -48,6 +49,7 @@ void FileDialogManager::draw(float scale) {
             AppSignals::UI::SaveSimulation.emit(ImGuiFileDialog::Instance()->GetFilePathName());
         }
         ImGuiFileDialog::Instance()->Close();
+        saveDialogOpen_ = false;
     }
 
     if (ImGuiFileDialog::Instance()->Display("LoadDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {

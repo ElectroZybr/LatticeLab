@@ -21,4 +21,6 @@ struct UiState {
     uint64_t captureFrameCount = 0;
     float captureFps = 0.0f;
     double captureBlinkElapsed = 0.0;
+
+    bool scenePreviewMode = false;
 };

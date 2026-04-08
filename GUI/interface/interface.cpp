@@ -17,6 +17,39 @@
 #define ICON_FA_FAST_BACKWARD "\uf049"
 #define ICON_FA_BUG "\uf188"
 
+namespace {
+    void drawScenePreviewFrame(const sf::RenderWindow& window, float uiScale) {
+        ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+        const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+
+        const float frameAspect = 1.282f;
+        const float horizontalMargin = 36.0f * uiScale;
+        const float verticalMargin = 88.0f * uiScale;
+        const float maxWidth = std::max(120.0f, displaySize.x - horizontalMargin * 2.0f);
+        const float maxHeight = std::max(120.0f, displaySize.y - verticalMargin * 2.0f);
+
+        float frameWidth = maxWidth * 0.7f;
+        float frameHeight = frameWidth / frameAspect;
+        if (frameHeight > maxHeight) {
+            frameHeight = maxHeight * 0.72f;
+            frameWidth = frameHeight * frameAspect;
+        }
+
+        const ImVec2 frameMin((displaySize.x - frameWidth) * 0.5f, (displaySize.y - frameHeight) * 0.5f);
+        const ImVec2 frameMax(frameMin.x + frameWidth, frameMin.y + frameHeight);
+        const ImU32 shadeColor = ImGui::GetColorU32(ImVec4(0.02f, 0.03f, 0.05f, 0.42f));
+        const ImU32 frameColor = ImGui::GetColorU32(ImVec4(0.80f, 0.88f, 1.00f, 0.95f));
+        const ImU32 hintBgColor = ImGui::GetColorU32(ImVec4(0.05f, 0.07f, 0.10f, 0.78f));
+
+        drawList->AddRectFilled(ImVec2(0.0f, 0.0f), ImVec2(displaySize.x, frameMin.y), shadeColor);
+        drawList->AddRectFilled(ImVec2(0.0f, frameMin.y), ImVec2(frameMin.x, frameMax.y), shadeColor);
+        drawList->AddRectFilled(ImVec2(frameMax.x, frameMin.y), ImVec2(displaySize.x, frameMax.y), shadeColor);
+        drawList->AddRectFilled(ImVec2(0.0f, frameMax.y), ImVec2(displaySize.x, displaySize.y), shadeColor);
+
+        drawList->AddRect(frameMin, frameMax, frameColor, 10.0f, 0, 1.5f);
+    }
+}
+
 Interface::Interface(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r, CaptureController& c)
     : window_(&w), simulation_(&s), renderer_(&r), captureController_(&c) {}
 
@@ -78,6 +111,11 @@ int Interface::update() {
     settingsPanel.draw(styleManager.getScale(), window_->getSize(), *simulation_, *renderer_, *captureController_, fileDialog);
     ioPanel.draw(styleManager.getScale(), window_->getSize(), *simulation_, fileDialog, uiState_);
     ImGui::PopFont();
+
+    uiState_.scenePreviewMode = fileDialog.isSaveDialogOpen();
+    if (uiState_.scenePreviewMode) {
+        drawScenePreviewFrame(*window_, styleManager.getScale());
+    }
 
     uiState_.cursorHovered = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) ||
                              ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup);
