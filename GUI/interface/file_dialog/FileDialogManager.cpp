@@ -20,17 +20,17 @@ namespace {
 void FileDialogManager::openSave() {
     IGFD::FileDialogConfig config;
     config.path = defaultSimulationPath();
-    config.fileName = "simulation";
+    config.fileName = "scene";
     config.countSelectionMax = 1;
     config.flags = ImGuiFileDialogFlags_ConfirmOverwrite;
-    ImGuiFileDialog::Instance()->OpenDialog("SaveDlg", "Save simulation", ".sim", config);
+    ImGuiFileDialog::Instance()->OpenDialog("SaveDlg", "Save scene", ".lat", config);
 }
 
 void FileDialogManager::openLoad() {
     IGFD::FileDialogConfig config;
     config.path = defaultSimulationPath();
     config.countSelectionMax = 1;
-    ImGuiFileDialog::Instance()->OpenDialog("LoadDlg", "Load simulation", ".sim", config);
+    ImGuiFileDialog::Instance()->OpenDialog("LoadDlg", "Load scene", ".lat,.sim", config);
 }
 
 void FileDialogManager::openCaptureDirectory(const std::string& currentPath) {

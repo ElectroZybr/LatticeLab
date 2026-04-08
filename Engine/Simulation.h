@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SFML/Graphics.hpp>
+#include <string>
 
 #include "Engine/Consts.h"
 #include "Engine/NeighborSearch/NeighborList.h"
@@ -34,6 +35,14 @@ public:
 
     int getSimStep() const { return sim_step; }
     float simTimeNs() const { return sim_time_ns; }
+    void restoreRuntimeState(int simStep, float simTimeNs) {
+        sim_step = simStep;
+        sim_time_ns = simTimeNs;
+    }
+    void setSceneTitle(std::string title) { sceneTitle_ = std::move(title); }
+    const std::string& sceneTitle() const { return sceneTitle_; }
+    void setSceneDescription(std::string description) { sceneDescription_ = std::move(description); }
+    const std::string& sceneDescription() const { return sceneDescription_; }
 
     float averageKineticEnergyEv() const {
         refreshMetricsCache();
@@ -115,6 +124,8 @@ private:
     int sim_step = 0;
     float sim_time_ns = 0.0f;
     bool bondFormationEnabled_ = false;
+    std::string sceneTitle_;
+    std::string sceneDescription_;
     mutable bool metricsCacheValid_ = false;
     mutable EnergyMetrics::Snapshot metricsCache_{};
 };

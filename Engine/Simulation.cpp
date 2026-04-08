@@ -102,7 +102,7 @@ bool Simulation::removeAtom(size_t atomIndex) {
 }
 
 void Simulation::addBond(size_t aIndex, size_t bIndex) {
-    if (!bondFormationEnabled_ || aIndex >= atomStorage_.size() || bIndex >= atomStorage_.size()) {
+    if (aIndex >= atomStorage_.size() || bIndex >= atomStorage_.size()) {
         return;
     }
 
@@ -113,7 +113,10 @@ void Simulation::clear() {
     atomStorage_.clear();
     invalidateMetricsCache();
     bonds_.clear();
+    sceneTitle_.clear();
+    sceneDescription_.clear();
     sim_box_.grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
     neighborList_.clear();
     sim_step = 0;
+    sim_time_ns = 0.0f;
 }
