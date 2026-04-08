@@ -203,9 +203,11 @@ namespace {
         simulation.setSceneTitle(loadedTitle);
         simulation.setSceneDescription(loadedDescription);
 
+        simulation.reserveAtoms(atoms.size());
         for (const LoadedAtomData& atom : atoms) {
-            simulation.createAtom(atom.coords, atom.speed, static_cast<AtomData::Type>(atom.type), atom.fixed);
+            simulation.appendAtomFast(atom.coords, atom.speed, static_cast<AtomData::Type>(atom.type), atom.fixed);
         }
+        simulation.finalizeAtomBatch();
         simulation.restoreRuntimeState(loadedStep, loadedTimeNs);
     }
 
@@ -348,9 +350,11 @@ namespace {
         simulation.setSceneTitle(loadedTitle);
         simulation.setSceneDescription(loadedDescription);
 
+        simulation.reserveAtoms(atoms.size());
         for (const LoadedAtomData& atom : atoms) {
-            simulation.createAtom(atom.coords, atom.speed, static_cast<AtomData::Type>(atom.type), atom.fixed);
+            simulation.appendAtomFast(atom.coords, atom.speed, static_cast<AtomData::Type>(atom.type), atom.fixed);
         }
+        simulation.finalizeAtomBatch();
         for (size_t i = 0; i < atoms.size(); ++i) {
             simulation.atoms().charge(i) = atoms[i].charge;
         }

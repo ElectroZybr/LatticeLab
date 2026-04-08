@@ -34,8 +34,8 @@ namespace {
 }
 
 namespace AppActions {
-    void Handler::trackIOPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
-        track(AppSignals::UI::SaveSimulation.connect([&](std::string_view path) { AppStateIO::save(simulation, *renderer, path); }));
+    void Handler::trackIOPanel(sf::RenderWindow& window, Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
+        track(AppSignals::UI::SaveSimulation.connect([&](std::string_view path) { AppStateIO::save(window, simulation, *renderer, path); }));
         track(AppSignals::UI::LoadSimulation.connect([&](std::string_view path) {
             AppStateIO::load(simulation, *renderer, path);
             ToolsManager::resetInteractionState();
@@ -100,7 +100,7 @@ namespace AppActions {
     }
 
     Handler::Handler(sf::RenderWindow& window, sf::View& sceneView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
-        trackIOPanel(simulation, renderer);
+        trackIOPanel(window, simulation, renderer);
         trackToolsPanel(simulation, renderer, window, sceneView);
         trackSettingsPanel(window);
         trackSimControlPanel(simulation);
