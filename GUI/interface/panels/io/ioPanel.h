@@ -3,6 +3,9 @@
 #include <SFML/Graphics.hpp>
 #include <imgui.h>
 
+#include <string>
+#include <vector>
+
 #include "Engine/math/Vec3f.h"
 #include "Engine/physics/AtomData.h"
 
@@ -30,7 +33,18 @@ public:
     [[nodiscard]] Vec3f boxSize() const { return boxSize_; }
 
 private:
+    struct SceneTile {
+        std::string path;
+        std::string title;
+        std::string description;
+        sf::Texture previewTexture;
+        bool hasPreview = false;
+    };
+
+    void ensureSceneCatalogLoaded();
+
     bool visible_ = false;
+    bool sceneCatalogLoaded_ = false;
     float animProgress_ = 0.f;
     int sceneAxisCount_ = 25;
     bool sceneIs3D_ = true;
@@ -40,4 +54,5 @@ private:
     Vec3f boxSize_ = Vec3f(100.0f, 100.0f, 6.0f);
     AtomData::Type atomType_ = AtomData::Type::Z;
     AtomData::Type gasAtomType_ = AtomData::Type::Z;
+    std::vector<SceneTile> sceneTiles_;
 };
