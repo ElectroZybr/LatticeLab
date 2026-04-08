@@ -51,16 +51,13 @@ int Application::run() {
     captureController.setSettings(userSettings.captureSettings);
     captureController.setOutputDirectory(userSettings.captureOutputDirectory);
     Interface ui(window, simulation, renderer, captureController);
+    AppActions::Handler appActions(window, gameView, simulation, renderer, ui);
 
-    AppActions::init(simulation, renderer, window, gameView, ui);
     if (ui.init() != EXIT_SUCCESS) {
         return EXIT_FAILURE;
     }
-    EventManager::init(&window, &gameView, renderer, &simulation.box(), &simulation.atoms(), &ui);
-    ToolsManager::init(
-        &window, &gameView, &box.grid, &box, renderer, &simulation.atoms(), &ui.state(), &ui.sideToolsPanel,
-        [&](Vec3f coords, Vec3f speed, AtomData::Type type, bool fixed) { return simulation.createAtom(coords, speed, type, fixed); },
-        [&](size_t atomIndex) { return simulation.removeAtom(atomIndex); });
+    EventManager::init(window, gameView, simulation, renderer, ui);
+    ToolsManager::init(window, gameView, simulation, renderer, ui);
     ui.state().pause = true;
 
     const DebugViews debugViews = createDebugViews(ui.debugPanel);

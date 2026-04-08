@@ -9,7 +9,7 @@
 #include "App/interaction/tools/RemoveAtomTool.h"
 #include "App/interaction/tools/RulerTool.h"
 #include "Engine/SimBox.h"
-#include "GUI/interface/UiState.h"
+#include "GUI/interface/interface.h"
 #include "GUI/interface/panels/tools/SideToolsPanel.h"
 
 namespace {
@@ -35,14 +35,10 @@ namespace {
 sf::RenderWindow* ToolsManager::window = nullptr;
 sf::View* ToolsManager::gameView = nullptr;
 std::unique_ptr<IRenderer>* ToolsManager::renderer = nullptr;
-SpatialGrid* ToolsManager::grid = nullptr;
 PickingSystem* ToolsManager::pickingSystem = nullptr;
-SimBox* ToolsManager::box = nullptr;
-AtomStorage* ToolsManager::atomStorage = nullptr;
+Simulation* ToolsManager::simulation = nullptr;
 UiState* ToolsManager::uiState = nullptr;
 SideToolsPanel* ToolsManager::sideToolsPanel = nullptr;
-ToolsManager::AtomCreator ToolsManager::atomCreator = {};
-ToolsManager::AtomRemover ToolsManager::atomRemover = {};
 ToolContext ToolsManager::toolContext = {};
 std::array<std::unique_ptr<ITool>, ToolsManager::kModeCount> ToolsManager::toolInstances = {};
 ToolsManager::Mode ToolsManager::syncedMode = ToolsManager::Mode::Cursor;
@@ -50,33 +46,23 @@ sf::Vector2i ToolsManager::startMousePos = {};
 sf::Vector2i ToolsManager::lastSceneMousePos = {};
 bool ToolsManager::isInteracting = false;
 
-void ToolsManager::init(sf::RenderWindow* w, sf::View* gv, SpatialGrid* gr, SimBox* b, std::unique_ptr<IRenderer>& rend,
-                        AtomStorage* storage, UiState* state, SideToolsPanel* toolsPanel, AtomCreator createAtomFn,
-                        AtomRemover removeAtomFn) {
-    window = w;
-    gameView = gv;
-    grid = gr;
-    box = b;
+void ToolsManager::init(sf::RenderWindow& w, sf::View& gv, Simulation& sim, std::unique_ptr<IRenderer>& rend, Interface& ui) {
+    window = &w;
+    gameView = &gv;
+    simulation = &sim;
     renderer = &rend;
-    atomStorage = storage;
-    uiState = state;
-    sideToolsPanel = toolsPanel;
-    atomCreator = std::move(createAtomFn);
-    atomRemover = std::move(removeAtomFn);
+    uiState = &ui.state();
+    sideToolsPanel = &ui.sideToolsPanel;
 
     delete pickingSystem;
-    pickingSystem = new PickingSystem(*atomStorage, *box, rend);
+    pickingSystem = new PickingSystem(simulation->atoms(), simulation->box(), *renderer);
 
-    toolContext.window = w;
-    toolContext.gameView = gv;
-    toolContext.grid = gr;
-    toolContext.box = b;
+    toolContext.window = &w;
+    toolContext.gameView = &gv;
+    toolContext.simulation = &sim;
     toolContext.renderer = &rend;
-    toolContext.atomStorage = storage;
     toolContext.pickingSystem = pickingSystem;
-    toolContext.uiState = state;
-    toolContext.atomCreator = atomCreator;
-    toolContext.atomRemover = atomRemover;
+    toolContext.uiState = &ui.state();
 
     for (auto& tool : toolInstances) {
         tool.reset();
@@ -157,7 +143,7 @@ bool ToolsManager::onRightPressed(sf::Vector2i mousePos) {
 }
 
 void ToolsManager::onFrame(sf::Vector2i mousePos, float deltaTime) {
-    if (!renderer || !renderer->get() || !atomStorage || !pickingSystem) {
+    if (!renderer || !renderer->get() || !simulation || !pickingSystem) {
         return;
     }
 

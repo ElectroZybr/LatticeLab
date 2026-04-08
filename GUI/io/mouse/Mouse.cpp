@@ -4,20 +4,18 @@
 #include <iostream>
 
 #include "App/interaction/ToolsManager.h"
+#include "Engine/Simulation.h"
 #include "GUI/interface/interface.h"
 
 sf::RenderWindow* Mouse::window = nullptr;
 std::unique_ptr<IRenderer>* Mouse::renderer = nullptr;
-SimBox* Mouse::box = nullptr;
-AtomStorage* Mouse::atomStorage = nullptr;
 Interface* Mouse::ui = nullptr;
 
-void Mouse::init(sf::RenderWindow* w, std::unique_ptr<IRenderer>& r, SimBox* b, AtomStorage* storage, Interface* ui) {
-    window = w;
+void Mouse::init(sf::RenderWindow& w, std::unique_ptr<IRenderer>& r, Simulation& simulation, Interface& ui) {
+    window = &w;
     renderer = &r;
-    box = b;
-    atomStorage = storage;
-    Mouse::ui = ui;
+    Mouse::ui = &ui;
+    (void)simulation;
 }
 
 void Mouse::onEvent(const sf::Event& event) {

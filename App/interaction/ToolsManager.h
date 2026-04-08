@@ -9,7 +9,7 @@
 
 #include "App/interaction/picking/PickingSystem.h"
 #include "App/interaction/tools/ITool.h"
-#include "Engine/NeighborSearch/SpatialGrid.h"
+#include "Engine/Simulation.h"
 #include "Engine/math/Vec3f.h"
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
@@ -17,13 +17,11 @@
 
 class SimBox;
 class SideToolsPanel;
+class Interface;
 struct UiState;
 
 class ToolsManager {
 public:
-    using AtomCreator = std::function<bool(Vec3f, Vec3f, AtomData::Type, bool)>;
-    using AtomRemover = std::function<bool(size_t)>;
-
     enum class Mode : uint8_t {
         Cursor,
         Frame,
@@ -33,9 +31,7 @@ public:
         RemoveAtom,
     };
 
-    static void init(sf::RenderWindow* window, sf::View* gameView, SpatialGrid* grid, SimBox* box, std::unique_ptr<IRenderer>& renderer,
-                     AtomStorage* atomStorage = nullptr, UiState* uiState = nullptr, SideToolsPanel* sideToolsPanel = nullptr,
-                     AtomCreator atomCreator = {}, AtomRemover atomRemover = {});
+    static void init(sf::RenderWindow& window, sf::View& gameView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, Interface& ui);
 
     static Vec3f screenToWorld(sf::Vector2i mousePos);
     static sf::Vector2i worldToScreen(Vec3f pos);
@@ -61,14 +57,10 @@ private:
 
     static sf::RenderWindow* window;
     static sf::View* gameView;
-    static SpatialGrid* grid;
     static std::unique_ptr<IRenderer>* renderer;
-    static SimBox* box;
-    static AtomStorage* atomStorage;
+    static Simulation* simulation;
     static UiState* uiState;
     static SideToolsPanel* sideToolsPanel;
-    static AtomCreator atomCreator;
-    static AtomRemover atomRemover;
     static ToolContext toolContext;
     static std::array<std::unique_ptr<ITool>, kModeCount> toolInstances;
     static Mode syncedMode;
