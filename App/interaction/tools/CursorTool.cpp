@@ -4,7 +4,7 @@
 
 #include "App/interaction/picking/PickingSystem.h"
 #include "Engine/physics/AtomStorage.h"
-#include "GUI/interface/interface.h"
+#include "GUI/interface/UiState.h"
 
 CursorTool::CursorTool(ToolContext& context) noexcept : ITool(context) {}
 
@@ -25,7 +25,9 @@ void CursorTool::onLeftPressed(sf::Vector2i mousePos) {
         atomMoveActive_ = true;
     }
 
-    Interface::countSelectedAtom = static_cast<int>(ctx.pickingSystem->getSelectedIndices().size());
+    if (ctx.uiState != nullptr) {
+        ctx.uiState->selectedAtomCount = static_cast<int>(ctx.pickingSystem->getSelectedIndices().size());
+    }
 }
 
 void CursorTool::onLeftReleased(sf::Vector2i mousePos) {

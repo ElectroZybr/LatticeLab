@@ -8,13 +8,14 @@
 
 class FileDialogManager;
 class Simulation;
+struct UiState;
 
 class IOPanel {
 public:
     static constexpr ImGuiWindowFlags PANEL_FLAGS =
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 
-    void draw(float scale, sf::Vector2u windowSize, Simulation& simulation, FileDialogManager& fileDialog);
+    void draw(float scale, sf::Vector2u windowSize, Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState);
 
     void toggle() { visible_ = !visible_; }
     void close() { visible_ = false; }

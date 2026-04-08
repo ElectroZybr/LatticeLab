@@ -17,50 +17,36 @@
 #include "GUI/interface/panels/tools/SideToolsPanel.h"
 #include "GUI/interface/panels/tools/ToolsPanel.h"
 #include "GUI/interface/style/StyleManager.h"
+#include "GUI/interface/UiState.h"
 
 class Interface {
-private:
-    static sf::RenderWindow* window;
-    static Simulation* simulation;
-    static std::unique_ptr<IRenderer>* renderer;
-    static class CaptureController* captureController;
-    static sf::Clock clock;
-    static int selectedAtom;
-    static float simulationSpeed;
-    static double averageEnergy;
-    static int sim_step;
-
 public:
-    static bool pause;
-    static int init(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r, CaptureController& c);
-    static void shutdown();
-    static int Update();
-    static bool getPause();
-    static int getSelectedAtom();
-    static float getSimulationSpeed();
-    static bool popStepRequested();
-    static void setAverageEnergy(double energy);
-    static void setSimStep(int step);
-    static bool cursorHovered;
-    static int countSelectedAtom;
-    static bool drawToolTrip;
-    static std::string toolTooltipText;
-    static bool captureRecording;
-    static bool captureAvailable;
-    static uint64_t captureFrameCount;
-    static float captureFps;
-    static double captureBlinkElapsed;
+    Interface(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r, class CaptureController& c);
 
-    static FontManager fontManager;
+    int init();
+    void shutdown();
+    int update();
+    UiState& state();
+    const UiState& state() const;
 
-    static DebugPanel debugPanel;
-    static FileDialogManager fileDialog;
-    static StyleManager styleManager;
-    static ToolsPanel toolsPanel;
-    static IOPanel ioPanel;
-    static SideToolsPanel sideToolsPanel;
-    static SimControlPanel simControlPanel;
-    static PeriodicPanel periodicPanel;
-    static StatsPanel statsPanel;
-    static SettingsPanel settingsPanel;
+    FontManager fontManager;
+
+    DebugPanel debugPanel;
+    FileDialogManager fileDialog;
+    StyleManager styleManager;
+    ToolsPanel toolsPanel;
+    IOPanel ioPanel;
+    SideToolsPanel sideToolsPanel;
+    SimControlPanel simControlPanel;
+    PeriodicPanel periodicPanel;
+    StatsPanel statsPanel;
+    SettingsPanel settingsPanel;
+
+private:
+    sf::RenderWindow* window_;
+    Simulation* simulation_;
+    std::unique_ptr<IRenderer>* renderer_;
+    class CaptureController* captureController_;
+    sf::Clock clock_;
+    UiState uiState_;
 };

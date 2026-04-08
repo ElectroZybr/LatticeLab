@@ -50,17 +50,20 @@ int Application::run() {
     const UserSettings userSettings = UserSettingsIO::load();
     captureController.setSettings(userSettings.captureSettings);
     captureController.setOutputDirectory(userSettings.captureOutputDirectory);
+    Interface ui(window, simulation, renderer, captureController);
 
-    AppActions::init(simulation, renderer, window, gameView);
-    Interface::init(window, simulation, renderer, captureController);
-    EventManager::init(&window, &gameView, renderer, &simulation.box(), &simulation.atoms());
+    AppActions::init(simulation, renderer, window, gameView, ui);
+    if (ui.init() != EXIT_SUCCESS) {
+        return EXIT_FAILURE;
+    }
+    EventManager::init(&window, &gameView, renderer, &simulation.box(), &simulation.atoms(), &ui);
     ToolsManager::init(
-        &window, &gameView, &box.grid, &box, renderer, &simulation.atoms(),
+        &window, &gameView, &box.grid, &box, renderer, &simulation.atoms(), &ui.state(), &ui.sideToolsPanel,
         [&](Vec3f coords, Vec3f speed, AtomData::Type type, bool fixed) { return simulation.createAtom(coords, speed, type, fixed); },
         [&](size_t atomIndex) { return simulation.removeAtom(atomIndex); });
-    Interface::pause = true;
+    ui.state().pause = true;
 
-    const DebugViews debugViews = createDebugViews(Interface::debugPanel);
+    const DebugViews debugViews = createDebugViews(ui.debugPanel);
 
     sf::Clock clock;
     double renderAccum = 0.0;
@@ -84,6 +87,7 @@ int Application::run() {
     while (window.isOpen()) {
         Profiler::instance().beginFrame();
         const float deltaTime = clock.restart().asSeconds();
+        UiState& uiState = ui.state();
         physicsAccum += deltaTime;
         renderAccum += deltaTime;
         logAccum += deltaTime;
@@ -92,22 +96,22 @@ int Application::run() {
         EventManager::poll();
         EventManager::frame(deltaTime);
         captureController.update(deltaTime);
-        Interface::captureAvailable = captureController.isAvailable();
-        Interface::captureRecording = captureController.isRecording();
-        Interface::captureFrameCount = captureController.savedFrameCount();
-        Interface::captureFps = captureController.captureFps();
-        Interface::captureBlinkElapsed = captureController.blinkElapsed();
+        uiState.captureAvailable = captureController.isAvailable();
+        uiState.captureRecording = captureController.isRecording();
+        uiState.captureFrameCount = captureController.savedFrameCount();
+        uiState.captureFps = captureController.captureFps();
+        uiState.captureBlinkElapsed = captureController.blinkElapsed();
 
         const bool captureKeyPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F8);
-        if (Interface::captureAvailable && captureKeyPressed && !captureToggleHeld) {
+        if (uiState.captureAvailable && captureKeyPressed && !captureToggleHeld) {
             AppSignals::UI::ToggleCapture.emit();
         }
         captureToggleHeld = captureKeyPressed;
 
         // обновление физики
-        const double physicsInterval = 1.0 / Interface::getSimulationSpeed();
+        const double physicsInterval = 1.0 / uiState.simulationSpeed;
         if (physicsAccum >= physicsInterval) {
-            if (!Interface::getPause()) {
+            if (!uiState.pause) {
                 simulation.update();
                 Profiler::instance().addCount("Simulation::steps");
                 physicsAccum = 0.0;
@@ -121,7 +125,7 @@ int Application::run() {
         if (renderAccum >= renderInterval) {
             PROFILE_SCOPE("Application::RenderFrame");
             renderAccum -= renderInterval;
-            Interface::Update();
+            ui.update();
             refreshAtomDebugViews(debugViews, simulation);
             renderer->drawShot(simulation.atoms(), simulation.bonds(), simulation.box());
             ToolsManager::pickingSystem->getOverlay().draw(window);
@@ -147,6 +151,6 @@ int Application::run() {
         .captureOutputDirectory = captureController.outputDirectory(),
         .captureSettings = captureController.settings(),
     });
-    Interface::shutdown();
+    ui.shutdown();
     return 0;
 }

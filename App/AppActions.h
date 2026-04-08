@@ -42,7 +42,7 @@ namespace AppActions {
     }
 
     class Handler : public Signals::Trackable {
-        void trackIOPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
+        void trackIOPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, Interface& ui) {
             track(AppSignals::UI::SaveSimulation.connect([&](std::string_view path) { AppStateIO::save(simulation, *renderer, path); }));
             track(AppSignals::UI::LoadSimulation.connect([&](std::string_view path) {
                 AppStateIO::load(simulation, *renderer, path);
@@ -56,14 +56,14 @@ namespace AppActions {
             track(AppSignals::UI::CreateGas.connect([&]() {
                 simulation.clear();
                 ToolsManager::resetInteractionState();
-                Scenes::randomGas(simulation, Interface::ioPanel.gasAtomCount(), Interface::ioPanel.gasAtomType(),
-                                  Interface::ioPanel.gasIs3D(), 6.0, 6.0, Interface::ioPanel.gasDensity());
+                IOPanel& ioPanel = ui.ioPanel;
+                Scenes::randomGas(simulation, ioPanel.gasAtomCount(), ioPanel.gasAtomType(), ioPanel.gasIs3D(), 6.0, 6.0, ioPanel.gasDensity());
             }));
             track(AppSignals::UI::CreateCrystal.connect([&]() {
                 simulation.clear();
                 ToolsManager::resetInteractionState();
-                Scenes::crystal(simulation, Interface::ioPanel.sceneAxisCount(), Interface::ioPanel.atomType(),
-                                Interface::ioPanel.sceneIs3D());
+                IOPanel& ioPanel = ui.ioPanel;
+                Scenes::crystal(simulation, ioPanel.sceneAxisCount(), ioPanel.atomType(), ioPanel.sceneIs3D());
             }));
         }
 
@@ -109,8 +109,8 @@ namespace AppActions {
         }
 
     public:
-        Handler(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView) {
-            trackIOPanel(simulation, renderer);
+        Handler(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView, Interface& ui) {
+            trackIOPanel(simulation, renderer, ui);
             trackToolsPanel(simulation, renderer, window, gameView);
             trackSettingsPanel(window);
             trackSimControlPanel(simulation);
@@ -120,7 +120,7 @@ namespace AppActions {
 
     inline Handler* instance = nullptr;
 
-    inline void init(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView) {
-        instance = new Handler(simulation, renderer, window, gameView);
+    inline void init(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& gameView, Interface& ui) {
+        instance = new Handler(simulation, renderer, window, gameView, ui);
     }
 }

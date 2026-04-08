@@ -2,7 +2,8 @@
 
 #include "Engine/SimBox.h"
 #include "Engine/physics/AtomStorage.h"
-#include "GUI/interface/interface.h"
+#include "GUI/interface/UiState.h"
+#include "GUI/interface/panels/periodic/PeriodicPanel.h"
 
 AddAtomTool::AddAtomTool(ToolContext& context) noexcept : ITool(context) {}
 
@@ -12,7 +13,11 @@ void AddAtomTool::onLeftPressed(sf::Vector2i mousePos) {
         return;
     }
 
-    const AtomData::Type atomType = static_cast<AtomData::Type>(Interface::getSelectedAtom());
+    if (ctx.uiState == nullptr) {
+        return;
+    }
+
+    const AtomData::Type atomType = static_cast<AtomData::Type>(PeriodicPanel::decodeAtom(ctx.uiState->selectedAtom));
     const Vec3f spawnPos = screenToWorld(mousePos);
 
     if (!(1 <= spawnPos.x && spawnPos.x <= ctx.box->size.x - 1 && 1 <= spawnPos.y && spawnPos.y <= ctx.box->size.y - 1 && 1 <= spawnPos.z &&

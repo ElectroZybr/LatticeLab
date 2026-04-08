@@ -10,12 +10,14 @@ sf::RenderWindow* Mouse::window = nullptr;
 std::unique_ptr<IRenderer>* Mouse::renderer = nullptr;
 SimBox* Mouse::box = nullptr;
 AtomStorage* Mouse::atomStorage = nullptr;
+Interface* Mouse::ui = nullptr;
 
-void Mouse::init(sf::RenderWindow* w, std::unique_ptr<IRenderer>& r, SimBox* b, AtomStorage* storage) {
+void Mouse::init(sf::RenderWindow* w, std::unique_ptr<IRenderer>& r, SimBox* b, AtomStorage* storage, Interface* ui) {
     window = w;
     renderer = &r;
     box = b;
     atomStorage = storage;
+    Mouse::ui = ui;
 }
 
 void Mouse::onEvent(const sf::Event& event) {
@@ -28,7 +30,8 @@ void Mouse::onEvent(const sf::Event& event) {
             ToolsManager::onLeftPressed(mouse_pos);
         }
 
-        if (e->button == sf::Mouse::Button::Right && !Interface::cursorHovered && !ToolsManager::isInteractingNow()) {
+        if (e->button == sf::Mouse::Button::Right && ui != nullptr && !ui->state().cursorHovered &&
+            !ToolsManager::isInteractingNow()) {
             if (!ToolsManager::onRightPressed(mouse_pos)) {
                 rend->camera.isDragging = true;
                 rend->camera.dragStartPixelPos = mouse_pos;
@@ -66,7 +69,8 @@ void Mouse::onEvent(const sf::Event& event) {
     }
 
     if (const auto* e = event.getIf<sf::Event::MouseWheelScrolled>()) {
-        if (e->wheel == sf::Mouse::Wheel::Vertical && !Interface::cursorHovered && !ToolsManager::isInteractingNow()) {
+        if (e->wheel == sf::Mouse::Wheel::Vertical && ui != nullptr && !ui->state().cursorHovered &&
+            !ToolsManager::isInteractingNow()) {
             if (rend->camera.getMode() == Camera::Mode::Free) {
                 const float wheelStep = rend->camera.moveSpeed * kFreeWheelMoveScale;
                 const float distance = e->delta * wheelStep;

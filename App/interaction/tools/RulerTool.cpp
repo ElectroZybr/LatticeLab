@@ -5,7 +5,7 @@
 
 #include "App/interaction/picking/PickingSystem.h"
 #include "Engine/Consts.h"
-#include "GUI/interface/interface.h"
+#include "GUI/interface/UiState.h"
 #include "Rendering/BaseRenderer.h"
 
 namespace {
@@ -50,8 +50,10 @@ void RulerTool::onLeftPressed(sf::Vector2i mousePos) {
     dragging_ = true;
     syncOverlayFromWorld();
 
-    Interface::drawToolTrip = false;
-    Interface::toolTooltipText.clear();
+    if (ctx.uiState != nullptr) {
+        ctx.uiState->drawToolTrip = false;
+        ctx.uiState->toolTooltipText.clear();
+    }
     overlay.rulerLabel = makeRulerTooltip(startWorld_, endWorld_);
 }
 
@@ -64,8 +66,10 @@ void RulerTool::onLeftReleased(sf::Vector2i mousePos) {
     endWorld_ = mapMouseToRulerWorld(ctx, mousePos);
     dragging_ = false;
     syncOverlayFromWorld();
-    Interface::drawToolTrip = false;
-    Interface::toolTooltipText.clear();
+    if (ctx.uiState != nullptr) {
+        ctx.uiState->drawToolTrip = false;
+        ctx.uiState->toolTooltipText.clear();
+    }
 }
 
 bool RulerTool::onRightPressed(sf::Vector2i mousePos) {
@@ -97,8 +101,11 @@ void RulerTool::onFrame(sf::Vector2i mousePos, float deltaTime) {
 void RulerTool::reset() {
     dragging_ = false;
     hasMeasurement_ = false;
-    Interface::drawToolTrip = false;
-    Interface::toolTooltipText.clear();
+    ToolContext& ctx = context();
+    if (ctx.uiState != nullptr) {
+        ctx.uiState->drawToolTrip = false;
+        ctx.uiState->toolTooltipText.clear();
+    }
 }
 
 void RulerTool::clearMeasurement() {
@@ -125,8 +132,10 @@ void RulerTool::updateMeasurement(sf::Vector2i mousePos) {
 
     endWorld_ = mapMouseToRulerWorld(ctx, mousePos);
     syncOverlayFromWorld();
-    Interface::drawToolTrip = false;
-    Interface::toolTooltipText.clear();
+    if (ctx.uiState != nullptr) {
+        ctx.uiState->drawToolTrip = false;
+        ctx.uiState->toolTooltipText.clear();
+    }
     overlay.rulerLabel = makeRulerTooltip(startWorld_, endWorld_);
 }
 

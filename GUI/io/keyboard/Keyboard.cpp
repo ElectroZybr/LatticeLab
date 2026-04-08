@@ -4,18 +4,28 @@
 #include "GUI/interface/interface.h"
 
 std::unique_ptr<IRenderer>* Keyboard::render = nullptr;
+Interface* Keyboard::ui = nullptr;
 
-void Keyboard::init(std::unique_ptr<IRenderer>& r) { render = &r; }
+void Keyboard::init(std::unique_ptr<IRenderer>& r, Interface* ui) {
+    render = &r;
+    Keyboard::ui = ui;
+}
 
 void Keyboard::onEvent(const sf::Event& event) {
     if (const auto* e = event.getIf<sf::Event::KeyPressed>()) {
+        if (ui == nullptr) {
+            return;
+        }
+
+        UiState& uiState = ui->state();
+
         if (e->code == sf::Keyboard::Key::P) {
-            Interface::debugPanel.toggle();
+            ui->debugPanel.toggle();
         }
         else if (e->code == sf::Keyboard::Key::Space) {
-            Interface::pause = !Interface::pause;
+            uiState.pause = !uiState.pause;
         }
-        else if (e->code == sf::Keyboard::Key::Right && Interface::getPause()) {
+        else if (e->code == sf::Keyboard::Key::Right && uiState.pause) {
             AppSignals::Keyboard::StepPhysics.emit();
         }
     }

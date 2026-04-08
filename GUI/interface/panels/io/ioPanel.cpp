@@ -9,6 +9,7 @@
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/interface.h"
 #include "GUI/interface/style/ComboStyle.h"
+#include "GUI/interface/UiState.h"
 
 namespace {
     struct AtomTypeOption {
@@ -57,11 +58,11 @@ namespace {
         ComboStyle::drawCenteredComboPreview(selectedLabel);
     }
 
-    void drawCaptureStatus() {
-        const double blinkTime = Interface::captureBlinkElapsed;
+    void drawCaptureStatus(const UiState& uiState) {
+        const double blinkTime = uiState.captureBlinkElapsed;
         const int blinkStep = static_cast<int>(blinkTime);
         const bool blinkOn = (blinkStep % 2) == 0;
-        const float alpha = Interface::captureRecording
+        const float alpha = uiState.captureRecording
             ? (blinkOn ? 0.8f : 0.2f)
             : 0.18f;
         const ImGuiStyle& style = ImGui::GetStyle();
@@ -81,14 +82,14 @@ namespace {
         );
         ImGui::SameLine();
         ImGui::AlignTextToFramePadding();
-        ImGui::Text("fps: %.1f", Interface::captureFps);
+        ImGui::Text("fps: %.1f", uiState.captureFps);
         ImGui::SameLine();
         ImGui::AlignTextToFramePadding();
-        ImGui::Text("frame: %llu", static_cast<unsigned long long>(Interface::captureFrameCount));
+        ImGui::Text("frame: %llu", static_cast<unsigned long long>(uiState.captureFrameCount));
     }
 }
 
-void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation, FileDialogManager& fileDialog) {
+void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState) {
     const float target = visible_ ? 1.f : 0.f;
     const float step = ImGui::GetIO().DeltaTime * 12.f;
     animProgress_ += (target - animProgress_) * std::min(step, 1.f);
@@ -123,12 +124,12 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
         AppSignals::UI::ClearSimulation.emit();
     }
 
-    if (Interface::captureAvailable) {
-        const char* captureLabel = Interface::captureRecording ? "Стоп" : "Запись";
+    if (uiState.captureAvailable) {
+        const char* captureLabel = uiState.captureRecording ? "Стоп" : "Запись";
         if (ImGui::Button(captureLabel, ImVec2(saveButtonWidth * scale, 0.f))) {
             AppSignals::UI::ToggleCapture.emit();
         }
-        drawCaptureStatus();
+        drawCaptureStatus(uiState);
     }
 
     ImGui::SeparatorText("Размер бокса");

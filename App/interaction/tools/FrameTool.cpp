@@ -3,7 +3,7 @@
 #include <SFML/Window/Keyboard.hpp>
 
 #include "App/interaction/picking/PickingSystem.h"
-#include "GUI/interface/interface.h"
+#include "GUI/interface/UiState.h"
 
 FrameTool::FrameTool(ToolContext& context) noexcept : ITool(context) {}
 
@@ -31,7 +31,9 @@ void FrameTool::onLeftReleased(sf::Vector2i mousePos) {
     auto& overlay = ctx.pickingSystem->getOverlay();
     if (overlay.boxVisible) {
         ctx.pickingSystem->processRect(overlay.boxStart, mousePos, cumulative);
-        Interface::countSelectedAtom = static_cast<int>(ctx.pickingSystem->getSelectedIndices().size());
+        if (ctx.uiState != nullptr) {
+            ctx.uiState->selectedAtomCount = static_cast<int>(ctx.pickingSystem->getSelectedIndices().size());
+        }
     }
     overlay.reset();
 }

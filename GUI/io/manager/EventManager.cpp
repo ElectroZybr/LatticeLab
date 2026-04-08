@@ -9,13 +9,14 @@
 sf::RenderWindow* EventManager::window = nullptr;
 std::unique_ptr<IRenderer>* EventManager::renderer = nullptr;
 
-void EventManager::init(sf::RenderWindow* w, sf::View* ui, std::unique_ptr<IRenderer>& r, SimBox* b, AtomStorage* atomStorage) {
+void EventManager::init(sf::RenderWindow* w, sf::View* uiView, std::unique_ptr<IRenderer>& r, SimBox* b, AtomStorage* atomStorage,
+                        Interface* ui) {
     window = w;
     renderer = &r;
 
-    WindowEvents::init(w, ui);
-    Keyboard::init(r);
-    Mouse::init(w, r, b, atomStorage);
+    WindowEvents::init(w, uiView, ui);
+    Keyboard::init(r, ui);
+    Mouse::init(w, r, b, atomStorage, ui);
 }
 
 void EventManager::poll() {

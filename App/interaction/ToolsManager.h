@@ -16,6 +16,8 @@
 #include "Rendering/BaseRenderer.h"
 
 class SimBox;
+class SideToolsPanel;
+struct UiState;
 
 class ToolsManager {
 public:
@@ -32,7 +34,8 @@ public:
     };
 
     static void init(sf::RenderWindow* window, sf::View* gameView, SpatialGrid* grid, SimBox* box, std::unique_ptr<IRenderer>& renderer,
-                     AtomStorage* atomStorage = nullptr, AtomCreator atomCreator = {}, AtomRemover atomRemover = {});
+                     AtomStorage* atomStorage = nullptr, UiState* uiState = nullptr, SideToolsPanel* sideToolsPanel = nullptr,
+                     AtomCreator atomCreator = {}, AtomRemover atomRemover = {});
 
     static Vec3f screenToWorld(sf::Vector2i mousePos);
     static sf::Vector2i worldToScreen(Vec3f pos);
@@ -62,6 +65,8 @@ private:
     static std::unique_ptr<IRenderer>* renderer;
     static SimBox* box;
     static AtomStorage* atomStorage;
+    static UiState* uiState;
+    static SideToolsPanel* sideToolsPanel;
     static AtomCreator atomCreator;
     static AtomRemover atomRemover;
     static ToolContext toolContext;

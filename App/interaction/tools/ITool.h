@@ -13,6 +13,7 @@ class IRenderer;
 class PickingSystem;
 class SimBox;
 class SpatialGrid;
+struct UiState;
 
 struct ToolContext {
     using AtomCreator = std::function<bool(Vec3f, Vec3f, AtomData::Type, bool)>;
@@ -25,6 +26,7 @@ struct ToolContext {
     std::unique_ptr<IRenderer>* renderer = nullptr;
     AtomStorage* atomStorage = nullptr;
     PickingSystem* pickingSystem = nullptr;
+    UiState* uiState = nullptr;
     AtomCreator atomCreator{};
     AtomRemover atomRemover{};
 
