@@ -3,6 +3,13 @@
 #include <cstdint>
 #include <string>
 
+struct PreviewFrameRect {
+    float x = 0.0f;
+    float y = 0.0f;
+    float width = 0.0f;
+    float height = 0.0f;
+};
+
 struct UiState {
     bool pause = false;
     bool cursorHovered = false;
@@ -23,4 +30,5 @@ struct UiState {
     double captureBlinkElapsed = 0.0;
 
     bool scenePreviewMode = false;
+    PreviewFrameRect scenePreviewRect;
 };

@@ -5,6 +5,7 @@
 #include "App/Scenes.h"
 #include "App/interaction/ToolsManager.h"
 #include "Engine/Simulation.h"
+#include "GUI/interface/UiState.h"
 #include "Rendering/2d/Renderer2D.h"
 #include "Rendering/3d/Renderer3D.h"
 
@@ -34,8 +35,9 @@ namespace {
 }
 
 namespace AppActions {
-    void Handler::trackIOPanel(sf::RenderWindow& window, Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
-        track(AppSignals::UI::SaveSimulation.connect([&](std::string_view path) { AppStateIO::save(window, simulation, *renderer, path); }));
+    void Handler::trackIOPanel(sf::RenderWindow& window, UiState& uiState, Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
+        track(AppSignals::UI::SaveSimulation.connect(
+            [&](std::string_view path) { AppStateIO::save(window, uiState.scenePreviewRect, simulation, *renderer, path); }));
         track(AppSignals::UI::LoadSimulation.connect([&](std::string_view path) {
             AppStateIO::load(simulation, *renderer, path);
             ToolsManager::resetInteractionState();
@@ -99,8 +101,9 @@ namespace AppActions {
         }));
     }
 
-    Handler::Handler(sf::RenderWindow& window, sf::View& sceneView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
-        trackIOPanel(window, simulation, renderer);
+    Handler::Handler(sf::RenderWindow& window, sf::View& sceneView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
+                     UiState& uiState) {
+        trackIOPanel(window, uiState, simulation, renderer);
         trackToolsPanel(simulation, renderer, window, sceneView);
         trackSettingsPanel(window);
         trackSimControlPanel(simulation);

@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "Engine/io/SimulationStateIO.h"
+#include "GUI/interface/UiState.h"
 #include "Rendering/BaseRenderer.h"
 
 namespace {
@@ -62,7 +63,7 @@ namespace {
         return encoded;
     }
 
-    sf::Image capturePreviewImage(const sf::RenderWindow& window) {
+    sf::Image capturePreviewImage(const sf::RenderWindow& window, const PreviewFrameRect& previewRect) {
         sf::Texture texture;
         const sf::Vector2u windowSize = window.getSize();
         if (windowSize.x == 0 || windowSize.y == 0) {
@@ -81,26 +82,35 @@ namespace {
             return {};
         }
 
-        const float scale = std::min(1.0f, std::min(static_cast<float>(kPreviewMaxSize) / static_cast<float>(srcWidth),
-                                                    static_cast<float>(kPreviewMaxSize) / static_cast<float>(srcHeight)));
-        const unsigned previewWidth = std::max(1u, static_cast<unsigned>(srcWidth * scale));
-        const unsigned previewHeight = std::max(1u, static_cast<unsigned>(srcHeight * scale));
+        const unsigned cropX = std::min(srcWidth - 1, static_cast<unsigned>(std::clamp(previewRect.x, 0.0f, static_cast<float>(srcWidth - 1))));
+        const unsigned cropY = std::min(srcHeight - 1, static_cast<unsigned>(std::clamp(previewRect.y, 0.0f, static_cast<float>(srcHeight - 1))));
+        const unsigned cropWidth =
+            std::max(1u, std::min(srcWidth - cropX, static_cast<unsigned>(std::clamp(previewRect.width, 1.0f, static_cast<float>(srcWidth)))));
+        const unsigned cropHeight =
+            std::max(1u, std::min(srcHeight - cropY, static_cast<unsigned>(std::clamp(previewRect.height, 1.0f, static_cast<float>(srcHeight)))));
+
+        const float scale = std::min(1.0f, std::min(static_cast<float>(kPreviewMaxSize) / static_cast<float>(cropWidth),
+                                                    static_cast<float>(kPreviewMaxSize) / static_cast<float>(cropHeight)));
+        const unsigned previewWidth = std::max(1u, static_cast<unsigned>(cropWidth * scale));
+        const unsigned previewHeight = std::max(1u, static_cast<unsigned>(cropHeight * scale));
 
         sf::Image preview;
         preview.resize({previewWidth, previewHeight});
         for (unsigned y = 0; y < previewHeight; ++y) {
             for (unsigned x = 0; x < previewWidth; ++x) {
-                const unsigned srcX = std::min(srcWidth - 1, static_cast<unsigned>((static_cast<std::uint64_t>(x) * srcWidth) / previewWidth));
-                const unsigned srcY = std::min(srcHeight - 1, static_cast<unsigned>((static_cast<std::uint64_t>(y) * srcHeight) / previewHeight));
-                preview.setPixel({x, y}, fullImage.getPixel({srcX, srcY}));
+                const unsigned srcSampleX =
+                    cropX + std::min(cropWidth - 1, static_cast<unsigned>((static_cast<std::uint64_t>(x) * cropWidth) / previewWidth));
+                const unsigned srcSampleY =
+                    cropY + std::min(cropHeight - 1, static_cast<unsigned>((static_cast<std::uint64_t>(y) * cropHeight) / previewHeight));
+                preview.setPixel({x, y}, fullImage.getPixel({srcSampleX, srcSampleY}));
             }
         }
 
         return preview;
     }
 
-    void saveImageState(const sf::RenderWindow& window, std::string_view path) {
-        const sf::Image preview = capturePreviewImage(window);
+    void saveImageState(const sf::RenderWindow& window, const PreviewFrameRect& previewRect, std::string_view path) {
+        const sf::Image preview = capturePreviewImage(window, previewRect);
         const sf::Vector2u size = preview.getSize();
         if (size.x == 0 || size.y == 0) {
             return;
@@ -203,10 +213,11 @@ namespace {
     }
 }
 
-void AppStateIO::save(const sf::RenderWindow& window, const Simulation& simulation, const IRenderer& renderer, std::string_view path) {
+void AppStateIO::save(const sf::RenderWindow& window, const PreviewFrameRect& previewRect, const Simulation& simulation,
+                      const IRenderer& renderer, std::string_view path) {
     SimulationStateIO::save(simulation, path);
     saveRendererState(renderer, path);
-    saveImageState(window, path);
+    saveImageState(window, previewRect, path);
 }
 
 void AppStateIO::load(Simulation& simulation, IRenderer& renderer, std::string_view path) {
