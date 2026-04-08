@@ -39,7 +39,7 @@ int Application::run() {
     CaptureController captureController;
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, sceneView, simulation.box());
     Interface appInterface(window, simulation, renderer, captureController);
-    AppActions::Handler appActions(window, sceneView, simulation, renderer);
+    AppActions::Handler appActions(window, sceneView, simulation, renderer, appInterface.state());
     CaptureActions::Handler captureActions(window, captureController);
     if (appInterface.init() != EXIT_SUCCESS) { return EXIT_FAILURE; }
     EventManager::init(window, sceneView, simulation, renderer, appInterface);

@@ -18,10 +18,7 @@
 #define ICON_FA_BUG "\uf188"
 
 namespace {
-    void drawScenePreviewFrame(const sf::RenderWindow& window, float uiScale) {
-        ImDrawList* drawList = ImGui::GetBackgroundDrawList();
-        const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
-
+    PreviewFrameRect computeScenePreviewRect(const ImVec2& displaySize, float uiScale) {
         const float frameAspect = 1.282f;
         const float horizontalMargin = 36.0f * uiScale;
         const float verticalMargin = 88.0f * uiScale;
@@ -35,11 +32,23 @@ namespace {
             frameWidth = frameHeight * frameAspect;
         }
 
-        const ImVec2 frameMin((displaySize.x - frameWidth) * 0.5f, (displaySize.y - frameHeight) * 0.5f);
-        const ImVec2 frameMax(frameMin.x + frameWidth, frameMin.y + frameHeight);
+        return {
+            .x = (displaySize.x - frameWidth) * 0.5f,
+            .y = (displaySize.y - frameHeight) * 0.5f,
+            .width = frameWidth,
+            .height = frameHeight,
+        };
+    }
+
+    void drawScenePreviewFrame(const sf::RenderWindow& window, float uiScale, UiState& uiState) {
+        ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+        const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+        uiState.scenePreviewRect = computeScenePreviewRect(displaySize, uiScale);
+
+        const ImVec2 frameMin(uiState.scenePreviewRect.x, uiState.scenePreviewRect.y);
+        const ImVec2 frameMax(frameMin.x + uiState.scenePreviewRect.width, frameMin.y + uiState.scenePreviewRect.height);
         const ImU32 shadeColor = ImGui::GetColorU32(ImVec4(0.02f, 0.03f, 0.05f, 0.42f));
         const ImU32 frameColor = ImGui::GetColorU32(ImVec4(0.80f, 0.88f, 1.00f, 0.95f));
-        const ImU32 hintBgColor = ImGui::GetColorU32(ImVec4(0.05f, 0.07f, 0.10f, 0.78f));
 
         drawList->AddRectFilled(ImVec2(0.0f, 0.0f), ImVec2(displaySize.x, frameMin.y), shadeColor);
         drawList->AddRectFilled(ImVec2(0.0f, frameMin.y), ImVec2(frameMin.x, frameMax.y), shadeColor);
@@ -114,7 +123,10 @@ int Interface::update() {
 
     uiState_.scenePreviewMode = fileDialog.isSaveDialogOpen();
     if (uiState_.scenePreviewMode) {
-        drawScenePreviewFrame(*window_, styleManager.getScale());
+        drawScenePreviewFrame(*window_, styleManager.getScale(), uiState_);
+    }
+    else {
+        uiState_.scenePreviewRect = {};
     }
 
     uiState_.cursorHovered = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) ||
