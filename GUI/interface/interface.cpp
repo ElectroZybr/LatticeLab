@@ -137,3 +137,10 @@ int Interface::update() {
 UiState& Interface::state() { return uiState_; }
 
 const UiState& Interface::state() const { return uiState_; }
+
+void Interface::setScenesDirectory(std::filesystem::path scenesDirectory) {
+    ioPanel.setScenesDirectory(std::move(scenesDirectory));
+    fileDialog.setSimulationDirectory(ioPanel.scenesDirectory().string());
+}
+
+const std::filesystem::path& Interface::scenesDirectory() const { return ioPanel.scenesDirectory(); }

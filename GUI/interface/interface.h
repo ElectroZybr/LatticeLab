@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <cstdint>
+#include <filesystem>
 #include <string>
 
 #include <SFML/Graphics.hpp>
@@ -28,6 +29,8 @@ public:
     int update();
     UiState& state();
     const UiState& state() const;
+    void setScenesDirectory(std::filesystem::path scenesDirectory);
+    [[nodiscard]] const std::filesystem::path& scenesDirectory() const;
 
     FontManager fontManager;
 

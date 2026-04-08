@@ -35,6 +35,11 @@ void IOPanel::clearPendingDeleteState() {
     pendingDeleteError_.clear();
 }
 
+void IOPanel::setScenesDirectory(std::filesystem::path scenesDirectory) {
+    scenesDirectory_ = std::move(scenesDirectory);
+    sceneCatalogLoaded_ = false;
+}
+
 void IOPanel::removeSceneTileByPath(std::string_view path) {
     const auto it =
         std::find_if(sceneTiles_.begin(), sceneTiles_.end(), [&](const IOPanelSceneTile& sceneTile) { return sceneTile.path == path; });
@@ -53,10 +58,16 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     }
 
     if (fileDialog.hasSelectedSceneDirectory()) {
-        scenesDirectory_ = fileDialog.consumeSelectedSceneDirectory();
-        sceneCatalogLoaded_ = false;
+        setScenesDirectory(fileDialog.consumeSelectedSceneDirectory());
+    }
+    if (fileDialog.hasSavedSimulationPath()) {
+        const std::filesystem::path savedSimulationPath = fileDialog.consumeSavedSimulationPath();
+        if (savedSimulationPath.parent_path().lexically_normal() == scenesDirectory_.lexically_normal()) {
+            sceneCatalogLoaded_ = false;
+        }
     }
 
+    fileDialog.setSimulationDirectory(scenesDirectory_.string());
     ensureSceneCatalogLoaded();
     boxSize_ = simulation.box().size;
 

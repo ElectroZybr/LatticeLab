@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "App/AppPaths.h"
 #include "Engine/math/Vec3f.h"
 #include "Engine/physics/AtomData.h"
 #include "GUI/interface/panels/io/ioPanelSceneCatalog.h"
@@ -21,6 +22,8 @@ public:
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 
     void draw(float scale, sf::Vector2u windowSize, Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState);
+    void setScenesDirectory(std::filesystem::path scenesDirectory);
+    [[nodiscard]] const std::filesystem::path& scenesDirectory() const { return scenesDirectory_; }
 
     void toggle() { visible_ = !visible_; }
     void close() { visible_ = false; }
@@ -50,7 +53,7 @@ private:
     Vec3f boxSize_ = Vec3f(100.0f, 100.0f, 6.0f);
     AtomData::Type atomType_ = AtomData::Type::Z;
     AtomData::Type gasAtomType_ = AtomData::Type::Z;
-    std::filesystem::path scenesDirectory_ = "demo/scenes";
+    std::filesystem::path scenesDirectory_ = AppPaths::kDefaultScenesDirectory;
     std::vector<IOPanelSceneTile> sceneTiles_;
     std::string pendingDeleteScenePath_;
     std::string pendingDeleteSceneTitle_;

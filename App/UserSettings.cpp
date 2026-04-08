@@ -90,6 +90,11 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
             if (file >> std::ws && std::getline(file, value) && !value.empty()) {
                 settings.captureOutputDirectory = value;
             }
+        } else if (tag == "scenes_dir") {
+            std::string value;
+            if (file >> std::ws && std::getline(file, value) && !value.empty()) {
+                settings.scenesDirectory = value;
+            }
         } else if (tag == "capture_fps") {
             file >> settings.captureSettings.fps;
         } else if (tag == "capture_crf") {
@@ -135,6 +140,9 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
     if (settings.captureOutputDirectory.empty()) {
         settings.captureOutputDirectory = "captures";
     }
+    if (settings.scenesDirectory.empty()) {
+        settings.scenesDirectory = AppPaths::kDefaultScenesDirectory;
+    }
     settings.rendererSpeedGradientMax = std::max(0.0f, settings.rendererSpeedGradientMax);
 
     return settings;
@@ -147,6 +155,7 @@ void UserSettingsIO::save(const UserSettings& settings, const std::filesystem::p
     }
 
     file << "capture_output_dir " << settings.captureOutputDirectory.string() << "\n";
+    file << "scenes_dir " << settings.scenesDirectory.string() << "\n";
     file << "capture_fps " << settings.captureSettings.fps << "\n";
     file << "capture_crf " << settings.captureSettings.crf << "\n";
     file << "capture_preset " << presetToString(settings.captureSettings.preset) << "\n";

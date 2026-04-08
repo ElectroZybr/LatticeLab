@@ -2,12 +2,14 @@
 
 #include <filesystem>
 
+#include "App/AppPaths.h"
 #include "App/capture/FrameRecorder.h"
 #include "Engine/physics/Integrator.h"
 #include "Rendering/BaseRenderer.h"
 
 struct UserSettings {
     std::filesystem::path captureOutputDirectory = "captures";
+    std::filesystem::path scenesDirectory = AppPaths::kDefaultScenesDirectory;
     CaptureSettings captureSettings{};
 
     bool rendererDrawGrid = false;
