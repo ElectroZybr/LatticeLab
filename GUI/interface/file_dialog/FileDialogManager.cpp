@@ -1,6 +1,7 @@
 #include "FileDialogManager.h"
 
 #include <filesystem>
+#include <utility>
 
 #include <ImGuiFileDialog.h>
 #include <imgui.h>
@@ -41,6 +42,18 @@ void FileDialogManager::openCaptureDirectory(const std::string& currentPath) {
     ImGuiFileDialog::Instance()->OpenDialog("CaptureDirDlg", "Select capture directory", nullptr, config);
 }
 
+void FileDialogManager::openSceneDirectory(const std::string& currentPath) {
+    IGFD::FileDialogConfig config;
+    config.path = currentPath.empty() ? "." : currentPath;
+    config.countSelectionMax = 1;
+    ImGuiFileDialog::Instance()->OpenDialog("SceneDirDlg", "Select scenes directory", nullptr, config);
+}
+
+std::string FileDialogManager::consumeSelectedSceneDirectory() {
+    sceneDirectorySelected_ = false;
+    return std::exchange(selectedSceneDirectory_, {});
+}
+
 void FileDialogManager::draw(float scale) {
     ImVec2 dlgSize(400 * scale, 300 * scale);
 
@@ -62,6 +75,14 @@ void FileDialogManager::draw(float scale) {
     if (ImGuiFileDialog::Instance()->Display("CaptureDirDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             AppSignals::Capture::SetOutputDirectory.emit(ImGuiFileDialog::Instance()->GetCurrentPath());
+        }
+        ImGuiFileDialog::Instance()->Close();
+    }
+
+    if (ImGuiFileDialog::Instance()->Display("SceneDirDlg", ImGuiWindowFlags_NoCollapse, dlgSize)) {
+        if (ImGuiFileDialog::Instance()->IsOk()) {
+            selectedSceneDirectory_ = ImGuiFileDialog::Instance()->GetCurrentPath();
+            sceneDirectorySelected_ = true;
         }
         ImGuiFileDialog::Instance()->Close();
     }
