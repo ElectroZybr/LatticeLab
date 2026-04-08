@@ -9,7 +9,8 @@
 #include "App/interaction/tools/RemoveAtomTool.h"
 #include "App/interaction/tools/RulerTool.h"
 #include "Engine/SimBox.h"
-#include "GUI/interface/interface.h"
+#include "GUI/interface/UiState.h"
+#include "GUI/interface/panels/tools/SideToolsPanel.h"
 
 namespace {
     ToolsManager::Mode mapPanelTool(SideToolsPanel::Tool tool) {
@@ -38,6 +39,8 @@ SpatialGrid* ToolsManager::grid = nullptr;
 PickingSystem* ToolsManager::pickingSystem = nullptr;
 SimBox* ToolsManager::box = nullptr;
 AtomStorage* ToolsManager::atomStorage = nullptr;
+UiState* ToolsManager::uiState = nullptr;
+SideToolsPanel* ToolsManager::sideToolsPanel = nullptr;
 ToolsManager::AtomCreator ToolsManager::atomCreator = {};
 ToolsManager::AtomRemover ToolsManager::atomRemover = {};
 ToolContext ToolsManager::toolContext = {};
@@ -48,13 +51,16 @@ sf::Vector2i ToolsManager::lastSceneMousePos = {};
 bool ToolsManager::isInteracting = false;
 
 void ToolsManager::init(sf::RenderWindow* w, sf::View* gv, SpatialGrid* gr, SimBox* b, std::unique_ptr<IRenderer>& rend,
-                        AtomStorage* storage, AtomCreator createAtomFn, AtomRemover removeAtomFn) {
+                        AtomStorage* storage, UiState* state, SideToolsPanel* toolsPanel, AtomCreator createAtomFn,
+                        AtomRemover removeAtomFn) {
     window = w;
     gameView = gv;
     grid = gr;
     box = b;
     renderer = &rend;
     atomStorage = storage;
+    uiState = state;
+    sideToolsPanel = toolsPanel;
     atomCreator = std::move(createAtomFn);
     atomRemover = std::move(removeAtomFn);
 
@@ -68,6 +74,7 @@ void ToolsManager::init(sf::RenderWindow* w, sf::View* gv, SpatialGrid* gr, SimB
     toolContext.renderer = &rend;
     toolContext.atomStorage = storage;
     toolContext.pickingSystem = pickingSystem;
+    toolContext.uiState = state;
     toolContext.atomCreator = atomCreator;
     toolContext.atomRemover = atomRemover;
 
@@ -97,16 +104,18 @@ void ToolsManager::resetInteractionState() {
         pickingSystem->getOverlay().reset();
     }
 
-    Interface::countSelectedAtom = 0;
-    Interface::drawToolTrip = false;
-    Interface::toolTooltipText.clear();
+    if (uiState != nullptr) {
+        uiState->selectedAtomCount = 0;
+        uiState->drawToolTrip = false;
+        uiState->toolTooltipText.clear();
+    }
     isInteracting = false;
 }
 
 bool ToolsManager::isInteractingNow() noexcept { return isInteracting; }
 
 void ToolsManager::onLeftPressed(sf::Vector2i mousePos) {
-    if (Interface::cursorHovered || !renderer || !renderer->get() || !pickingSystem) {
+    if ((uiState != nullptr && uiState->cursorHovered) || !renderer || !renderer->get() || !pickingSystem) {
         return;
     }
 
@@ -126,7 +135,8 @@ void ToolsManager::onLeftReleased(sf::Vector2i mousePos) {
         return;
     }
 
-    const sf::Vector2i releasePos = Interface::cursorHovered ? lastSceneMousePos : mousePos;
+    const bool cursorHovered = uiState != nullptr && uiState->cursorHovered;
+    const sf::Vector2i releasePos = cursorHovered ? lastSceneMousePos : mousePos;
 
     if (ITool* tool = activeTool(); tool != nullptr) {
         tool->onLeftReleased(releasePos);
@@ -135,7 +145,7 @@ void ToolsManager::onLeftReleased(sf::Vector2i mousePos) {
 }
 
 bool ToolsManager::onRightPressed(sf::Vector2i mousePos) {
-    if (Interface::cursorHovered) {
+    if (uiState != nullptr && uiState->cursorHovered) {
         return false;
     }
     syncToolMode();
@@ -152,7 +162,7 @@ void ToolsManager::onFrame(sf::Vector2i mousePos, float deltaTime) {
     }
 
     syncToolMode();
-    if (Interface::cursorHovered) {
+    if (uiState != nullptr && uiState->cursorHovered) {
         return;
     }
 
@@ -163,8 +173,10 @@ void ToolsManager::onFrame(sf::Vector2i mousePos, float deltaTime) {
     }
 
     if (currentMode() == Mode::Cursor) {
-        Interface::drawToolTrip = false;
-        Interface::toolTooltipText.clear();
+        if (uiState != nullptr) {
+            uiState->drawToolTrip = false;
+            uiState->toolTooltipText.clear();
+        }
     }
 }
 
@@ -172,7 +184,12 @@ Vec3f ToolsManager::screenToWorld(sf::Vector2i mousePos) { return (*renderer)->c
 
 sf::Vector2i ToolsManager::worldToScreen(Vec3f pos) { return (*renderer)->camera.worldToScreen(pos); }
 
-ToolsManager::Mode ToolsManager::currentMode() { return mapPanelTool(Interface::sideToolsPanel.getSelectedTool()); }
+ToolsManager::Mode ToolsManager::currentMode() {
+    if (sideToolsPanel == nullptr) {
+        return Mode::Cursor;
+    }
+    return mapPanelTool(sideToolsPanel->getSelectedTool());
+}
 
 bool ToolsManager::isSelectionMode(ToolsManager::Mode mode) { return mode == Mode::Frame || mode == Mode::Lasso; }
 
@@ -190,8 +207,10 @@ void ToolsManager::syncToolMode() noexcept {
     if (pickingSystem) {
         pickingSystem->getOverlay().reset();
     }
-    Interface::drawToolTrip = false;
-    Interface::toolTooltipText.clear();
+    if (uiState != nullptr) {
+        uiState->drawToolTrip = false;
+        uiState->toolTooltipText.clear();
+    }
     isInteracting = false;
     syncedMode = mode;
 }

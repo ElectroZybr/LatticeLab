@@ -5,7 +5,7 @@
 
 #include "App/interaction/picking/PickingSystem.h"
 #include "Engine/physics/AtomStorage.h"
-#include "GUI/interface/interface.h"
+#include "GUI/interface/UiState.h"
 
 RemoveAtomTool::RemoveAtomTool(ToolContext& context) noexcept : ITool(context) {}
 
@@ -38,5 +38,7 @@ void RemoveAtomTool::onLeftPressed(sf::Vector2i mousePos) {
         ctx.pickingSystem->handleAtomRemoval(target);
     }
 
-    Interface::countSelectedAtom = static_cast<int>(ctx.pickingSystem->getSelectedIndices().size());
+    if (ctx.uiState != nullptr) {
+        ctx.uiState->selectedAtomCount = static_cast<int>(ctx.pickingSystem->getSelectedIndices().size());
+    }
 }

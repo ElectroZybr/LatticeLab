@@ -1,9 +1,9 @@
 #include "interface.h"
+
 #include "App/capture/CaptureController.h"
 #include "imgui_impl_opengl3.h"
 
 #include <SFML/Graphics.hpp>
-
 #define ICON_MIN_FA 0xf000
 #define ICON_MAX_FA 0xf897
 
@@ -17,47 +17,11 @@
 #define ICON_FA_FAST_BACKWARD "\uf049"
 #define ICON_FA_BUG "\uf188"
 
-sf::RenderWindow* Interface::window = nullptr;
-Simulation* Interface::simulation = nullptr;
-std::unique_ptr<IRenderer>* Interface::renderer = nullptr;
-CaptureController* Interface::captureController = nullptr;
+Interface::Interface(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r, CaptureController& c)
+    : window_(&w), simulation_(&s), renderer_(&r), captureController_(&c) {}
 
-sf::Clock Interface::clock;
-int Interface::selectedAtom = 0;
-bool Interface::pause;
-bool Interface::cursorHovered = false;
-float Interface::simulationSpeed = 100.f;
-double Interface::averageEnergy = 0.0;
-int Interface::countSelectedAtom = 0;
-bool Interface::drawToolTrip = false;
-std::string Interface::toolTooltipText;
-bool Interface::captureRecording = false;
-bool Interface::captureAvailable = false;
-uint64_t Interface::captureFrameCount = 0;
-float Interface::captureFps = 0.0f;
-double Interface::captureBlinkElapsed = 0.0;
-int Interface::sim_step = 0;
-
-FontManager Interface::fontManager;
-
-DebugPanel Interface::debugPanel;
-FileDialogManager Interface::fileDialog;
-StyleManager Interface::styleManager;
-ToolsPanel Interface::toolsPanel;
-IOPanel Interface::ioPanel;
-SideToolsPanel Interface::sideToolsPanel;
-SimControlPanel Interface::simControlPanel;
-PeriodicPanel Interface::periodicPanel;
-StatsPanel Interface::statsPanel;
-SettingsPanel Interface::settingsPanel;
-
-int Interface::init(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r, CaptureController& c) {
-    window = &w;
-    simulation = &s;
-    renderer = &r;
-    captureController = &c;
-
-    if (!ImGui::SFML::Init(*window, false)) {
+int Interface::init() {
+    if (!ImGui::SFML::Init(*window_, false)) {
         return EXIT_FAILURE;
     }
 
@@ -81,36 +45,26 @@ void Interface::shutdown() {
     ImGui::SFML::Shutdown();
 }
 
-float Interface::getSimulationSpeed() { return simulationSpeed; }
-
-void Interface::setAverageEnergy(double energy) { averageEnergy = energy; }
-
-void Interface::setSimStep(int step) { sim_step = step; }
-
-bool Interface::getPause() { return pause; }
-
-int Interface::getSelectedAtom() { return PeriodicPanel::decodeAtom(selectedAtom); }
-
-int Interface::Update() {
+int Interface::update() {
     ImGui_ImplOpenGL3_NewFrame();
-    ImGui::SFML::Update(*window, clock.restart());
+    ImGui::SFML::Update(*window_, clock_.restart());
 
     ImGui::PushFont(fontManager.main);
-    toolsPanel.draw(styleManager.getScale(), *window, debugPanel, settingsPanel, ioPanel);
-    periodicPanel.draw(styleManager.getScale(), window->getSize(), selectedAtom);
-    simControlPanel.draw(styleManager.getScale(), window->getSize(), pause, simulationSpeed);
-    sideToolsPanel.draw(styleManager.getScale(), window->getSize(), fontManager.icons, fontManager.dialog);
-    statsPanel.draw(styleManager.getScale(), window->getSize());
-    if (drawToolTrip) {
-        ImVec2 mouse = ImGui::GetMousePos();
+    toolsPanel.draw(styleManager.getScale(), *window_, debugPanel, settingsPanel, ioPanel);
+    periodicPanel.draw(styleManager.getScale(), window_->getSize(), uiState_.selectedAtom);
+    simControlPanel.draw(styleManager.getScale(), window_->getSize(), uiState_.pause, uiState_.simulationSpeed);
+    sideToolsPanel.draw(styleManager.getScale(), window_->getSize(), fontManager.icons, fontManager.dialog);
+    statsPanel.draw(styleManager.getScale(), window_->getSize());
+    if (uiState_.drawToolTrip) {
+        const ImVec2 mouse = ImGui::GetMousePos();
         ImGui::SetNextWindowPos(ImVec2(mouse.x + 3 * styleManager.getScale(), mouse.y + 3 * styleManager.getScale()));
 
         ImGui::BeginTooltip();
-        if (!toolTooltipText.empty()) {
-            ImGui::TextUnformatted(toolTooltipText.c_str());
+        if (!uiState_.toolTooltipText.empty()) {
+            ImGui::TextUnformatted(uiState_.toolTooltipText.c_str());
         }
         else {
-            ImGui::Text("Selected: %d", countSelectedAtom);
+            ImGui::Text("Selected: %d", uiState_.selectedAtomCount);
         }
         ImGui::EndTooltip();
     }
@@ -118,13 +72,16 @@ int Interface::Update() {
 
     ImGui::PushFont(fontManager.dialog);
     fileDialog.draw(styleManager.getScale());
-    debugPanel.draw(styleManager.getScale(), window->getSize());
-    settingsPanel.draw(styleManager.getScale(), window->getSize(), *simulation, *renderer, *captureController, fileDialog);
-    ioPanel.draw(styleManager.getScale(), window->getSize(), *simulation, fileDialog);
+    debugPanel.draw(styleManager.getScale(), window_->getSize());
+    settingsPanel.draw(styleManager.getScale(), window_->getSize(), *simulation_, *renderer_, *captureController_, fileDialog);
+    ioPanel.draw(styleManager.getScale(), window_->getSize(), *simulation_, fileDialog, uiState_);
     ImGui::PopFont();
 
-    // Проверка на вхождение курсора в область
-    cursorHovered = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) ||
-                    ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup);
+    uiState_.cursorHovered = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) ||
+                             ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup);
     return EXIT_SUCCESS;
 }
+
+UiState& Interface::state() { return uiState_; }
+
+const UiState& Interface::state() const { return uiState_; }
