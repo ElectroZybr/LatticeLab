@@ -1,86 +1,73 @@
 #include "FrameRecorder.h"
 
 #include <cstdlib>
-#include <sstream>
-#include <vector>
 
 #include "Engine/metrics/Profiler.h"
 
 #ifdef _WIN32
 #include <windows.h>
+#undef NEAR
+#undef FAR
 #endif
 
 namespace {
-std::string quoteForCmd(const std::filesystem::path& path) {
-    return "\"" + path.string() + "\"";
-}
+    std::string quoteForCmd(const std::filesystem::path& path) { return "\"" + path.string() + "\""; }
 
-const char* toPresetArg(CaptureSettings::Preset preset) {
-    switch (preset) {
-        case CaptureSettings::Preset::Ultrafast: return "ultrafast";
-        case CaptureSettings::Preset::Veryfast:  return "veryfast";
-        case CaptureSettings::Preset::Faster:    return "faster";
-        case CaptureSettings::Preset::Fast:      return "fast";
-        case CaptureSettings::Preset::Medium:    return "medium";
+    const char* toPresetArg(CaptureSettings::Preset preset) {
+        switch (preset) {
+        case CaptureSettings::Preset::Ultrafast:
+            return "ultrafast";
+        case CaptureSettings::Preset::Veryfast:
+            return "veryfast";
+        case CaptureSettings::Preset::Faster:
+            return "faster";
+        case CaptureSettings::Preset::Fast:
+            return "fast";
+        case CaptureSettings::Preset::Medium:
+            return "medium";
+        }
+        return "veryfast";
     }
-    return "veryfast";
-}
 
-const char* toPixelFormatArg(CaptureSettings::PixelFormat pixelFormat) {
-    switch (pixelFormat) {
-        case CaptureSettings::PixelFormat::Yuv420p: return "yuv420p";
-        case CaptureSettings::PixelFormat::Yuv444p: return "yuv444p";
+    const char* toPixelFormatArg(CaptureSettings::PixelFormat pixelFormat) {
+        switch (pixelFormat) {
+        case CaptureSettings::PixelFormat::Yuv420p:
+            return "yuv420p";
+        case CaptureSettings::PixelFormat::Yuv444p:
+            return "yuv444p";
+        }
+        return "yuv444p";
     }
-    return "yuv444p";
-}
 
-bool is444(CaptureSettings::PixelFormat pixelFormat) {
-    return pixelFormat == CaptureSettings::PixelFormat::Yuv444p;
-}
+    bool is444(CaptureSettings::PixelFormat pixelFormat) { return pixelFormat == CaptureSettings::PixelFormat::Yuv444p; }
 
-std::filesystem::path tryWherePath() {
+    std::filesystem::path tryWherePath() {
 #ifdef _WIN32
-    std::wstring buffer(MAX_PATH, L'\0');
-    DWORD length = SearchPathW(
-        nullptr,
-        L"ffmpeg.exe",
-        nullptr,
-        static_cast<DWORD>(buffer.size()),
-        buffer.data(),
-        nullptr
-    );
+        std::wstring buffer(MAX_PATH, L'\0');
+        DWORD length = SearchPathW(nullptr, L"ffmpeg.exe", nullptr, static_cast<DWORD>(buffer.size()), buffer.data(), nullptr);
 
-    if (length == 0) {
-        return {};
-    }
-
-    if (length >= buffer.size()) {
-        buffer.resize(length + 1, L'\0');
-        length = SearchPathW(
-            nullptr,
-            L"ffmpeg.exe",
-            nullptr,
-            static_cast<DWORD>(buffer.size()),
-            buffer.data(),
-            nullptr
-        );
         if (length == 0) {
             return {};
         }
-    }
 
-    buffer.resize(length);
-    const std::filesystem::path path(buffer);
-    return std::filesystem::exists(path) ? path : std::filesystem::path{};
+        if (length >= buffer.size()) {
+            buffer.resize(length + 1, L'\0');
+            length = SearchPathW(nullptr, L"ffmpeg.exe", nullptr, static_cast<DWORD>(buffer.size()), buffer.data(), nullptr);
+            if (length == 0) {
+                return {};
+            }
+        }
+
+        buffer.resize(length);
+        const std::filesystem::path path(buffer);
+        return std::filesystem::exists(path) ? path : std::filesystem::path{};
 #else
-    return {};
+        return {};
 #endif
-}
+    }
 }
 
-FrameRecorder::~FrameRecorder() {
-    stop();
-}
+FrameRecorder::~FrameRecorder() { stop(); }
 
 void FrameRecorder::start(const std::filesystem::path& outputPath, CaptureSettings settings) {
     std::lock_guard lock(mutex_);
@@ -100,9 +87,7 @@ void FrameRecorder::stop() {
     recording_ = false;
 }
 
-bool FrameRecorder::isAvailable() {
-    return !findFfmpegExecutable().empty();
-}
+bool FrameRecorder::isAvailable() { return !findFfmpegExecutable().empty(); }
 
 bool FrameRecorder::isRecording() const {
     std::lock_guard lock(mutex_);
@@ -126,7 +111,8 @@ bool FrameRecorder::submit(CapturedFrame frame) {
             recording_ = false;
             return false;
         }
-    } else if (frame.width != frameWidth_ || frame.height != frameHeight_) {
+    }
+    else if (frame.width != frameWidth_ || frame.height != frameHeight_) {
         closeEncoder();
         recording_ = false;
         return false;
@@ -134,13 +120,8 @@ bool FrameRecorder::submit(CapturedFrame frame) {
 
 #ifdef _WIN32
     DWORD bytesWritten = 0;
-    const BOOL writeOk = WriteFile(
-        static_cast<HANDLE>(encoderStdinWrite_),
-        frame.rgba.data(),
-        static_cast<DWORD>(frame.rgba.size()),
-        &bytesWritten,
-        nullptr
-    );
+    const BOOL writeOk = WriteFile(static_cast<HANDLE>(encoderStdinWrite_), frame.rgba.data(), static_cast<DWORD>(frame.rgba.size()),
+                                   &bytesWritten, nullptr);
     if (!writeOk || bytesWritten != frame.rgba.size()) {
         closeEncoder();
         recording_ = false;
@@ -162,13 +143,9 @@ uint64_t FrameRecorder::savedFrameCount() const {
     return savedFrameCount_;
 }
 
-uint64_t FrameRecorder::droppedFrameCount() const {
-    return 0;
-}
+uint64_t FrameRecorder::droppedFrameCount() const { return 0; }
 
-size_t FrameRecorder::pendingFrameCount() const {
-    return 0;
-}
+size_t FrameRecorder::pendingFrameCount() const { return 0; }
 
 bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
 #ifndef _WIN32
@@ -204,15 +181,7 @@ bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
         return false;
     }
 
-    HANDLE nullHandle = CreateFileW(
-        L"NUL",
-        GENERIC_WRITE,
-        FILE_SHARE_READ,
-        &sa,
-        CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        nullptr
-    );
+    HANDLE nullHandle = CreateFileW(L"NUL", GENERIC_WRITE, FILE_SHARE_READ, &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (nullHandle == INVALID_HANDLE_VALUE) {
         CloseHandle(stdinRead);
         CloseHandle(stdinWrite);
@@ -222,19 +191,14 @@ bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
     }
 
     std::ostringstream command;
-    command
-        << quoteForCmd(ffmpegPath_)
-        << " -y"
-        << " -loglevel error"
-        << " -f rawvideo"
-        << " -pix_fmt rgba"
-        << " -s " << frameWidth_ << "x" << frameHeight_
-        << " -r " << settings_.fps
-        << " -i -"
-        << " -an"
-        << " -c:v libx264"
-        << " -preset " << toPresetArg(settings_.preset)
-        << " -crf " << settings_.crf;
+    command << quoteForCmd(ffmpegPath_) << " -y"
+            << " -loglevel error"
+            << " -f rawvideo"
+            << " -pix_fmt rgba"
+            << " -s " << frameWidth_ << "x" << frameHeight_ << " -r " << settings_.fps << " -i -"
+            << " -an"
+            << " -c:v libx264"
+            << " -preset " << toPresetArg(settings_.preset) << " -crf " << settings_.crf;
 
     if (is444(settings_.pixelFormat)) {
         command << " -profile:v high444";
@@ -244,9 +208,7 @@ bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
         command << " -vf pad=ceil(iw/2)*2:ceil(ih/2)*2";
     }
 
-    command
-        << " -pix_fmt " << toPixelFormatArg(settings_.pixelFormat)
-        << " " << quoteForCmd(outputPath);
+    command << " -pix_fmt " << toPixelFormatArg(settings_.pixelFormat) << " " << quoteForCmd(outputPath);
 
     std::string commandLine = command.str();
 
@@ -258,18 +220,8 @@ bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
     startupInfo.hStdError = nullHandle;
 
     PROCESS_INFORMATION processInfo{};
-    const BOOL created = CreateProcessA(
-        nullptr,
-        commandLine.data(),
-        nullptr,
-        nullptr,
-        TRUE,
-        CREATE_NO_WINDOW,
-        nullptr,
-        nullptr,
-        &startupInfo,
-        &processInfo
-    );
+    const BOOL created =
+        CreateProcessA(nullptr, commandLine.data(), nullptr, nullptr, TRUE, CREATE_NO_WINDOW, nullptr, nullptr, &startupInfo, &processInfo);
 
     CloseHandle(stdinRead);
     CloseHandle(nullHandle);
