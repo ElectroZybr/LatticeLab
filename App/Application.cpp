@@ -1,13 +1,9 @@
-#include "Application.h"
+﻿#include "Application.h"
+
 #include "AppActions.h"
-#include "AppSignals.h"
 #include "CreateWindow.h"
 #include "Scenes.h"
 #include "UserSettings.h"
-#include "capture/CaptureActions.h"
-#include "capture/CaptureController.h"
-#include "debug/CreateDebugPanels.h"
-#include "debug/DebugRuntime.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -22,7 +18,10 @@
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
 #include "Rendering/2d/Renderer2D.h"
-#include "Signals/Signals.h"
+#include "capture/CaptureActions.h"
+#include "capture/CaptureController.h"
+#include "debug/CreateDebugPanels.h"
+#include "debug/DebugRuntime.h"
 
 constexpr int FPS = 60;
 constexpr int LPS = 20;
@@ -30,9 +29,11 @@ constexpr int LPS = 20;
 int Application::run() {
     // создание окна
     sf::RenderWindow window = createWindow();
-    if (!window.isOpen()) { return EXIT_FAILURE; }
-    sf::View& sceneView = const_cast<sf::View&>(window.getView());    
-    
+    if (!window.isOpen()) {
+        return EXIT_FAILURE;
+    }
+    sf::View& sceneView = const_cast<sf::View&>(window.getView());
+
     // инициализация систем
     SimBox box(Vec3f(50, 50, 6));
     Simulation simulation(box);
@@ -41,11 +42,13 @@ int Application::run() {
     Interface appInterface(window, simulation, renderer, captureController);
     AppActions::Handler appActions(window, sceneView, simulation, renderer, appInterface.state());
     CaptureActions::Handler captureActions(window, captureController);
-    if (appInterface.init() != EXIT_SUCCESS) { return EXIT_FAILURE; }
+    if (appInterface.init() != EXIT_SUCCESS) {
+        return EXIT_FAILURE;
+    }
     EventManager::init(window, sceneView, simulation, renderer, appInterface);
     ToolsManager::init(window, sceneView, simulation, renderer, appInterface);
     const DebugViews debugViews = createDebugViews(appInterface.debugPanel);
-    
+
     // загрузка пользовательских настроек
     const UserSettings userSettings = UserSettingsIO::load();
     captureController.setSettings(userSettings.captureSettings);

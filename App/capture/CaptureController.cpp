@@ -4,26 +4,16 @@
 #include <chrono>
 #include <ctime>
 #include <filesystem>
-#include <iomanip>
-#include <sstream>
 
 #include <SFML/Window/Keyboard.hpp>
 
-CaptureSettings CaptureController::settings() const noexcept {
-    return settings_;
-}
+CaptureSettings CaptureController::settings() const noexcept { return settings_; }
 
-bool CaptureController::isAvailable() const {
-    return available_;
-}
+bool CaptureController::isAvailable() const { return available_; }
 
-void CaptureController::setSettings(const CaptureSettings& settings) noexcept {
-    settings_ = settings;
-}
+void CaptureController::setSettings(const CaptureSettings& settings) noexcept { settings_ = settings; }
 
-std::filesystem::path CaptureController::outputDirectory() const {
-    return outputDirectory_;
-}
+std::filesystem::path CaptureController::outputDirectory() const { return outputDirectory_; }
 
 void CaptureController::setOutputDirectory(const std::filesystem::path& path) {
     if (!path.empty()) {
@@ -96,7 +86,8 @@ void CaptureController::stop(sf::RenderWindow& window) {
 void CaptureController::toggle(sf::RenderWindow& window) {
     if (frameRecorder_.isRecording()) {
         stop(window);
-    } else {
+    }
+    else {
         start();
     }
 }
@@ -115,62 +106,54 @@ void CaptureController::onFrameRendered(sf::RenderWindow& window) {
     }
 }
 
-bool CaptureController::isRecording() const {
-    return frameRecorder_.isRecording();
-}
+bool CaptureController::isRecording() const { return frameRecorder_.isRecording(); }
 
-uint64_t CaptureController::savedFrameCount() const {
-    return frameRecorder_.isRecording() ? frameRecorder_.savedFrameCount() : 0;
-}
+uint64_t CaptureController::savedFrameCount() const { return frameRecorder_.isRecording() ? frameRecorder_.savedFrameCount() : 0; }
 
-float CaptureController::captureFps() const noexcept {
-    return frameRecorder_.isRecording() ? captureFps_ : 0.0f;
-}
+float CaptureController::captureFps() const noexcept { return frameRecorder_.isRecording() ? captureFps_ : 0.0f; }
 
-double CaptureController::blinkElapsed() const noexcept {
-    return frameRecorder_.isRecording() ? blinkElapsed_ : 0.0;
-}
+double CaptureController::blinkElapsed() const noexcept { return frameRecorder_.isRecording() ? blinkElapsed_ : 0.0; }
 
 std::filesystem::path CaptureController::makeCaptureOutputPath() const {
+    namespace fs = std::filesystem;
+
     const auto now = std::chrono::system_clock::now();
-    const std::time_t time = std::chrono::system_clock::to_time_t(now);
-    std::tm localTime{};
-    localtime_s(&localTime, &time);
+    const std::string date_str = std::format("{:%Y-%m-%d}", std::chrono::floor<std::chrono::days>(now));
+    const std::string prefix = date_str + "_";
 
-    std::ostringstream datePrefix;
-    datePrefix << std::put_time(&localTime, "%Y-%m-%d");
+    const fs::path captures_dir = outputDirectory_.empty() ? fs::path("captures") : outputDirectory_;
 
-    const std::filesystem::path capturesDir = outputDirectory_.empty()
-        ? std::filesystem::path("captures")
-        : outputDirectory_;
-    std::filesystem::create_directories(capturesDir);
+    std::error_code ec;
+    fs::create_directories(captures_dir, ec);
 
-    const std::string prefix = datePrefix.str() + "_";
-    int nextIndex = 1;
+    int next_index = 1;
 
-    for (const auto& entry : std::filesystem::directory_iterator(capturesDir)) {
-        if (!entry.is_regular_file()) {
-            continue;
-        }
+    if (fs::exists(captures_dir, ec)) {
+        for (const auto& entry : fs::directory_iterator(captures_dir)) {
+            if (!entry.is_regular_file()) {
+                continue;
+            }
 
-        const std::filesystem::path path = entry.path();
-        if (path.extension() != ".mp4") {
-            continue;
-        }
+            const auto& path = entry.path();
+            if (path.extension() != ".mp4") {
+                continue;
+            }
 
-        const std::string stem = path.stem().string();
-        if (!stem.starts_with(prefix)) {
-            continue;
-        }
+            const std::string stem = path.stem().string();
+            if (stem.starts_with(prefix)) {
+                std::string_view suffix(stem.data() + prefix.size(), stem.size() - prefix.size());
 
-        const std::string suffix = stem.substr(prefix.size());
-        try {
-            nextIndex = std::max(nextIndex, std::stoi(suffix) + 1);
-        } catch (...) {
+                int current_val = 0;
+                auto [ptr, parse_ec] = std::from_chars(suffix.data(), suffix.data() + suffix.size(), current_val);
+
+                if (parse_ec == std::errc{}) {
+                    next_index = std::max(next_index, current_val + 1);
+                }
+            }
         }
     }
 
-    return capturesDir / (prefix + std::to_string(nextIndex) + ".mp4");
+    return captures_dir / std::format("{}{}.mp4", prefix, next_index);
 }
 
 void CaptureController::resetSessionStats() {

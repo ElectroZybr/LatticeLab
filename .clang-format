@@ -21,6 +21,7 @@ BraceWrapping:
   AfterFunction:         false
   AfterClass:            false
   AfterNamespace:        false
+  BeforeCatch:           true
   BeforeElse:            true
 
 IncludeBlocks: Regroup
