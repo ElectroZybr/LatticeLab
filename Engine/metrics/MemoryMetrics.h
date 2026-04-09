@@ -1,8 +1,10 @@
 #pragma once
 
 #if defined(_WIN32) || defined(_WIN64)
+// clang-format off
 #include <windows.h>
 #include <psapi.h>
+// clang-format on
 #ifdef NEAR
 #undef NEAR
 #endif

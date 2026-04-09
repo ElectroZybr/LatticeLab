@@ -2,6 +2,18 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#ifdef NEAR
+#undef NEAR
+#endif
+#ifdef FAR
+#undef FAR
+#endif
+#ifdef near
+#undef near
+#endif
+#ifdef far
+#undef far
+#endif
 #endif
 
 #ifdef __APPLE__

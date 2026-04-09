@@ -6,8 +6,18 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#ifdef NEAR
 #undef NEAR
+#endif
+#ifdef FAR
 #undef FAR
+#endif
+#ifdef near
+#undef near
+#endif
+#ifdef far
+#undef far
+#endif
 #endif
 
 namespace {
@@ -62,6 +72,25 @@ namespace {
         const std::filesystem::path path(buffer);
         return std::filesystem::exists(path) ? path : std::filesystem::path{};
 #else
+        const char* pathEnv = std::getenv("PATH");
+        if (!pathEnv) {
+            return {};
+        }
+
+        std::istringstream stream(pathEnv);
+        std::string dir;
+
+        while (std::getline(stream, dir, ':')) {
+            auto candidate = std::filesystem::path(dir) / "ffmpeg";
+            std::error_code ec;
+            auto status = std::filesystem::status(candidate, ec);
+
+            if (!ec && std::filesystem::is_regular_file(status) &&
+                (status.permissions() & std::filesystem::perms::owner_exec) != std::filesystem::perms::none) {
+                return candidate;
+            }
+        }
+
         return {};
 #endif
     }
