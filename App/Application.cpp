@@ -9,6 +9,7 @@
 #include <cstdlib>
 
 #include <SFML/Graphics.hpp>
+#include <bgfx/bgfx.h>
 #include <imgui-SFML.h>
 
 #include "App/interaction/ToolsManager.h"
@@ -17,7 +18,8 @@
 #include "GUI/interface/interface.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
-#include "Rendering/2d/Renderer2D.h"
+// #include "Rendering/2d/Renderer2D.h"
+#include "Rendering/2d/Renderer2DBGFX.h"
 #include "capture/CaptureActions.h"
 #include "capture/CaptureController.h"
 #include "debug/CreateDebugPanels.h"
@@ -38,7 +40,7 @@ int Application::run() {
     SimBox box(Vec3f(50, 50, 6));
     Simulation simulation(box);
     CaptureController captureController;
-    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2D>(window, sceneView, simulation.box());
+    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2DBGFX>(window, sceneView, simulation.box());
     Interface appInterface(window, simulation, renderer, captureController);
     AppActions::Handler appActions(window, sceneView, simulation, renderer, appInterface.state());
     CaptureActions::Handler captureActions(window, captureController);
@@ -106,6 +108,11 @@ int Application::run() {
         if (renderAccum >= renderInterval) {
             PROFILE_SCOPE("Application::RenderFrame");
             renderAccum -= renderInterval;
+
+            const auto sz = window.getSize();
+            bgfx::setViewRect(0, 0, 0, sz.x, sz.y);
+            bgfx::touch(0); // гарантирует что view 0 будет очищен даже если draw calls нет
+
             uiState.simStep = simulation.getSimStep();
             appInterface.update();
             refreshAtomDebugViews(debugViews, simulation);
@@ -117,6 +124,7 @@ int Application::run() {
             captureController.onFrameRendered(window);
 
             window.display();
+            bgfx::frame();
         }
 
         Profiler::instance().endFrame();

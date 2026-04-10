@@ -136,7 +136,7 @@ FetchContent_Declare(
     GIT_SHALLOW    ON
     )
 set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(BGFX_BUILD_TOOLS    OFF CACHE BOOL "" FORCE)
+set(BGFX_BUILD_TOOLS    ON  CACHE BOOL "" FORCE)
 set(BGFX_WITH_WAYLAND   OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(bgfx_cmake)
 
@@ -158,6 +158,57 @@ configure_file(
 )
 
 add_library(latticelab_lib STATIC ${CORE_SOURCES})
+
+# --- Компиляция шейдеров bgfx ---
+set(SHADERC_BIN "${CMAKE_SOURCE_DIR}/shaderc")
+set(BGFX_SHADER_INCLUDE "${bgfx_cmake_SOURCE_DIR}/bgfx/src")
+set(BGFX_VARYING_DEF "${CMAKE_SOURCE_DIR}/assets/shaders/bgfx/varying.def.sc")
+set(BGFX_SHADER_OUT "${CMAKE_SOURCE_DIR}/assets/shaders/bgfx")
+if(WIN32)
+    set(BGFX_SHADER_PLATFORM "windows")
+    set(BGFX_SHADER_PROFILE_VERT "vs_5_0")
+    set(BGFX_SHADER_PROFILE_FRAG "ps_5_0")
+elseif(APPLE)
+    set(BGFX_SHADER_PLATFORM "osx")
+    set(BGFX_SHADER_PROFILE_VERT "metal")
+    set(BGFX_SHADER_PROFILE_FRAG "metal")
+else()
+    set(BGFX_SHADER_PLATFORM "linux")
+    set(BGFX_SHADER_PROFILE_VERT "150")
+    set(BGFX_SHADER_PROFILE_FRAG "150")
+endif()
+function(bgfx_compile_shader SC_FILE TYPE OUT_FILES_VAR)
+    get_filename_component(NAME ${SC_FILE} NAME_WE)
+    set(OUT_FILE "${BGFX_SHADER_OUT}/${NAME}.${TYPE}.bin")
+
+    if(${TYPE} STREQUAL "v")
+        set(PROFILE ${BGFX_SHADER_PROFILE_VERT})
+    else()
+        set(PROFILE ${BGFX_SHADER_PROFILE_FRAG})
+    endif()
+
+    add_custom_command(
+        OUTPUT ${OUT_FILE}
+        COMMAND ${SHADERC_BIN}
+            -f ${SC_FILE}
+            -o ${OUT_FILE}
+            --type ${TYPE}
+            --platform ${BGFX_SHADER_PLATFORM}
+            -p ${PROFILE}
+            --varyingdef ${BGFX_VARYING_DEF}
+            -i ${BGFX_SHADER_INCLUDE}
+        DEPENDS ${SC_FILE} ${BGFX_VARYING_DEF}
+        VERBATIM
+    )
+    set(${OUT_FILES_VAR} ${${OUT_FILES_VAR}} ${OUT_FILE} PARENT_SCOPE)
+endfunction()
+set(BGFX_SHADER_BINS "")
+bgfx_compile_shader(${BGFX_SHADER_OUT}/box.vert.sc v BGFX_SHADER_BINS)
+bgfx_compile_shader(${BGFX_SHADER_OUT}/box.frag.sc f BGFX_SHADER_BINS)
+bgfx_compile_shader(${BGFX_SHADER_OUT}/bond.vert.sc v BGFX_SHADER_BINS)
+bgfx_compile_shader(${BGFX_SHADER_OUT}/bond.frag.sc f BGFX_SHADER_BINS)
+add_custom_target(bgfx_shaders ALL DEPENDS ${BGFX_SHADER_BINS})
+add_dependencies(latticelab_lib bgfx_shaders)
 
 if(OPTIMIZE_FOR_NATIVE)
     target_compile_options(latticelab_lib PRIVATE -O3 -march=native)

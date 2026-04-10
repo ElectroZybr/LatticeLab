@@ -8,6 +8,7 @@
 class SimBox;
 class Renderer2D;
 class Renderer3D;
+class Renderer2DBGFX;
 
 class Camera {
     friend class Mouse;
@@ -15,6 +16,8 @@ class Camera {
 
     friend Renderer2D;
     friend Renderer3D;
+
+    friend Renderer2DBGFX;
 
 public:
     enum class Mode : uint8_t { Mode2D, Orbit, Free };
