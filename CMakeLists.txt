@@ -128,6 +128,18 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glm)
 
+# --- Настройка bgfx ---
+FetchContent_Declare(
+    bgfx_cmake
+    GIT_REPOSITORY https://github.com/bkaradzic/bgfx.cmake.git
+    GIT_TAG        v1.142.9197-527
+    GIT_SHALLOW    ON
+    )
+set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(BGFX_BUILD_TOOLS    OFF CACHE BOOL "" FORCE)
+set(BGFX_WITH_WAYLAND   OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(bgfx_cmake)
+
 file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
     "Engine/*.cpp"
     "GUI/*.cpp"
@@ -160,17 +172,21 @@ target_include_directories(latticelab_lib PUBLIC
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
     ${imguifiledialog_SOURCE_DIR}
+    ${bgfx_cmake_SOURCE_DIR}/bgfx/include
+    ${bgfx_cmake_SOURCE_DIR}/bx/include
 )
 
 target_link_libraries(latticelab_lib PUBLIC
-    sfml-graphics 
-    sfml-window 
-    sfml-system 
+    sfml-graphics
+    sfml-window
+    sfml-system
     ImGui-SFML::ImGui-SFML
     ImGuiFileDialog_lib
     glad
     OpenGL::GL
     glm::glm
+    bgfx
+    bx
 )
 
 if (WIN32)
