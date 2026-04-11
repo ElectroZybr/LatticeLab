@@ -24,7 +24,6 @@ protected:
     virtual bool useLighting() = 0;
 
     sf::RenderTarget& target;
-    const SimBox* currentBox = nullptr;
     glm::mat4 projection{1.f};
     glm::mat4 view{1.f};
 
@@ -45,16 +44,10 @@ private:
     void drawBoxImpl(const SimBox& box);
     void drawGridImpl(const SpatialGrid& grid);
 
-    // Atom
+    // Vertex buffers
     bgfx::VertexBufferHandle atomQuadVbh = BGFX_INVALID_HANDLE;
-
-    // Bond
     bgfx::DynamicVertexBufferHandle bondVbh = BGFX_INVALID_HANDLE;
-
-    // Box
     bgfx::DynamicVertexBufferHandle boxVbh = BGFX_INVALID_HANDLE;
-
-    // Grid
     bgfx::VertexBufferHandle gridLineVbh = BGFX_INVALID_HANDLE;
 
     // Uniforms

@@ -3,6 +3,7 @@
 #include <cstring>
 #include <format>
 #include <fstream>
+#include <ranges>
 #include <string_view>
 
 #include "App/interaction/ToolsManager.h"
@@ -78,8 +79,8 @@ RendererBGFX::~RendererBGFX() {
 
 void RendererBGFX::initAtomColors() {
     const int typeCount = static_cast<int>(AtomData::Type::COUNT);
-
     typeColorsData.resize(typeCount);
+
     for (int i = 0; i < typeCount; ++i) {
         const auto& props = AtomData::getProps(static_cast<AtomData::Type>(i));
         typeColorsData[i] = glm::vec4(props.color.r / 255.f, props.color.g / 255.f, props.color.b / 255.f, 1.f);
@@ -94,8 +95,7 @@ void RendererBGFX::initAtomBuffers() {
     bgfx::VertexLayout quadLayout;
     quadLayout.begin().add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float).end();
 
-    const bgfx::Memory* mem = bgfx::copy(quad, sizeof(quad));
-    atomQuadVbh = bgfx::createVertexBuffer(mem, quadLayout);
+    atomQuadVbh = bgfx::createVertexBuffer(bgfx::copy(quad, sizeof(quad)), quadLayout);
 }
 
 void RendererBGFX::initBoxBuffers() {
@@ -126,7 +126,6 @@ void RendererBGFX::initGridBuffers() {
 // Draw
 
 void RendererBGFX::drawShot(const AtomStorage& atoms, const Bond::List& bonds, const SimBox& box) {
-    currentBox = &box;
     updateMatrices();
 
     const auto size = target.getSize();
@@ -158,14 +157,14 @@ void RendererBGFX::drawAtomsImpl(const AtomStorage& atoms) {
         const Vec3f pos = atoms.pos(i);
         const Vec3f vel = atoms.vel(i);
         atomInstData[i] = {
-            .x = float(pos.x),
-            .y = float(pos.y),
-            .z = float(pos.z),
-            .radius = float(AtomData::getProps(atoms.type(i)).radius),
-            .vx = float(vel.x),
-            .vy = float(vel.y),
-            .vz = float(vel.z),
-            .type = float(static_cast<uint8_t>(atoms.type(i))),
+            .x = pos.x,
+            .y = pos.y,
+            .z = pos.z,
+            .radius = AtomData::getProps(atoms.type(i)).radius,
+            .vx = vel.x,
+            .vy = vel.y,
+            .vz = vel.z,
+            .type = static_cast<float>(atoms.type(i)),
             .selected = 0.f,
         };
     }
@@ -179,7 +178,7 @@ void RendererBGFX::drawAtomsImpl(const AtomStorage& atoms) {
     }
 
     bgfx::InstanceDataBuffer idb;
-    bgfx::allocInstanceDataBuffer(&idb, uint32_t(count), sizeof(AtomInstance));
+    bgfx::allocInstanceDataBuffer(&idb, count, sizeof(AtomInstance));
 
     std::memcpy(idb.data, atomInstData.data(), count * sizeof(AtomInstance));
 
@@ -190,12 +189,9 @@ void RendererBGFX::drawAtomsImpl(const AtomStorage& atoms) {
             maxSpeedSqr = speedGradientMax * speedGradientMax;
         }
         else {
-            for (size_t i = 0; i < count; ++i) {
-                maxSpeedSqr = std::max(maxSpeedSqr, atoms.vel(i).sqrAbs());
-            }
-        }
-        if (maxSpeedSqr < 1e-6f) {
-            maxSpeedSqr = 1.f;
+            const auto maxSpeedIt =
+                std::ranges::max_element(std::views::iota(size_t{0}, count), {}, [&](size_t i) { return atoms.vel(i).sqrAbs(); });
+            maxSpeedSqr = std::max(1e-6f, atoms.vel(*maxSpeedIt).sqrAbs());
         }
     }
 
@@ -203,19 +199,17 @@ void RendererBGFX::drawAtomsImpl(const AtomStorage& atoms) {
     bgfx::setUniform(uMaxSpeedSqr, &speedParam);
 
     if (useLighting()) {
-        const glm::vec3 ld = getLightDir();
-        const glm::vec4 lightDir(ld, 0.f);
+        const glm::vec4 lightDir(getLightDir(), 0.f);
         bgfx::setUniform(uLightDir, &lightDir);
     }
 
-    bgfx::setVertexBuffer(0, atomQuadVbh);
-    bgfx::setInstanceDataBuffer(&idb);
-
-    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS);
-
     const glm::vec4 colorModeVec(static_cast<float>(speedColorMode), 0, 0, 0);
     bgfx::setUniform(uColorMode, &colorModeVec);
-    bgfx::setUniform(uTypeColors, typeColorsData.data(), uint16_t(typeColorsData.size()));
+    bgfx::setUniform(uTypeColors, typeColorsData.data(), typeColorsData.size());
+
+    bgfx::setVertexBuffer(0, atomQuadVbh);
+    bgfx::setInstanceDataBuffer(&idb);
+    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS);
     bgfx::submit(0, atomProgram);
 }
 
@@ -258,7 +252,7 @@ void RendererBGFX::drawBondsImpl(const AtomStorage& atoms, const Bond::List& bon
         return;
     }
 
-    const bgfx::Memory* mem = bgfx::makeRef(verts.data(), uint32_t(verts.size() * sizeof(verts[0])));
+    const bgfx::Memory* mem = bgfx::copy(verts.data(), verts.size() * sizeof(verts[0]));
     bgfx::update(bondVbh, 0, mem);
 
     bgfx::setVertexBuffer(0, bondVbh);
@@ -274,13 +268,12 @@ void RendererBGFX::drawGridImpl(const SpatialGrid& grid) {
     for (int z = 1; z < grid.sizeZ - 1; ++z) {
         for (int y = 1; y < grid.sizeY - 1; ++y) {
             for (int x = 1; x < grid.sizeX - 1; ++x) {
-                const int cnt = grid.countAtomsInCell(x, y, z);
-                if (cnt == 0) {
-                    continue;
+                const int count = grid.countAtomsInCell(x, y, z);
+                if (count > 0) {
+                    gridData.emplace_back(glm::vec3((x - 1) * grid.cellSize, (y - 1) * grid.cellSize, (z - 1) * grid.cellSize),
+                                          grid.cellSize, count);
+                    maxCount = std::max(maxCount, count);
                 }
-                gridData.emplace_back(glm::vec3((x - 1) * grid.cellSize, (y - 1) * grid.cellSize, (z - 1) * grid.cellSize),
-                                      float(grid.cellSize), float(cnt));
-                maxCount = std::max(maxCount, cnt);
             }
         }
     }
@@ -290,13 +283,13 @@ void RendererBGFX::drawGridImpl(const SpatialGrid& grid) {
     }
 
     const uint32_t numInstances = uint32_t(gridData.size());
-    const uint16_t stride = sizeof(GridInstance); // должно быть кратно 16
+    const uint16_t stride = sizeof(GridInstance);
 
     bgfx::InstanceDataBuffer idb;
     bgfx::allocInstanceDataBuffer(&idb, numInstances, stride);
     std::memcpy(idb.data, gridData.data(), numInstances * stride);
 
-    const glm::vec4 maxCountVec(float(maxCount), 0, 0, 0);
+    const glm::vec4 maxCountVec(maxCount, 0, 0, 0);
     bgfx::setUniform(uMaxCount, &maxCountVec);
 
     bgfx::setVertexBuffer(0, gridLineVbh);

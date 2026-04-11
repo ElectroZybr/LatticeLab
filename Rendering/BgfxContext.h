@@ -24,13 +24,11 @@ public:
         init.type = bgfx::RendererType::OpenGL;
 #if defined(SFML_SYSTEM_LINUX)
         init.platformData.ndt = XOpenDisplay(nullptr);
-        init.platformData.nwh = reinterpret_cast<void*>(nativeHandle);
         init.platformData.context = reinterpret_cast<void*>(glXGetCurrentContext());
 #elif defined(SFML_SYSTEM_WINDOWS)
-        init.platformData.nwh = reinterpret_cast<void*>(nativeHandle);
 #elif defined(SFML_SYSTEM_MACOS)
-        init.platformData.nwh = reinterpret_cast<void*>(nativeHandle);
 #endif
+        init.platformData.nwh = reinterpret_cast<void*>(nativeHandle);
         init.resolution.width = width;
         init.resolution.height = height;
         init.resolution.reset = BGFX_RESET_NONE;

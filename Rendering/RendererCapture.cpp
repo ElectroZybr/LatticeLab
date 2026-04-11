@@ -2,12 +2,11 @@
 
 #include <algorithm>
 
-#include "Engine/metrics/Profiler.h"
 #include <glad/glad.h>
 
-RendererCapture::~RendererCapture() {
-    releasePBOs();
-}
+#include "Engine/metrics/Profiler.h"
+
+RendererCapture::~RendererCapture() { releasePBOs(); }
 
 CapturedFrame RendererCapture::captureRGBA_PBO(sf::RenderTarget& target, bool flipVertically) {
     PROFILE_SCOPE("Capture::readback");
@@ -117,13 +116,7 @@ CapturedFrame RendererCapture::captureRGBA(sf::RenderTarget& target, bool flipVe
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
     glReadBuffer(GL_BACK);
-    glReadPixels(
-        0, 0,
-        static_cast<GLsizei>(frame.width),
-        static_cast<GLsizei>(frame.height),
-        GL_RGBA, GL_UNSIGNED_BYTE,
-        frame.rgba.data()
-    );
+    glReadPixels(0, 0, static_cast<GLsizei>(frame.width), static_cast<GLsizei>(frame.height), GL_RGBA, GL_UNSIGNED_BYTE, frame.rgba.data());
 
     glPixelStorei(GL_PACK_ALIGNMENT, previousPackAlignment);
 
@@ -176,14 +169,11 @@ void RendererCapture::flipRows(CapturedFrame& frame) {
     }
 
     const size_t rowSize = static_cast<size_t>(frame.width) * 4;
-    std::vector<uint8_t> scratch(rowSize);
+    uint8_t* data = frame.rgba.data();
 
     for (uint32_t y = 0; y < frame.height / 2; ++y) {
-        uint8_t* top = frame.rgba.data() + static_cast<size_t>(y) * rowSize;
-        uint8_t* bottom = frame.rgba.data() + static_cast<size_t>(frame.height - 1 - y) * rowSize;
-
-        std::copy_n(top, rowSize, scratch.data());
-        std::copy_n(bottom, rowSize, top);
-        std::copy_n(scratch.data(), rowSize, bottom);
+        uint8_t* topRow = data + (static_cast<size_t>(y) * rowSize);
+        uint8_t* bottomRow = data + (static_cast<size_t>(frame.height - 1 - y) * rowSize);
+        std::swap_ranges(topRow, topRow + rowSize, bottomRow);
     }
 }

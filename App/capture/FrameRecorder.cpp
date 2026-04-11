@@ -18,6 +18,8 @@
 #ifdef far
 #undef far
 #endif
+#else
+#include <unistd.h>
 #endif
 
 namespace {
@@ -157,9 +159,12 @@ bool FrameRecorder::submit(CapturedFrame frame) {
         return false;
     }
 #else
-    closeEncoder();
-    recording_ = false;
-    return false;
+    const ssize_t written = write(reinterpret_cast<intptr_t>(encoderStdinWrite_), frame.rgba.data(), frame.rgba.size());
+    if (written != static_cast<ssize_t>(frame.rgba.size())) {
+        closeEncoder();
+        recording_ = false;
+        return false;
+    }
 #endif
 
     ++nextFrameIndex_;
@@ -177,9 +182,7 @@ uint64_t FrameRecorder::droppedFrameCount() const { return 0; }
 size_t FrameRecorder::pendingFrameCount() const { return 0; }
 
 bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
-#ifndef _WIN32
-    return false;
-#else
+#ifdef _WIN32
     if (ffmpegPath_.empty() || !std::filesystem::exists(ffmpegPath_)) {
         return false;
     }
@@ -266,6 +269,8 @@ bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
     encoderProcess_ = processInfo.hProcess;
     encoderStdinWrite_ = stdinWrite;
     return true;
+#else
+    return false;
 #endif
 }
 

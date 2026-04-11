@@ -11,13 +11,9 @@ struct CapturedFrame {
     uint32_t height = 0;
     std::vector<uint8_t> rgba;
 
-    bool empty() const {
-        return width == 0 || height == 0 || rgba.empty();
-    }
+    bool empty() const { return width == 0 || height == 0 || rgba.empty(); }
 
-    size_t byteSize() const {
-        return rgba.size();
-    }
+    size_t byteSize() const { return rgba.size(); }
 };
 
 class RendererCapture {
