@@ -47,7 +47,6 @@ private:
 
     // Atom
     bgfx::VertexBufferHandle atomQuadVbh = BGFX_INVALID_HANDLE;
-    bgfx::DynamicVertexBufferHandle atomInstVbh = BGFX_INVALID_HANDLE;
 
     // Bond
     bgfx::DynamicVertexBufferHandle bondVbh = BGFX_INVALID_HANDLE;
@@ -83,9 +82,9 @@ private:
     };
 
     struct AtomInstance {
-        float x, y, z, radius;  // texcoord0
-        float vx, vy, vz, type; // texcoord1
-        float selected, pad[3];
+        float x, y, z, radius;  // i_data0
+        float vx, vy, vz, type; // i_data1
+        float selected, pad[3]; // i_data2
     };
 
     std::vector<AtomInstance> atomInstData;

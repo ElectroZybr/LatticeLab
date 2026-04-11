@@ -1,4 +1,4 @@
-$input a_position, a_texcoord0, a_texcoord1, a_texcoord2
+$input a_position, i_data0, i_data1, i_data2
 $output v_fragColor, v_uv, v_isSelected
 
 #include <bgfx_shader.sh>
@@ -16,16 +16,16 @@ vec3 turboColor(float t) {
 }
 
 void main() {
-    float posX   = a_texcoord0.x;
-    float posY   = a_texcoord0.y;
-    float radius = a_texcoord0.w;
+    float posX   = i_data0.x;
+    float posY   = i_data0.y;
+    float radius = i_data0.w;
 
-    float velX   = a_texcoord1.x;
-    float velY   = a_texcoord1.y;
-    float velZ   = a_texcoord1.z;
-    int   aType  = int(a_texcoord1.w);
+    float velX   = i_data1.x;
+    float velY   = i_data1.y;
+    float velZ   = i_data1.z;
+    int   aType  = int(i_data1.w);
 
-    float sel    = a_texcoord2.x;
+    float sel    = i_data2.x;
 
     int mode = int(u_colorMode.x);
     vec3 color;

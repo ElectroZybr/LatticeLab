@@ -90,7 +90,6 @@ RendererBGFX::~RendererBGFX() {
     bgfx::destroy(uColorMode);
 
     bgfx::destroy(atomQuadVbh);
-    bgfx::destroy(atomInstVbh);
     bgfx::destroy(atomProgram);
 
     bgfx::destroy(bondVbh);
@@ -127,15 +126,6 @@ void RendererBGFX::initAtomBuffers() {
 
     const bgfx::Memory* mem = bgfx::copy(quad, sizeof(quad));
     atomQuadVbh = bgfx::createVertexBuffer(mem, quadLayout);
-
-    bgfx::VertexLayout instLayout;
-    instLayout.begin()
-        .add(bgfx::Attrib::TexCoord0, 4, bgfx::AttribType::Float) // x,y,z,radius
-        .add(bgfx::Attrib::TexCoord1, 4, bgfx::AttribType::Float) // vx,vy,vz,type
-        .add(bgfx::Attrib::TexCoord2, 4, bgfx::AttribType::Float) // selected,pad
-        .end();
-
-    atomInstVbh = bgfx::createDynamicVertexBuffer(1, instLayout, BGFX_BUFFER_ALLOW_RESIZE);
 }
 
 void RendererBGFX::initBoxBuffers() {
@@ -218,8 +208,10 @@ void RendererBGFX::drawAtomsImpl(const AtomStorage& atoms) {
         }
     }
 
-    const bgfx::Memory* mem = bgfx::makeRef(atomInstData.data(), uint32_t(count * sizeof(atomInstData[0])));
-    bgfx::update(atomInstVbh, 0, mem);
+    bgfx::InstanceDataBuffer idb;
+    bgfx::allocInstanceDataBuffer(&idb, uint32_t(count), sizeof(AtomInstance));
+
+    std::memcpy(idb.data, atomInstData.data(), count * sizeof(AtomInstance));
 
     // maxSpeedSqr
     float maxSpeedSqr = 1.f;
@@ -229,7 +221,7 @@ void RendererBGFX::drawAtomsImpl(const AtomStorage& atoms) {
         }
         else {
             for (size_t i = 0; i < count; ++i) {
-                maxSpeedSqr = std::max(maxSpeedSqr, float(atoms.vel(i).sqrAbs()));
+                maxSpeedSqr = std::max(maxSpeedSqr, atoms.vel(i).sqrAbs());
             }
         }
         if (maxSpeedSqr < 1e-6f) {
@@ -247,7 +239,7 @@ void RendererBGFX::drawAtomsImpl(const AtomStorage& atoms) {
     }
 
     bgfx::setVertexBuffer(0, atomQuadVbh);
-    bgfx::setVertexBuffer(1, atomInstVbh);
+    bgfx::setInstanceDataBuffer(&idb);
 
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS);
 
