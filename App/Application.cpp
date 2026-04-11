@@ -18,8 +18,8 @@
 #include "GUI/interface/interface.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
-// #include "Rendering/2d/Renderer2D.h"
 #include "Rendering/2d/Renderer2DBGFX.h"
+#include "Rendering/3d/Renderer3DBGFX.h"
 #include "capture/CaptureActions.h"
 #include "capture/CaptureController.h"
 #include "debug/CreateDebugPanels.h"
@@ -40,7 +40,7 @@ int Application::run() {
     SimBox box(Vec3f(50, 50, 6));
     Simulation simulation(box);
     CaptureController captureController;
-    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2DBGFX>(window, window.getNativeHandle(), sceneView, simulation.box());
+    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer3DBGFX>(window, window.getNativeHandle(), sceneView, simulation.box());
     Interface appInterface(window, simulation, renderer, captureController);
     AppActions::Handler appActions(window, sceneView, simulation, renderer, appInterface.state());
     CaptureActions::Handler captureActions(window, captureController);
@@ -111,7 +111,7 @@ int Application::run() {
 
             const auto sz = window.getSize();
             bgfx::setViewRect(0, 0, 0, sz.x, sz.y);
-            bgfx::touch(0); // гарантирует что view 0 будет очищен даже если draw calls нет
+            bgfx::touch(0);
 
             uiState.simStep = simulation.getSimStep();
             appInterface.update();

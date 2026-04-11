@@ -7,7 +7,7 @@
 
 class SimBox;
 class Renderer2D;
-class Renderer3D;
+class Renderer3DBGFX;
 class Renderer2DBGFX;
 
 class Camera {
@@ -15,7 +15,7 @@ class Camera {
     friend class Keyboard;
 
     friend Renderer2D;
-    friend Renderer3D;
+    friend Renderer3DBGFX;
 
     friend Renderer2DBGFX;
 

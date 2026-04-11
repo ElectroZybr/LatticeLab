@@ -5,13 +5,8 @@
 #include <fstream>
 #include <string_view>
 
-#if defined(SFML_SYSTEM_LINUX)
-#include <GL/glx.h>
-#include <X11/Xlib.h>
-
-#endif
-
 #include "App/interaction/ToolsManager.h"
+#include "Rendering/BgfxContext.h"
 
 bgfx::ProgramHandle RendererBGFX::loadProgram(std::string_view vsPath, std::string_view fsPath) {
     auto loadShader = [](std::string_view path) -> bgfx::ShaderHandle {
@@ -39,32 +34,9 @@ bgfx::ProgramHandle RendererBGFX::loadProgram(std::string_view vsPath, std::stri
 
 RendererBGFX::RendererBGFX(sf::RenderTarget& t, sf::WindowHandle nativeHandle, sf::View& gv, SimBox& simbox)
     : IRenderer(gv, simbox), target(t) {
-    bgfx::renderFrame();
-
-    bgfx::Init init;
-    init.type = bgfx::RendererType::OpenGL;
-
-#if defined(SFML_SYSTEM_LINUX)
-    init.platformData.ndt = XOpenDisplay(nullptr);
-    init.platformData.nwh = reinterpret_cast<void*>(nativeHandle);
-#elif defined(SFML_SYSTEM_WINDOWS)
-    init.platformData.nwh = reinterpret_cast<void*>(nativeHandle);
-#elif defined(SFML_SYSTEM_MACOS)
-    init.platformData.nwh = reinterpret_cast<void*>(nativeHandle);
-#endif
-
-#if defined(SFML_SYSTEM_LINUX)
-    init.platformData.context = reinterpret_cast<void*>(glXGetCurrentContext());
-#endif
-
     const auto size = target.getSize();
-    init.resolution.width = size.x;
-    init.resolution.height = size.y;
-    init.resolution.reset = BGFX_RESET_NONE;
 
-    if (!bgfx::init(init)) {
-        throw std::runtime_error("bgfx::init failed");
-    }
+    BgfxContext::instance().init(nativeHandle, size.x, size.y);
 
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x212121ff, 1.0f, 0);
     bgfx::setViewRect(0, 0, 0, size.x, size.y);
@@ -100,8 +72,6 @@ RendererBGFX::~RendererBGFX() {
 
     bgfx::destroy(gridLineVbh);
     bgfx::destroy(gridProgram);
-
-    bgfx::shutdown();
 }
 
 // Init

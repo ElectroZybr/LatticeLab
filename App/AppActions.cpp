@@ -6,8 +6,8 @@
 #include "App/interaction/ToolsManager.h"
 #include "Engine/Simulation.h"
 #include "GUI/interface/UiState.h"
-#include "Rendering/2d/Renderer2D.h"
-#include "Rendering/3d/Renderer3D.h"
+#include "Rendering/2d/Renderer2DBGFX.h"
+#include "Rendering/3d/Renderer3DBGFX.h"
 
 namespace {
     void shiftAtoms(AtomStorage& atomStorage, Vec3f delta) {
@@ -65,10 +65,10 @@ namespace AppActions {
             std::unique_ptr<IRenderer> newRenderer;
             switch (type) {
             case RendererType::Renderer2D:
-                newRenderer = std::make_unique<Renderer2D>(window, sceneView, simulation.box());
+                newRenderer = std::make_unique<Renderer2DBGFX>(window, window.getNativeHandle(), sceneView, simulation.box());
                 break;
             case RendererType::Renderer3D:
-                newRenderer = std::make_unique<Renderer3D>(window, sceneView, simulation.box());
+                newRenderer = std::make_unique<Renderer3DBGFX>(window, window.getNativeHandle(), sceneView, simulation.box());
                 break;
             }
 
@@ -85,20 +85,14 @@ namespace AppActions {
         track(AppSignals::UI::SetCameraMode.connect([&](Camera::Mode mode) { renderer->camera.setMode(mode); }));
     }
 
-    void Handler::trackSettingsPanel(sf::Window& window) {
-        track(AppSignals::UI::ExitApplication.connect(&sf::Window::close, &window));
-    }
+    void Handler::trackSettingsPanel(sf::Window& window) { track(AppSignals::UI::ExitApplication.connect(&sf::Window::close, &window)); }
 
     void Handler::trackKeyboard(Simulation& simulation) {
-        track(AppSignals::Keyboard::StepPhysics.connect([&]() {
-            simulation.update();
-        }));
+        track(AppSignals::Keyboard::StepPhysics.connect([&]() { simulation.update(); }));
     }
 
     void Handler::trackSimControlPanel(Simulation& simulation) {
-        track(AppSignals::UI::StepPhysics.connect([&]() {
-            simulation.update();
-        }));
+        track(AppSignals::UI::StepPhysics.connect([&]() { simulation.update(); }));
     }
 
     Handler::Handler(sf::RenderWindow& window, sf::View& sceneView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
