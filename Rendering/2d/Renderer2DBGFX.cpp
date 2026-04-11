@@ -2,9 +2,14 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-Renderer2DBGFX::Renderer2DBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simBox) : RendererBGFX(t, gv, simBox) {
+Renderer2DBGFX::Renderer2DBGFX(sf::RenderTarget& t, sf::WindowHandle nativeHandle, sf::View& gv, SimBox& simBox)
+    : RendererBGFX(t, nativeHandle, gv, simBox) {
     camera.position = Vec2f(simBox.size.x, simBox.size.y) / 2.f;
     camera.setZoom(std::max(simBox.size.x, simBox.size.y) * 0.07);
+
+    bondProgram = loadProgram("assets/shaders/bgfx/bond.v.bin", "assets/shaders/bgfx/bond.f.bin");
+    boxProgram = loadProgram("assets/shaders/bgfx/box.v.bin", "assets/shaders/bgfx/box.f.bin");
+    gridProgram = loadProgram("assets/shaders/bgfx/grid.v.bin", "assets/shaders/bgfx/grid.f.bin");
 }
 
 void Renderer2DBGFX::updateMatrices() {

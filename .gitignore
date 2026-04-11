@@ -12,6 +12,7 @@ Testing/
 .cmake/
 
 # Binaries and libraries
+*.bin
 LatticeLab
 /benchmarks
 /benchmarks.exe

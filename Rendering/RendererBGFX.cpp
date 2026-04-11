@@ -1,12 +1,19 @@
 #include "RendererBGFX.h"
 
+#include <cstring>
 #include <format>
 #include <fstream>
 #include <string_view>
 
+#if defined(SFML_SYSTEM_LINUX)
+#include <GL/glx.h>
+#include <X11/Xlib.h>
+
+#endif
+
 #include "App/interaction/ToolsManager.h"
 
-static bgfx::ProgramHandle loadProgram(std::string_view vsPath, std::string_view fsPath) {
+bgfx::ProgramHandle RendererBGFX::loadProgram(std::string_view vsPath, std::string_view fsPath) {
     auto loadShader = [](std::string_view path) -> bgfx::ShaderHandle {
         std::ifstream file(path.data(), std::ios::binary | std::ios::ate);
         if (!file.is_open()) {
@@ -30,16 +37,25 @@ static bgfx::ProgramHandle loadProgram(std::string_view vsPath, std::string_view
     return bgfx::createProgram(vs, fs, true);
 }
 
-RendererBGFX::RendererBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simbox) : IRenderer(gv, simbox), target(t) {
-    target.setActive(false);
-
+RendererBGFX::RendererBGFX(sf::RenderTarget& t, sf::WindowHandle nativeHandle, sf::View& gv, SimBox& simbox)
+    : IRenderer(gv, simbox), target(t) {
     bgfx::renderFrame();
 
     bgfx::Init init;
     init.type = bgfx::RendererType::OpenGL;
-    init.platformData.nwh = nullptr;
-    init.platformData.ndt = nullptr;
-    init.platformData.context = nullptr;
+
+#if defined(SFML_SYSTEM_LINUX)
+    init.platformData.ndt = XOpenDisplay(nullptr);
+    init.platformData.nwh = reinterpret_cast<void*>(nativeHandle);
+#elif defined(SFML_SYSTEM_WINDOWS)
+    init.platformData.nwh = reinterpret_cast<void*>(nativeHandle);
+#elif defined(SFML_SYSTEM_MACOS)
+    init.platformData.nwh = reinterpret_cast<void*>(nativeHandle);
+#endif
+
+#if defined(SFML_SYSTEM_LINUX)
+    init.platformData.context = reinterpret_cast<void*>(glXGetCurrentContext());
+#endif
 
     const auto size = target.getSize();
     init.resolution.width = size.x;
@@ -53,12 +69,11 @@ RendererBGFX::RendererBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simbox) : 
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x212121ff, 1.0f, 0);
     bgfx::setViewRect(0, 0, 0, size.x, size.y);
 
-    uProjection = bgfx::createUniform("u_projection", bgfx::UniformType::Mat4);
-    uView = bgfx::createUniform("u_view", bgfx::UniformType::Mat4);
     uLightDir = bgfx::createUniform("u_lightDir", bgfx::UniformType::Vec4);
     uTypeColors = bgfx::createUniform("u_typeColors", bgfx::UniformType::Vec4, static_cast<int>(AtomData::Type::COUNT));
     uMaxSpeedSqr = bgfx::createUniform("u_maxSpeedSqr", bgfx::UniformType::Vec4);
     uMaxCount = bgfx::createUniform("u_maxCount", bgfx::UniformType::Vec4);
+    uColorMode = bgfx::createUniform("u_colorMode", bgfx::UniformType::Vec4);
 
     initAtomBuffers();
     initBondBuffers();
@@ -68,18 +83,15 @@ RendererBGFX::RendererBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simbox) : 
 }
 
 RendererBGFX::~RendererBGFX() {
-    bgfx::destroy(uProjection);
-    bgfx::destroy(uView);
     bgfx::destroy(uLightDir);
     bgfx::destroy(uTypeColors);
     bgfx::destroy(uMaxSpeedSqr);
     bgfx::destroy(uMaxCount);
+    bgfx::destroy(uColorMode);
 
     bgfx::destroy(atomQuadVbh);
     bgfx::destroy(atomInstVbh);
-    for (auto& p : atomPrograms) {
-        bgfx::destroy(p);
-    }
+    bgfx::destroy(atomProgram);
 
     bgfx::destroy(bondVbh);
     bgfx::destroy(bondProgram);
@@ -88,7 +100,6 @@ RendererBGFX::~RendererBGFX() {
     bgfx::destroy(boxProgram);
 
     bgfx::destroy(gridLineVbh);
-    bgfx::destroy(gridInstVbh);
     bgfx::destroy(gridProgram);
 
     bgfx::shutdown();
@@ -119,11 +130,9 @@ void RendererBGFX::initAtomBuffers() {
 
     bgfx::VertexLayout instLayout;
     instLayout.begin()
-        .add(bgfx::Attrib::TexCoord0, 3, bgfx::AttribType::Float) // x, y, z
-        .add(bgfx::Attrib::TexCoord1, 1, bgfx::AttribType::Float) // radius
-        .add(bgfx::Attrib::TexCoord2, 3, bgfx::AttribType::Float) // vx, vy, vz
-        .add(bgfx::Attrib::TexCoord3, 1, bgfx::AttribType::Float) // type
-        .add(bgfx::Attrib::TexCoord4, 1, bgfx::AttribType::Float) // selected
+        .add(bgfx::Attrib::TexCoord0, 4, bgfx::AttribType::Float) // x,y,z,radius
+        .add(bgfx::Attrib::TexCoord1, 4, bgfx::AttribType::Float) // vx,vy,vz,type
+        .add(bgfx::Attrib::TexCoord2, 4, bgfx::AttribType::Float) // selected,pad
         .end();
 
     atomInstVbh = bgfx::createDynamicVertexBuffer(1, instLayout, BGFX_BUFFER_ALLOW_RESIZE);
@@ -152,15 +161,6 @@ void RendererBGFX::initGridBuffers() {
     lineLayout.begin().add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float).end();
 
     gridLineVbh = bgfx::createVertexBuffer(bgfx::copy(lines, sizeof(lines)), lineLayout);
-
-    bgfx::VertexLayout instLayout;
-    instLayout.begin()
-        .add(bgfx::Attrib::TexCoord0, 3, bgfx::AttribType::Float) // origin
-        .add(bgfx::Attrib::TexCoord1, 1, bgfx::AttribType::Float) // cellSize
-        .add(bgfx::Attrib::TexCoord2, 1, bgfx::AttribType::Float) // atomCount
-        .end();
-
-    gridInstVbh = bgfx::createDynamicVertexBuffer(1, instLayout, BGFX_BUFFER_ALLOW_RESIZE);
 }
 
 // Draw
@@ -171,20 +171,18 @@ void RendererBGFX::drawShot(const AtomStorage& atoms, const Bond::List& bonds, c
 
     const auto size = target.getSize();
     bgfx::setViewRect(0, 0, 0, uint16_t(size.x), uint16_t(size.y));
+    bgfx::setViewTransform(0, &view[0][0], &projection[0][0]);
     bgfx::touch(0);
 
-    // bgfx::setUniform(uProjection, &projection[0][0]);
-    // bgfx::setUniform(uView, &view[0][0]);
+    if (drawBonds) {
+        drawBondsImpl(atoms, bonds);
+    }
+    if (drawGrid) {
+        drawGridImpl(box.grid);
+    }
 
-    // if (drawBonds) {
-    //     drawBondsImpl(atoms, bonds);
-    // }
-    // if (drawGrid) {
-    //     drawGridImpl(box.grid);
-    // }
-
-    // drawBoxImpl(box);
-    // drawAtomsImpl(atoms);
+    drawBoxImpl(box);
+    drawAtomsImpl(atoms);
 
     bgfx::frame();
 }
@@ -207,8 +205,8 @@ void RendererBGFX::drawAtomsImpl(const AtomStorage& atoms) {
             .vx = float(vel.x),
             .vy = float(vel.y),
             .vz = float(vel.z),
-            .type = static_cast<uint8_t>(atoms.type(i)),
-            .selected = 0,
+            .type = float(static_cast<uint8_t>(atoms.type(i))),
+            .selected = 0.f,
         };
     }
 
@@ -253,9 +251,10 @@ void RendererBGFX::drawAtomsImpl(const AtomStorage& atoms) {
 
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS);
 
-    const size_t modeIdx = static_cast<size_t>(speedColorMode);
+    const glm::vec4 colorModeVec(static_cast<float>(speedColorMode), 0, 0, 0);
+    bgfx::setUniform(uColorMode, &colorModeVec);
     bgfx::setUniform(uTypeColors, typeColorsData.data(), uint16_t(typeColorsData.size()));
-    bgfx::submit(0, atomPrograms[modeIdx < 3 ? modeIdx : 0]);
+    bgfx::submit(0, atomProgram);
 }
 
 void RendererBGFX::drawBoxImpl(const SimBox& box) {
@@ -266,8 +265,7 @@ void RendererBGFX::drawBoxImpl(const SimBox& box) {
         0, 0,  0, x1, 0,  0, x1, 0,  0, x1, 0,  z1, x1, 0,  z1, 0,  0,  z1, 0, 0,  z1, 0, 0,  0,
         0, 0,  0, 0,  y1, 0, x1, 0,  0, x1, y1, 0,  x1, 0,  z1, x1, y1, z1, 0, 0,  z1, 0, y1, z1,
     };
-
-    const bgfx::Memory* mem = bgfx::makeRef(lines, sizeof(lines));
+    const bgfx::Memory* mem = bgfx::copy(lines, sizeof(lines));
     bgfx::update(boxVbh, 0, mem);
 
     bgfx::setVertexBuffer(0, boxVbh);
@@ -329,15 +327,19 @@ void RendererBGFX::drawGridImpl(const SpatialGrid& grid) {
         return;
     }
 
-    bgfx::update(gridInstVbh, 0, bgfx::makeRef(gridData.data(), uint32_t(gridData.size() * sizeof(gridData[0]))));
+    const uint32_t numInstances = uint32_t(gridData.size());
+    const uint16_t stride = sizeof(GridInstance); // должно быть кратно 16
+
+    bgfx::InstanceDataBuffer idb;
+    bgfx::allocInstanceDataBuffer(&idb, numInstances, stride);
+    std::memcpy(idb.data, gridData.data(), numInstances * stride);
 
     const glm::vec4 maxCountVec(float(maxCount), 0, 0, 0);
     bgfx::setUniform(uMaxCount, &maxCountVec);
 
     bgfx::setVertexBuffer(0, gridLineVbh);
-    bgfx::setVertexBuffer(1, gridInstVbh);
+    bgfx::setInstanceDataBuffer(&idb);
 
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_BLEND_ALPHA | BGFX_STATE_PT_LINES);
-
     bgfx::submit(0, gridProgram);
 }

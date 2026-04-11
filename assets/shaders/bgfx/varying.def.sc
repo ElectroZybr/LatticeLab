@@ -1,10 +1,13 @@
-vec2 v_texcoord0 : TEXCOORD0 = vec2(0.0, 0.0);
-vec3 v_normal    : TEXCOORD1 = vec3(0.0, 0.0, 1.0);
-vec3 v_fragPos   : TEXCOORD2 = vec3(0.0, 0.0, 0.0);
-float v_atomCount : TEXCOORD3 = 0.0;
-float v_maxCount  : TEXCOORD4 = 0.0;
+float v_atomCount  : TEXCOORD0 = 0.0;
+float v_maxCount   : TEXCOORD1 = 0.0;
+vec3  v_fragColor  : TEXCOORD2 = vec3(0.0, 0.0, 0.0);
+vec2  v_uv         : TEXCOORD3 = vec2(0.0, 0.0);
+float v_isSelected : TEXCOORD4 = 0.0;
 
-vec3 a_position  : POSITION;
-vec2 a_texcoord0 : TEXCOORD0;
-vec3 a_texcoord1 : TEXCOORD1;
-vec3 a_texcoord2 : TEXCOORD2;
+vec4 a_position  : POSITION;
+vec4 a_texcoord0 : TEXCOORD0;
+vec4 a_texcoord1 : TEXCOORD1;
+vec4 a_texcoord2 : TEXCOORD2;
+
+vec4 i_data0 : TEXCOORD7;
+vec4 i_data1 : TEXCOORD6;

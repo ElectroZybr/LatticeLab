@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include <vector>
 
 #include <SFML/Graphics.hpp>
@@ -12,12 +11,14 @@
 
 class RendererBGFX : public IRenderer {
 public:
-    RendererBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simbox);
+    RendererBGFX(sf::RenderTarget& t, sf::WindowHandle nativeHandle, sf::View& gv, SimBox& simbox);
     ~RendererBGFX() override;
 
     void drawShot(const AtomStorage& atoms, const Bond::List& bonds, const SimBox& box) override;
 
 protected:
+    static bgfx::ProgramHandle loadProgram(std::string_view vsPath, std::string_view fsPath);
+
     virtual void updateMatrices() = 0;
     virtual glm::vec3 getLightDir() = 0;
     virtual bool useLighting() = 0;
@@ -26,6 +27,11 @@ protected:
     const SimBox* currentBox = nullptr;
     glm::mat4 projection{1.f};
     glm::mat4 view{1.f};
+
+    bgfx::ProgramHandle atomProgram = BGFX_INVALID_HANDLE;
+    bgfx::ProgramHandle bondProgram = BGFX_INVALID_HANDLE;
+    bgfx::ProgramHandle boxProgram = BGFX_INVALID_HANDLE;
+    bgfx::ProgramHandle gridProgram = BGFX_INVALID_HANDLE;
 
 private:
     void initAtomBuffers();
@@ -42,37 +48,34 @@ private:
     // Atom
     bgfx::VertexBufferHandle atomQuadVbh = BGFX_INVALID_HANDLE;
     bgfx::DynamicVertexBufferHandle atomInstVbh = BGFX_INVALID_HANDLE;
-    std::array<bgfx::ProgramHandle, 3> atomPrograms{{BGFX_INVALID_HANDLE, BGFX_INVALID_HANDLE, BGFX_INVALID_HANDLE}};
 
     // Bond
     bgfx::DynamicVertexBufferHandle bondVbh = BGFX_INVALID_HANDLE;
-    bgfx::ProgramHandle bondProgram = BGFX_INVALID_HANDLE;
 
     // Box
     bgfx::DynamicVertexBufferHandle boxVbh = BGFX_INVALID_HANDLE;
-    bgfx::ProgramHandle boxProgram = BGFX_INVALID_HANDLE;
 
     // Grid
     bgfx::VertexBufferHandle gridLineVbh = BGFX_INVALID_HANDLE;
-    bgfx::DynamicVertexBufferHandle gridInstVbh = BGFX_INVALID_HANDLE;
-    bgfx::ProgramHandle gridProgram = BGFX_INVALID_HANDLE;
 
     // Uniforms
-    bgfx::UniformHandle uProjection = BGFX_INVALID_HANDLE;
-    bgfx::UniformHandle uView = BGFX_INVALID_HANDLE;
     bgfx::UniformHandle uLightDir = BGFX_INVALID_HANDLE;
     bgfx::UniformHandle uTypeColors = BGFX_INVALID_HANDLE;
     bgfx::UniformHandle uMaxSpeedSqr = BGFX_INVALID_HANDLE;
     bgfx::UniformHandle uMaxCount = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle uColorMode = BGFX_INVALID_HANDLE;
 
-    struct alignas(16) BondVertex {
+    struct BondVertex {
         glm::vec3 posA;
         float pad0 = 0;
+
         glm::vec3 posB;
-        float radius;
+        float pad1 = 0;
+
+        float radius, pad[3] = {};
     };
 
-    struct alignas(16) GridInstance {
+    struct GridInstance {
         glm::vec3 origin;
         float cellSize;
         float atomCount;
@@ -80,12 +83,9 @@ private:
     };
 
     struct AtomInstance {
-        float x, y, z;
-        float radius;
-        float vx, vy, vz;
-        uint8_t type;
-        uint8_t selected;
-        uint8_t pad[2] = {};
+        float x, y, z, radius;  // texcoord0
+        float vx, vy, vz, type; // texcoord1
+        float selected, pad[3];
     };
 
     std::vector<AtomInstance> atomInstData;
