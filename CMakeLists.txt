@@ -160,7 +160,7 @@ configure_file(
 add_library(latticelab_lib STATIC ${CORE_SOURCES})
 
 # --- Компиляция шейдеров bgfx ---
-set(SHADERC_BIN "${CMAKE_SOURCE_DIR}/shaderc")
+set(SHADERC_BIN "$<TARGET_FILE:shaderc>")
 set(BGFX_SHADER_INCLUDE "${bgfx_cmake_SOURCE_DIR}/bgfx/src")
 set(BGFX_VARYING_DEF "${CMAKE_SOURCE_DIR}/assets/shaders/bgfx/varying.def.sc")
 set(BGFX_SHADER_OUT "${CMAKE_SOURCE_DIR}/assets/shaders/bgfx")
@@ -214,6 +214,7 @@ bgfx_compile_shader(${BGFX_SHADER_OUT}/bond.frag.sc f BGFX_SHADER_BINS)
 bgfx_compile_shader(${BGFX_SHADER_OUT}/grid.vert.sc v BGFX_SHADER_BINS)
 bgfx_compile_shader(${BGFX_SHADER_OUT}/grid.frag.sc f BGFX_SHADER_BINS)
 add_custom_target(bgfx_shaders ALL DEPENDS ${BGFX_SHADER_BINS})
+add_dependencies(bgfx_shaders shaderc)
 add_dependencies(latticelab_lib bgfx_shaders)
 
 if(OPTIMIZE_FOR_NATIVE)
@@ -221,7 +222,6 @@ if(OPTIMIZE_FOR_NATIVE)
     else()
     target_compile_options(latticelab_lib PRIVATE -O3)
 endif()
-
 
 target_include_directories(latticelab_lib PUBLIC
     ${CMAKE_SOURCE_DIR}
