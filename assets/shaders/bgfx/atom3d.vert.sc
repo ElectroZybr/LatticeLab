@@ -1,7 +1,17 @@
-$input a_position, i_data0, i_data1, i_data2
+$input a_position
 $output v_fragColor, v_uv, v_isSelected, v_data0
 
 #include <bgfx_shader.sh>
+
+SAMPLER2D(s_posX,   0);
+SAMPLER2D(s_posY,   1);
+SAMPLER2D(s_posZ,   2);
+SAMPLER2D(s_velX,   3);
+SAMPLER2D(s_velY,   4);
+SAMPLER2D(s_velZ,   5);
+SAMPLER2D(s_type,   6);
+SAMPLER2D(s_radius, 7);
+SAMPLER2D(s_sel,    8);
 
 uniform vec4 u_maxSpeedSqr;
 uniform vec4 u_colorMode;
@@ -16,17 +26,17 @@ vec3 turboColor(float t) {
 }
 
 void main() {
-    float posX   = i_data0.x;
-    float posY   = i_data0.y;
-    float posZ   = i_data0.z;
-    float radius = i_data0.w;
+    ivec2 coord = ivec2(gl_InstanceID, 0);
 
-    float velX   = i_data1.x;
-    float velY   = i_data1.y;
-    float velZ   = i_data1.z;
-    int   aType  = int(i_data1.w);
-
-    float sel    = i_data2.x;
+    float posX   = texelFetch(s_posX,   coord, 0).r;
+    float posY   = texelFetch(s_posY,   coord, 0).r;
+    float posZ   = texelFetch(s_posZ,   coord, 0).r;
+    float radius = texelFetch(s_radius, coord, 0).r;
+    float velX   = texelFetch(s_velX,   coord, 0).r;
+    float velY   = texelFetch(s_velY,   coord, 0).r;
+    float velZ   = texelFetch(s_velZ,   coord, 0).r;
+    int   aType  = int(texelFetch(s_type, coord, 0).r);
+    float sel    = texelFetch(s_sel,    coord, 0).r;
 
     int mode = int(u_colorMode.x);
     vec3 color;
@@ -42,7 +52,8 @@ void main() {
         }
     }
 
-    v_data0 = i_data0;
+    // v_data0 нужен фрагментному шейдеру для depth correction и освещения
+    v_data0      = vec4(posX, posY, posZ, radius);
     v_fragColor  = color;
     v_uv         = a_position.xy;
     v_isSelected = sel;

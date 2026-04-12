@@ -1,7 +1,17 @@
-$input a_position, i_data0, i_data1, i_data2
+$input a_position
 $output v_fragColor, v_uv, v_isSelected
 
 #include <bgfx_shader.sh>
+
+SAMPLER2D(s_posX,   0);
+SAMPLER2D(s_posY,   1);
+SAMPLER2D(s_posZ,   2);
+SAMPLER2D(s_velX,   3);
+SAMPLER2D(s_velY,   4);
+SAMPLER2D(s_velZ,   5);
+SAMPLER2D(s_type,   6);
+SAMPLER2D(s_radius, 7);
+SAMPLER2D(s_sel,    8);
 
 uniform vec4 u_maxSpeedSqr;
 uniform vec4 u_colorMode;
@@ -16,16 +26,16 @@ vec3 turboColor(float t) {
 }
 
 void main() {
-    float posX   = i_data0.x;
-    float posY   = i_data0.y;
-    float radius = i_data0.w;
+    ivec2 coord = ivec2(gl_InstanceID, 0);
 
-    float velX   = i_data1.x;
-    float velY   = i_data1.y;
-    float velZ   = i_data1.z;
-    int   aType  = int(i_data1.w);
-
-    float sel    = i_data2.x;
+    float posX   = texelFetch(s_posX,   coord, 0).r;
+    float posY   = texelFetch(s_posY,   coord, 0).r;
+    float velX   = texelFetch(s_velX,   coord, 0).r;
+    float velY   = texelFetch(s_velY,   coord, 0).r;
+    float velZ   = texelFetch(s_velZ,   coord, 0).r;
+    float radius = texelFetch(s_radius, coord, 0).r;
+    int   aType  = int(texelFetch(s_type, coord, 0).r);
+    float sel    = texelFetch(s_sel,    coord, 0).r;
 
     int mode = int(u_colorMode.x);
     vec3 color;
@@ -34,17 +44,13 @@ void main() {
     } else {
         float vSqr = velX*velX + velY*velY + velZ*velZ;
         float t    = clamp(sqrt(vSqr / u_maxSpeedSqr.x), 0.0, 1.0);
-        if (mode == 1) {
-            color = vec3(t, 0.0, 1.0 - t);
-        } else {
-            color = turboColor(t);
-        }
+        color = (mode == 1) ? vec3(t, 0.0, 1.0 - t) : turboColor(t);
     }
 
     v_fragColor  = color;
     v_uv         = a_position.xy;
     v_isSelected = sel;
 
-    vec2 screenOffset = a_position.xy * radius;
-    gl_Position = mul(u_proj, mul(u_view, vec4(posX + screenOffset.x, posY + screenOffset.y, 0.0, 1.0)));
+    vec2 offset = a_position.xy * radius;
+    gl_Position = mul(u_proj, mul(u_view, vec4(posX + offset.x, posY + offset.y, 0.0, 1.0)));
 }

@@ -9,6 +9,20 @@
 #include "App/interaction/ToolsManager.h"
 #include "Rendering/BgfxContext.h"
 
+namespace {
+    void ensureTBO(bgfx::TextureHandle& handle, uint16_t count) {
+        if (bgfx::isValid(handle)) {
+            bgfx::destroy(handle);
+        }
+        handle = bgfx::createTexture2D(count, 1, false, 1, bgfx::TextureFormat::R32F,
+                                       BGFX_TEXTURE_NONE | BGFX_SAMPLER_POINT | BGFX_SAMPLER_UVW_CLAMP);
+    }
+
+    void uploadTBO(bgfx::TextureHandle handle, const float* data, uint16_t count) {
+        bgfx::updateTexture2D(handle, 0, 0, 0, 0, count, 1, bgfx::makeRef(data, count * sizeof(float)));
+    }
+}
+
 bgfx::ProgramHandle RendererBGFX::loadProgram(std::string_view vsPath, std::string_view fsPath) {
     auto loadShader = [](std::string_view path) -> bgfx::ShaderHandle {
         std::ifstream file(path.data(), std::ios::binary | std::ios::ate);
@@ -96,6 +110,16 @@ void RendererBGFX::initAtomBuffers() {
     quadLayout.begin().add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float).end();
 
     atomQuadVbh = bgfx::createVertexBuffer(bgfx::copy(quad, sizeof(quad)), quadLayout);
+
+    sTboX = bgfx::createUniform("s_posX", bgfx::UniformType::Sampler);
+    sTboY = bgfx::createUniform("s_posY", bgfx::UniformType::Sampler);
+    sTboZ = bgfx::createUniform("s_posZ", bgfx::UniformType::Sampler);
+    sTboVX = bgfx::createUniform("s_velX", bgfx::UniformType::Sampler);
+    sTboVY = bgfx::createUniform("s_velY", bgfx::UniformType::Sampler);
+    sTboVZ = bgfx::createUniform("s_velZ", bgfx::UniformType::Sampler);
+    sTboType = bgfx::createUniform("s_type", bgfx::UniformType::Sampler);
+    sTboRadius = bgfx::createUniform("s_radius", bgfx::UniformType::Sampler);
+    sTboSel = bgfx::createUniform("s_sel", bgfx::UniformType::Sampler);
 }
 
 void RendererBGFX::initBoxBuffers() {
@@ -152,35 +176,42 @@ void RendererBGFX::drawAtomsImpl(const AtomStorage& atoms) {
         return;
     }
 
-    atomInstData.resize(count);
+    if (count > tboCapacity_) {
+        ensureTBO(tboX, count);
+        ensureTBO(tboY, count);
+        ensureTBO(tboZ, count);
+        ensureTBO(tboVX, count);
+        ensureTBO(tboVY, count);
+        ensureTBO(tboVZ, count);
+        ensureTBO(tboType, count);
+        ensureTBO(tboRadius, count);
+        ensureTBO(tboSel, count);
+        tboCapacity_ = count;
+    }
+
+    uploadTBO(tboX, atoms.xData(), count);
+    uploadTBO(tboY, atoms.yData(), count);
+    uploadTBO(tboZ, atoms.zData(), count);
+    uploadTBO(tboVX, atoms.vxData(), count);
+    uploadTBO(tboVY, atoms.vyData(), count);
+    uploadTBO(tboVZ, atoms.vzData(), count);
+
+    radii.resize(count);
+    typeData.resize(count);
+    selectedData.assign(count, 0.f);
+
     for (size_t i = 0; i < count; ++i) {
-        const Vec3f pos = atoms.pos(i);
-        const Vec3f vel = atoms.vel(i);
-        atomInstData[i] = {
-            .x = pos.x,
-            .y = pos.y,
-            .z = pos.z,
-            .radius = AtomData::getProps(atoms.type(i)).radius,
-            .vx = vel.x,
-            .vy = vel.y,
-            .vz = vel.z,
-            .type = static_cast<float>(atoms.type(i)),
-            .selected = 0.f,
-        };
+        const auto& props = AtomData::getProps(atoms.type(i));
+        radii[i] = props.radius;
+        typeData[i] = static_cast<float>(atoms.type(i));
+    }
+    for (const size_t idx : ToolsManager::pickingSystem->getSelectedIndices()) {
+        selectedData[idx] = 1.f;
     }
 
-    // selected
-    const auto& selectedIndices = ToolsManager::pickingSystem->getSelectedIndices();
-    for (const size_t idx : selectedIndices) {
-        if (idx < count) {
-            atomInstData[idx].selected = 1;
-        }
-    }
-
-    bgfx::InstanceDataBuffer idb;
-    bgfx::allocInstanceDataBuffer(&idb, count, sizeof(AtomInstance));
-
-    std::memcpy(idb.data, atomInstData.data(), count * sizeof(AtomInstance));
+    uploadTBO(tboRadius, radii.data(), count);
+    uploadTBO(tboType, typeData.data(), count);
+    uploadTBO(tboSel, selectedData.data(), count);
 
     // maxSpeedSqr
     float maxSpeedSqr = 1.f;
@@ -207,8 +238,18 @@ void RendererBGFX::drawAtomsImpl(const AtomStorage& atoms) {
     bgfx::setUniform(uColorMode, &colorModeVec);
     bgfx::setUniform(uTypeColors, typeColorsData.data(), typeColorsData.size());
 
+    bgfx::setTexture(0, sTboX, tboX);
+    bgfx::setTexture(1, sTboY, tboY);
+    bgfx::setTexture(2, sTboZ, tboZ);
+    bgfx::setTexture(3, sTboVX, tboVX);
+    bgfx::setTexture(4, sTboVY, tboVY);
+    bgfx::setTexture(5, sTboVZ, tboVZ);
+    bgfx::setTexture(6, sTboType, tboType);
+    bgfx::setTexture(7, sTboRadius, tboRadius);
+    bgfx::setTexture(8, sTboSel, tboSel);
+
     bgfx::setVertexBuffer(0, atomQuadVbh);
-    bgfx::setInstanceDataBuffer(&idb);
+    bgfx::setInstanceCount(count);
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS);
     bgfx::submit(0, atomProgram);
 }

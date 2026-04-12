@@ -74,15 +74,33 @@ private:
         float pad[3] = {};
     };
 
-    struct AtomInstance {
-        float x, y, z, radius;  // i_data0
-        float vx, vy, vz, type; // i_data1
-        float selected, pad[3]; // i_data2
-    };
-
-    std::vector<AtomInstance> atomInstData;
     std::vector<BondVertex> bondData;
     std::vector<GridInstance> gridData;
-    std::vector<float> radii;
     std::vector<glm::vec4> typeColorsData;
+
+    // Atoms
+    bgfx::UniformHandle sTboX = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle sTboY = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle sTboZ = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle sTboVX = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle sTboVY = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle sTboVZ = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle sTboType = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle sTboRadius = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle sTboSel = BGFX_INVALID_HANDLE;
+
+    bgfx::TextureHandle tboX = BGFX_INVALID_HANDLE;
+    bgfx::TextureHandle tboY = BGFX_INVALID_HANDLE;
+    bgfx::TextureHandle tboZ = BGFX_INVALID_HANDLE;
+    bgfx::TextureHandle tboVX = BGFX_INVALID_HANDLE;
+    bgfx::TextureHandle tboVY = BGFX_INVALID_HANDLE;
+    bgfx::TextureHandle tboVZ = BGFX_INVALID_HANDLE;
+    bgfx::TextureHandle tboType = BGFX_INVALID_HANDLE;
+    bgfx::TextureHandle tboRadius = BGFX_INVALID_HANDLE;
+    bgfx::TextureHandle tboSel = BGFX_INVALID_HANDLE;
+
+    std::vector<float> selectedData;
+    std::vector<float> radii;
+    std::vector<float> typeData;
+    size_t tboCapacity_ = 0;
 };
