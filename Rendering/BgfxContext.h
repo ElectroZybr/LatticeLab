@@ -4,6 +4,13 @@
 #if defined(SFML_SYSTEM_LINUX)
 #include <GL/glx.h>
 #include <X11/Xlib.h>
+#elif defined(SFML_SYSTEM_WINDOWS)
+// clang-format off
+#include <windows.h>
+#include <GL/gl.h>
+// clang-format on
+#elif defined(SFML_SYSTEM_MACOS)
+#include <OpenGL/OpenGL.h>
 #endif
 
 class BgfxContext {
@@ -26,7 +33,9 @@ public:
         init.platformData.ndt = XOpenDisplay(nullptr);
         init.platformData.context = reinterpret_cast<void*>(glXGetCurrentContext());
 #elif defined(SFML_SYSTEM_WINDOWS)
+        init.platformData.context = reinterpret_cast<void*>(wglGetCurrentContext());
 #elif defined(SFML_SYSTEM_MACOS)
+        init.platformData.context = reinterpret_cast<void*>(CGLGetCurrentContext());
 #endif
         init.platformData.nwh = reinterpret_cast<void*>(nativeHandle);
         init.resolution.width = width;
