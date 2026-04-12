@@ -1,6 +1,6 @@
 #include "WindowEvents.h"
 
-#include <imgui-SFML.h>
+#include "imgui_impl_bgfx.h"
 
 #include "GUI/interface/interface.h"
 
@@ -28,9 +28,8 @@ void WindowEvents::onEvent(const sf::Event& event) {
 
         appInterface->styleManager.onResize(e->size);
         if (appInterface->fontManager.load(appInterface->styleManager.getScale())) {
-            if (!ImGui::SFML::UpdateFontTexture()) {
-                // Keep current font pointers if texture update failed.
-            }
+            ImGui_Implbgfx_InvalidateDeviceObjects();
+            ImGui_Implbgfx_CreateDeviceObjects();
         }
     }
 }

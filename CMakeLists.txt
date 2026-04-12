@@ -22,7 +22,6 @@ include(CheckIPOSupported)
 check_ipo_supported(RESULT lto_supported OUTPUT lto_error)
 if(lto_supported AND NOT MINGW)
     message(STATUS "LTO (IPO) is supported and enabled")
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 elseif(lto_supported AND MINGW)
     message(STATUS "LTO (IPO) is disabled for MinGW due to linker/LTO instability")
 else()
@@ -52,8 +51,6 @@ unset(IMGUI_SFML_CONFIG_DIR CACHE)
 unset(imgui_SOURCE_DIR CACHE)
 unset(imgui_BINARY_DIR CACHE)
 
-find_package(OpenGL REQUIRED)
-
 # --- Настройка SFML ---
 FetchContent_Declare(
     sfml
@@ -82,23 +79,16 @@ add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+    ${CMAKE_SOURCE_DIR}/GUI/imgui_bgfx/imgui_impl_bgfx.cpp
 )
-include_directories(${imgui_SOURCE_DIR})
-
-# --- Настройка ImGui-SFML ---
-FetchContent_Declare(
-    imgui-sfml
-    GIT_REPOSITORY https://github.com/SFML/imgui-sfml.git
-    GIT_TAG        v3.0
-    GIT_SHALLOW    ON
+target_include_directories(imgui PUBLIC
+    ${imgui_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/GUI/imgui_bgfx
+    ${bgfx_cmake_SOURCE_DIR}/bgfx/include
+    ${bgfx_cmake_SOURCE_DIR}/bgfx/examples/common/imgui
+    ${bgfx_cmake_SOURCE_DIR}/bx/include
 )
-set(IMGUI_SFML_FIND_SFML OFF CACHE BOOL "" FORCE)
-set(IMGUI_SFML_IF_FETCHCONTENT ON CACHE BOOL "" FORCE)
-set(IMGUI_DIR ${imgui_SOURCE_DIR} CACHE PATH "" FORCE)
-set(IMGUI_INCLUDE_DIR ${imgui_SOURCE_DIR} CACHE PATH "" FORCE)
-
-FetchContent_MakeAvailable(imgui-sfml)
+target_link_libraries(imgui PUBLIC bgfx bx)
 
 # --- Настройка ImGuiFileDialog ---
 FetchContent_Declare(
@@ -165,6 +155,9 @@ configure_file(
 )
 
 add_library(latticelab_lib STATIC ${CORE_SOURCES})
+if(lto_supported)
+    set_target_properties(latticelab_lib PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
 
 # --- Компиляция шейдеров bgfx ---
 set(SHADERC_BIN "$<TARGET_FILE:shaderc>")
@@ -242,10 +235,9 @@ target_link_libraries(latticelab_lib PUBLIC
     sfml-graphics
     sfml-window
     sfml-system
-    ImGui-SFML::ImGui-SFML
+    imgui
     ImGuiFileDialog_lib
     glad
-    OpenGL::GL
     glm::glm
     bgfx
     bx
@@ -255,6 +247,10 @@ if (WIN32)
     add_executable(${APP_NAME} WIN32 main.cpp)
 else()
     add_executable(${APP_NAME} main.cpp)
+endif()
+
+if(lto_supported)
+    set_target_properties(${APP_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
 if(OPTIMIZE_FOR_NATIVE)

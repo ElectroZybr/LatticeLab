@@ -45,6 +45,8 @@ public:
         if (!bgfx::init(init)) {
             throw std::runtime_error("bgfx::init failed");
         }
+        bgfx::setViewClear(255, BGFX_CLEAR_NONE);
+        bgfx::setViewMode(255, bgfx::ViewMode::Sequential);
         initialized = true;
     }
 

@@ -5,6 +5,9 @@
 #include <glad/glad.h>
 
 #include "Engine/metrics/Profiler.h"
+#include "SFML/Graphics/Image.hpp"
+#include "SFML/Graphics/RenderWindow.hpp"
+#include "SFML/Graphics/Texture.hpp"
 
 RendererCapture::~RendererCapture() { releasePBOs(); }
 
@@ -17,47 +20,65 @@ CapturedFrame RendererCapture::captureRGBA_PBO(sf::RenderTarget& target, bool fl
         return frame;
     }
 
-    if (!target.setActive(true)) {
+    auto* window = dynamic_cast<sf::RenderWindow*>(&target);
+    if (!window) {
         return frame;
     }
 
-    ensurePBOs(size.x, size.y);
-    if (byteSize_ == 0) {
-        return frame;
+    sf::Texture texture(size);
+    texture.update(*window);
+    sf::Image image = texture.copyToImage();
+
+    frame.width = size.x;
+    frame.height = size.y;
+    const uint8_t* px = image.getPixelsPtr();
+    frame.rgba.assign(px, px + size.x * size.y * 4);
+    if (!flipVertically) {
+        flipRows(frame);
     }
-
-    GLint previousPackAlignment = 4;
-    GLint previousPackBuffer = 0;
-    glGetIntegerv(GL_PACK_ALIGNMENT, &previousPackAlignment);
-    glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previousPackBuffer);
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-
-    glBindBuffer(GL_PIXEL_PACK_BUFFER, pbos_[static_cast<size_t>(writeIndex_)]);
-    glReadBuffer(GL_BACK);
-    glReadPixels(0, 0, static_cast<GLsizei>(width_), static_cast<GLsizei>(height_), GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-
-    if (primed_) {
-        glBindBuffer(GL_PIXEL_PACK_BUFFER, pbos_[static_cast<size_t>(readIndex_)]);
-        void* mapped = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, static_cast<GLsizeiptr>(byteSize_), GL_MAP_READ_BIT);
-        if (mapped != nullptr) {
-            frame.width = width_;
-            frame.height = height_;
-            frame.rgba.resize(byteSize_);
-            std::copy_n(static_cast<const uint8_t*>(mapped), byteSize_, frame.rgba.data());
-            glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-
-            if (flipVertically) {
-                flipRows(frame);
-            }
-        }
-    }
-
-    glBindBuffer(GL_PIXEL_PACK_BUFFER, previousPackBuffer);
-    glPixelStorei(GL_PACK_ALIGNMENT, previousPackAlignment);
-
-    std::swap(writeIndex_, readIndex_);
-    primed_ = true;
     return frame;
+
+    // if (!target.setActive(true)) {
+    //     return frame;
+    // }
+
+    // ensurePBOs(size.x, size.y);
+    // if (byteSize_ == 0) {
+    //     return frame;
+    // }
+
+    // GLint previousPackAlignment = 4;
+    // GLint previousPackBuffer = 0;
+    // glGetIntegerv(GL_PACK_ALIGNMENT, &previousPackAlignment);
+    // glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previousPackBuffer);
+    // glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+    // glBindBuffer(GL_PIXEL_PACK_BUFFER, pbos_[static_cast<size_t>(writeIndex_)]);
+    // glReadBuffer(GL_BACK);
+    // glReadPixels(0, 0, static_cast<GLsizei>(width_), static_cast<GLsizei>(height_), GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+    // if (primed_) {
+    //     glBindBuffer(GL_PIXEL_PACK_BUFFER, pbos_[static_cast<size_t>(readIndex_)]);
+    //     void* mapped = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, static_cast<GLsizeiptr>(byteSize_), GL_MAP_READ_BIT);
+    //     if (mapped != nullptr) {
+    //         frame.width = width_;
+    //         frame.height = height_;
+    //         frame.rgba.resize(byteSize_);
+    //         std::copy_n(static_cast<const uint8_t*>(mapped), byteSize_, frame.rgba.data());
+    //         glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+
+    //         if (flipVertically) {
+    //             flipRows(frame);
+    //         }
+    //     }
+    // }
+
+    // glBindBuffer(GL_PIXEL_PACK_BUFFER, previousPackBuffer);
+    // glPixelStorei(GL_PACK_ALIGNMENT, previousPackAlignment);
+
+    // std::swap(writeIndex_, readIndex_);
+    // primed_ = true;
+    // return frame;
 }
 
 CapturedFrame RendererCapture::consumePendingFrame(bool flipVertically) {

@@ -1,6 +1,7 @@
 #include "FrameRecorder.h"
 
 #include <cstdlib>
+#include <format>
 
 #include "Engine/metrics/Profiler.h"
 
@@ -19,6 +20,8 @@
 #undef far
 #endif
 #else
+#include <fcntl.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #endif
 
@@ -270,7 +273,102 @@ bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
     encoderStdinWrite_ = stdinWrite;
     return true;
 #else
-    return false;
+    if (ffmpegPath_.empty() || !std::filesystem::exists(ffmpegPath_)) {
+        return false;
+    }
+
+    frameWidth_ = frame.width;
+    frameHeight_ = frame.height;
+
+    const std::filesystem::path outputPath = std::filesystem::absolute(outputPath_);
+    const bool needsPad = (frameWidth_ % 2 != 0) || (frameHeight_ % 2 != 0);
+
+    int pipefd[2];
+    if (pipe(pipefd) != 0) {
+        frameWidth_ = frameHeight_ = 0;
+        return false;
+    }
+
+    std::string sizeArg = std::format("{}x{}", frameWidth_, frameHeight_);
+    std::string fpsArg = std::to_string(settings_.fps);
+    std::string crfArg = std::to_string(settings_.crf);
+    std::string pixFmtArg = toPixelFormatArg(settings_.pixelFormat);
+    std::string presetArg = toPresetArg(settings_.preset);
+    std::string outputStr = outputPath.string();
+
+    std::vector<std::string> args = {
+        ffmpegPath_.string(),
+        "-y",
+        "-loglevel",
+        "error",
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "rgba",
+        "-s",
+        sizeArg,
+        "-r",
+        fpsArg,
+        "-i",
+        "-",
+        "-an",
+        "-c:v",
+        "libx264",
+        "-preset",
+        presetArg,
+        "-crf",
+        crfArg,
+    };
+
+    if (is444(settings_.pixelFormat)) {
+        args.emplace_back("-profile:v");
+        args.emplace_back("high444");
+    }
+    if (needsPad) {
+        args.emplace_back("-vf");
+        args.emplace_back("pad=ceil(iw/2)*2:ceil(ih/2)*2");
+    }
+
+    args.emplace_back("-pix_fmt");
+    args.emplace_back(pixFmtArg);
+    args.emplace_back(outputStr);
+
+    std::vector<const char*> argv;
+    argv.reserve(args.size() + 1);
+    for (const auto& a : args) {
+        argv.emplace_back(a.data());
+    }
+    argv.emplace_back(nullptr);
+
+    const pid_t pid = fork();
+    if (pid < 0) {
+        close(pipefd[0]);
+        close(pipefd[1]);
+        frameWidth_ = frameHeight_ = 0;
+        return false;
+    }
+
+    if (pid == 0) {
+        dup2(pipefd[0], STDIN_FILENO);
+        close(pipefd[0]);
+        close(pipefd[1]);
+
+        int devNull = open("/dev/null", O_WRONLY);
+        if (devNull >= 0) {
+            dup2(devNull, STDOUT_FILENO);
+            dup2(devNull, STDERR_FILENO);
+            close(devNull);
+        }
+
+        execvp(argv[0], const_cast<char* const*>(argv.data()));
+        _exit(1);
+    }
+
+    close(pipefd[0]);
+
+    encoderProcess_ = reinterpret_cast<void*>(static_cast<intptr_t>(pid));
+    encoderStdinWrite_ = reinterpret_cast<void*>(static_cast<intptr_t>(pipefd[1]));
+    return true;
 #endif
 }
 
@@ -283,6 +381,16 @@ void FrameRecorder::closeEncoder() {
     if (encoderProcess_ != nullptr) {
         WaitForSingleObject(static_cast<HANDLE>(encoderProcess_), 15000);
         CloseHandle(static_cast<HANDLE>(encoderProcess_));
+        encoderProcess_ = nullptr;
+    }
+#else
+    if (encoderStdinWrite_ != nullptr) {
+        close(static_cast<int>(reinterpret_cast<intptr_t>(encoderStdinWrite_)));
+        encoderStdinWrite_ = nullptr;
+    }
+    if (encoderProcess_ != nullptr) {
+        const pid_t pid = static_cast<pid_t>(reinterpret_cast<intptr_t>(encoderProcess_));
+        waitpid(pid, nullptr, 0);
         encoderProcess_ = nullptr;
     }
 #endif

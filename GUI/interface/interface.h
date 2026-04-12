@@ -1,12 +1,10 @@
 #pragma once
-#include <memory>
-#include <cstdint>
 #include <filesystem>
-#include <string>
+#include <memory>
 
 #include <SFML/Graphics.hpp>
-#include <imgui-SFML.h>
 
+#include "GUI/interface/UiState.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/font_manager/FontManager.h"
 #include "GUI/interface/panels/debug/DebugPanel.h"
@@ -18,7 +16,6 @@
 #include "GUI/interface/panels/tools/SideToolsPanel.h"
 #include "GUI/interface/panels/tools/ToolsPanel.h"
 #include "GUI/interface/style/StyleManager.h"
-#include "GUI/interface/UiState.h"
 
 class Interface {
 public:

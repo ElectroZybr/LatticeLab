@@ -1,7 +1,5 @@
 #include "ioPanel.h"
 
-#include <imgui-SFML.h>
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -12,9 +10,9 @@
 
 #include "App/AppSignals.h"
 #include "Engine/Simulation.h"
+#include "GUI/interface/UiState.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/panels/io/ioPanelWidgets.h"
-#include "GUI/interface/UiState.h"
 
 namespace {
     constexpr float kSceneTileRounding = 10.0f;
@@ -230,18 +228,16 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
         const bool deleteClicked = deleteHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
 
         drawList->AddRectFilled(deleteMin, deleteMax,
-                                ImGui::GetColorU32(deleteHovered ? ImVec4(0.76f, 0.24f, 0.28f, 0.96f)
-                                                                 : ImVec4(0.10f, 0.12f, 0.16f, 0.86f)),
+                                ImGui::GetColorU32(deleteHovered ? ImVec4(0.76f, 0.24f, 0.28f, 0.96f) : ImVec4(0.10f, 0.12f, 0.16f, 0.86f)),
                                 6.0f * scale);
-        const ImVec2 deleteCenter(deleteMin.x + deleteButtonSize * 0.5f - 0.5f * scale, deleteMin.y + deleteButtonSize * 0.5f - 0.5f * scale);
+        const ImVec2 deleteCenter(deleteMin.x + deleteButtonSize * 0.5f - 0.5f * scale,
+                                  deleteMin.y + deleteButtonSize * 0.5f - 0.5f * scale);
         const float crossHalfExtent = deleteButtonSize * 0.18f;
         const ImU32 crossColor = ImGui::GetColorU32(ImVec4(0.96f, 0.97f, 0.99f, 1.0f));
         drawList->AddLine(ImVec2(deleteCenter.x - crossHalfExtent, deleteCenter.y - crossHalfExtent),
-                          ImVec2(deleteCenter.x + crossHalfExtent, deleteCenter.y + crossHalfExtent), crossColor,
-                          1.4f * scale);
+                          ImVec2(deleteCenter.x + crossHalfExtent, deleteCenter.y + crossHalfExtent), crossColor, 1.4f * scale);
         drawList->AddLine(ImVec2(deleteCenter.x - crossHalfExtent, deleteCenter.y + crossHalfExtent),
-                          ImVec2(deleteCenter.x + crossHalfExtent, deleteCenter.y - crossHalfExtent), crossColor,
-                          1.4f * scale);
+                          ImVec2(deleteCenter.x + crossHalfExtent, deleteCenter.y - crossHalfExtent), crossColor, 1.4f * scale);
 
         if (!deleteHovered && isHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
             AppSignals::UI::LoadSimulation.emit(tile.path);
@@ -256,8 +252,8 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
         }
 
         const ImVec2 titlePos(tileMin.x + 10.0f, tileMax.y - 25.0f);
-        drawList->AddText(ImVec2(titlePos.x + 1.0f, titlePos.y + 1.0f),
-                          ImGui::GetColorU32(ImVec4(0.02f, 0.03f, 0.05f, 0.85f)), tile.title.c_str());
+        drawList->AddText(ImVec2(titlePos.x + 1.0f, titlePos.y + 1.0f), ImGui::GetColorU32(ImVec4(0.02f, 0.03f, 0.05f, 0.85f)),
+                          tile.title.c_str());
         drawList->AddText(titlePos, ImGui::GetColorU32(ImVec4(0.95f, 0.96f, 0.98f, 1.0f)), tile.title.c_str());
         if (!tile.description.empty()) {
             const ImVec2 descriptionPos(tileMin.x + 10.0f, tileMax.y - 15.0f);
@@ -283,8 +279,8 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
         ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.08f, 0.10f, 0.13f, 0.96f));
         ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.33f, 0.38f, 0.46f, 0.95f));
 
-        if (ImGui::BeginPopup(kDeletePopupId, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
-                                                 ImGuiWindowFlags_NoSavedSettings)) {
+        if (ImGui::BeginPopup(kDeletePopupId,
+                              ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings)) {
             const char* deleteTitle = "Удалить сцену?";
             const float titleWidth = ImGui::CalcTextSize(deleteTitle).x;
             const float titleOffsetX = std::max(0.0f, (ImGui::GetContentRegionAvail().x - titleWidth) * 0.5f);

@@ -4,13 +4,13 @@
 #include "CreateWindow.h"
 #include "Scenes.h"
 #include "UserSettings.h"
+#include "imgui_impl_bgfx.h"
 
 #include <cmath>
 #include <cstdlib>
 
 #include <SFML/Graphics.hpp>
 #include <bgfx/bgfx.h>
-#include <imgui-SFML.h>
 
 #include "App/interaction/ToolsManager.h"
 #include "Engine/Simulation.h"
@@ -108,16 +108,14 @@ int Application::run() {
             PROFILE_SCOPE("Application::RenderFrame");
             renderAccum -= renderInterval;
 
-            const auto sz = window.getSize();
-            bgfx::setViewRect(0, 0, 0, sz.x, sz.y);
-            bgfx::touch(0);
-
             uiState.simStep = simulation.getSimStep();
             appInterface.update();
             refreshAtomDebugViews(debugViews, simulation);
             renderer->drawShot(simulation.atoms(), simulation.bonds(), simulation.box());
             ToolsManager::pickingSystem->getOverlay().draw(window);
-            ImGui::SFML::Render(window);
+
+            ImGui::Render();
+            ImGui_Implbgfx_RenderDrawLists(ImGui::GetDrawData());
 
             // захват кадра для видео
             captureController.onFrameRendered(window);

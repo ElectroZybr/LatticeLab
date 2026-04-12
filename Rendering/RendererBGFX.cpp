@@ -166,8 +166,6 @@ void RendererBGFX::drawShot(const AtomStorage& atoms, const Bond::List& bonds, c
 
     drawBoxImpl(box);
     drawAtomsImpl(atoms);
-
-    bgfx::frame();
 }
 
 void RendererBGFX::drawAtomsImpl(const AtomStorage& atoms) {

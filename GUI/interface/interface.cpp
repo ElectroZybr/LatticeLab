@@ -1,9 +1,10 @@
 #include "interface.h"
 
-#include "App/capture/CaptureController.h"
-#include "imgui_impl_opengl3.h"
+#include "imgui_impl_bgfx.h"
 
 #include <SFML/Graphics.hpp>
+
+#include "App/capture/CaptureController.h"
 #define ICON_MIN_FA 0xf000
 #define ICON_MAX_FA 0xf897
 
@@ -63,34 +64,33 @@ Interface::Interface(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRender
     : window_(&w), simulation_(&s), renderer_(&r), captureController_(&c) {}
 
 int Interface::init() {
-    if (!ImGui::SFML::Init(*window_, false)) {
-        return EXIT_FAILURE;
-    }
+    ImGui::CreateContext();
 
     styleManager.applyCustomStyle();
 
     if (!fontManager.load(styleManager.getScale())) {
         return EXIT_FAILURE;
     }
-    if (!ImGui_ImplOpenGL3_Init("#version 150")) {
-        return EXIT_FAILURE;
-    }
-    if (!ImGui_ImplOpenGL3_CreateFontsTexture()) {
-        return EXIT_FAILURE;
-    }
+    ImGui_Implbgfx_Init(255);
+    ImGui_Implbgfx_CreateDeviceObjects();
+
     return EXIT_SUCCESS;
 }
 
 void Interface::shutdown() {
-    ImGui_ImplOpenGL3_DestroyFontsTexture();
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui::SFML::Shutdown();
+    ImGui_Implbgfx_Shutdown();
+    ImGui::DestroyContext();
 }
 
 int Interface::update() {
-    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_Implbgfx_NewFrame();
+
+    ImGuiIO& io = ImGui::GetIO();
     const sf::Time delta = clock_.restart();
-    ImGui::SFML::Update(*window_, delta);
+    io.DeltaTime = delta.asSeconds();
+    io.DisplaySize = ImVec2(window_->getSize().x, window_->getSize().y);
+
+    ImGui::NewFrame();
 
     ImGui::PushFont(fontManager.main);
     toolsPanel.draw(styleManager.getScale(), *window_, debugPanel, settingsPanel, ioPanel);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include <SFML/System/Vector2.hpp>
 #include <imgui.h>
 
