@@ -4,7 +4,7 @@
 
 class Renderer3DBGFX : public RendererBGFX {
 public:
-    Renderer3DBGFX(sf::RenderTarget& t, sf::WindowHandle nativeHandle, sf::View& gv, SimBox& simbox);
+    Renderer3DBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simbox);
     ~Renderer3DBGFX() override = default;
 
 protected:

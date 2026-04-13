@@ -2,8 +2,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-Renderer3DBGFX::Renderer3DBGFX(sf::RenderTarget& t, sf::WindowHandle nativeHandle, sf::View& gv, SimBox& simBox)
-    : RendererBGFX(t, nativeHandle, gv, simBox) {
+Renderer3DBGFX::Renderer3DBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simBox) : RendererBGFX(t, gv, simBox) {
     camera.setMode(Camera::Mode::Orbit);
 
     atomProgram = loadProgram("assets/shaders/bgfx/atom3d.v.bin", "assets/shaders/bgfx/atom3d.f.bin");

@@ -65,10 +65,10 @@ namespace AppActions {
             std::unique_ptr<IRenderer> newRenderer;
             switch (type) {
             case RendererType::Renderer2D:
-                newRenderer = std::make_unique<Renderer2DBGFX>(window, window.getNativeHandle(), sceneView, simulation.box());
+                newRenderer = std::make_unique<Renderer2DBGFX>(window, sceneView, simulation.box());
                 break;
             case RendererType::Renderer3D:
-                newRenderer = std::make_unique<Renderer3DBGFX>(window, window.getNativeHandle(), sceneView, simulation.box());
+                newRenderer = std::make_unique<Renderer3DBGFX>(window, sceneView, simulation.box());
                 break;
             }
 

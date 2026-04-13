@@ -52,6 +52,35 @@ public:
         initialized = true;
     }
 
+    void init(uint32_t width, uint32_t height) {
+        if (initialized) {
+            return;
+        }
+
+        bgfx::renderFrame();
+
+        bgfx::Init init;
+        init.type = bgfx::RendererType::OpenGL;
+#if defined(SFML_SYSTEM_LINUX)
+        init.platformData.ndt = XOpenDisplay(nullptr);
+        init.platformData.context = reinterpret_cast<void*>(glXGetCurrentContext());
+#elif defined(SFML_SYSTEM_WINDOWS)
+        init.platformData.context = reinterpret_cast<void*>(wglGetCurrentContext());
+#elif defined(SFML_SYSTEM_MACOS)
+        init.platformData.context = reinterpret_cast<void*>(CGLGetCurrentContext());
+#endif
+        init.resolution.width = width;
+        init.resolution.height = height;
+        init.resolution.reset = BGFX_RESET_NONE;
+
+        init.callback = &callback_;
+
+        if (!bgfx::init(init)) {
+            throw std::runtime_error("bgfx::init failed");
+        }
+        initialized = true;
+    }
+
     void shutdown() {
         if (!initialized) {
             return;

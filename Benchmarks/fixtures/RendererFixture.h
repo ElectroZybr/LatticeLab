@@ -6,13 +6,18 @@
 #include <SFML/Graphics.hpp>
 #include <benchmark/benchmark.h>
 
+#include "App/interaction/ToolsManager.h"
 #include "Engine/SimBox.h"
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/physics/Bond.h"
 #include "Rendering/BaseRenderer.h"
+#include "Rendering/BgfxContext.h"
 
-template <typename TRenderer> class RendererFixture : public benchmark::Fixture {
+template <typename T>
+concept IsRenderer = std::derived_from<T, IRenderer>;
+
+template <IsRenderer TRenderer> class RendererFixture : public benchmark::Fixture {
 public:
     void SetUp(benchmark::State& state) override {
         renderTexture_ = std::make_unique<sf::RenderTexture>();
@@ -21,13 +26,21 @@ public:
             return;
         }
 
+        renderTexture_->setActive(true);
+
+        BgfxContext::instance().init(800, 600);
+
         view_ = renderTexture_->getView();
         renderer_ = std::make_unique<TRenderer>(*renderTexture_, view_, box_);
+        ToolsManager::pickingSystem = new PickingSystem(atomStorage_, box_, renderer_);
 
         atomStorage_ = makeGridAtoms(static_cast<int>(state.range(0)));
     }
 
-    void TearDown(benchmark::State&) override { renderer_.reset(); }
+    void TearDown(benchmark::State&) override {
+        bgfx::frame();
+        renderer_.reset();
+    }
 
 protected:
     void setCounters(benchmark::State& state) const {

@@ -60,14 +60,8 @@ bgfx::ProgramHandle RendererBGFX::loadProgram(std::string_view vsPath, std::stri
     return bgfx::createProgram(vs, fs, true);
 }
 
-RendererBGFX::RendererBGFX(sf::RenderTarget& t, sf::WindowHandle nativeHandle, sf::View& gv, SimBox& simbox)
-    : IRenderer(gv, simbox), target(t) {
-    const auto size = target.getSize();
-
-    BgfxContext::instance().init(nativeHandle, size.x, size.y);
-
+RendererBGFX::RendererBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simbox) : IRenderer(gv, simbox), target(t) {
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x212121ff, 1.0f, 0);
-    bgfx::setViewRect(0, 0, 0, size.x, size.y);
 
     uLightDir = bgfx::createUniform("u_lightDir", bgfx::UniformType::Vec4);
     uTypeColors = bgfx::createUniform("u_typeColors", bgfx::UniformType::Vec4, static_cast<int>(AtomData::Type::COUNT));

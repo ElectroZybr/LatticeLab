@@ -1,9 +1,5 @@
 ﻿#include "Application.h"
 
-#include "AppActions.h"
-#include "CreateWindow.h"
-#include "Scenes.h"
-#include "UserSettings.h"
 #include "imgui_impl_bgfx.h"
 
 #include <cmath>
@@ -12,6 +8,10 @@
 #include <SFML/Graphics.hpp>
 #include <bgfx/bgfx.h>
 
+#include "App/AppActions.h"
+#include "App/CreateWindow.h"
+#include "App/Scenes.h"
+#include "App/UserSettings.h"
 #include "App/interaction/ToolsManager.h"
 #include "Engine/Simulation.h"
 #include "Engine/metrics/Profiler.h"
@@ -19,6 +19,7 @@
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
 #include "Rendering/2d/Renderer2DBGFX.h"
+#include "Rendering/BgfxContext.h"
 #include "capture/CaptureActions.h"
 #include "capture/CaptureController.h"
 #include "debug/CreateDebugPanels.h"
@@ -28,18 +29,19 @@ constexpr int FPS = 60;
 constexpr int LPS = 20;
 
 int Application::run() {
-    // создание окна
     sf::RenderWindow window = createWindow();
     if (!window.isOpen()) {
         return EXIT_FAILURE;
     }
+    BgfxContext::instance().init(window.getNativeHandle(), window.getSize().x, window.getSize().y);
+
     sf::View& sceneView = const_cast<sf::View&>(window.getView());
 
     // инициализация систем
     SimBox box(Vec3f(50, 50, 6));
     Simulation simulation(box);
     CaptureController captureController;
-    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2DBGFX>(window, window.getNativeHandle(), sceneView, simulation.box());
+    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2DBGFX>(window, sceneView, simulation.box());
     Interface appInterface(window, simulation, renderer, captureController);
     AppActions::Handler appActions(window, sceneView, simulation, renderer, appInterface.state());
     CaptureActions::Handler captureActions(captureController);

@@ -4,7 +4,7 @@
 
 class Renderer2DBGFX : public RendererBGFX {
 public:
-    Renderer2DBGFX(sf::RenderTarget& t, sf::WindowHandle nativeHandle, sf::View& gv, SimBox& simbox);
+    Renderer2DBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simbox);
     ~Renderer2DBGFX() override = default;
 
 protected:

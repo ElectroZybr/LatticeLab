@@ -11,7 +11,7 @@
 
 class RendererBGFX : public IRenderer {
 public:
-    RendererBGFX(sf::RenderTarget& t, sf::WindowHandle nativeHandle, sf::View& gv, SimBox& simbox);
+    RendererBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simbox);
     ~RendererBGFX() override;
 
     void drawShot(const AtomStorage& atoms, const Bond::List& bonds, const SimBox& box) override;

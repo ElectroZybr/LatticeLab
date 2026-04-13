@@ -208,7 +208,7 @@ add_dependencies(latticelab_lib bgfx_shaders)
 
 if(OPTIMIZE_FOR_NATIVE)
     target_compile_options(latticelab_lib PRIVATE -O3 -march=native)
-    else()
+else()
     target_compile_options(latticelab_lib PRIVATE -O3)
 endif()
 
