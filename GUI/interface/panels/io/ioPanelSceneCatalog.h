@@ -1,16 +1,18 @@
 #pragma once
 
-#include <SFML/Graphics/Texture.hpp>
-
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include <SFML/Graphics/Texture.hpp>
+#include <bgfx/bgfx.h>
 
 struct IOPanelSceneTile {
     std::string path;
     std::string title;
     std::string description;
-    sf::Texture previewTexture;
+    bgfx::TextureHandle previewTexture = BGFX_INVALID_HANDLE;
+    sf::Vector2u previewSize;
     bool hasPreview = false;
 };
 

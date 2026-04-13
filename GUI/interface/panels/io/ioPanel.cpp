@@ -186,8 +186,8 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
         const bool isHovered = ImGui::IsItemHovered();
 
         if (tile.hasPreview) {
-            const ImTextureID textureId = static_cast<ImTextureID>(tile.previewTexture.getNativeHandle());
-            const sf::Vector2u textureSize = tile.previewTexture.getSize();
+            const ImTextureID textureId = (ImTextureID)(uintptr_t)tile.previewTexture.idx;
+            const sf::Vector2u textureSize = tile.previewSize;
             ImVec2 uvMin(0.0f, 0.0f);
             ImVec2 uvMax(1.0f, 1.0f);
 

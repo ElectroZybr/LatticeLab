@@ -1,7 +1,5 @@
 #include "ioPanelSceneCatalog.h"
 
-#include <SFML/Graphics/Image.hpp>
-
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -11,6 +9,8 @@
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include <SFML/Graphics/Image.hpp>
 
 namespace {
     struct ParsedSceneInfo {
@@ -188,12 +188,15 @@ std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirec
         tile.description = std::move(parsed.description);
 
         if (parsed.hasEmbeddedPreview) {
-            sf::Image image;
-            image.resize({parsed.imageWidth, parsed.imageHeight}, parsed.imageBytes.data());
-            tile.hasPreview = tile.previewTexture.loadFromImage(image);
+            const bgfx::Memory* mem = bgfx::copy(parsed.imageBytes.data(), parsed.imageBytes.size());
+
+            tile.previewTexture = bgfx::createTexture2D(parsed.imageWidth, parsed.imageHeight, false, 1, bgfx::TextureFormat::RGBA8,
+                                                        BGFX_TEXTURE_NONE | BGFX_SAMPLER_POINT, mem);
+            tile.previewSize = {parsed.imageWidth, parsed.imageHeight};
+            tile.hasPreview = bgfx::isValid(tile.previewTexture);
         }
 
-        sceneTiles.push_back(std::move(tile));
+        sceneTiles.emplace_back(std::move(tile));
     }
 
     return sceneTiles;
