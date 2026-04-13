@@ -2,6 +2,7 @@ $input a_position
 $output v_fragColor, v_uv, v_isSelected
 
 #include <bgfx_shader.sh>
+#include "gradient.sh"
 
 SAMPLER2D(s_posX,   0);
 SAMPLER2D(s_posY,   1);
@@ -16,14 +17,6 @@ SAMPLER2D(s_sel,    8);
 uniform vec4 u_maxSpeedSqr;
 uniform vec4 u_colorMode;
 uniform vec4 u_typeColors[119];
-
-vec3 turboColor(float t) {
-    t = clamp(t, 0.0, 1.0);
-    float r = 34.61 + t * (1172.33 + t * (-10793.56 + t * (33300.12 + t * (-38394.49 + t * 14825.05))));
-    float g = 23.31 + t * (557.33   + t * (1225.33   + t * (-3574.96  + t * (1073.77  + t * 707.56))));
-    float b = 27.20 + t * (3211.10  + t * (-15327.97 + t * (27814.00  + t * (-22569.18 + t * 6838.66))));
-    return clamp(vec3(r, g, b) / 255.0, 0.0, 1.0);
-}
 
 void main() {
     ivec2 coord = ivec2(gl_InstanceID % 4096, gl_InstanceID / 4096);
