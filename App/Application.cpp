@@ -42,7 +42,7 @@ int Application::run() {
     std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2DBGFX>(window, window.getNativeHandle(), sceneView, simulation.box());
     Interface appInterface(window, simulation, renderer, captureController);
     AppActions::Handler appActions(window, sceneView, simulation, renderer, appInterface.state());
-    CaptureActions::Handler captureActions(window, captureController);
+    CaptureActions::Handler captureActions(captureController);
     if (appInterface.init() != EXIT_SUCCESS) {
         return EXIT_FAILURE;
     }
@@ -92,7 +92,7 @@ int Application::run() {
         EventManager::frame(deltaTime);
         captureController.update(deltaTime);
         captureController.syncUiState(uiState);
-        captureController.handleToggleShortcut(window);
+        captureController.handleToggleShortcut();
 
         // обновление физики
         const double physicsInterval = 1.0 / uiState.simulationSpeed;
@@ -111,14 +111,16 @@ int Application::run() {
             uiState.simStep = simulation.getSimStep();
             appInterface.update();
             refreshAtomDebugViews(debugViews, simulation);
+
+            const auto sz = window.getSize();
+
             renderer->drawShot(simulation.atoms(), simulation.bonds(), simulation.box());
             ToolsManager::pickingSystem->getOverlay().draw(window);
-
             ImGui::Render();
             ImGui_Implbgfx_RenderDrawLists(ImGui::GetDrawData());
 
             // захват кадра для видео
-            captureController.onFrameRendered(window);
+            captureController.onFrameRendered();
 
             window.display();
             bgfx::frame();
@@ -133,7 +135,7 @@ int Application::run() {
         }
     }
 
-    captureController.stop(window);
+    captureController.stop();
     UserSettingsIO::save(UserSettings{
         .captureOutputDirectory = captureController.outputDirectory(),
         .scenesDirectory = appInterface.scenesDirectory(),

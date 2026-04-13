@@ -6,6 +6,9 @@
 #include <filesystem>
 
 #include <SFML/Window/Keyboard.hpp>
+#include <bgfx/bgfx.h>
+
+#include "Rendering/BgfxContext.h"
 
 CaptureSettings CaptureController::settings() const noexcept { return settings_; }
 
@@ -52,10 +55,10 @@ void CaptureController::syncUiState(UiState& uiState) const {
     uiState.captureBlinkElapsed = blinkElapsed();
 }
 
-void CaptureController::handleToggleShortcut(sf::RenderWindow& window) {
+void CaptureController::handleToggleShortcut() {
     const bool captureKeyPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F8);
     if (isAvailable() && captureKeyPressed && !toggleShortcutHeld_) {
-        toggle(window);
+        toggle();
     }
     toggleShortcutHeld_ = captureKeyPressed;
 }
@@ -69,41 +72,54 @@ void CaptureController::start() {
     resetSessionStats();
 }
 
-void CaptureController::stop(sf::RenderWindow& window) {
-    if (window.setActive(true)) {
-        CapturedFrame pendingFrame = rendererCapture_.consumePendingFrame();
-        if (!pendingFrame.empty() && frameRecorder_.isRecording()) {
-            frameRecorder_.submit(std::move(pendingFrame));
-        }
-    }
-
+void CaptureController::stop() {
     frameRecorder_.stop();
     captureFps_ = 0.0f;
     blinkElapsed_ = 0.0;
     toggleShortcutHeld_ = false;
 }
 
-void CaptureController::toggle(sf::RenderWindow& window) {
+void CaptureController::toggle() {
     if (frameRecorder_.isRecording()) {
-        stop(window);
+        stop();
     }
     else {
         start();
     }
 }
 
-void CaptureController::onFrameRendered(sf::RenderWindow& window) {
+void CaptureController::onFrameRendered() {
     if (!frameRecorder_.isRecording()) {
         return;
     }
 
     const double frameInterval = 1.0 / static_cast<double>(activeSessionFps_);
-    const bool shouldSubmitCaptureFrame = captureSubmitAccum_ >= frameInterval;
-    CapturedFrame frame = rendererCapture_.captureRGBA_PBO(window);
-    if (shouldSubmitCaptureFrame && !frame.empty()) {
-        frameRecorder_.submit(std::move(frame));
-        captureSubmitAccum_ -= frameInterval;
+    if (captureSubmitAccum_ < frameInterval) {
+        return;
     }
+    captureSubmitAccum_ -= frameInterval;
+
+    BgfxContext::instance().callback().setScreenShotCallback(
+        [this](uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip) {
+            CapturedFrame frame;
+            frame.width = width;
+            frame.height = height;
+            frame.rgba.assign(static_cast<const uint8_t*>(data), static_cast<const uint8_t*>(data) + size);
+
+            if (yflip) {
+                const size_t rowSize = width * 4;
+
+                for (uint32_t y = 0; y < height / 2; ++y) {
+                    uint8_t* top = frame.rgba.data() + y * rowSize;
+                    uint8_t* bottom = frame.rgba.data() + (height - 1 - y) * rowSize;
+                    std::swap_ranges(top, top + rowSize, bottom);
+                }
+            }
+
+            frameRecorder_.submit(std::move(frame));
+        });
+
+    bgfx::requestScreenShot(BGFX_INVALID_HANDLE, "capture");
 }
 
 bool CaptureController::isRecording() const { return frameRecorder_.isRecording(); }

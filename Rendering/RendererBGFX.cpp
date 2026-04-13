@@ -153,7 +153,7 @@ void RendererBGFX::drawShot(const AtomStorage& atoms, const Bond::List& bonds, c
     updateMatrices();
 
     const auto size = target.getSize();
-    bgfx::setViewRect(0, 0, 0, uint16_t(size.x), uint16_t(size.y));
+    bgfx::setViewRect(0, 0, 0, size.x, size.y);
     bgfx::setViewTransform(0, &view[0][0], &projection[0][0]);
     bgfx::touch(0);
 

@@ -13,6 +13,8 @@
 #include <OpenGL/OpenGL.h>
 #endif
 
+#include "Rendering/BgfxCallback.h"
+
 class BgfxContext {
 public:
     static BgfxContext& instance() {
@@ -42,11 +44,11 @@ public:
         init.resolution.height = height;
         init.resolution.reset = BGFX_RESET_NONE;
 
+        init.callback = &callback_;
+
         if (!bgfx::init(init)) {
             throw std::runtime_error("bgfx::init failed");
         }
-        bgfx::setViewClear(255, BGFX_CLEAR_NONE);
-        bgfx::setViewMode(255, bgfx::ViewMode::Sequential);
         initialized = true;
     }
 
@@ -60,7 +62,10 @@ public:
 
     ~BgfxContext() { shutdown(); }
 
+    BgfxCallback& callback() { return callback_; }
+
 private:
     BgfxContext() = default;
     bool initialized = false;
+    BgfxCallback callback_;
 };

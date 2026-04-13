@@ -4,8 +4,19 @@
 #include <cstdint>
 #include <filesystem>
 #include <mutex>
+#include <vector>
 
-#include "Rendering/RendererCapture.h"
+#include <SFML/Graphics/RenderTarget.hpp>
+
+struct CapturedFrame {
+    uint32_t width = 0;
+    uint32_t height = 0;
+    std::vector<uint8_t> rgba;
+
+    bool empty() const { return width == 0 || height == 0 || rgba.empty(); }
+
+    size_t byteSize() const { return rgba.size(); }
+};
 
 struct CaptureSettings {
     enum class Preset {

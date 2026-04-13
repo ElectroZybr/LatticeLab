@@ -1,13 +1,13 @@
 #pragma once
 
+#include "FrameRecorder.h"
+
 #include <cstdint>
 #include <filesystem>
 
 #include <SFML/Graphics/RenderWindow.hpp>
 
-#include "FrameRecorder.h"
 #include "GUI/interface/UiState.h"
-#include "Rendering/RendererCapture.h"
 
 class CaptureController {
 public:
@@ -19,11 +19,11 @@ public:
 
     void update(double deltaTime);
     void syncUiState(UiState& uiState) const;
-    void handleToggleShortcut(sf::RenderWindow& window);
+    void handleToggleShortcut();
     void start();
-    void stop(sf::RenderWindow& window);
-    void toggle(sf::RenderWindow& window);
-    void onFrameRendered(sf::RenderWindow& window);
+    void stop();
+    void toggle();
+    void onFrameRendered();
 
     [[nodiscard]] bool isRecording() const;
     [[nodiscard]] uint64_t savedFrameCount() const;
@@ -38,7 +38,6 @@ private:
     CaptureSettings settings_{};
     std::filesystem::path outputDirectory_ = "captures";
     FrameRecorder frameRecorder_{};
-    RendererCapture rendererCapture_{};
     int activeSessionFps_ = settings_.fps;
     double captureRateAccum_ = 0.0;
     double captureSubmitAccum_ = 0.0;
