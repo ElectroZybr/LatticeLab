@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Engine/math/Vec3f.h"
+#include "Engine/math/Vec3.h"
 
 class Ray final {
 public:

@@ -1,14 +1,14 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
-#include <imgui.h>
-
 #include <filesystem>
 #include <string>
 #include <vector>
 
+#include <SFML/Graphics.hpp>
+#include <imgui.h>
+
 #include "App/AppPaths.h"
-#include "Engine/math/Vec3f.h"
+#include "Engine/math/Vec3.h"
 #include "Engine/physics/AtomData.h"
 #include "GUI/interface/panels/io/ioPanelSceneCatalog.h"
 

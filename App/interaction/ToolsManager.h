@@ -10,7 +10,7 @@
 #include "App/interaction/picking/PickingSystem.h"
 #include "App/interaction/tools/ITool.h"
 #include "Engine/Simulation.h"
-#include "Engine/math/Vec3f.h"
+#include "Engine/math/Vec3.h"
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Rendering/BaseRenderer.h"

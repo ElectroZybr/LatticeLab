@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Engine/SimBox.h"
-#include "Engine/math/Vec3f.h"
+#include "Engine/math/Vec3.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/physics/Bond.h"
 #include "Engine/physics/ForceFields/BondForceField.h"

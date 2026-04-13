@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "Engine/math/Vec3f.h"
+#include "Engine/math/Vec3.h"
 #include "Engine/physics/AtomData.h"
 
 class AtomStorage {
