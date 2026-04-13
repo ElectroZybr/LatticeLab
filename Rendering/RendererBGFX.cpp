@@ -36,28 +36,16 @@ namespace {
     }
 }
 
-bgfx::ProgramHandle RendererBGFX::loadProgram(std::string_view vsPath, std::string_view fsPath) {
-    auto loadShader = [](std::string_view path) -> bgfx::ShaderHandle {
-        std::ifstream file(path.data(), std::ios::binary | std::ios::ate);
-        if (!file.is_open()) {
-            throw std::runtime_error(std::format("Cannot open shader: {}", path));
-        }
+bgfx::ProgramHandle RendererBGFX::loadEmbeddedProgram(const bgfx::EmbeddedShader* es, std::string_view name) {
+    bgfx::RendererType::Enum type = bgfx::getRendererType();
 
-        const std::streamsize size = file.tellg();
-        file.seekg(0);
+    std::string vsName = std::string(name) + "_v";
+    bgfx::ShaderHandle vsh = bgfx::createEmbeddedShader(es, type, vsName.data());
 
-        const bgfx::Memory* mem = bgfx::alloc(uint32_t(size) + 1);
-        file.read(reinterpret_cast<char*>(mem->data), size);
-        mem->data[size] = '\0';
+    std::string fsName = std::string(name) + "_f";
+    bgfx::ShaderHandle fsh = bgfx::createEmbeddedShader(es, type, fsName.data());
 
-        bgfx::ShaderHandle sh = bgfx::createShader(mem);
-        bgfx::setName(sh, path.data());
-        return sh;
-    };
-
-    bgfx::ShaderHandle vs = loadShader(vsPath);
-    bgfx::ShaderHandle fs = loadShader(fsPath);
-    return bgfx::createProgram(vs, fs, true);
+    return bgfx::createProgram(vsh, fsh, true);
 }
 
 RendererBGFX::RendererBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simbox) : IRenderer(gv, simbox), target(t) {

@@ -152,59 +152,119 @@ endif()
 
 # --- Компиляция шейдеров bgfx ---
 set(SHADERC_BIN "$<TARGET_FILE:shaderc>")
+set(BIN2C_BIN "$<TARGET_FILE:bin2c>")
+set(BGFX_SHADER_SRC "${CMAKE_SOURCE_DIR}/assets/shaders/bgfx")
+set(BGFX_VARYING_DEFS "${CMAKE_SOURCE_DIR}/assets/shaders/bgfx/varying.def.sc")
 set(BGFX_SHADER_INCLUDE "${bgfx_cmake_SOURCE_DIR}/bgfx/src")
-set(BGFX_VARYING_DEF "${CMAKE_SOURCE_DIR}/assets/shaders/bgfx/varying.def.sc")
-set(BGFX_SHADER_OUT "${CMAKE_SOURCE_DIR}/assets/shaders/bgfx")
-if(WIN32)
-    set(BGFX_SHADER_PLATFORM "windows")
-    set(BGFX_SHADER_PROFILE_VERT "150")
-    set(BGFX_SHADER_PROFILE_FRAG "150")
-elseif(APPLE)
-    set(BGFX_SHADER_PLATFORM "osx")
-    set(BGFX_SHADER_PROFILE_VERT "150")
-    set(BGFX_SHADER_PROFILE_FRAG "150")
-else()
-    set(BGFX_SHADER_PLATFORM "linux")
-    set(BGFX_SHADER_PROFILE_VERT "150")
-    set(BGFX_SHADER_PROFILE_FRAG "150")
-endif()
-function(bgfx_compile_shader SC_FILE TYPE OUT_FILES_VAR)
+set(BGFX_SHADER_OUT "${CMAKE_BINARY_DIR}/generated/shaders")
+file(MAKE_DIRECTORY "${BGFX_SHADER_OUT}")
+
+# platform, profile, suffix (должен совпадать с суффиксом в BGFX_EMBEDDED_SHADER)
+set(SHADER_VARIANTS
+    "linux"   "150"    "glsl"
+    "linux"   "spirv"  "spv"
+    "osx"     "metal"  "mtl"
+    "windows" "vs_5_0" "dxbc"
+    "windows" "ps_5_0" "dxbc"
+)
+function(bgfx_compile_shader_embedded SC_FILE TYPE OUT_HEADERS_VAR)
     get_filename_component(NAME ${SC_FILE} NAME_WE)
-    set(OUT_FILE "${BGFX_SHADER_OUT}/${NAME}.${TYPE}.bin")
 
     if(${TYPE} STREQUAL "v")
-        set(PROFILE ${BGFX_SHADER_PROFILE_VERT})
+        set(DX_PROFILE "s_5_0")
+        set(GL_PROFILE "120")
+        set(MTL_PROFILE "metal")
     else()
-        set(PROFILE ${BGFX_SHADER_PROFILE_FRAG})
+        set(DX_PROFILE "s_5_0")
+        set(GL_PROFILE "120")
+        set(MTL_PROFILE "metal")
     endif()
 
+    set(VARIANTS
+        "linux"   "${GL_PROFILE}" "glsl"
+        "linux"   "spirv"         "spv"
+        "osx"     "${MTL_PROFILE}" "mtl"
+    )
+    set(H_FILES "")
+    list(LENGTH VARIANTS LEN)
+    math(EXPR LAST "${LEN} - 1")
+
+    foreach(I RANGE 0 ${LAST} 3)
+        list(GET VARIANTS ${I} PLATFORM)
+        math(EXPR I1 "${I}+1")
+        list(GET VARIANTS ${I1} PROFILE)
+        math(EXPR I2 "${I}+2")
+        list(GET VARIANTS ${I2} SUFFIX)
+
+        set(BIN_FILE "${BGFX_SHADER_OUT}/${NAME}.${TYPE}.${SUFFIX}.bin")
+        set(H_FILE   "${BGFX_SHADER_OUT}/${NAME}.${TYPE}.${SUFFIX}.bin.h")
+        set(ARR_NAME "${NAME}_${TYPE}_${SUFFIX}") 
+
+        add_custom_command(
+            OUTPUT ${BIN_FILE}
+            COMMAND ${SHADERC_BIN}
+                -f ${SC_FILE} -o ${BIN_FILE}
+                --type ${TYPE} --platform ${PLATFORM} -p ${PROFILE}
+                --varyingdef ${BGFX_VARYING_DEF}
+                -i ${BGFX_SHADER_INCLUDE}
+            DEPENDS ${SC_FILE} ${BGFX_VARYING_DEF} shaderc
+            VERBATIM
+        )
+
+        add_custom_command(
+            OUTPUT ${H_FILE}
+            COMMAND ${BIN2C_BIN} -f ${BIN_FILE} -o ${H_FILE} -n ${ARR_NAME}
+            DEPENDS ${BIN_FILE} bin2c
+            VERBATIM
+        )
+
+        list(APPEND H_FILES ${H_FILE})
+    endforeach()
+
+    set(FINAL_H "${BGFX_SHADER_OUT}/${NAME}.${TYPE}.embedded.h")
     add_custom_command(
-        OUTPUT ${OUT_FILE}
-        COMMAND ${SHADERC_BIN}
-            -f ${SC_FILE}
-            -o ${OUT_FILE}
-            --type ${TYPE}
-            --platform ${BGFX_SHADER_PLATFORM}
-            -p ${PROFILE}
-            --varyingdef ${BGFX_VARYING_DEF}
-            -i ${BGFX_SHADER_INCLUDE}
-        DEPENDS ${SC_FILE} ${BGFX_VARYING_DEF}
+        OUTPUT ${FINAL_H}
+        COMMAND ${CMAKE_COMMAND}
+            -DNAME=${NAME}
+            -DTYPE=${TYPE}
+            -DOUT=${FINAL_H}
+            -DSHADER_OUT=${BGFX_SHADER_OUT}
+            -P ${CMAKE_SOURCE_DIR}/cmake/bgfx_gen_embedded.cmake
+        DEPENDS ${H_FILES}
         VERBATIM
     )
-    set(${OUT_FILES_VAR} ${${OUT_FILES_VAR}} ${OUT_FILE} PARENT_SCOPE)
+
+    set(${OUT_HEADERS_VAR} ${${OUT_HEADERS_VAR}} ${FINAL_H} PARENT_SCOPE)
 endfunction()
-file(GLOB BGFX_VERT_SOURCES "${BGFX_SHADER_OUT}/*.vert.sc")
-file(GLOB BGFX_FRAG_SOURCES "${BGFX_SHADER_OUT}/*.frag.sc")
-set(BGFX_SHADER_BINS "")
+
+file(GLOB BGFX_VERT_SOURCES "${BGFX_SHADER_SRC}/*.vert.sc")
+file(GLOB BGFX_FRAG_SOURCES "${BGFX_SHADER_SRC}/*.frag.sc")
+set(BGFX_SHADER_HEADERS "")
 foreach(SC_FILE ${BGFX_VERT_SOURCES})
-    bgfx_compile_shader(${SC_FILE} v BGFX_SHADER_BINS)
+    bgfx_compile_shader_embedded(${SC_FILE} v BGFX_SHADER_HEADERS)
 endforeach()
 foreach(SC_FILE ${BGFX_FRAG_SOURCES})
-    bgfx_compile_shader(${SC_FILE} f BGFX_SHADER_BINS)
+    bgfx_compile_shader_embedded(${SC_FILE} f BGFX_SHADER_HEADERS)
 endforeach()
-add_custom_target(bgfx_shaders ALL DEPENDS ${BGFX_SHADER_BINS})
-add_dependencies(bgfx_shaders shaderc)
+set(SHADER_REGISTRY_H "${BGFX_SHADER_OUT}/shader_registry.h")
+add_custom_command(
+    OUTPUT ${SHADER_REGISTRY_H}
+    COMMAND ${CMAKE_COMMAND}
+        -DSHADER_OUT=${BGFX_SHADER_OUT}
+        -DREGISTRY_NAME=s_allShaders
+        -DOUT=${SHADER_REGISTRY_H}
+        -P ${CMAKE_SOURCE_DIR}/cmake/bgfx_gen_registry.cmake
+    DEPENDS ${BGFX_SHADER_HEADERS}
+    VERBATIM
+)
+
+add_custom_target(bgfx_registry DEPENDS ${SHADER_REGISTRY_H})
+add_custom_target(bgfx_shaders ALL DEPENDS ${BGFX_SHADER_HEADERS})
+add_dependencies(bgfx_shaders shaderc bin2c)
+add_dependencies(bgfx_shaders bgfx_registry)
 add_dependencies(latticelab_lib bgfx_shaders)
+
+target_include_directories(latticelab_lib PUBLIC ${BGFX_SHADER_OUT})
 
 if(OPTIMIZE_FOR_NATIVE)
     target_compile_options(latticelab_lib PRIVATE -O3 -march=native)

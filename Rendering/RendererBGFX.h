@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string_view>
 #include <vector>
 
 #include <SFML/Graphics.hpp>
@@ -8,6 +9,7 @@
 #include <glm/glm.hpp>
 
 #include "Rendering/BaseRenderer.h"
+#include "bgfx/embedded_shader.h"
 
 class RendererBGFX : public IRenderer {
 public:
@@ -17,7 +19,7 @@ public:
     void drawShot(const AtomStorage& atoms, const Bond::List& bonds, const SimBox& box) override;
 
 protected:
-    static bgfx::ProgramHandle loadProgram(std::string_view vsPath, std::string_view fsPath);
+    static bgfx::ProgramHandle loadEmbeddedProgram(const bgfx::EmbeddedShader* es, std::string_view name);
 
     virtual void updateMatrices() = 0;
     virtual glm::vec3 getLightDir() = 0;

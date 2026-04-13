@@ -12,11 +12,10 @@ Testing/
 .cmake/
 
 # Binaries and libraries
-*.bin
+/bin2c
 /shaderc
 LatticeLab
 /benchmarks
-/benchmarks.exe
 !/Benchmarks/
 !/Benchmarks/**
 Benchmarks/*.json

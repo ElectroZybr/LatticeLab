@@ -2,14 +2,16 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "shaders/shader_registry.h"
+
 Renderer2DBGFX::Renderer2DBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simBox) : RendererBGFX(t, gv, simBox) {
     camera.position = Vec2f(simBox.size.x, simBox.size.y) / 2.f;
     camera.setZoom(std::max(simBox.size.x, simBox.size.y) * 0.07);
 
-    atomProgram = loadProgram("assets/shaders/bgfx/atom2d.v.bin", "assets/shaders/bgfx/atom2d.f.bin");
-    bondProgram = loadProgram("assets/shaders/bgfx/bond.v.bin", "assets/shaders/bgfx/bond.f.bin");
-    boxProgram = loadProgram("assets/shaders/bgfx/box.v.bin", "assets/shaders/bgfx/box.f.bin");
-    gridProgram = loadProgram("assets/shaders/bgfx/grid.v.bin", "assets/shaders/bgfx/grid.f.bin");
+    atomProgram = loadEmbeddedProgram(s_allShaders, "atom2d");
+    bondProgram = loadEmbeddedProgram(s_allShaders, "bond");
+    boxProgram = loadEmbeddedProgram(s_allShaders, "box");
+    gridProgram = loadEmbeddedProgram(s_allShaders, "grid");
 }
 
 void Renderer2DBGFX::updateMatrices() {

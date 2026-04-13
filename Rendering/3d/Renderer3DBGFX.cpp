@@ -2,13 +2,15 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "shaders/shader_registry.h"
+
 Renderer3DBGFX::Renderer3DBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simBox) : RendererBGFX(t, gv, simBox) {
     camera.setMode(Camera::Mode::Orbit);
 
-    atomProgram = loadProgram("assets/shaders/bgfx/atom3d.v.bin", "assets/shaders/bgfx/atom3d.f.bin");
-    bondProgram = loadProgram("assets/shaders/bgfx/bond.v.bin", "assets/shaders/bgfx/bond.f.bin");
-    boxProgram = loadProgram("assets/shaders/bgfx/box.v.bin", "assets/shaders/bgfx/box.f.bin");
-    gridProgram = loadProgram("assets/shaders/bgfx/grid.v.bin", "assets/shaders/bgfx/grid.f.bin");
+    atomProgram = loadEmbeddedProgram(s_allShaders, "atom3d");
+    bondProgram = loadEmbeddedProgram(s_allShaders, "bond");
+    boxProgram = loadEmbeddedProgram(s_allShaders, "box");
+    gridProgram = loadEmbeddedProgram(s_allShaders, "grid");
 
     camera.freePosition = simBox.size / 2.f;
     camera.freePosition.z = -200.f;
