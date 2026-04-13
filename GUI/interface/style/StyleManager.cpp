@@ -61,7 +61,7 @@ void StyleManager::applyCustomStyle() {
 }
 
 void StyleManager::onResize(Vec2u newSize) {
-    sf::Vector2f s = sf::Vector2f(newSize).componentWiseDiv(sf::Vector2f(BASE_W, BASE_H));
+    Vec2f s = Vec2f(newSize) / Vec2f(BASE_W, BASE_H);
     scale = std::min(s.x, s.y);
 
     ImGui::GetStyle() = baseStyle;

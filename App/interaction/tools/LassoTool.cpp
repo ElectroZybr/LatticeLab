@@ -60,9 +60,9 @@ void LassoTool::onFrame(sf::Vector2i mousePos, float deltaTime) {
         return;
     }
 
-    const sf::Vector2f currentPos(mousePos.x, mousePos.y);
-    const sf::Vector2f lastPos(overlay.lassoPoints.back().x, overlay.lassoPoints.back().y);
-    if ((currentPos - lastPos).lengthSquared() >= kMinStepSqr) {
+    const Vec2f currentPos(mousePos.x, mousePos.y);
+    const Vec2f lastPos(overlay.lassoPoints.back().x, overlay.lassoPoints.back().y);
+    if ((currentPos - lastPos).sqrAbs() >= kMinStepSqr) {
         overlay.lassoPoints.push_back(mousePos);
     }
 }

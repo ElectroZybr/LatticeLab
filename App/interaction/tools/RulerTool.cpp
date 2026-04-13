@@ -17,7 +17,7 @@ namespace {
         }
 
         if (renderer->camera.getMode() == Camera::Mode::Mode2D && ctx.window != nullptr && ctx.gameView != nullptr) {
-            const sf::Vector2f world = ctx.window->mapPixelToCoords(mousePos, *ctx.gameView);
+            const Vec2f world(ctx.window->mapPixelToCoords(mousePos, *ctx.gameView));
             return Vec3f(world.x, world.y, 1.0f);
         }
 
@@ -152,8 +152,8 @@ void RulerTool::syncOverlayFromWorld() {
     }
 
     if (renderer->camera.getMode() == Camera::Mode::Mode2D && ctx.window != nullptr && ctx.gameView != nullptr) {
-        overlay.rulerStart = ctx.window->mapCoordsToPixel(sf::Vector2f(startWorld_.x, startWorld_.y), *ctx.gameView);
-        overlay.rulerEnd = ctx.window->mapCoordsToPixel(sf::Vector2f(endWorld_.x, endWorld_.y), *ctx.gameView);
+        overlay.rulerStart = ctx.window->mapCoordsToPixel(startWorld_.xy(), *ctx.gameView);
+        overlay.rulerEnd = ctx.window->mapCoordsToPixel(endWorld_.xy(), *ctx.gameView);
         return;
     }
 

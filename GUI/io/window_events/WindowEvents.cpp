@@ -20,13 +20,13 @@ void WindowEvents::onEvent(const sf::Event& event) {
     }
 
     if (const auto* e = event.getIf<sf::Event::Resized>()) {
-        gameView->setSize(sf::Vector2f(e->size));
-        gameView->setCenter(sf::Vector2f(e->size) / 2.f);
+        gameView->setSize(Vec2f(e->size));
+        gameView->setCenter(Vec2f(e->size) / 2.f);
         if (appInterface == nullptr) {
             return;
         }
 
-        appInterface->styleManager.onResize(e->size);
+        appInterface->styleManager.onResize(Vec2u(e->size));
         if (appInterface->fontManager.load(appInterface->styleManager.getScale())) {
             ImGui_Implbgfx_InvalidateDeviceObjects();
             ImGui_Implbgfx_CreateDeviceObjects();

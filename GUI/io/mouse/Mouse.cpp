@@ -78,7 +78,7 @@ void Mouse::onEvent(const sf::Event& event) {
                 rend->camera.move3D(forward * distance);
             }
             else {
-                rend->camera.zoomAt(e->delta, sf::Vector2f(e->position), *window);
+                rend->camera.zoomAt(e->delta, Vec2f(e->position), *window);
             }
         }
     }

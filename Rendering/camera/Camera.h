@@ -41,7 +41,7 @@ public:
     Vec3f screenToWorld(sf::Vector2i screenPos) const;
     sf::Vector2i worldToScreen(Vec3f worldPos) const;
 
-    void zoomAt(float factor, sf::Vector2f mousePos, sf::RenderWindow& target);
+    void zoomAt(float factor, Vec2f mousePos, sf::RenderWindow& target);
     float getZoom() const { return zoom; }
     void setZoom(float new_zoom);
 
@@ -55,7 +55,7 @@ public:
     Ray screenToRay(float screenX, float screenY) const;
 
 private:
-    sf::Vector2f screenSize;
+    Vec2f screenSize;
     sf::View* view;
     Vec2f position;
     Vec3f freePosition{0.f, 0.f, -100.f};

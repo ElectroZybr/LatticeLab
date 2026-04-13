@@ -7,9 +7,10 @@
 #include <vector>
 
 #include <SFML/Graphics.hpp>
-#include <SFML/System/Vector2.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
+
+#include "Engine/math/Vec2.h"
 
 struct OverlayState {
     bool boxVisible = false;
@@ -58,12 +59,12 @@ struct OverlayState {
             dl->AddCircleFilled(ImVec2(rulerStart.x, rulerStart.y), 4.f, light_red);
             dl->AddCircleFilled(ImVec2(rulerEnd.x, rulerEnd.y), 4.f, light_red);
 
-            const sf::Vector2f line(rulerEnd - rulerStart);
-            const float lineLength = line.length();
-            sf::Vector2f labelPos = 0.5f * sf::Vector2f(rulerStart + rulerEnd);
+            const Vec2f line(rulerEnd - rulerStart);
+            const float lineLength = line.abs();
+            Vec2f labelPos = 0.5f * Vec2f(rulerStart + rulerEnd);
             float angleDeg = 0.0f;
             if (lineLength > 0.001f) {
-                sf::Vector2f normal(-line.y / lineLength, line.x / lineLength);
+                Vec2f normal(-line.y / lineLength, line.x / lineLength);
                 if (normal.y > 0.0f) {
                     normal = -normal;
                 }
@@ -90,7 +91,7 @@ struct OverlayState {
         }
     }
 
-    static void AddTextRotated(ImDrawList* dl, ImFont* font, float font_size, sf::Vector2f pos, float angle_rad, ImU32 color,
+    static void AddTextRotated(ImDrawList* dl, ImFont* font, float font_size, Vec2f pos, float angle_rad, ImU32 color,
                                std::string_view text) {
         if (text.empty()) {
             return;
