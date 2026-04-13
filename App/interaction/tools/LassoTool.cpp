@@ -7,7 +7,7 @@
 
 LassoTool::LassoTool(ToolContext& context) noexcept : ITool(context) {}
 
-void LassoTool::onLeftPressed(sf::Vector2i mousePos) {
+void LassoTool::onLeftPressed(Vec2i mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -19,7 +19,7 @@ void LassoTool::onLeftPressed(sf::Vector2i mousePos) {
     overlay.lassoPoints.push_back(mousePos);
 }
 
-void LassoTool::onLeftReleased(sf::Vector2i mousePos) {
+void LassoTool::onLeftReleased(Vec2i mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -41,7 +41,7 @@ void LassoTool::onLeftReleased(sf::Vector2i mousePos) {
     overlay.reset();
 }
 
-void LassoTool::onFrame(sf::Vector2i mousePos, float deltaTime) {
+void LassoTool::onFrame(Vec2i mousePos, float deltaTime) {
     (void)deltaTime;
 
     ToolContext& ctx = context();

@@ -2,7 +2,6 @@
 
 #include <array>
 #include <cstdint>
-#include <functional>
 #include <memory>
 
 #include <SFML/Graphics.hpp>
@@ -11,8 +10,6 @@
 #include "App/interaction/tools/ITool.h"
 #include "Engine/Simulation.h"
 #include "Engine/math/Vec3.h"
-#include "Engine/physics/AtomData.h"
-#include "Engine/physics/AtomStorage.h"
 #include "Rendering/BaseRenderer.h"
 
 class SimBox;
@@ -34,13 +31,13 @@ public:
     static void init(sf::RenderWindow& window, sf::View& sceneView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
                      Interface& appInterface);
 
-    static Vec3f screenToWorld(sf::Vector2i mousePos);
-    static sf::Vector2i worldToScreen(Vec3f pos);
+    static Vec3f screenToWorld(Vec2i mousePos);
+    static Vec2i worldToScreen(Vec3f pos);
 
-    static void onLeftPressed(sf::Vector2i mousePos);
-    static void onLeftReleased(sf::Vector2i mousePos);
-    static bool onRightPressed(sf::Vector2i mousePos);
-    static void onFrame(sf::Vector2i mousePos, float deltaTime);
+    static void onLeftPressed(Vec2i mousePos);
+    static void onLeftReleased(Vec2i mousePos);
+    static bool onRightPressed(Vec2i mousePos);
+    static void onFrame(Vec2i mousePos, float deltaTime);
     static void resetInteractionState();
     static bool isInteractingNow() noexcept;
 
@@ -66,7 +63,7 @@ private:
     static std::array<std::unique_ptr<ITool>, kModeCount> toolInstances;
     static Mode syncedMode;
 
-    static sf::Vector2i startMousePos;
-    static sf::Vector2i lastSceneMousePos;
+    static Vec2i startMousePos;
+    static Vec2i lastSceneMousePos;
     static bool isInteracting;
 };

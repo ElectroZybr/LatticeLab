@@ -8,7 +8,7 @@
 
 CursorTool::CursorTool(ToolContext& context) noexcept : ITool(context) {}
 
-void CursorTool::onLeftPressed(sf::Vector2i mousePos) {
+void CursorTool::onLeftPressed(Vec2i mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr || ctx.simulation == nullptr) {
         return;
@@ -30,13 +30,13 @@ void CursorTool::onLeftPressed(sf::Vector2i mousePos) {
     }
 }
 
-void CursorTool::onLeftReleased(sf::Vector2i mousePos) {
+void CursorTool::onLeftReleased(Vec2i mousePos) {
     (void)mousePos;
     atomMoveActive_ = false;
     selectedMoveAtomIndex_ = InvalidIndex;
 }
 
-void CursorTool::onFrame(sf::Vector2i mousePos, float deltaTime) {
+void CursorTool::onFrame(Vec2i mousePos, float deltaTime) {
     ToolContext& ctx = context();
     if (!atomMoveActive_ || ctx.simulation == nullptr || ctx.pickingSystem == nullptr) {
         return;

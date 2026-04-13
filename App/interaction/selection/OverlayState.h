@@ -17,13 +17,13 @@ struct OverlayState {
     bool lassoVisible = false;
     bool rulerVisible = false;
 
-    sf::Vector2i boxStart;
-    sf::Vector2i boxEnd;
-    sf::Vector2i rulerStart;
-    sf::Vector2i rulerEnd;
+    Vec2i boxStart;
+    Vec2i boxEnd;
+    Vec2i rulerStart;
+    Vec2i rulerEnd;
     std::string rulerLabel;
 
-    std::vector<sf::Vector2i> lassoPoints;
+    std::vector<Vec2i> lassoPoints;
 
     void reset() {
         boxVisible = false;

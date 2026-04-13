@@ -5,6 +5,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "App/capture/CaptureController.h"
+
 #define ICON_MIN_FA 0xf000
 #define ICON_MAX_FA 0xf897
 
@@ -94,11 +95,11 @@ int Interface::update() {
 
     ImGui::PushFont(fontManager.main);
     toolsPanel.draw(styleManager.getScale(), *window_, debugPanel, settingsPanel, ioPanel);
-    periodicPanel.draw(styleManager.getScale(), window_->getSize(), uiState_.selectedAtom);
-    simControlPanel.draw(styleManager.getScale(), window_->getSize(), uiState_.pause, uiState_.simulationSpeed, uiState_.simStep,
+    periodicPanel.draw(styleManager.getScale(), Vec2u(window_->getSize()), uiState_.selectedAtom);
+    simControlPanel.draw(styleManager.getScale(), Vec2u(window_->getSize()), uiState_.pause, uiState_.simulationSpeed, uiState_.simStep,
                          delta.asSeconds());
-    sideToolsPanel.draw(styleManager.getScale(), window_->getSize(), fontManager.icons, fontManager.dialog);
-    statsPanel.draw(styleManager.getScale(), window_->getSize());
+    sideToolsPanel.draw(styleManager.getScale(), Vec2u(window_->getSize()), fontManager.icons, fontManager.dialog);
+    statsPanel.draw(styleManager.getScale(), Vec2u(window_->getSize()));
     if (uiState_.drawToolTrip) {
         const ImVec2 mouse = ImGui::GetMousePos();
         ImGui::SetNextWindowPos(ImVec2(mouse.x + 3 * styleManager.getScale(), mouse.y + 3 * styleManager.getScale()));
@@ -116,9 +117,9 @@ int Interface::update() {
 
     ImGui::PushFont(fontManager.dialog);
     fileDialog.draw(styleManager.getScale());
-    debugPanel.draw(styleManager.getScale(), window_->getSize());
-    settingsPanel.draw(styleManager.getScale(), window_->getSize(), *simulation_, *renderer_, *captureController_, fileDialog);
-    ioPanel.draw(styleManager.getScale(), window_->getSize(), *simulation_, fileDialog, uiState_);
+    debugPanel.draw(styleManager.getScale(), Vec2u(window_->getSize()));
+    settingsPanel.draw(styleManager.getScale(), Vec2u(window_->getSize()), *simulation_, *renderer_, *captureController_, fileDialog);
+    ioPanel.draw(styleManager.getScale(), Vec2u(window_->getSize()), *simulation_, fileDialog, uiState_);
     ImGui::PopFont();
 
     uiState_.scenePreviewMode = fileDialog.isSaveDialogOpen();

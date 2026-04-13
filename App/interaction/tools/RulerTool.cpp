@@ -10,7 +10,7 @@
 
 namespace {
 
-    Vec3f mapMouseToRulerWorld(const ToolContext& ctx, sf::Vector2i mousePos) {
+    Vec3f mapMouseToRulerWorld(const ToolContext& ctx, Vec2i mousePos) {
         IRenderer* renderer = ctx.activeRenderer();
         if (renderer == nullptr) {
             return Vec3f();
@@ -36,7 +36,7 @@ namespace {
 
 RulerTool::RulerTool(ToolContext& context) noexcept : ITool(context) {}
 
-void RulerTool::onLeftPressed(sf::Vector2i mousePos) {
+void RulerTool::onLeftPressed(Vec2i mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -57,7 +57,7 @@ void RulerTool::onLeftPressed(sf::Vector2i mousePos) {
     overlay.rulerLabel = makeRulerTooltip(startWorld_, endWorld_);
 }
 
-void RulerTool::onLeftReleased(sf::Vector2i mousePos) {
+void RulerTool::onLeftReleased(Vec2i mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -72,13 +72,13 @@ void RulerTool::onLeftReleased(sf::Vector2i mousePos) {
     }
 }
 
-bool RulerTool::onRightPressed(sf::Vector2i mousePos) {
+bool RulerTool::onRightPressed(Vec2i mousePos) {
     (void)mousePos;
     clearMeasurement();
     return true;
 }
 
-void RulerTool::onFrame(sf::Vector2i mousePos, float deltaTime) {
+void RulerTool::onFrame(Vec2i mousePos, float deltaTime) {
     (void)deltaTime;
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
@@ -119,7 +119,7 @@ void RulerTool::clearMeasurement() {
     reset();
 }
 
-void RulerTool::updateMeasurement(sf::Vector2i mousePos) {
+void RulerTool::updateMeasurement(Vec2i mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -152,8 +152,8 @@ void RulerTool::syncOverlayFromWorld() {
     }
 
     if (renderer->camera.getMode() == Camera::Mode::Mode2D && ctx.window != nullptr && ctx.gameView != nullptr) {
-        overlay.rulerStart = ctx.window->mapCoordsToPixel(startWorld_.xy(), *ctx.gameView);
-        overlay.rulerEnd = ctx.window->mapCoordsToPixel(endWorld_.xy(), *ctx.gameView);
+        overlay.rulerStart = Vec2i(ctx.window->mapCoordsToPixel(startWorld_.xy(), *ctx.gameView));
+        overlay.rulerEnd = Vec2i(ctx.window->mapCoordsToPixel(endWorld_.xy(), *ctx.gameView));
         return;
     }
 

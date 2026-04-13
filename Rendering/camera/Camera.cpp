@@ -35,14 +35,14 @@ void Camera::zoomAt(float factor, Vec2f mousePos, sf::RenderWindow& window) {
     }
 }
 
-void Camera::orbitDrag(sf::Vector2i delta) {
+void Camera::orbitDrag(Vec2i delta) {
     constexpr float sensitivity = 0.005f;
     azimuth -= delta.x * sensitivity;
     elevation += delta.y * sensitivity;
     elevation = std::clamp(elevation, -1.5f, 1.5f);
 }
 
-void Camera::freeDrag(sf::Vector2i delta) {
+void Camera::freeDrag(Vec2i delta) {
     constexpr float sensitivity = 0.003f;
     azimuth -= delta.x * sensitivity;
     elevation -= delta.y * sensitivity;
@@ -50,7 +50,7 @@ void Camera::freeDrag(sf::Vector2i delta) {
 }
 
 // Для 3д режимов возвращает cameraPos + cameraDir * 10
-Vec3f Camera::screenToWorld(sf::Vector2i screenPos) const {
+Vec3f Camera::screenToWorld(Vec2i screenPos) const {
     if (mode == Mode::Mode2D) {
         const Vec2f viewSize(view->getSize());
         const Vec2f viewCenter(view->getCenter());
@@ -62,12 +62,12 @@ Vec3f Camera::screenToWorld(sf::Vector2i screenPos) const {
     return ray.at(100.0);
 }
 
-sf::Vector2i Camera::worldToScreen(Vec3f worldPos) const {
+Vec2i Camera::worldToScreen(Vec3f worldPos) const {
     if (mode == Mode::Mode2D) {
         const Vec2f viewSize(view->getSize());
         const Vec2f viewCenter(view->getCenter());
         const Vec2f s = (worldPos.xy() - viewCenter) * (screenSize / viewSize) + screenSize * 0.5f;
-        return sf::Vector2i(static_cast<int>(s.x), static_cast<int>(s.y));
+        return Vec2i(s);
     }
 
     const glm::vec4 clip = getProjectionMatrix() * getViewMatrix() * glm::vec4(worldPos.x, worldPos.y, worldPos.z, 1.f);
@@ -79,7 +79,7 @@ sf::Vector2i Camera::worldToScreen(Vec3f worldPos) const {
     const float ndcX = clip.x / clip.w;
     const float ndcY = clip.y / clip.w;
 
-    return sf::Vector2i(static_cast<int>((ndcX + 1.f) * 0.5f * screenSize.x), static_cast<int>((-ndcY + 1.f) * 0.5f * screenSize.y));
+    return Vec2i(static_cast<int>((ndcX + 1.f) * 0.5f * screenSize.x), static_cast<int>((-ndcY + 1.f) * 0.5f * screenSize.y));
 }
 
 glm::vec3 Camera::getEyePosition() const {

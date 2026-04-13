@@ -7,7 +7,7 @@
 
 FrameTool::FrameTool(ToolContext& context) noexcept : ITool(context) {}
 
-void FrameTool::onLeftPressed(sf::Vector2i mousePos) {
+void FrameTool::onLeftPressed(Vec2i mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -19,7 +19,7 @@ void FrameTool::onLeftPressed(sf::Vector2i mousePos) {
     overlay.boxEnd = mousePos;
 }
 
-void FrameTool::onLeftReleased(sf::Vector2i mousePos) {
+void FrameTool::onLeftReleased(Vec2i mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -38,7 +38,7 @@ void FrameTool::onLeftReleased(sf::Vector2i mousePos) {
     overlay.reset();
 }
 
-void FrameTool::onFrame(sf::Vector2i mousePos, float deltaTime) {
+void FrameTool::onFrame(Vec2i mousePos, float deltaTime) {
     (void)deltaTime;
 
     ToolContext& ctx = context();

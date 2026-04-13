@@ -35,11 +35,11 @@ public:
     void setMode(Mode newMode) { mode = newMode; }
     Mode getMode() const { return mode; }
 
-    void orbitDrag(sf::Vector2i delta);
-    void freeDrag(sf::Vector2i delta); // для Free mode
+    void orbitDrag(Vec2i delta);
+    void freeDrag(Vec2i delta); // для Free mode
 
-    Vec3f screenToWorld(sf::Vector2i screenPos) const;
-    sf::Vector2i worldToScreen(Vec3f worldPos) const;
+    Vec3f screenToWorld(Vec2i screenPos) const;
+    Vec2i worldToScreen(Vec3f worldPos) const;
 
     void zoomAt(float factor, Vec2f mousePos, sf::RenderWindow& target);
     float getZoom() const { return zoom; }
@@ -67,7 +67,7 @@ private:
     bool isDragging;
     Vec2f lastMousePos;
 
-    sf::Vector2i dragStartPixelPos;
+    Vec2i dragStartPixelPos;
     Vec2f dragStartCameraPos;
 
     Mode mode = Mode::Mode2D;

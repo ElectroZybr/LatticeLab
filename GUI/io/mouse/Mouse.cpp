@@ -19,7 +19,7 @@ void Mouse::init(sf::RenderWindow& w, std::unique_ptr<IRenderer>& r, Simulation&
 }
 
 void Mouse::onEvent(const sf::Event& event) {
-    const sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
+    const Vec2i mouse_pos(sf::Mouse::getPosition(*window));
     std::unique_ptr<IRenderer>& rend = *renderer;
     constexpr float kFreeWheelMoveScale = 0.008f;
 
@@ -49,8 +49,8 @@ void Mouse::onEvent(const sf::Event& event) {
     }
 
     if (event.getIf<sf::Event::MouseMoved>() && rend->camera.isDragging) {
-        const sf::Vector2i currentPixelPos = sf::Mouse::getPosition(*window);
-        sf::Vector2i deltaPixel = currentPixelPos - rend->camera.dragStartPixelPos;
+        const Vec2i currentPixelPos(sf::Mouse::getPosition(*window));
+        Vec2i deltaPixel = currentPixelPos - rend->camera.dragStartPixelPos;
 
         if (rend->camera.mode == Camera::Mode::Orbit) {
             rend->camera.orbitDrag(deltaPixel);
@@ -85,12 +85,12 @@ void Mouse::onEvent(const sf::Event& event) {
 }
 
 void Mouse::onFrame(float deltaTime) {
-    const sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
+    const Vec2i mouse_pos(sf::Mouse::getPosition(*window));
     ToolsManager::onFrame(mouse_pos, deltaTime);
 }
 
 void Mouse::logMousePos() {
-    sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
+    Vec2i mouse_pos(sf::Mouse::getPosition(*window));
     Vec3f world_pos = ToolsManager::screenToWorld(mouse_pos);
     std::cout << "<Mouse pos>"
               << " Screen: "
