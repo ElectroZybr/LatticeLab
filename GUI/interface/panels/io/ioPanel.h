@@ -21,7 +21,7 @@ public:
     static constexpr ImGuiWindowFlags PANEL_FLAGS =
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 
-    void draw(float scale, sf::Vector2u windowSize, Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState);
+    void draw(float scale, Vec2u windowSize, Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState);
     void setScenesDirectory(std::filesystem::path scenesDirectory);
     [[nodiscard]] const std::filesystem::path& scenesDirectory() const { return scenesDirectory_; }
 

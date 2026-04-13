@@ -7,12 +7,14 @@
 #include <SFML/Graphics/Texture.hpp>
 #include <bgfx/bgfx.h>
 
+#include "Engine/math/Vec2.h"
+
 struct IOPanelSceneTile {
     std::string path;
     std::string title;
     std::string description;
     bgfx::TextureHandle previewTexture = BGFX_INVALID_HANDLE;
-    sf::Vector2u previewSize;
+    Vec2u previewSize;
     bool hasPreview = false;
 };
 

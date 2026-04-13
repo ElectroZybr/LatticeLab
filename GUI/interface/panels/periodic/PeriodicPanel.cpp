@@ -24,7 +24,7 @@ int PeriodicPanel::decodeAtom(int index) {
     return -1;
 }
 
-void PeriodicPanel::draw(float scale, sf::Vector2u windowSize, int& selectedAtom) {
+void PeriodicPanel::draw(float scale, Vec2u windowSize, int& selectedAtom) {
     const float panelW = 387.0f * scale;
     const float panelH = 142.0f * scale;
     const float panelX = windowSize.x * 0.5f - panelW * 0.5f;

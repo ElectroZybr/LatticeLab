@@ -1,9 +1,5 @@
 #include "AppStateIO.h"
 
-#include <SFML/Graphics/Image.hpp>
-#include <SFML/Graphics/RenderWindow.hpp>
-#include <SFML/Graphics/Texture.hpp>
-
 #include <cctype>
 #include <cstdint>
 #include <fstream>
@@ -12,7 +8,12 @@
 #include <string_view>
 #include <vector>
 
+#include <SFML/Graphics/Image.hpp>
+#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Graphics/Texture.hpp>
+
 #include "Engine/io/SimulationStateIO.h"
+#include "Engine/math/Vec2.h"
 #include "GUI/interface/UiState.h"
 #include "Rendering/BaseRenderer.h"
 
@@ -65,7 +66,7 @@ namespace {
 
     sf::Image capturePreviewImage(const sf::RenderWindow& window, const PreviewFrameRect& previewRect) {
         sf::Texture texture;
-        const sf::Vector2u windowSize = window.getSize();
+        const Vec2u windowSize(window.getSize());
         if (windowSize.x == 0 || windowSize.y == 0) {
             return {};
         }
@@ -82,12 +83,14 @@ namespace {
             return {};
         }
 
-        const unsigned cropX = std::min(srcWidth - 1, static_cast<unsigned>(std::clamp(previewRect.x, 0.0f, static_cast<float>(srcWidth - 1))));
-        const unsigned cropY = std::min(srcHeight - 1, static_cast<unsigned>(std::clamp(previewRect.y, 0.0f, static_cast<float>(srcHeight - 1))));
-        const unsigned cropWidth =
-            std::max(1u, std::min(srcWidth - cropX, static_cast<unsigned>(std::clamp(previewRect.width, 1.0f, static_cast<float>(srcWidth)))));
-        const unsigned cropHeight =
-            std::max(1u, std::min(srcHeight - cropY, static_cast<unsigned>(std::clamp(previewRect.height, 1.0f, static_cast<float>(srcHeight)))));
+        const unsigned cropX =
+            std::min(srcWidth - 1, static_cast<unsigned>(std::clamp(previewRect.x, 0.0f, static_cast<float>(srcWidth - 1))));
+        const unsigned cropY =
+            std::min(srcHeight - 1, static_cast<unsigned>(std::clamp(previewRect.y, 0.0f, static_cast<float>(srcHeight - 1))));
+        const unsigned cropWidth = std::max(
+            1u, std::min(srcWidth - cropX, static_cast<unsigned>(std::clamp(previewRect.width, 1.0f, static_cast<float>(srcWidth)))));
+        const unsigned cropHeight = std::max(
+            1u, std::min(srcHeight - cropY, static_cast<unsigned>(std::clamp(previewRect.height, 1.0f, static_cast<float>(srcHeight)))));
 
         const float scale = std::min(1.0f, std::min(static_cast<float>(kPreviewMaxSize) / static_cast<float>(cropWidth),
                                                     static_cast<float>(kPreviewMaxSize) / static_cast<float>(cropHeight)));
@@ -111,7 +114,7 @@ namespace {
 
     void saveImageState(const sf::RenderWindow& window, const PreviewFrameRect& previewRect, std::string_view path) {
         const sf::Image preview = capturePreviewImage(window, previewRect);
-        const sf::Vector2u size = preview.getSize();
+        const Vec2u size(preview.getSize());
         if (size.x == 0 || size.y == 0) {
             return;
         }

@@ -1,11 +1,12 @@
 #pragma once
-#include <SFML/System/Vector2.hpp>
 #include <imgui.h>
+
+#include "Engine/math/Vec2.h"
 
 class StyleManager {
 public:
     void applyCustomStyle();
-    void onResize(sf::Vector2u newSize);
+    void onResize(Vec2u newSize);
     float getScale() const { return scale; }
 
 private:

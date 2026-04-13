@@ -69,7 +69,7 @@ namespace {
     }
 }
 
-void SettingsPanel::draw(float uiScale, sf::Vector2u windowSize, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
+void SettingsPanel::draw(float uiScale, Vec2u windowSize, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
                          CaptureController& captureController, FileDialogManager& fileDialog) {
     float target = visible ? 1.f : 0.f;
     float step = ImGui::GetIO().DeltaTime * 12.f;
