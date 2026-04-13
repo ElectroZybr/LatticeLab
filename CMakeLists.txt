@@ -107,15 +107,6 @@ target_include_directories(ImGuiFileDialog_lib PUBLIC
 )
 target_link_libraries(ImGuiFileDialog_lib PUBLIC imgui)
 
-# --- Настройка glad ---
-FetchContent_Declare(
-    glad
-    GIT_REPOSITORY https://github.com/Dav1dde/glad.git
-    GIT_TAG        v0.1.36
-    GIT_SHALLOW    ON
-)
-FetchContent_MakeAvailable(glad)
-
 # --- Настройка GLM ---
 FetchContent_Declare(
     glm
@@ -237,7 +228,6 @@ target_link_libraries(latticelab_lib PUBLIC
     sfml-system
     imgui
     ImGuiFileDialog_lib
-    glad
     glm::glm
     bgfx
     bx

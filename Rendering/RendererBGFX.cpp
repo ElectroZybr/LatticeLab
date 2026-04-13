@@ -10,16 +10,29 @@
 #include "Rendering/BgfxContext.h"
 
 namespace {
-    void ensureTBO(bgfx::TextureHandle& handle, uint16_t count) {
+    // в случае замены надо поменять atom2d.vert и atom3d.vert
+    static constexpr uint16_t kTBOWidth = 4096;
+
+    void ensureTBO(bgfx::TextureHandle& handle, uint32_t count) {
         if (bgfx::isValid(handle)) {
             bgfx::destroy(handle);
         }
-        handle = bgfx::createTexture2D(count, 1, false, 1, bgfx::TextureFormat::R32F,
+        const uint16_t height = (count + kTBOWidth - 1) / kTBOWidth;
+        handle = bgfx::createTexture2D(kTBOWidth, height, false, 1, bgfx::TextureFormat::R32F,
                                        BGFX_TEXTURE_NONE | BGFX_SAMPLER_POINT | BGFX_SAMPLER_UVW_CLAMP);
     }
 
-    void uploadTBO(bgfx::TextureHandle handle, const float* data, uint16_t count) {
-        bgfx::updateTexture2D(handle, 0, 0, 0, 0, count, 1, bgfx::makeRef(data, count * sizeof(float)));
+    void uploadTBO(bgfx::TextureHandle handle, const float* data, uint32_t count) {
+        const uint32_t fullRows = count / kTBOWidth;
+        const uint32_t remainder = count % kTBOWidth;
+
+        if (fullRows > 0) {
+            bgfx::updateTexture2D(handle, 0, 0, 0, 0, kTBOWidth, fullRows, bgfx::makeRef(data, fullRows * kTBOWidth * sizeof(data[0])));
+        }
+        if (remainder > 0) {
+            bgfx::updateTexture2D(handle, 0, 0, 0, fullRows, remainder, 1,
+                                  bgfx::makeRef(data + fullRows * kTBOWidth, remainder * sizeof(data[0])));
+        }
     }
 }
 

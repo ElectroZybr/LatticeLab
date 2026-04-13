@@ -26,7 +26,7 @@ vec3 turboColor(float t) {
 }
 
 void main() {
-    ivec2 coord = ivec2(gl_InstanceID, 0);
+    ivec2 coord = ivec2(gl_InstanceID % 4096, gl_InstanceID / 4096);
 
     float posX   = texelFetch(s_posX,   coord, 0).r;
     float posY   = texelFetch(s_posY,   coord, 0).r;
