@@ -22,7 +22,8 @@ public:
     enum class Mode : uint8_t { Mode2D, Orbit, Free };
 
     Camera(SimBox& simBox, float moveSpeed = 500.f, float zoomSpeed = 0.1f);
-    Camera& operator=(const Camera& other);
+
+    void resetView();
 
     void setScreenSize(Vec2f screenSize) { this->screenSize = screenSize; }
     Vec2f getScreenSize() const { return screenSize; }

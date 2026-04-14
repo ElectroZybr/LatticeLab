@@ -83,6 +83,7 @@ int Application::run() {
     constexpr double renderInterval = 1.0 / FPS;
     constexpr double logInterval = 1.0 / LPS;
 
+    renderer->camera.resetView();
     while (!glfwWindowShouldClose(window)) {
         Profiler::instance().beginFrame();
 

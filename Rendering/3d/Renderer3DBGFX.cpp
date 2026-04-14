@@ -1,5 +1,7 @@
 #include "Renderer3DBGFX.h"
 
+#include <cmath>
+
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "generated/shaders/shader_registry.h"
@@ -10,17 +12,12 @@ Renderer3DBGFX::Renderer3DBGFX(GLFWwindow* window, SimBox& simBox) : RendererBGF
     boxProgram = loadEmbeddedProgram(s_allShaders, "box");
     gridProgram = loadEmbeddedProgram(s_allShaders, "grid");
 
-    camera.freePosition = simBox.size / 2.f;
-    camera.freePosition.z = -200.f;
     camera.setMode(Camera::Mode::Orbit);
-    camera.setZoom(std::max({simBox.size.x, simBox.size.y, simBox.size.z}) * 0.02);
+    camera.resetView();
 }
 
 void Renderer3DBGFX::updateMatrices() {
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-    const float aspect = static_cast<float>(width) / static_cast<float>(height);
-
+    const float aspect = static_cast<float>(camera.screenSize.x) / static_cast<float>(camera.screenSize.y);
     projection = glm::perspective(glm::radians(45.f), aspect, 0.1f, 1000.f);
     view = camera.getViewMatrix();
 }

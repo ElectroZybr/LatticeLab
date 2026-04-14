@@ -251,4 +251,5 @@ void AppStateIO::save(const PreviewFrameRect& previewRect, const Simulation& sim
 void AppStateIO::load(Simulation& simulation, IRenderer& renderer, std::string_view path) {
     SimulationStateIO::load(simulation, path);
     loadRendererState(renderer, path);
+    renderer.camera.resetView();
 }
