@@ -106,17 +106,19 @@ glm::mat4 Camera::getProjectionMatrix() const {
 }
 
 Ray Camera::screenToRay(float screenX, float screenY) const {
-    const float ndcX = (screenX / screenSize.x) * 2.f - 1.f;
-    const float ndcY = 1.f - (screenY / screenSize.y) * 2.f;
+    const float ndcX = (2.0f * screenX) / screenSize.x - 1.0f;
+    const float ndcY = 1.0f - (2.0f * screenY) / screenSize.y;
 
-    const glm::vec4 rayClip(ndcX, ndcY, -1.f, 1.f);
+    const glm::mat4 invProj = glm::inverse(getProjectionMatrix());
 
-    glm::vec4 rayEye = glm::inverse(getProjectionMatrix()) * rayClip;
-    rayEye = glm::vec4(rayEye.x / rayEye.w, rayEye.y / rayEye.w, -1.f, 0.f);
+    const glm::vec4 rayClip(ndcX, ndcY, -1.0f, 1.0f);
+    glm::vec4 rayEye = invProj * rayClip;
 
-    const glm::vec3 rayDirGLM = glm::normalize(glm::vec3(glm::inverse(getViewMatrix()) * rayEye));
+    rayEye.z = -1.0f;
+    rayEye.w = 0.0f;
 
-    const glm::vec3 eye = getEyePosition();
+    const glm::mat4 invView = glm::inverse(getViewMatrix());
+    const glm::vec3 rayDirWorld = glm::normalize(glm::vec3(invView * rayEye));
 
-    return Ray(Vec3f(eye.x, eye.y, eye.z), Vec3f(rayDirGLM.x, rayDirGLM.y, rayDirGLM.z));
+    return Ray(Vec3f(getEyePosition()), Vec3f(rayDirWorld));
 }
