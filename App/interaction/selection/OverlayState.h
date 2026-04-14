@@ -58,7 +58,7 @@ struct OverlayState {
             dl->AddCircleFilled(ImVec2(rulerStart.x, rulerStart.y), 4.f, light_red);
             dl->AddCircleFilled(ImVec2(rulerEnd.x, rulerEnd.y), 4.f, light_red);
 
-            const Vec2f line(rulerEnd - rulerStart);
+            const Vec2f line(Vec2f(rulerEnd) - Vec2f(rulerStart));
             const float lineLength = line.abs();
             Vec2f labelPos = 0.5f * Vec2f(rulerStart + rulerEnd);
             float angleDeg = 0.0f;
