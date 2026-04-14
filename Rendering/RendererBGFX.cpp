@@ -90,12 +90,12 @@ void RendererBGFX::initAtomColors() {
 
     for (int i = 0; i < typeCount; ++i) {
         const auto& props = AtomData::getProps(static_cast<AtomData::Type>(i));
-        typeColorsData[i] = glm::vec4(props.color.r / 255.f, props.color.g / 255.f, props.color.b / 255.f, 1.f);
+        typeColorsData[i] = glm::vec4(props.color.r / 255.f, props.color.g / 255.f, props.color.b / 255.f, props.color.a / 255.f);
     }
 }
 
 void RendererBGFX::initAtomBuffers() {
-    const float quad[] = {
+    constexpr float quad[] = {
         -1.f, -1.f, 1.f, -1.f, 1.f, 1.f, -1.f, -1.f, 1.f, 1.f, -1.f, 1.f,
     };
 
@@ -129,7 +129,7 @@ void RendererBGFX::initBondBuffers() {
 }
 
 void RendererBGFX::initGridBuffers() {
-    const float lines[] = {
+    constexpr float lines[] = {
         0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1,
         1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1,
     };

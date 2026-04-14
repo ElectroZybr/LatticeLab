@@ -4,14 +4,19 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <SFML/Graphics/Color.hpp>
+union Color {
+    uint32_t rgba;
+    struct {
+        uint8_t r, g, b, a;
+    };
+};
 
 struct StaticAtomicData {
     const float mass;
     const float radius;
     const char maxValence;
     const float defaultCharge;
-    const sf::Color color;
+    const Color color;
     const float ljA0;
     const float ljEps;
 };
