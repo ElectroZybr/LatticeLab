@@ -14,15 +14,12 @@ struct UiState;
 
 struct ToolContext {
     sf::RenderWindow* window = nullptr;
-    sf::View* gameView = nullptr;
     Simulation* simulation = nullptr;
     std::unique_ptr<IRenderer>* renderer = nullptr;
     PickingSystem* pickingSystem = nullptr;
     UiState* uiState = nullptr;
 
-    [[nodiscard]] bool isValid() const noexcept {
-        return window != nullptr && gameView != nullptr && simulation != nullptr && renderer != nullptr;
-    }
+    [[nodiscard]] bool isValid() const noexcept { return window != nullptr && simulation != nullptr && renderer != nullptr; }
 
     [[nodiscard]] IRenderer* activeRenderer() const noexcept { return (renderer != nullptr) ? renderer->get() : nullptr; }
 };

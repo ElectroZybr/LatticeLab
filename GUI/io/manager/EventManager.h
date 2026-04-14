@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-
 #include <SFML/Graphics.hpp>
 
 class IRenderer;
@@ -10,8 +8,7 @@ class Interface;
 
 class EventManager {
 public:
-    static void init(sf::RenderWindow& window, sf::View& sceneView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
-                     Interface& appInterface);
+    static void init(sf::RenderWindow& window, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, Interface& appInterface);
     static void poll();
     static void frame(float deltaTime);
 

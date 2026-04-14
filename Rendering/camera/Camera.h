@@ -1,6 +1,5 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
 #include <glm/glm.hpp>
 
 #include "Engine/math/Ray.h"
@@ -22,9 +21,11 @@ class Camera {
 public:
     enum class Mode : uint8_t { Mode2D, Orbit, Free };
 
-    Camera(sf::View* view, SimBox& simBox, float moveSpeed = 500.f, float zoomSpeed = 0.1f);
+    Camera(SimBox& simBox, float moveSpeed = 500.f, float zoomSpeed = 0.1f);
+    Camera& operator=(const Camera& other);
 
-    void update(sf::RenderTarget& target);
+    void setScreenSize(Vec2f screenSize) { this->screenSize = screenSize; }
+    Vec2f getScreenSize() const { return screenSize; }
 
     void move(Vec2f offset) { position += offset; }
     void move3D(Vec3f offset) { freePosition += offset; }
@@ -41,12 +42,9 @@ public:
     Vec3f screenToWorld(Vec2i screenPos) const;
     Vec2i worldToScreen(Vec3f worldPos) const;
 
-    void zoomAt(float factor, Vec2f mousePos, sf::RenderWindow& target);
+    void zoomAt(float factor, Vec2f mousePos);
     float getZoom() const { return zoom; }
     void setZoom(float new_zoom);
-
-    sf::View& getView() { return *view; }
-    const sf::View& getView() const { return *view; }
 
     glm::vec3 getEyePosition() const;
     glm::mat4 getViewMatrix() const;
@@ -56,7 +54,6 @@ public:
 
 private:
     Vec2f screenSize;
-    sf::View* view;
     Vec2f position;
     Vec3f freePosition{0.f, 0.f, -100.f};
     float zoom;

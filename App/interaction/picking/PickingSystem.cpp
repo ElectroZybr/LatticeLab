@@ -16,8 +16,6 @@ void PickingSystem::clearSelection() {
 
 void PickingSystem::processClick(Vec2i screenPos, bool cumulative) {
     IRenderer* rend = renderer->get();
-    const Vec2f vSize(rend->camera.getView().getSize());
-    const Vec2f vCenter(rend->camera.getView().getCenter());
 
     AtomHit hit;
     bool found = pickAtom(screenPos, 10.0f, hit);
@@ -45,9 +43,6 @@ void PickingSystem::processRect(Vec2i start, Vec2i end, bool cumulative) {
         clearSelection();
     }
     IRenderer* rend = renderer->get();
-
-    const Vec2f vSize(rend->camera.getView().getSize());
-    const Vec2f vCenter(rend->camera.getView().getCenter());
 
     for (size_t i = 0; i < atomStorage.size(); ++i) {
         const Vec3f worldPos = atomStorage.pos(i);

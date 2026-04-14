@@ -30,8 +30,8 @@ public:
 
         BgfxContext::instance().init(800, 600);
 
-        view_ = renderTexture_->getView();
-        renderer_ = std::make_unique<TRenderer>(*renderTexture_, view_, box_);
+        renderer_ = std::make_unique<TRenderer>(*renderTexture_, box_);
+        renderer_->camera.setScreenSize(Vec2f{800, 600});
         ToolsManager::pickingSystem = new PickingSystem(atomStorage_, box_, renderer_);
 
         atomStorage_ = makeGridAtoms(static_cast<int>(state.range(0)));
@@ -49,7 +49,6 @@ protected:
 
     std::unique_ptr<sf::RenderTexture> renderTexture_;
     std::unique_ptr<IRenderer> renderer_;
-    sf::View view_;
     AtomStorage atomStorage_;
     Bond::List bonds_;
     SimBox box_{Vec3f(300, 300, 300)};

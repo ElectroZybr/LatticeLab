@@ -30,7 +30,6 @@ namespace {
 }
 
 sf::RenderWindow* ToolsManager::window = nullptr;
-sf::View* ToolsManager::gameView = nullptr;
 std::unique_ptr<IRenderer>* ToolsManager::renderer = nullptr;
 PickingSystem* ToolsManager::pickingSystem = nullptr;
 Simulation* ToolsManager::simulation = nullptr;
@@ -43,10 +42,8 @@ Vec2i ToolsManager::startMousePos = {};
 Vec2i ToolsManager::lastSceneMousePos = {};
 bool ToolsManager::isInteracting = false;
 
-void ToolsManager::init(sf::RenderWindow& w, sf::View& sceneView, Simulation& sim, std::unique_ptr<IRenderer>& rend,
-                        Interface& appInterface) {
+void ToolsManager::init(sf::RenderWindow& w, Simulation& sim, std::unique_ptr<IRenderer>& rend, Interface& appInterface) {
     window = &w;
-    gameView = &sceneView;
     simulation = &sim;
     renderer = &rend;
     uiState = &appInterface.state();
@@ -56,7 +53,6 @@ void ToolsManager::init(sf::RenderWindow& w, sf::View& sceneView, Simulation& si
     pickingSystem = new PickingSystem(simulation->atoms(), simulation->box(), *renderer);
 
     toolContext.window = &w;
-    toolContext.gameView = &sceneView;
     toolContext.simulation = &sim;
     toolContext.renderer = &rend;
     toolContext.pickingSystem = pickingSystem;

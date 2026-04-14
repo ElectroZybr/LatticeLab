@@ -16,14 +16,14 @@ namespace sf {
 namespace AppActions {
     class Handler : public Signals::Trackable {
     public:
-        Handler(sf::RenderWindow& window, sf::View& sceneView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
-                UiState& uiState);
+        Handler(sf::RenderWindow& window, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, UiState& uiState);
 
     private:
         void trackIOPanel(sf::RenderWindow& window, UiState& uiState, Simulation& simulation, std::unique_ptr<IRenderer>& renderer);
-        void trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window, sf::View& sceneView);
+        void trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window);
         void trackSettingsPanel(sf::Window& window);
         void trackKeyboard(Simulation& simulation);
+        void trackWindow(std::unique_ptr<IRenderer>& renderer);
         void trackSimControlPanel(Simulation& simulation);
     };
 }

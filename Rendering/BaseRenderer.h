@@ -28,5 +28,5 @@ public:
     Camera camera;
 
 protected:
-    IRenderer(sf::View& gv, SimBox& box) : camera(&gv, box) {}
+    IRenderer(SimBox& box) : camera(box) {}
 };

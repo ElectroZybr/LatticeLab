@@ -4,7 +4,7 @@
 
 #include "generated/shaders/shader_registry.h"
 
-Renderer3DBGFX::Renderer3DBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simBox) : RendererBGFX(t, gv, simBox) {
+Renderer3DBGFX::Renderer3DBGFX(sf::RenderTarget& t, SimBox& simBox) : RendererBGFX(t, simBox) {
     camera.setMode(Camera::Mode::Orbit);
 
     atomProgram = loadEmbeddedProgram(s_allShaders, "atom3d");

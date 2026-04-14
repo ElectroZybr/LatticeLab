@@ -35,21 +35,19 @@ int Application::run() {
     }
     BgfxContext::instance().init(window.getNativeHandle(), window.getSize().x, window.getSize().y);
 
-    sf::View& sceneView = const_cast<sf::View&>(window.getView());
-
     // инициализация систем
     SimBox box(Vec3f(50, 50, 6));
     Simulation simulation(box);
     CaptureController captureController;
-    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2DBGFX>(window, sceneView, simulation.box());
+    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2DBGFX>(window, simulation.box());
     Interface appInterface(window, simulation, renderer, captureController);
-    AppActions::Handler appActions(window, sceneView, simulation, renderer, appInterface.state());
+    AppActions::Handler appActions(window, simulation, renderer, appInterface.state());
     CaptureActions::Handler captureActions(captureController);
     if (appInterface.init() != EXIT_SUCCESS) {
         return EXIT_FAILURE;
     }
-    EventManager::init(window, sceneView, simulation, renderer, appInterface);
-    ToolsManager::init(window, sceneView, simulation, renderer, appInterface);
+    EventManager::init(window, simulation, renderer, appInterface);
+    ToolsManager::init(window, simulation, renderer, appInterface);
     const DebugViews debugViews = createDebugViews(appInterface.debugPanel);
 
     // загрузка пользовательских настроек
@@ -89,7 +87,6 @@ int Application::run() {
         renderAccum += deltaTime;
         logAccum += deltaTime;
 
-        renderer->camera.update(window);
         EventManager::poll();
         EventManager::frame(deltaTime);
         captureController.update(deltaTime);

@@ -77,12 +77,11 @@ namespace {
 sf::RenderWindow* EventManager::window = nullptr;
 std::unique_ptr<IRenderer>* EventManager::renderer = nullptr;
 
-void EventManager::init(sf::RenderWindow& w, sf::View& sceneView, Simulation& simulation, std::unique_ptr<IRenderer>& r,
-                        Interface& appInterface) {
+void EventManager::init(sf::RenderWindow& w, Simulation& simulation, std::unique_ptr<IRenderer>& r, Interface& appInterface) {
     window = &w;
     renderer = &r;
 
-    WindowEvents::init(w, sceneView, appInterface);
+    WindowEvents::init(w, appInterface);
     Keyboard::init(r, appInterface);
     Mouse::init(w, r, simulation, appInterface);
 }

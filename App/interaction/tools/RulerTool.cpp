@@ -9,16 +9,10 @@
 #include "Rendering/BaseRenderer.h"
 
 namespace {
-
     Vec3f mapMouseToRulerWorld(const ToolContext& ctx, Vec2i mousePos) {
         IRenderer* renderer = ctx.activeRenderer();
         if (renderer == nullptr) {
             return Vec3f();
-        }
-
-        if (renderer->camera.getMode() == Camera::Mode::Mode2D && ctx.window != nullptr && ctx.gameView != nullptr) {
-            const Vec2f world(ctx.window->mapPixelToCoords(mousePos, *ctx.gameView));
-            return Vec3f(world.x, world.y, 1.0f);
         }
 
         return renderer->camera.screenToWorld(mousePos);
@@ -148,12 +142,6 @@ void RulerTool::syncOverlayFromWorld() {
     auto& overlay = ctx.pickingSystem->getOverlay();
     IRenderer* renderer = ctx.activeRenderer();
     if (renderer == nullptr) {
-        return;
-    }
-
-    if (renderer->camera.getMode() == Camera::Mode::Mode2D && ctx.window != nullptr && ctx.gameView != nullptr) {
-        overlay.rulerStart = Vec2i(ctx.window->mapCoordsToPixel(startWorld_.xy(), *ctx.gameView));
-        overlay.rulerEnd = Vec2i(ctx.window->mapCoordsToPixel(endWorld_.xy(), *ctx.gameView));
         return;
     }
 

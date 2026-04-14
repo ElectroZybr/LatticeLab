@@ -59,16 +59,15 @@ namespace AppActions {
         }));
     }
 
-    void Handler::trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window,
-                                  sf::View& sceneView) {
+    void Handler::trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window) {
         track(AppSignals::UI::SetRender.connect([&](RendererType type) {
             std::unique_ptr<IRenderer> newRenderer;
             switch (type) {
             case RendererType::Renderer2D:
-                newRenderer = std::make_unique<Renderer2DBGFX>(window, sceneView, simulation.box());
+                newRenderer = std::make_unique<Renderer2DBGFX>(window, simulation.box());
                 break;
             case RendererType::Renderer3D:
-                newRenderer = std::make_unique<Renderer3DBGFX>(window, sceneView, simulation.box());
+                newRenderer = std::make_unique<Renderer3DBGFX>(window, simulation.box());
                 break;
             }
 
@@ -78,6 +77,7 @@ namespace AppActions {
                 newRenderer->drawBonds = renderer->drawBonds;
                 newRenderer->speedColorMode = renderer->speedColorMode;
                 newRenderer->speedGradientMax = renderer->speedGradientMax;
+                newRenderer->camera.setScreenSize(renderer->camera.getScreenSize());
                 renderer = std::move(newRenderer);
             }
         }));
@@ -95,12 +95,16 @@ namespace AppActions {
         track(AppSignals::UI::StepPhysics.connect([&]() { simulation.update(); }));
     }
 
-    Handler::Handler(sf::RenderWindow& window, sf::View& sceneView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
-                     UiState& uiState) {
+    void Handler::trackWindow(std::unique_ptr<IRenderer>& renderer) {
+        track(AppSignals::Window::Resize.connect([&](Vec2f newSize) { renderer->camera.setScreenSize(newSize); }));
+    }
+
+    Handler::Handler(sf::RenderWindow& window, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, UiState& uiState) {
         trackIOPanel(window, uiState, simulation, renderer);
-        trackToolsPanel(simulation, renderer, window, sceneView);
+        trackToolsPanel(simulation, renderer, window);
         trackSettingsPanel(window);
         trackSimControlPanel(simulation);
         trackKeyboard(simulation);
+        trackWindow(renderer);
     }
 }

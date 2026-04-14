@@ -4,7 +4,7 @@
 
 #include "generated/shaders/shader_registry.h"
 
-Renderer2DBGFX::Renderer2DBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simBox) : RendererBGFX(t, gv, simBox) {
+Renderer2DBGFX::Renderer2DBGFX(sf::RenderTarget& t, SimBox& simBox) : RendererBGFX(t, simBox) {
     camera.position = Vec2f(simBox.size.x, simBox.size.y) / 2.f;
     camera.setZoom(std::max(simBox.size.x, simBox.size.y) * 0.07);
 

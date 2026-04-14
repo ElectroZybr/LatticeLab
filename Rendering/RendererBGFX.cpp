@@ -1,8 +1,6 @@
 #include "RendererBGFX.h"
 
 #include <cstring>
-#include <format>
-#include <fstream>
 #include <ranges>
 #include <string_view>
 
@@ -48,7 +46,7 @@ bgfx::ProgramHandle RendererBGFX::loadEmbeddedProgram(const bgfx::EmbeddedShader
     return bgfx::createProgram(vsh, fsh, true);
 }
 
-RendererBGFX::RendererBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simbox) : IRenderer(gv, simbox), target(t) {
+RendererBGFX::RendererBGFX(sf::RenderTarget& t, SimBox& simbox) : IRenderer(simbox), target(t) {
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x212121ff, 1.0f, 0);
 
     uLightDir = bgfx::createUniform("u_lightDir", bgfx::UniformType::Vec4);
