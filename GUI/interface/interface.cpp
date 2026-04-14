@@ -106,7 +106,7 @@ int Interface::update() {
 
         ImGui::BeginTooltip();
         if (!uiState_.toolTooltipText.empty()) {
-            ImGui::TextUnformatted(uiState_.toolTooltipText.c_str());
+            ImGui::TextUnformatted(uiState_.toolTooltipText.data());
         }
         else {
             ImGui::Text("Selected: %d", uiState_.selectedAtomCount);

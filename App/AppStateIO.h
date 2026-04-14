@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstdint>
 #include <string_view>
+#include <vector>
 
 namespace sf {
     class RenderWindow;
@@ -9,6 +11,12 @@ namespace sf {
 class Simulation;
 class IRenderer;
 struct PreviewFrameRect;
+
+struct ImageData {
+    std::vector<std::uint8_t> pixels; // RGBA
+    uint32_t width = 0;
+    uint32_t height = 0;
+};
 
 class AppStateIO {
 public:

@@ -5,7 +5,6 @@
 #include <cmath>
 #include <cstdlib>
 
-#include <SFML/Graphics.hpp>
 #include <bgfx/bgfx.h>
 
 #include "App/AppActions.h"
@@ -25,11 +24,13 @@
 #include "debug/CreateDebugPanels.h"
 #include "debug/DebugRuntime.h"
 
+using Clock = std::chrono::high_resolution_clock;
+
 constexpr int FPS = 60;
 constexpr int LPS = 20;
 
 int Application::run() {
-    sf::RenderWindow window = createWindow();
+    auto window = createWindow();
     if (!window.isOpen()) {
         return EXIT_FAILURE;
     }
@@ -71,7 +72,7 @@ int Application::run() {
     // simulation.createAtom(Vec3f(24, 25, 3), Vec3f(1, 0, 0), AtomData::Type::Na);
     // simulation.createAtom(Vec3f(28, 25, 3), Vec3f(-1, 0, 0), AtomData::Type::Na);
 
-    sf::Clock clock;
+    auto startTime = Clock::now();
     double renderAccum = 0.0;
     double physicsAccum = 0.0;
     double logAccum = 0.0;
@@ -81,7 +82,11 @@ int Application::run() {
 
     while (window.isOpen()) {
         Profiler::instance().beginFrame();
-        const float deltaTime = clock.restart().asSeconds();
+
+        auto currentTime = Clock::now();
+        const float deltaTime = std::chrono::duration<float>(currentTime - startTime).count();
+        startTime = currentTime;
+
         UiState& uiState = appInterface.state();
         physicsAccum += deltaTime;
         renderAccum += deltaTime;

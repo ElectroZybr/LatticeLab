@@ -23,8 +23,8 @@ void IOPanel::ensureSceneCatalogLoaded() {
         return;
     }
 
-    sceneCatalogLoaded_ = true;
     sceneTiles_ = loadIOPanelSceneTiles(scenesDirectory_.string());
+    sceneCatalogLoaded_ = true;
 }
 
 void IOPanel::clearPendingDeleteState() {
@@ -61,8 +61,12 @@ void IOPanel::draw(float scale, Vec2u windowSize, Simulation& simulation, FileDi
     if (fileDialog.hasSavedSimulationPath()) {
         const std::filesystem::path savedSimulationPath = fileDialog.consumeSavedSimulationPath();
         if (savedSimulationPath.parent_path().lexically_normal() == scenesDirectory_.lexically_normal()) {
-            sceneCatalogLoaded_ = false;
+            pendingReloadFrames_ = 1;
         }
+    }
+    // Задержка, что бы изображение успело записаться в файл сохранения
+    if (pendingReloadFrames_ > 0 && --pendingReloadFrames_ == 0) {
+        sceneCatalogLoaded_ = false;
     }
 
     fileDialog.setSimulationDirectory(scenesDirectory_.string());
@@ -152,7 +156,7 @@ void IOPanel::draw(float scale, Vec2u windowSize, Simulation& simulation, FileDi
     ImGui::SeparatorText("Сцены");
     std::array<char, 512> scenesDirBuffer{};
     const std::string scenesDir = scenesDirectory_.string();
-    std::snprintf(scenesDirBuffer.data(), scenesDirBuffer.size(), "%s", scenesDir.c_str());
+    std::snprintf(scenesDirBuffer.data(), scenesDirBuffer.size(), "%s", scenesDir.data());
     const float browseButtonWidth = ImGui::GetFrameHeight();
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseButtonWidth - ImGui::GetStyle().ItemSpacing.x);
     ImGui::InputText("##scenes_dir", scenesDirBuffer.data(), scenesDirBuffer.size(), ImGuiInputTextFlags_ReadOnly);
@@ -173,7 +177,7 @@ void IOPanel::draw(float scale, Vec2u windowSize, Simulation& simulation, FileDi
         IOPanelSceneTile& tile = sceneTiles_[i];
         ImGui::PushID(static_cast<int>(i));
 
-        if ((i % 2) != 0) {
+        if (i % 2 != 0) {
             ImGui::SameLine();
         }
 
@@ -253,13 +257,13 @@ void IOPanel::draw(float scale, Vec2u windowSize, Simulation& simulation, FileDi
 
         const ImVec2 titlePos(tileMin.x + 10.0f, tileMax.y - 25.0f);
         drawList->AddText(ImVec2(titlePos.x + 1.0f, titlePos.y + 1.0f), ImGui::GetColorU32(ImVec4(0.02f, 0.03f, 0.05f, 0.85f)),
-                          tile.title.c_str());
-        drawList->AddText(titlePos, ImGui::GetColorU32(ImVec4(0.95f, 0.96f, 0.98f, 1.0f)), tile.title.c_str());
+                          tile.title.data());
+        drawList->AddText(titlePos, ImGui::GetColorU32(ImVec4(0.95f, 0.96f, 0.98f, 1.0f)), tile.title.data());
         if (!tile.description.empty()) {
             const ImVec2 descriptionPos(tileMin.x + 10.0f, tileMax.y - 15.0f);
             drawList->AddText(ImVec2(descriptionPos.x + 1.0f, descriptionPos.y + 1.0f),
-                              ImGui::GetColorU32(ImVec4(0.02f, 0.03f, 0.05f, 0.80f)), tile.description.c_str());
-            drawList->AddText(descriptionPos, ImGui::GetColorU32(ImVec4(0.82f, 0.86f, 0.90f, 0.98f)), tile.description.c_str());
+                              ImGui::GetColorU32(ImVec4(0.02f, 0.03f, 0.05f, 0.80f)), tile.description.data());
+            drawList->AddText(descriptionPos, ImGui::GetColorU32(ImVec4(0.82f, 0.86f, 0.90f, 0.98f)), tile.description.data());
         }
 
         ImGui::PopID();
@@ -315,7 +319,7 @@ void IOPanel::draw(float scale, Vec2u windowSize, Simulation& simulation, FileDi
             if (!pendingDeleteError_.empty()) {
                 ImGui::Spacing();
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.48f, 0.48f, 1.0f));
-                ImGui::TextWrapped("%s", pendingDeleteError_.c_str());
+                ImGui::TextWrapped("%s", pendingDeleteError_.data());
                 ImGui::PopStyleColor();
             }
 

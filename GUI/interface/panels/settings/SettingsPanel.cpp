@@ -248,7 +248,7 @@ void SettingsPanel::draw(float uiScale, Vec2u windowSize, Simulation& simulation
 
         ImGui::TextUnformatted("Папка сохранения видео");
         std::array<char, 512> captureDirBuffer{};
-        std::snprintf(captureDirBuffer.data(), captureDirBuffer.size(), "%s", captureDir.c_str());
+        std::snprintf(captureDirBuffer.data(), captureDirBuffer.size(), "%s", captureDir.data());
         const float browseButtonWidth = ImGui::GetFrameHeight();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseButtonWidth - ImGui::GetStyle().ItemSpacing.x);
         ImGui::InputText("##capture_dir", captureDirBuffer.data(), captureDirBuffer.size(), ImGuiInputTextFlags_ReadOnly);

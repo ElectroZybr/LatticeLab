@@ -42,6 +42,7 @@ private:
     void clearPendingDeleteState();
     void removeSceneTileByPath(std::string_view path);
 
+    uint8_t pendingReloadFrames_ = 0;
     bool visible_ = false;
     bool sceneCatalogLoaded_ = false;
     float animProgress_ = 0.f;

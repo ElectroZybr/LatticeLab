@@ -1,5 +1,6 @@
 #include "AppStateIO.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cstdint>
 #include <fstream>
@@ -11,11 +12,12 @@
 #include <SFML/Graphics/Image.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Graphics/Texture.hpp>
+#include <bgfx/bgfx.h>
 
 #include "Engine/io/SimulationStateIO.h"
-#include "Engine/math/Vec2.h"
 #include "GUI/interface/UiState.h"
 #include "Rendering/BaseRenderer.h"
+#include "Rendering/BgfxContext.h"
 
 namespace {
     constexpr const char* kBlockIndent = "  ";
@@ -64,24 +66,13 @@ namespace {
         return encoded;
     }
 
-    sf::Image capturePreviewImage(const sf::RenderWindow& window, const PreviewFrameRect& previewRect) {
-        sf::Texture texture;
-        const Vec2u windowSize(window.getSize());
-        if (windowSize.x == 0 || windowSize.y == 0) {
-            return {};
-        }
-        if (!texture.resize(windowSize)) {
+    ImageData capturePreviewImage(uint32_t srcWidth, uint32_t srcHeight, const void* rawData, uint32_t pitch, bool yflip,
+                                  const PreviewFrameRect& previewRect) {
+        if (srcWidth == 0 || srcHeight == 0 || rawData == nullptr) {
             return {};
         }
 
-        texture.update(window);
-        const sf::Image fullImage = texture.copyToImage();
-
-        const unsigned srcWidth = fullImage.getSize().x;
-        const unsigned srcHeight = fullImage.getSize().y;
-        if (srcWidth == 0 || srcHeight == 0) {
-            return {};
-        }
+        const std::uint8_t* src = static_cast<const std::uint8_t*>(rawData);
 
         const unsigned cropX =
             std::min(srcWidth - 1, static_cast<unsigned>(std::clamp(previewRect.x, 0.0f, static_cast<float>(srcWidth - 1))));
@@ -97,55 +88,71 @@ namespace {
         const unsigned previewWidth = std::max(1u, static_cast<unsigned>(cropWidth * scale));
         const unsigned previewHeight = std::max(1u, static_cast<unsigned>(cropHeight * scale));
 
-        sf::Image preview;
-        preview.resize({previewWidth, previewHeight});
+        ImageData result;
+        result.width = previewWidth;
+        result.height = previewHeight;
+        result.pixels.resize(static_cast<size_t>(previewWidth) * previewHeight * 4);
+
         for (unsigned y = 0; y < previewHeight; ++y) {
             for (unsigned x = 0; x < previewWidth; ++x) {
-                const unsigned srcSampleX =
+                unsigned srcSampleX =
                     cropX + std::min(cropWidth - 1, static_cast<unsigned>((static_cast<std::uint64_t>(x) * cropWidth) / previewWidth));
-                const unsigned srcSampleY =
+                unsigned srcSampleY =
                     cropY + std::min(cropHeight - 1, static_cast<unsigned>((static_cast<std::uint64_t>(y) * cropHeight) / previewHeight));
-                preview.setPixel({x, y}, fullImage.getPixel({srcSampleX, srcSampleY}));
+
+                unsigned flippedY = yflip ? (srcHeight - 1 - srcSampleY) : srcSampleY;
+
+                const std::uint8_t* srcPixel = src + flippedY * pitch + srcSampleX * 4;
+                std::uint8_t* dstPixel = result.pixels.data() + (y * previewWidth + x) * 4;
+
+                dstPixel[0] = srcPixel[0];
+                dstPixel[1] = srcPixel[1];
+                dstPixel[2] = srcPixel[2];
+                dstPixel[3] = srcPixel[3];
             }
         }
-
-        return preview;
+        return result;
     }
 
-    void saveImageState(const sf::RenderWindow& window, const PreviewFrameRect& previewRect, std::string_view path) {
-        const sf::Image preview = capturePreviewImage(window, previewRect);
-        const Vec2u size(preview.getSize());
-        if (size.x == 0 || size.y == 0) {
-            return;
-        }
+    void saveImageState(const PreviewFrameRect& previewRect, std::string_view path) {
+        BgfxCallback& bgfxCallback = BgfxContext::instance().callback();
 
-        const std::uint8_t* pixels = preview.getPixelsPtr();
-        if (pixels == nullptr) {
-            return;
-        }
+        bgfxCallback.addScreenShotCallback(path, [&bgfxCallback, path, previewRect, filePath = std::string(path)](
+                                                     uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip) {
+            bgfxCallback.removeScreenShotCallback(path);
 
-        const size_t byteCount = static_cast<size_t>(size.x) * static_cast<size_t>(size.y) * 4;
-        const std::vector<std::uint8_t> bytes(pixels, pixels + byteCount);
-        const std::string encoded = encodeBase64(bytes);
+            const uint32_t pitch = width * 4;
+            const ImageData preview = capturePreviewImage(width, height, data, pitch, yflip, previewRect);
 
-        std::ofstream file(path.data(), std::ios::app);
-        if (!file.is_open()) {
-            return;
-        }
+            if (preview.width == 0 || preview.height == 0) {
+                return;
+            }
 
-        file << "\n[image]\n";
-        file << kBlockIndent << "encoding base64\n";
-        file << kBlockIndent << "format rgba8\n";
-        file << kBlockIndent << "width " << size.x << "\n";
-        file << kBlockIndent << "height " << size.y << "\n";
-        file << kBlockIndent << "data_begin\n";
+            const size_t byteCount = static_cast<size_t>(preview.width) * preview.height * 4;
+            const std::vector<std::uint8_t> bytes(preview.pixels.data(), preview.pixels.data() + byteCount);
+            const std::string encoded = encodeBase64(bytes);
 
-        constexpr size_t lineWidth = 120;
-        for (size_t offset = 0; offset < encoded.size(); offset += lineWidth) {
-            file << kBlockIndent << encoded.substr(offset, lineWidth) << "\n";
-        }
+            std::ofstream file(filePath, std::ios::app);
+            if (!file.is_open()) {
+                return;
+            }
 
-        file << kBlockIndent << "data_end\n";
+            file << "\n[image]\n";
+            file << kBlockIndent << "encoding base64\n";
+            file << kBlockIndent << "format rgba8\n";
+            file << kBlockIndent << "width " << preview.width << "\n";
+            file << kBlockIndent << "height " << preview.height << "\n";
+            file << kBlockIndent << "data_begin\n";
+
+            constexpr size_t lineWidth = 120;
+            for (size_t offset = 0; offset < encoded.size(); offset += lineWidth) {
+                file << kBlockIndent << encoded.substr(offset, lineWidth) << "\n";
+            }
+
+            file << kBlockIndent << "data_end\n";
+        });
+
+        bgfx::requestScreenShot(BGFX_INVALID_HANDLE, path.data());
     }
 
     void saveRendererState(const IRenderer& renderer, std::string_view path) {
@@ -220,7 +227,7 @@ void AppStateIO::save(const sf::RenderWindow& window, const PreviewFrameRect& pr
                       const IRenderer& renderer, std::string_view path) {
     SimulationStateIO::save(simulation, path);
     saveRendererState(renderer, path);
-    saveImageState(window, previewRect, path);
+    saveImageState(previewRect, path);
 }
 
 void AppStateIO::load(Simulation& simulation, IRenderer& renderer, std::string_view path) {
