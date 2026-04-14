@@ -1,5 +1,6 @@
 #include "Keyboard.h"
 
+#include <GLFW/glfw3.h>
 #include <imgui.h>
 
 #include "App/AppSignals.h"
@@ -7,65 +8,81 @@
 
 std::unique_ptr<IRenderer>* Keyboard::render = nullptr;
 Interface* Keyboard::appInterface = nullptr;
+GLFWwindow* Keyboard::window = nullptr;
+GLFWkeyfun Keyboard::imgui_key_callback = nullptr;
 
-void Keyboard::init(std::unique_ptr<IRenderer>& r, Interface& appInterface) {
+void Keyboard::init(GLFWwindow* window, std::unique_ptr<IRenderer>& r, Interface& appInterface) {
     render = &r;
     Keyboard::appInterface = &appInterface;
+    Keyboard::window = window;
+
+    imgui_key_callback = glfwSetKeyCallback(window, Keyboard::onKey);
 }
 
-void Keyboard::onEvent(const sf::Event& event) {
-    if (const auto* e = event.getIf<sf::Event::KeyPressed>()) {
-        if (appInterface == nullptr) {
-            return;
-        }
+bool Keyboard::isPressed(int key) {
+    if (!window) {
+        return false;
+    }
+    return glfwGetKey(window, key) == GLFW_PRESS;
+}
 
-        if (ImGui::GetIO().WantTextInput) {
-            return;
-        }
+void Keyboard::onKey(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if (imgui_key_callback) {
+        imgui_key_callback(window, key, scancode, action, mods);
+    }
 
-        UiState& uiState = appInterface->state();
-        const bool ctrlHeld =
-            sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
+    if (action != GLFW_PRESS) {
+        return;
+    }
+    if (appInterface == nullptr) {
+        return;
+    }
+    if (ImGui::GetIO().WantTextInput) {
+        return;
+    }
 
-        if (ctrlHeld && e->code == sf::Keyboard::Key::S) {
-            appInterface->fileDialog.openSave();
-            return;
-        }
-        if (ctrlHeld && e->code == sf::Keyboard::Key::O) {
-            appInterface->fileDialog.openLoad();
-            return;
-        }
+    UiState& uiState = appInterface->state();
+    const bool ctrlHeld = (mods & GLFW_MOD_CONTROL) != 0;
 
-        if (e->code == sf::Keyboard::Key::P) {
-            appInterface->debugPanel.toggle();
-        }
-        else if (e->code == sf::Keyboard::Key::Escape) {
-            AppSignals::UI::ExitApplication.emit();
-        }
-        else if (e->code == sf::Keyboard::Key::Space) {
-            uiState.pause = !uiState.pause;
-        }
-        else if (e->code == sf::Keyboard::Key::Right && uiState.pause) {
-            AppSignals::Keyboard::StepPhysics.emit();
-        }
+    if (ctrlHeld && key == GLFW_KEY_S) {
+        appInterface->fileDialog.openSave();
+        return;
+    }
+    if (ctrlHeld && key == GLFW_KEY_O) {
+        appInterface->fileDialog.openLoad();
+        return;
+    }
+
+    if (key == GLFW_KEY_P) {
+        appInterface->debugPanel.toggle();
+    }
+    else if (key == GLFW_KEY_ESCAPE) {
+        AppSignals::UI::ExitApplication.emit();
+    }
+    else if (key == GLFW_KEY_SPACE) {
+        uiState.pause = !uiState.pause;
+    }
+    else if (key == GLFW_KEY_RIGHT && uiState.pause) {
+        AppSignals::Keyboard::StepPhysics.emit();
     }
 }
 
 void Keyboard::onFrame(float deltaTime) {
     std::unique_ptr<IRenderer>& rend = *render;
     constexpr float kFreeMoveSpeedScale = 0.8f;
+
     if (rend->camera.mode == Camera::Mode::Orbit) {
         float rotSpeed = 1.5f * deltaTime;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) {
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
             rend->camera.elevation = std::clamp(rend->camera.elevation + rotSpeed, -1.5f, 1.5f);
         }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) {
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
             rend->camera.elevation = std::clamp(rend->camera.elevation - rotSpeed, -1.5f, 1.5f);
         }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) {
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
             rend->camera.azimuth -= rotSpeed;
         }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
             rend->camera.azimuth += rotSpeed;
         }
     }
@@ -75,37 +92,37 @@ void Keyboard::onFrame(float deltaTime) {
         const glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.f, 1.f, 0.f)));
         const float s = rend->camera.speed * deltaTime * kFreeMoveSpeedScale;
 
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) {
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
             rend->camera.move3D(Vec3f(forward.x, forward.y, forward.z) * s);
         }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) {
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
             rend->camera.move3D(Vec3f(-forward.x, -forward.y, -forward.z) * s);
         }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) {
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
             rend->camera.move3D(Vec3f(-right.x, -right.y, -right.z) * s);
         }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
             rend->camera.move3D(Vec3f(right.x, right.y, right.z) * s);
         }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q)) {
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
             rend->camera.move3D(Vec3f(0.f, -s, 0.f));
         }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E)) {
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
             rend->camera.move3D(Vec3f(0.f, s, 0.f));
         }
     }
     else if (rend->camera.mode == Camera::Mode::Mode2D) {
         float deltaSpeed = rend->camera.speed * deltaTime;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) {
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
             rend->camera.move({0, deltaSpeed});
         }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) {
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
             rend->camera.move({0, -deltaSpeed});
         }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) {
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
             rend->camera.move({-deltaSpeed, 0});
         }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
             rend->camera.move({deltaSpeed, 0});
         }
     }

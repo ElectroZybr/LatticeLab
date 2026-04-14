@@ -1,17 +1,18 @@
-#include <SFML/Graphics/RenderWindow.hpp>
-#include <bgfx/bgfx.h>
+#include <stdexcept>
 
-#if defined(SFML_SYSTEM_LINUX)
-#include <GL/glx.h>
-#include <X11/Xlib.h>
-#elif defined(SFML_SYSTEM_WINDOWS)
-// clang-format off
-#include <windows.h>
-#include <GL/gl.h>
-// clang-format on
-#elif defined(SFML_SYSTEM_MACOS)
-#include <OpenGL/OpenGL.h>
+#if defined(__linux__)
+#define GLFW_EXPOSE_NATIVE_X11
+#define GLFW_EXPOSE_NATIVE_GLX
+#elif defined(_WIN32)
+#define GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_WGL
+#elif defined(__APPLE__)
+#define GLFW_EXPOSE_NATIVE_COCOA
+#define GLFW_EXPOSE_NATIVE_NSGL
 #endif
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+#include <bgfx/bgfx.h>
 
 #include "Rendering/BgfxCallback.h"
 
@@ -22,7 +23,7 @@ public:
         return ctx;
     }
 
-    void init(sf::WindowHandle nativeHandle, uint32_t width, uint32_t height) {
+    void init(GLFWwindow* window, uint32_t width, uint32_t height) {
         if (initialized) {
             return;
         }
@@ -30,49 +31,24 @@ public:
         bgfx::renderFrame();
 
         bgfx::Init init;
-        init.type = bgfx::RendererType::OpenGL;
-#if defined(SFML_SYSTEM_LINUX)
-        init.platformData.ndt = XOpenDisplay(nullptr);
-        init.platformData.context = reinterpret_cast<void*>(glXGetCurrentContext());
-#elif defined(SFML_SYSTEM_WINDOWS)
-        init.platformData.context = reinterpret_cast<void*>(wglGetCurrentContext());
-#elif defined(SFML_SYSTEM_MACOS)
-        init.platformData.context = reinterpret_cast<void*>(CGLGetCurrentContext());
+        init.type = bgfx::RendererType::Count;
+
+#if defined(__linux__)
+        init.platformData.ndt = glfwGetX11Display();
 #endif
-        init.platformData.nwh = reinterpret_cast<void*>(nativeHandle);
+        if (window != nullptr) {
+#if defined(__linux__)
+            init.platformData.nwh = reinterpret_cast<void*>(static_cast<uintptr_t>(glfwGetX11Window(window)));
+#elif defined(_WIN32)
+            init.platformData.nwh = glfwGetWin32Window(window);
+#elif defined(__APPLE__)
+            init.platformData.nwh = glfwGetCocoaWindow(window);
+#endif
+        }
+
         init.resolution.width = width;
         init.resolution.height = height;
         init.resolution.reset = BGFX_RESET_NONE;
-
-        init.callback = &callback_;
-
-        if (!bgfx::init(init)) {
-            throw std::runtime_error("bgfx::init failed");
-        }
-        initialized = true;
-    }
-
-    void init(uint32_t width, uint32_t height) {
-        if (initialized) {
-            return;
-        }
-
-        bgfx::renderFrame();
-
-        bgfx::Init init;
-        init.type = bgfx::RendererType::OpenGL;
-#if defined(SFML_SYSTEM_LINUX)
-        init.platformData.ndt = XOpenDisplay(nullptr);
-        init.platformData.context = reinterpret_cast<void*>(glXGetCurrentContext());
-#elif defined(SFML_SYSTEM_WINDOWS)
-        init.platformData.context = reinterpret_cast<void*>(wglGetCurrentContext());
-#elif defined(SFML_SYSTEM_MACOS)
-        init.platformData.context = reinterpret_cast<void*>(CGLGetCurrentContext());
-#endif
-        init.resolution.width = width;
-        init.resolution.height = height;
-        init.resolution.reset = BGFX_RESET_NONE;
-
         init.callback = &callback_;
 
         if (!bgfx::init(init)) {

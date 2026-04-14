@@ -30,11 +30,14 @@ constexpr int FPS = 60;
 constexpr int LPS = 20;
 
 int Application::run() {
-    auto window = createWindow();
-    if (!window.isOpen()) {
+    GLFWwindow* window = createWindow();
+    if (!window) {
         return EXIT_FAILURE;
     }
-    BgfxContext::instance().init(window.getNativeHandle(), window.getSize().x, window.getSize().y);
+
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    BgfxContext::instance().init(window, width, height);
 
     // инициализация систем
     SimBox box(Vec3f(50, 50, 6));
@@ -47,7 +50,7 @@ int Application::run() {
     if (appInterface.init() != EXIT_SUCCESS) {
         return EXIT_FAILURE;
     }
-    EventManager::init(window, simulation, renderer, appInterface);
+    EventManager::init(window, renderer, appInterface);
     ToolsManager::init(window, simulation, renderer, appInterface);
     const DebugViews debugViews = createDebugViews(appInterface.debugPanel);
 
@@ -80,7 +83,7 @@ int Application::run() {
     constexpr double renderInterval = 1.0 / FPS;
     constexpr double logInterval = 1.0 / LPS;
 
-    while (window.isOpen()) {
+    while (!glfwWindowShouldClose(window)) {
         Profiler::instance().beginFrame();
 
         auto currentTime = Clock::now();
@@ -116,18 +119,18 @@ int Application::run() {
             appInterface.update();
             refreshAtomDebugViews(debugViews, simulation);
 
-            const auto sz = window.getSize();
-
             renderer->drawShot(simulation.atoms(), simulation.bonds(), simulation.box());
-            ToolsManager::pickingSystem->getOverlay().draw(window);
+            ToolsManager::pickingSystem->getOverlay().draw();
             ImGui::Render();
             ImGui_Implbgfx_RenderDrawLists(ImGui::GetDrawData());
 
             // захват кадра для видео
             captureController.onFrameRendered();
 
-            window.display();
             bgfx::frame();
+            if (bgfx::getRendererType() == bgfx::RendererType::OpenGL) {
+                glfwSwapBuffers(window);
+            }
         }
 
         Profiler::instance().endFrame();

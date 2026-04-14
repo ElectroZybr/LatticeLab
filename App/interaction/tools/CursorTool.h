@@ -6,9 +6,9 @@ class CursorTool final : public ITool {
 public:
     explicit CursorTool(ToolContext& context) noexcept;
 
-    void onLeftPressed(Vec2i mousePos) override;
-    void onLeftReleased(Vec2i mousePos) override;
-    void onFrame(Vec2i mousePos, float deltaTime) override;
+    void onLeftPressed(Vec2u mousePos) override;
+    void onLeftReleased(Vec2u mousePos) override;
+    void onFrame(Vec2u mousePos, float deltaTime) override;
     void reset() override;
 
 private:

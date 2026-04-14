@@ -34,8 +34,4 @@ namespace AppSignals {
     namespace Keyboard {
         inline Signals::Signal<void()> StepPhysics;
     }
-
-    namespace Window {
-        inline Signals::Signal<void(Vec2f newSize)> Resize;
-    }
 }

@@ -1,8 +1,7 @@
 #include "interface.h"
 
 #include "imgui_impl_bgfx.h"
-
-#include <SFML/Graphics.hpp>
+#include "imgui_impl_glfw.h"
 
 #include "App/capture/CaptureController.h"
 
@@ -42,7 +41,7 @@ namespace {
         };
     }
 
-    void drawScenePreviewFrame(const sf::RenderWindow& window, float uiScale, UiState& uiState) {
+    void drawScenePreviewFrame(float uiScale, UiState& uiState) {
         ImDrawList* drawList = ImGui::GetBackgroundDrawList();
         const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
         uiState.scenePreviewRect = computeScenePreviewRect(displaySize, uiScale);
@@ -61,8 +60,8 @@ namespace {
     }
 }
 
-Interface::Interface(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r, CaptureController& c)
-    : window_(&w), simulation_(&s), renderer_(&r), captureController_(&c) {}
+Interface::Interface(GLFWwindow* w, Simulation& s, std::unique_ptr<IRenderer>& r, CaptureController& c)
+    : window_(w), simulation_(&s), renderer_(&r), captureController_(&c) {}
 
 int Interface::init() {
     ImGui::CreateContext();
@@ -72,6 +71,7 @@ int Interface::init() {
     if (!fontManager.load(styleManager.getScale())) {
         return EXIT_FAILURE;
     }
+    ImGui_ImplGlfw_InitForOther(window_, true);
     ImGui_Implbgfx_Init(255);
     ImGui_Implbgfx_CreateDeviceObjects();
 
@@ -80,26 +80,31 @@ int Interface::init() {
 
 void Interface::shutdown() {
     ImGui_Implbgfx_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 }
 
 int Interface::update() {
     ImGui_Implbgfx_NewFrame();
-
-    ImGuiIO& io = ImGui::GetIO();
-    const sf::Time delta = clock_.restart();
-    io.DeltaTime = delta.asSeconds();
-    io.DisplaySize = ImVec2(window_->getSize().x, window_->getSize().y);
-
+    ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
+    ImGuiIO& io = ImGui::GetIO();
+    const auto currentTime = std::chrono::high_resolution_clock::now();
+    const float deltaTime = std::chrono::duration<float>(currentTime - lastTime_).count();
+    io.DeltaTime = deltaTime;
+    lastTime_ = currentTime;
+
+    int width, height;
+    glfwGetFramebufferSize(window_, &width, &height);
+
     ImGui::PushFont(fontManager.main);
-    toolsPanel.draw(styleManager.getScale(), *window_, debugPanel, settingsPanel, ioPanel);
-    periodicPanel.draw(styleManager.getScale(), Vec2u(window_->getSize()), uiState_.selectedAtom);
-    simControlPanel.draw(styleManager.getScale(), Vec2u(window_->getSize()), uiState_.pause, uiState_.simulationSpeed, uiState_.simStep,
-                         delta.asSeconds());
-    sideToolsPanel.draw(styleManager.getScale(), Vec2u(window_->getSize()), fontManager.icons, fontManager.dialog);
-    statsPanel.draw(styleManager.getScale(), Vec2u(window_->getSize()));
+    toolsPanel.draw(styleManager.getScale(), debugPanel, settingsPanel, ioPanel);
+    periodicPanel.draw(styleManager.getScale(), Vec2u(width, height), uiState_.selectedAtom);
+    simControlPanel.draw(styleManager.getScale(), Vec2u(width, height), uiState_.pause, uiState_.simulationSpeed, uiState_.simStep,
+                         deltaTime);
+    sideToolsPanel.draw(styleManager.getScale(), Vec2u(width, height), fontManager.icons, fontManager.dialog);
+    statsPanel.draw(styleManager.getScale(), Vec2u(width, height));
     if (uiState_.drawToolTrip) {
         const ImVec2 mouse = ImGui::GetMousePos();
         ImGui::SetNextWindowPos(ImVec2(mouse.x + 3 * styleManager.getScale(), mouse.y + 3 * styleManager.getScale()));
@@ -117,14 +122,14 @@ int Interface::update() {
 
     ImGui::PushFont(fontManager.dialog);
     fileDialog.draw(styleManager.getScale());
-    debugPanel.draw(styleManager.getScale(), Vec2u(window_->getSize()));
-    settingsPanel.draw(styleManager.getScale(), Vec2u(window_->getSize()), *simulation_, *renderer_, *captureController_, fileDialog);
-    ioPanel.draw(styleManager.getScale(), Vec2u(window_->getSize()), *simulation_, fileDialog, uiState_);
+    debugPanel.draw(styleManager.getScale(), Vec2u(width, height));
+    settingsPanel.draw(styleManager.getScale(), Vec2u(width, height), *simulation_, *renderer_, *captureController_, fileDialog);
+    ioPanel.draw(styleManager.getScale(), Vec2u(width, height), *simulation_, fileDialog, uiState_);
     ImGui::PopFont();
 
     uiState_.scenePreviewMode = fileDialog.isSaveDialogOpen();
     if (uiState_.scenePreviewMode) {
-        drawScenePreviewFrame(*window_, styleManager.getScale(), uiState_);
+        drawScenePreviewFrame(styleManager.getScale(), uiState_);
     }
     else {
         uiState_.scenePreviewRect = {};

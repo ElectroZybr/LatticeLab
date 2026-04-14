@@ -39,8 +39,8 @@ public:
     void orbitDrag(Vec2i delta);
     void freeDrag(Vec2i delta); // для Free mode
 
-    Vec3f screenToWorld(Vec2i screenPos) const;
-    Vec2i worldToScreen(Vec3f worldPos) const;
+    Vec3f screenToWorld(Vec2u screenPos) const;
+    Vec2u worldToScreen(Vec3f worldPos) const;
 
     void zoomAt(float factor, Vec2f mousePos);
     float getZoom() const { return zoom; }
@@ -64,7 +64,7 @@ private:
     bool isDragging;
     Vec2f lastMousePos;
 
-    Vec2i dragStartPixelPos;
+    Vec2u dragStartPixelPos;
     Vec2f dragStartCameraPos;
 
     Mode mode = Mode::Mode2D;

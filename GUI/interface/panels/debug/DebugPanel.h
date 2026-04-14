@@ -1,8 +1,7 @@
 #pragma once
 #include <deque>
 
-#include <SFML/Graphics.hpp>
-
+#include "Engine/math/Vec2.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
 
 class DebugPanel {

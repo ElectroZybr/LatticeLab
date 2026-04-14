@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include <SFML/Graphics.hpp>
 #include <imgui.h>
 
 #include "App/AppPaths.h"

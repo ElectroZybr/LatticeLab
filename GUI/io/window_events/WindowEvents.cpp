@@ -2,32 +2,40 @@
 
 #include "imgui_impl_bgfx.h"
 
-#include "App/AppSignals.h"
 #include "GUI/interface/interface.h"
+#include "Rendering/BaseRenderer.h"
 
-sf::RenderWindow* WindowEvents::window = nullptr;
+GLFWwindow* WindowEvents::window = nullptr;
+std::unique_ptr<IRenderer>* WindowEvents::renderer = nullptr;
 Interface* WindowEvents::appInterface = nullptr;
 
-void WindowEvents::init(sf::RenderWindow& w, Interface& appInterface) {
-    window = &w;
+void WindowEvents::init(GLFWwindow* w, std::unique_ptr<IRenderer>& r, Interface& appInterface) {
+    window = w;
+    renderer = &r;
     WindowEvents::appInterface = &appInterface;
+
+    glfwSetWindowCloseCallback(window, windowCloseCallback);
+    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 }
 
-void WindowEvents::onEvent(const sf::Event& event) {
-    if (event.is<sf::Event::Closed>()) {
-        window->close();
+void WindowEvents::windowCloseCallback(GLFWwindow* window) { glfwSetWindowShouldClose(window, GLFW_TRUE); }
+
+void WindowEvents::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
+    if (width <= 0 || height <= 0) {
+        return;
     }
 
-    if (const auto* e = event.getIf<sf::Event::Resized>()) {
-        AppSignals::Window::Resize.emit(Vec2f(e->size));
+    (*renderer)->camera.setScreenSize(Vec2f(width, height));
+    bgfx::reset(static_cast<uint32_t>(width), static_cast<uint32_t>(height), BGFX_RESET_NONE);
 
-        if (appInterface == nullptr) {
-            return;
-        }
-        appInterface->styleManager.onResize(Vec2u(e->size));
-        if (appInterface->fontManager.load(appInterface->styleManager.getScale())) {
-            ImGui_Implbgfx_InvalidateDeviceObjects();
-            ImGui_Implbgfx_CreateDeviceObjects();
-        }
+    if (appInterface == nullptr) {
+        return;
+    }
+
+    appInterface->styleManager.onResize(Vec2u(width, height));
+
+    if (appInterface->fontManager.load(appInterface->styleManager.getScale())) {
+        ImGui_Implbgfx_InvalidateDeviceObjects();
+        ImGui_Implbgfx_CreateDeviceObjects();
     }
 }

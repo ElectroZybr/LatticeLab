@@ -9,9 +9,6 @@
 #include <string_view>
 #include <vector>
 
-#include <SFML/Graphics/Image.hpp>
-#include <SFML/Graphics/RenderWindow.hpp>
-#include <SFML/Graphics/Texture.hpp>
 #include <bgfx/bgfx.h>
 
 #include "Engine/io/SimulationStateIO.h"
@@ -223,8 +220,7 @@ namespace {
     }
 }
 
-void AppStateIO::save(const sf::RenderWindow& window, const PreviewFrameRect& previewRect, const Simulation& simulation,
-                      const IRenderer& renderer, std::string_view path) {
+void AppStateIO::save(const PreviewFrameRect& previewRect, const Simulation& simulation, const IRenderer& renderer, std::string_view path) {
     SimulationStateIO::save(simulation, path);
     saveRendererState(renderer, path);
     saveImageState(previewRect, path);

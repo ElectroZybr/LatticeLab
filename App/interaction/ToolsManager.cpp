@@ -29,7 +29,7 @@ namespace {
     }
 }
 
-sf::RenderWindow* ToolsManager::window = nullptr;
+GLFWwindow* ToolsManager::window = nullptr;
 std::unique_ptr<IRenderer>* ToolsManager::renderer = nullptr;
 PickingSystem* ToolsManager::pickingSystem = nullptr;
 Simulation* ToolsManager::simulation = nullptr;
@@ -38,12 +38,12 @@ SideToolsPanel* ToolsManager::sideToolsPanel = nullptr;
 ToolContext ToolsManager::toolContext = {};
 std::array<std::unique_ptr<ITool>, ToolsManager::kModeCount> ToolsManager::toolInstances = {};
 ToolsManager::Mode ToolsManager::syncedMode = ToolsManager::Mode::Cursor;
-Vec2i ToolsManager::startMousePos = {};
-Vec2i ToolsManager::lastSceneMousePos = {};
+Vec2u ToolsManager::startMousePos = {};
+Vec2u ToolsManager::lastSceneMousePos = {};
 bool ToolsManager::isInteracting = false;
 
-void ToolsManager::init(sf::RenderWindow& w, Simulation& sim, std::unique_ptr<IRenderer>& rend, Interface& appInterface) {
-    window = &w;
+void ToolsManager::init(GLFWwindow* w, Simulation& sim, std::unique_ptr<IRenderer>& rend, Interface& appInterface) {
+    window = w;
     simulation = &sim;
     renderer = &rend;
     uiState = &appInterface.state();
@@ -52,7 +52,7 @@ void ToolsManager::init(sf::RenderWindow& w, Simulation& sim, std::unique_ptr<IR
     delete pickingSystem;
     pickingSystem = new PickingSystem(simulation->atoms(), simulation->box(), *renderer);
 
-    toolContext.window = &w;
+    toolContext.window = w;
     toolContext.simulation = &sim;
     toolContext.renderer = &rend;
     toolContext.pickingSystem = pickingSystem;
@@ -94,7 +94,7 @@ void ToolsManager::resetInteractionState() {
 
 bool ToolsManager::isInteractingNow() noexcept { return isInteracting; }
 
-void ToolsManager::onLeftPressed(Vec2i mousePos) {
+void ToolsManager::onLeftPressed(Vec2u mousePos) {
     if ((uiState != nullptr && uiState->cursorHovered) || !renderer || !renderer->get() || !pickingSystem) {
         return;
     }
@@ -109,14 +109,14 @@ void ToolsManager::onLeftPressed(Vec2i mousePos) {
     }
 }
 
-void ToolsManager::onLeftReleased(Vec2i mousePos) {
+void ToolsManager::onLeftReleased(Vec2u mousePos) {
     syncToolMode();
     if (!isInteracting) {
         return;
     }
 
     const bool cursorHovered = uiState != nullptr && uiState->cursorHovered;
-    const Vec2i releasePos = cursorHovered ? lastSceneMousePos : mousePos;
+    const Vec2u releasePos = cursorHovered ? lastSceneMousePos : mousePos;
 
     if (ITool* tool = activeTool(); tool != nullptr) {
         tool->onLeftReleased(releasePos);
@@ -124,7 +124,7 @@ void ToolsManager::onLeftReleased(Vec2i mousePos) {
     isInteracting = false;
 }
 
-bool ToolsManager::onRightPressed(Vec2i mousePos) {
+bool ToolsManager::onRightPressed(Vec2u mousePos) {
     if (uiState != nullptr && uiState->cursorHovered) {
         return false;
     }
@@ -136,7 +136,7 @@ bool ToolsManager::onRightPressed(Vec2i mousePos) {
     return false;
 }
 
-void ToolsManager::onFrame(Vec2i mousePos, float deltaTime) {
+void ToolsManager::onFrame(Vec2u mousePos, float deltaTime) {
     if (!renderer || !renderer->get() || !simulation || !pickingSystem) {
         return;
     }
@@ -160,9 +160,9 @@ void ToolsManager::onFrame(Vec2i mousePos, float deltaTime) {
     }
 }
 
-Vec3f ToolsManager::screenToWorld(Vec2i mousePos) { return (*renderer)->camera.screenToWorld(mousePos); }
+Vec3f ToolsManager::screenToWorld(Vec2u mousePos) { return (*renderer)->camera.screenToWorld(mousePos); }
 
-Vec2i ToolsManager::worldToScreen(Vec3f pos) { return (*renderer)->camera.worldToScreen(pos); }
+Vec2u ToolsManager::worldToScreen(Vec3f pos) { return (*renderer)->camera.worldToScreen(pos); }
 
 ToolsManager::Mode ToolsManager::currentMode() {
     if (sideToolsPanel == nullptr) {

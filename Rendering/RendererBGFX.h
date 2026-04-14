@@ -3,7 +3,7 @@
 #include <string_view>
 #include <vector>
 
-#include <SFML/Graphics.hpp>
+#include <GLFW/glfw3.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #include <glm/glm.hpp>
@@ -13,7 +13,7 @@
 
 class RendererBGFX : public IRenderer {
 public:
-    RendererBGFX(sf::RenderTarget& t, SimBox& simbox);
+    RendererBGFX(GLFWwindow* window, SimBox& simbox);
     ~RendererBGFX() override;
 
     void drawShot(const AtomStorage& atoms, const Bond::List& bonds, const SimBox& box) override;
@@ -25,7 +25,7 @@ protected:
     virtual glm::vec3 getLightDir() = 0;
     virtual bool useLighting() = 0;
 
-    sf::RenderTarget& target;
+    GLFWwindow* window;
     glm::mat4 projection{1.f};
     glm::mat4 view{1.f};
 

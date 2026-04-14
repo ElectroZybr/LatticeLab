@@ -1,14 +1,22 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+#include <memory>
+
+#include <GLFW/glfw3.h>
+
+class IRenderer;
+class Interface;
 
 class WindowEvents {
     friend class EventManager;
 
 public:
-    static void init(sf::RenderWindow& w, class Interface& appInterface);
-    static void onEvent(const sf::Event& event);
+    static void init(GLFWwindow* w, std::unique_ptr<IRenderer>& renderer, Interface& appInterface);
+
+    static void windowCloseCallback(GLFWwindow* window);
+    static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 
 private:
-    static sf::RenderWindow* window;
-    static class Interface* appInterface;
+    static GLFWwindow* window;
+    static std::unique_ptr<IRenderer>* renderer;
+    static Interface* appInterface;
 };

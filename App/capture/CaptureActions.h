@@ -4,10 +4,6 @@
 
 class CaptureController;
 
-namespace sf {
-    class RenderWindow;
-}
-
 namespace CaptureActions {
     class Handler : public Signals::Trackable {
     public:

@@ -1,24 +1,23 @@
 include(FetchContent)
 
 unset(IMGUI_INCLUDE_DIR CACHE)
-unset(IMGUI_SFML_CONFIG_DIR CACHE)
 unset(imgui_SOURCE_DIR CACHE)
 unset(imgui_BINARY_DIR CACHE)
 
-# --- Настройка SFML ---
+# --- Настройка GLFW ---
 FetchContent_Declare(
-    sfml
-    GIT_REPOSITORY https://github.com/SFML/SFML.git
-    GIT_TAG        3.0.2
+    glfw
+    GIT_REPOSITORY https://github.com/glfw/glfw.git
+    GIT_TAG        3.4
     GIT_SHALLOW    ON
 )
-set(SFML_BUILD_NETWORK OFF CACHE BOOL "" FORCE)
-set(SFML_BUILD_AUDIO OFF CACHE BOOL "" FORCE)
-set(SFML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(SFML_BUILD_DOC OFF CACHE BOOL "" FORCE)
-set(SFML_INSTALL_PKGCONFIG_FILES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_DOCS     OFF CACHE BOOL "" FORCE)
+set(GLFW_INSTALL        OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_WAYLAND  OFF CACHE BOOL "" FORCE)
 
-FetchContent_MakeAvailable(sfml)
+FetchContent_MakeAvailable(glfw)
 
 # --- Настройка ImGui ---
 FetchContent_Declare(
@@ -33,6 +32,7 @@ add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
     ${CMAKE_SOURCE_DIR}/GUI/imgui_bgfx/imgui_impl_bgfx.cpp
 )
 target_include_directories(imgui PUBLIC
@@ -42,7 +42,7 @@ target_include_directories(imgui PUBLIC
     ${bgfx_cmake_SOURCE_DIR}/bgfx/examples/common/imgui
     ${bgfx_cmake_SOURCE_DIR}/bx/include
 )
-target_link_libraries(imgui PUBLIC bgfx bx)
+target_link_libraries(imgui PUBLIC bgfx bx glfw)
 
 # --- Настройка ImGuiFileDialog ---
 FetchContent_Declare(

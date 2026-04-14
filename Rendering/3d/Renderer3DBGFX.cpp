@@ -4,9 +4,7 @@
 
 #include "generated/shaders/shader_registry.h"
 
-Renderer3DBGFX::Renderer3DBGFX(sf::RenderTarget& t, SimBox& simBox) : RendererBGFX(t, simBox) {
-    camera.setMode(Camera::Mode::Orbit);
-
+Renderer3DBGFX::Renderer3DBGFX(GLFWwindow* window, SimBox& simBox) : RendererBGFX(window, simBox) {
     atomProgram = loadEmbeddedProgram(s_allShaders, "atom3d");
     bondProgram = loadEmbeddedProgram(s_allShaders, "bond");
     boxProgram = loadEmbeddedProgram(s_allShaders, "box");
@@ -14,12 +12,14 @@ Renderer3DBGFX::Renderer3DBGFX(sf::RenderTarget& t, SimBox& simBox) : RendererBG
 
     camera.freePosition = simBox.size / 2.f;
     camera.freePosition.z = -200.f;
+    camera.setMode(Camera::Mode::Orbit);
     camera.setZoom(std::max({simBox.size.x, simBox.size.y, simBox.size.z}) * 0.02);
 }
 
 void Renderer3DBGFX::updateMatrices() {
-    const auto size = target.getSize();
-    const float aspect = static_cast<float>(size.x) / static_cast<float>(size.y);
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    const float aspect = static_cast<float>(width) / static_cast<float>(height);
 
     projection = glm::perspective(glm::radians(45.f), aspect, 0.1f, 1000.f);
     view = camera.getViewMatrix();

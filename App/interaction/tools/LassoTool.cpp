@@ -1,13 +1,12 @@
 #include "LassoTool.h"
 
-#include <SFML/Window/Keyboard.hpp>
-
 #include "App/interaction/picking/PickingSystem.h"
 #include "GUI/interface/UiState.h"
+#include "GUI/io/keyboard/Keyboard.h"
 
 LassoTool::LassoTool(ToolContext& context) noexcept : ITool(context) {}
 
-void LassoTool::onLeftPressed(Vec2i mousePos) {
+void LassoTool::onLeftPressed(Vec2u mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -19,19 +18,18 @@ void LassoTool::onLeftPressed(Vec2i mousePos) {
     overlay.lassoPoints.push_back(mousePos);
 }
 
-void LassoTool::onLeftReleased(Vec2i mousePos) {
+void LassoTool::onLeftReleased(Vec2u mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
     }
 
-    const bool cumulative =
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
+    const bool cumulative = Keyboard::isPressed(GLFW_KEY_LEFT_CONTROL) || Keyboard::isPressed(GLFW_KEY_RIGHT_CONTROL);
 
     auto& overlay = ctx.pickingSystem->getOverlay();
     if (overlay.lassoVisible) {
         if (overlay.lassoPoints.empty() || overlay.lassoPoints.back() != mousePos) {
-            overlay.lassoPoints.push_back(mousePos);
+            overlay.lassoPoints.emplace_back(mousePos);
         }
         ctx.pickingSystem->processLasso(overlay.lassoPoints, cumulative);
         if (ctx.uiState != nullptr) {
@@ -41,7 +39,7 @@ void LassoTool::onLeftReleased(Vec2i mousePos) {
     overlay.reset();
 }
 
-void LassoTool::onFrame(Vec2i mousePos, float deltaTime) {
+void LassoTool::onFrame(Vec2u mousePos, float deltaTime) {
     (void)deltaTime;
 
     ToolContext& ctx = context();

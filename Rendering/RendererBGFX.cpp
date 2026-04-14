@@ -46,7 +46,7 @@ bgfx::ProgramHandle RendererBGFX::loadEmbeddedProgram(const bgfx::EmbeddedShader
     return bgfx::createProgram(vsh, fsh, true);
 }
 
-RendererBGFX::RendererBGFX(sf::RenderTarget& t, SimBox& simbox) : IRenderer(simbox), target(t) {
+RendererBGFX::RendererBGFX(GLFWwindow* window, SimBox& simbox) : IRenderer(simbox), window(window) {
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x212121ff, 1.0f, 0);
 
     uLightDir = bgfx::createUniform("u_lightDir", bgfx::UniformType::Vec4);
@@ -129,7 +129,7 @@ void RendererBGFX::initBondBuffers() {
 }
 
 void RendererBGFX::initGridBuffers() {
-    constexpr float lines[] = {
+    static constexpr float lines[] = {
         0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1,
         1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1,
     };
@@ -137,16 +137,17 @@ void RendererBGFX::initGridBuffers() {
     bgfx::VertexLayout lineLayout;
     lineLayout.begin().add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float).end();
 
-    gridLineVbh = bgfx::createVertexBuffer(bgfx::copy(lines, sizeof(lines)), lineLayout);
+    gridLineVbh = bgfx::createVertexBuffer(bgfx::makeRef(lines, sizeof(lines)), lineLayout);
 }
 
 // Draw
-
 void RendererBGFX::drawShot(const AtomStorage& atoms, const Bond::List& bonds, const SimBox& box) {
     updateMatrices();
 
-    const auto size = target.getSize();
-    bgfx::setViewRect(0, 0, 0, size.x, size.y);
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    bgfx::setViewRect(0, 0, 0, width, height);
+    bgfx::setViewRect(255, 0, 0, width, height);
     bgfx::setViewTransform(0, &view[0][0], &projection[0][0]);
     bgfx::touch(0);
 

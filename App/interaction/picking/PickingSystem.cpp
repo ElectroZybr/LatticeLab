@@ -14,7 +14,7 @@ void PickingSystem::clearSelection() {
     selectedIndices.clear();
 }
 
-void PickingSystem::processClick(Vec2i screenPos, bool cumulative) {
+void PickingSystem::processClick(Vec2u screenPos, bool cumulative) {
     IRenderer* rend = renderer->get();
 
     AtomHit hit;
@@ -38,7 +38,7 @@ void PickingSystem::processClick(Vec2i screenPos, bool cumulative) {
     }
 }
 
-void PickingSystem::processRect(Vec2i start, Vec2i end, bool cumulative) {
+void PickingSystem::processRect(Vec2u start, Vec2u end, bool cumulative) {
     if (!cumulative) {
         clearSelection();
     }
@@ -46,14 +46,14 @@ void PickingSystem::processRect(Vec2i start, Vec2i end, bool cumulative) {
 
     for (size_t i = 0; i < atomStorage.size(); ++i) {
         const Vec3f worldPos = atomStorage.pos(i);
-        const Vec2i atomScreen = rend->camera.worldToScreen(worldPos);
+        const Vec2u atomScreen = rend->camera.worldToScreen(worldPos);
         if (pointInRect(atomScreen, start, end)) {
             selectedIndices.insert(i);
         }
     }
 }
 
-void PickingSystem::processLasso(std::span<Vec2i> points, bool cumulative) {
+void PickingSystem::processLasso(std::span<Vec2u> points, bool cumulative) {
     if (points.size() < 3) {
         return;
     }
@@ -64,7 +64,7 @@ void PickingSystem::processLasso(std::span<Vec2i> points, bool cumulative) {
 
     for (size_t i = 0; i < atomStorage.size(); ++i) {
         const Vec3f worldPos = atomStorage.pos(i);
-        const Vec2i screenPos = rend->camera.worldToScreen(worldPos);
+        const Vec2u screenPos = rend->camera.worldToScreen(worldPos);
         if (pointInPolygon(screenPos, points)) {
             selectedIndices.insert(i);
         }
@@ -83,7 +83,7 @@ void PickingSystem::handleAtomRemoval(size_t index) {
     }
 }
 
-bool PickingSystem::pickAtom(Vec2i screenPos, float tolerance, AtomHit& hit) const {
+bool PickingSystem::pickAtom(Vec2u screenPos, float tolerance, AtomHit& hit) const {
     IRenderer* rend = renderer->get();
     switch (rend->camera.getMode()) {
     case Camera::Mode::Mode2D:
@@ -95,14 +95,14 @@ bool PickingSystem::pickAtom(Vec2i screenPos, float tolerance, AtomHit& hit) con
     return false;
 }
 
-bool PickingSystem::pickAtom2D(Vec2i screenPos, float tolerance, AtomHit& hit) const {
+bool PickingSystem::pickAtom2D(Vec2u screenPos, float tolerance, AtomHit& hit) const {
     IRenderer* rend = renderer->get();
     float bestDistSqr = std::numeric_limits<float>::max();
     size_t bestIndex = static_cast<size_t>(-1);
 
     for (size_t i = 0; i < atomStorage.size(); ++i) {
         const Vec3f worldPos = atomStorage.pos(i);
-        const Vec2i atomScreen = rend->camera.worldToScreen(worldPos);
+        const Vec2u atomScreen = rend->camera.worldToScreen(worldPos);
         const float distSqr = (atomScreen - screenPos).sqrAbs();
 
         // радиус атома в экранных пикселях
@@ -124,7 +124,7 @@ bool PickingSystem::pickAtom2D(Vec2i screenPos, float tolerance, AtomHit& hit) c
 }
 
 // 3D: ray cast — ищем ближайший атом вдоль луча
-bool PickingSystem::pickAtom3D(Vec2i screenPos, AtomHit& hit) const {
+bool PickingSystem::pickAtom3D(Vec2u screenPos, AtomHit& hit) const {
     const Ray ray = (*renderer)->camera.screenToRay(static_cast<float>(screenPos.x), static_cast<float>(screenPos.y));
 
     float bestT = std::numeric_limits<float>::max();
@@ -152,7 +152,7 @@ bool PickingSystem::pickAtom3D(Vec2i screenPos, AtomHit& hit) const {
 }
 
 // Ray casting алгоритм для point-in-polygon
-bool PickingSystem::pointInPolygon(Vec2i point, std::span<Vec2i> polygon) {
+bool PickingSystem::pointInPolygon(Vec2u point, std::span<Vec2u> polygon) {
     bool inside = false;
     const int x = point.x;
     const int y = point.y;
@@ -171,7 +171,7 @@ bool PickingSystem::pointInPolygon(Vec2i point, std::span<Vec2i> polygon) {
     return inside;
 }
 
-bool PickingSystem::pointInRect(Vec2i point, Vec2i start, Vec2i end) {
+bool PickingSystem::pointInRect(Vec2u point, Vec2u start, Vec2u end) {
     int minX = std::min(start.x, end.x);
     int maxX = std::max(start.x, end.x);
     int minY = std::min(start.y, end.y);

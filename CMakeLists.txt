@@ -25,7 +25,6 @@ endif()
 
 if (WIN32)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static libraries on Windows" FORCE)
-    set(SFML_USE_STATIC_STD_LIBS ON CACHE BOOL "Use static std libs" FORCE)
 else()
     set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries on Unix" FORCE)
 endif()
@@ -77,7 +76,7 @@ target_include_directories(latticelab_lib PUBLIC
 )
 
 target_link_libraries(latticelab_lib PUBLIC
-    sfml-graphics sfml-window sfml-system
+    glfw
     imgui ImGuiFileDialog_lib
     glm::glm
     bgfx bx

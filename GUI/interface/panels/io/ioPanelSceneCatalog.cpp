@@ -10,8 +10,6 @@
 #include <string_view>
 #include <vector>
 
-#include <SFML/Graphics/Image.hpp>
-
 namespace {
     struct ParsedSceneInfo {
         std::string title;
@@ -71,7 +69,7 @@ namespace {
             val = (val << 6) + decodedChar;
             valb += 6;
             if (valb >= 0) {
-                decoded.push_back(static_cast<std::uint8_t>((val >> valb) & 0xFF));
+                decoded.emplace_back(static_cast<std::uint8_t>((val >> valb) & 0xFF));
                 valb -= 8;
             }
         }
@@ -172,7 +170,7 @@ std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirec
             continue;
         }
         if (entry.path().extension() == ".lat") {
-            scenePaths.push_back(entry.path());
+            scenePaths.emplace_back(entry.path());
         }
     }
 

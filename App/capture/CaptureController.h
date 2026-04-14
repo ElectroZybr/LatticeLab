@@ -5,8 +5,6 @@
 #include <cstdint>
 #include <filesystem>
 
-#include <SFML/Graphics/RenderWindow.hpp>
-
 #include "GUI/interface/UiState.h"
 
 class CaptureController {

@@ -9,7 +9,7 @@
 #include "Rendering/BaseRenderer.h"
 
 namespace {
-    Vec3f mapMouseToRulerWorld(const ToolContext& ctx, Vec2i mousePos) {
+    Vec3f mapMouseToRulerWorld(const ToolContext& ctx, Vec2u mousePos) {
         IRenderer* renderer = ctx.activeRenderer();
         if (renderer == nullptr) {
             return Vec3f();
@@ -30,7 +30,7 @@ namespace {
 
 RulerTool::RulerTool(ToolContext& context) noexcept : ITool(context) {}
 
-void RulerTool::onLeftPressed(Vec2i mousePos) {
+void RulerTool::onLeftPressed(Vec2u mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -51,7 +51,7 @@ void RulerTool::onLeftPressed(Vec2i mousePos) {
     overlay.rulerLabel = makeRulerTooltip(startWorld_, endWorld_);
 }
 
-void RulerTool::onLeftReleased(Vec2i mousePos) {
+void RulerTool::onLeftReleased(Vec2u mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -66,13 +66,13 @@ void RulerTool::onLeftReleased(Vec2i mousePos) {
     }
 }
 
-bool RulerTool::onRightPressed(Vec2i mousePos) {
+bool RulerTool::onRightPressed(Vec2u mousePos) {
     (void)mousePos;
     clearMeasurement();
     return true;
 }
 
-void RulerTool::onFrame(Vec2i mousePos, float deltaTime) {
+void RulerTool::onFrame(Vec2u mousePos, float deltaTime) {
     (void)deltaTime;
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
@@ -113,7 +113,7 @@ void RulerTool::clearMeasurement() {
     reset();
 }
 
-void RulerTool::updateMeasurement(Vec2i mousePos) {
+void RulerTool::updateMeasurement(Vec2u mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;

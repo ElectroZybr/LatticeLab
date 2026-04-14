@@ -4,8 +4,6 @@
 #include <numbers>
 #include <type_traits>
 
-#include <SFML/System/Vector2.hpp>
-
 #include "Engine/Consts.h"
 
 template <typename T>
@@ -28,7 +26,6 @@ public:
     constexpr Vec2(T x = T{}, T y = T{}) : x(x), y(y) {}
 
     template <Vec2Like Other> explicit constexpr Vec2(const Other& v) : x(static_cast<T>(v.x)), y(static_cast<T>(v.y)) {}
-    operator sf::Vector2<T>() const { return {x, y}; }
 
     [[nodiscard]] constexpr Vec2 operator-() const { return {-x, -y}; }
 

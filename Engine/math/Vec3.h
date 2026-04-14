@@ -4,8 +4,6 @@
 #include <concepts>
 #include <numbers>
 
-#include <SFML/System/Vector3.hpp>
-
 #include "Engine/Consts.h"
 #include "Engine/math/Vec2.h"
 
@@ -23,9 +21,6 @@ public:
             { v.z } -> std::convertible_to<T>;
         }
     explicit constexpr Vec3(const Other& v) : x(static_cast<T>(v.x)), y(static_cast<T>(v.y)), z(static_cast<T>(v.z)) {}
-
-    operator sf::Vector2<T>() const { return {x, y}; }
-    operator sf::Vector3<T>() const { return {x, y, z}; }
 
     [[nodiscard]] constexpr Vec3 operator-() const { return {-x, -y, -z}; }
 

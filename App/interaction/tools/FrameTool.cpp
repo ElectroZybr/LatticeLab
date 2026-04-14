@@ -1,13 +1,12 @@
 #include "FrameTool.h"
 
-#include <SFML/Window/Keyboard.hpp>
-
 #include "App/interaction/picking/PickingSystem.h"
 #include "GUI/interface/UiState.h"
+#include "GUI/io/keyboard/Keyboard.h"
 
 FrameTool::FrameTool(ToolContext& context) noexcept : ITool(context) {}
 
-void FrameTool::onLeftPressed(Vec2i mousePos) {
+void FrameTool::onLeftPressed(Vec2u mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -19,14 +18,13 @@ void FrameTool::onLeftPressed(Vec2i mousePos) {
     overlay.boxEnd = mousePos;
 }
 
-void FrameTool::onLeftReleased(Vec2i mousePos) {
+void FrameTool::onLeftReleased(Vec2u mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
     }
 
-    const bool cumulative =
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
+    const bool cumulative = Keyboard::isPressed(GLFW_KEY_LEFT_CONTROL) || Keyboard::isPressed(GLFW_KEY_RIGHT_CONTROL);
 
     auto& overlay = ctx.pickingSystem->getOverlay();
     if (overlay.boxVisible) {
@@ -38,7 +36,7 @@ void FrameTool::onLeftReleased(Vec2i mousePos) {
     overlay.reset();
 }
 
-void FrameTool::onFrame(Vec2i mousePos, float deltaTime) {
+void FrameTool::onFrame(Vec2u mousePos, float deltaTime) {
     (void)deltaTime;
 
     ToolContext& ctx = context();

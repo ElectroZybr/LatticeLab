@@ -3,7 +3,6 @@
 #include <cmath>
 #include <memory>
 
-#include <SFML/Graphics.hpp>
 #include <benchmark/benchmark.h>
 
 #include "App/interaction/ToolsManager.h"

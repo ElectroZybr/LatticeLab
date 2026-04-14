@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 
-#include <SFML/Graphics.hpp>
+#include <GLFW/glfw3.h>
 
 #include "Rendering/BaseRenderer.h"
 
@@ -9,12 +9,16 @@ class Keyboard {
     friend class EventManager;
 
 public:
-    static void init(std::unique_ptr<IRenderer>& r, class Interface& appInterface);
+    static void init(GLFWwindow* window, std::unique_ptr<IRenderer>& r, class Interface& appInterface);
 
-    static void onEvent(const sf::Event& event);
+    static bool isPressed(int key);
+
+    static void onKey(GLFWwindow* window, int key, int scancode, int action, int mods);
     static void onFrame(float deltaTime);
 
 private:
+    static GLFWwindow* window;
     static std::unique_ptr<IRenderer>* render;
     static class Interface* appInterface;
+    static GLFWkeyfun imgui_key_callback;
 };

@@ -4,7 +4,6 @@
 #include <string_view>
 #include <vector>
 
-#include <SFML/Graphics/Texture.hpp>
 #include <bgfx/bgfx.h>
 
 #include "Engine/math/Vec2.h"

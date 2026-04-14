@@ -14,7 +14,7 @@
 #define ICON_FA_SYNC_ALT "\uf2f1"
 #define ICON_FA_STREET_VIEW "\uf21d"
 
-void ToolsPanel::draw(float scale, sf::RenderWindow& window, DebugPanel& debug, SettingsPanel& settings, IOPanel& ioPanel) {
+void ToolsPanel::draw(float scale, DebugPanel& debug, SettingsPanel& settings, IOPanel& ioPanel) {
     constexpr float baseTopOffset = 0.0f;
     constexpr float baseLeftOffset = 0.0f;
     constexpr float baseSpacing = 4.0f;

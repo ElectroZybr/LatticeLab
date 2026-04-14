@@ -1,11 +1,10 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
 #include <string>
 
-#include "Engine/Consts.h"
 #include "Engine/NeighborSearch/NeighborList.h"
 #include "Engine/SimBox.h"
+#include "Engine/math/Vec3.h"
 #include "Engine/metrics/EnergyMetrics.h"
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
@@ -59,9 +58,7 @@ public:
         return metricsCache_.fullAverageEnergyEv();
     }
 
-    float fullEnegryPJ() const {
-        return fullAverageEnergyEv() * atomStorage_.size() * Units::kEvToPJ;
-    }
+    float fullEnegryPJ() const { return fullAverageEnergyEv() * atomStorage_.size() * Units::kEvToPJ; }
 
     float temperatureK() const {
         refreshMetricsCache();

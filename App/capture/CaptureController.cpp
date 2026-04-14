@@ -5,9 +5,10 @@
 #include <ctime>
 #include <filesystem>
 
-#include <SFML/Window/Keyboard.hpp>
+#include <GLFW/glfw3.h>
 #include <bgfx/bgfx.h>
 
+#include "GUI/io/keyboard/Keyboard.h"
 #include "Rendering/BgfxContext.h"
 
 CaptureSettings CaptureController::settings() const noexcept { return settings_; }
@@ -56,7 +57,7 @@ void CaptureController::syncUiState(UiState& uiState) const {
 }
 
 void CaptureController::handleToggleShortcut() {
-    const bool captureKeyPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F8);
+    const bool captureKeyPressed = Keyboard::isPressed(GLFW_KEY_F8);
     if (isAvailable() && captureKeyPressed && !toggleShortcutHeld_) {
         toggle();
     }

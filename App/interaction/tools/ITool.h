@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <SFML/Graphics.hpp>
+#include <GLFW/glfw3.h>
 
 #include "Engine/math/Vec3.h"
 
@@ -13,7 +13,7 @@ class Simulation;
 struct UiState;
 
 struct ToolContext {
-    sf::RenderWindow* window = nullptr;
+    GLFWwindow* window = nullptr;
     Simulation* simulation = nullptr;
     std::unique_ptr<IRenderer>* renderer = nullptr;
     PickingSystem* pickingSystem = nullptr;
@@ -32,18 +32,18 @@ public:
     ITool(const ITool&) = delete;
     ITool& operator=(const ITool&) = delete;
 
-    virtual void onLeftPressed(Vec2i mousePos);
-    virtual void onLeftReleased(Vec2i mousePos);
-    virtual bool onRightPressed(Vec2i mousePos);
-    virtual void onFrame(Vec2i mousePos, float deltaTime);
+    virtual void onLeftPressed(Vec2u mousePos);
+    virtual void onLeftReleased(Vec2u mousePos);
+    virtual bool onRightPressed(Vec2u mousePos);
+    virtual void onFrame(Vec2u mousePos, float deltaTime);
     virtual void reset();
 
 protected:
     [[nodiscard]] ToolContext& context() noexcept { return context_; }
     [[nodiscard]] const ToolContext& context() const noexcept { return context_; }
 
-    [[nodiscard]] Vec3f screenToWorld(Vec2i mousePos) const;
-    [[nodiscard]] Vec2i worldToScreen(Vec3f worldPos) const;
+    [[nodiscard]] Vec3f screenToWorld(Vec2u mousePos) const;
+    [[nodiscard]] Vec2u worldToScreen(Vec3f worldPos) const;
 
 private:
     ToolContext& context_;

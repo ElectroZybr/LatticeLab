@@ -1,8 +1,9 @@
 #pragma once
+#include <chrono>
 #include <filesystem>
 #include <memory>
 
-#include <SFML/Graphics.hpp>
+#include <GLFW/glfw3.h>
 
 #include "GUI/interface/UiState.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
@@ -19,7 +20,7 @@
 
 class Interface {
 public:
-    Interface(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r, class CaptureController& c);
+    Interface(GLFWwindow* w, Simulation& s, std::unique_ptr<IRenderer>& r, class CaptureController& c);
 
     int init();
     void shutdown();
@@ -43,10 +44,10 @@ public:
     SettingsPanel settingsPanel;
 
 private:
-    sf::RenderWindow* window_;
+    GLFWwindow* window_;
     Simulation* simulation_;
     std::unique_ptr<IRenderer>* renderer_;
     class CaptureController* captureController_;
-    sf::Clock clock_;
+    std::chrono::high_resolution_clock::time_point lastTime_;
     UiState uiState_;
 };

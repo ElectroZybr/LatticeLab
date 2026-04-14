@@ -4,8 +4,6 @@
 #include <cstdint>
 #include <memory>
 
-#include <SFML/Graphics.hpp>
-
 #include "App/interaction/picking/PickingSystem.h"
 #include "App/interaction/tools/ITool.h"
 #include "Engine/Simulation.h"
@@ -28,15 +26,15 @@ public:
         RemoveAtom,
     };
 
-    static void init(sf::RenderWindow& window, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, Interface& appInterface);
+    static void init(GLFWwindow* window, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, Interface& appInterface);
 
-    static Vec3f screenToWorld(Vec2i mousePos);
-    static Vec2i worldToScreen(Vec3f pos);
+    static Vec3f screenToWorld(Vec2u mousePos);
+    static Vec2u worldToScreen(Vec3f pos);
 
-    static void onLeftPressed(Vec2i mousePos);
-    static void onLeftReleased(Vec2i mousePos);
-    static bool onRightPressed(Vec2i mousePos);
-    static void onFrame(Vec2i mousePos, float deltaTime);
+    static void onLeftPressed(Vec2u mousePos);
+    static void onLeftReleased(Vec2u mousePos);
+    static bool onRightPressed(Vec2u mousePos);
+    static void onFrame(Vec2u mousePos, float deltaTime);
     static void resetInteractionState();
     static bool isInteractingNow() noexcept;
 
@@ -52,7 +50,7 @@ private:
     static void syncToolMode() noexcept;
     static size_t toIndex(Mode mode) noexcept;
 
-    static sf::RenderWindow* window;
+    static GLFWwindow* window;
     static std::unique_ptr<IRenderer>* renderer;
     static Simulation* simulation;
     static UiState* uiState;
@@ -61,7 +59,7 @@ private:
     static std::array<std::unique_ptr<ITool>, kModeCount> toolInstances;
     static Mode syncedMode;
 
-    static Vec2i startMousePos;
-    static Vec2i lastSceneMousePos;
+    static Vec2u startMousePos;
+    static Vec2u lastSceneMousePos;
     static bool isInteracting;
 };

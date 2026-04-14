@@ -28,16 +28,16 @@ namespace {
         const Vec3f delta = (newSize - oldSize) * 0.5f;
 
         shiftAtoms(simulation.atoms(), delta);
-        renderer->camera.move({delta.x, delta.y});
+        renderer->camera.move(delta.xy());
         renderer->camera.move3D(delta);
         simulation.setSizeBox(newSize);
     }
 }
 
 namespace AppActions {
-    void Handler::trackIOPanel(sf::RenderWindow& window, UiState& uiState, Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
+    void Handler::trackIOPanel(UiState& uiState, Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
         track(AppSignals::UI::SaveSimulation.connect(
-            [&](std::string_view path) { AppStateIO::save(window, uiState.scenePreviewRect, simulation, *renderer, path); }));
+            [&](std::string_view path) { AppStateIO::save(uiState.scenePreviewRect, simulation, *renderer, path); }));
         track(AppSignals::UI::LoadSimulation.connect([&](std::string_view path) {
             AppStateIO::load(simulation, *renderer, path);
             ToolsManager::resetInteractionState();
@@ -59,8 +59,8 @@ namespace AppActions {
         }));
     }
 
-    void Handler::trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, sf::RenderWindow& window) {
-        track(AppSignals::UI::SetRender.connect([&](RendererType type) {
+    void Handler::trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, GLFWwindow* window) {
+        track(AppSignals::UI::SetRender.connect([&, window](RendererType type) {
             std::unique_ptr<IRenderer> newRenderer;
             switch (type) {
             case RendererType::Renderer2D:
@@ -85,7 +85,9 @@ namespace AppActions {
         track(AppSignals::UI::SetCameraMode.connect([&](Camera::Mode mode) { renderer->camera.setMode(mode); }));
     }
 
-    void Handler::trackSettingsPanel(sf::Window& window) { track(AppSignals::UI::ExitApplication.connect(&sf::Window::close, &window)); }
+    void Handler::trackSettingsPanel(GLFWwindow* window) {
+        track(AppSignals::UI::ExitApplication.connect([window]() { glfwSetWindowShouldClose(window, GLFW_TRUE); }));
+    }
 
     void Handler::trackKeyboard(Simulation& simulation) {
         track(AppSignals::Keyboard::StepPhysics.connect([&]() { simulation.update(); }));
@@ -95,16 +97,11 @@ namespace AppActions {
         track(AppSignals::UI::StepPhysics.connect([&]() { simulation.update(); }));
     }
 
-    void Handler::trackWindow(std::unique_ptr<IRenderer>& renderer) {
-        track(AppSignals::Window::Resize.connect([&](Vec2f newSize) { renderer->camera.setScreenSize(newSize); }));
-    }
-
-    Handler::Handler(sf::RenderWindow& window, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, UiState& uiState) {
-        trackIOPanel(window, uiState, simulation, renderer);
+    Handler::Handler(GLFWwindow* window, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, UiState& uiState) {
+        trackIOPanel(uiState, simulation, renderer);
         trackToolsPanel(simulation, renderer, window);
         trackSettingsPanel(window);
         trackSimControlPanel(simulation);
         trackKeyboard(simulation);
-        trackWindow(renderer);
     }
 }

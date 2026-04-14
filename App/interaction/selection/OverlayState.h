@@ -6,7 +6,6 @@
 #include <string_view>
 #include <vector>
 
-#include <SFML/Graphics.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -17,13 +16,13 @@ struct OverlayState {
     bool lassoVisible = false;
     bool rulerVisible = false;
 
-    Vec2i boxStart;
-    Vec2i boxEnd;
-    Vec2i rulerStart;
-    Vec2i rulerEnd;
+    Vec2u boxStart;
+    Vec2u boxEnd;
+    Vec2u rulerStart;
+    Vec2u rulerEnd;
     std::string rulerLabel;
 
-    std::vector<Vec2i> lassoPoints;
+    std::vector<Vec2u> lassoPoints;
 
     void reset() {
         boxVisible = false;
@@ -33,7 +32,7 @@ struct OverlayState {
         lassoPoints.clear();
     }
 
-    void draw(sf::RenderTarget& target) const {
+    void draw() const {
         if (!boxVisible && !lassoVisible && !rulerVisible) {
             return;
         }
