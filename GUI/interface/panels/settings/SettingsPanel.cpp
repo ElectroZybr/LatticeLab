@@ -1,7 +1,5 @@
 #include "SettingsPanel.h"
 
-#include "AppVersion.h"
-
 #include <array>
 #include <cstdio>
 
@@ -14,6 +12,7 @@
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/style/ComboStyle.h"
 #include "Rendering/BaseRenderer.h"
+#include "generated/AppVersion.h"
 
 namespace {
     const char* integratorName(Integrator::Scheme scheme) {

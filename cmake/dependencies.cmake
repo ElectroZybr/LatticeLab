@@ -1,0 +1,83 @@
+include(FetchContent)
+
+unset(IMGUI_INCLUDE_DIR CACHE)
+unset(IMGUI_SFML_CONFIG_DIR CACHE)
+unset(imgui_SOURCE_DIR CACHE)
+unset(imgui_BINARY_DIR CACHE)
+
+# --- Настройка SFML ---
+FetchContent_Declare(
+    sfml
+    GIT_REPOSITORY https://github.com/SFML/SFML.git
+    GIT_TAG        3.0.2
+    GIT_SHALLOW    ON
+)
+set(SFML_BUILD_NETWORK OFF CACHE BOOL "" FORCE)
+set(SFML_BUILD_AUDIO OFF CACHE BOOL "" FORCE)
+set(SFML_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(SFML_BUILD_DOC OFF CACHE BOOL "" FORCE)
+set(SFML_INSTALL_PKGCONFIG_FILES OFF CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(sfml)
+
+# --- Настройка ImGui ---
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG        v1.91.9
+    GIT_SHALLOW    ON
+)
+FetchContent_MakeAvailable(imgui)
+add_library(imgui STATIC
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${CMAKE_SOURCE_DIR}/GUI/imgui_bgfx/imgui_impl_bgfx.cpp
+)
+target_include_directories(imgui PUBLIC
+    ${imgui_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/GUI/imgui_bgfx
+    ${bgfx_cmake_SOURCE_DIR}/bgfx/include
+    ${bgfx_cmake_SOURCE_DIR}/bgfx/examples/common/imgui
+    ${bgfx_cmake_SOURCE_DIR}/bx/include
+)
+target_link_libraries(imgui PUBLIC bgfx bx)
+
+# --- Настройка ImGuiFileDialog ---
+FetchContent_Declare(
+    ImGuiFileDialog
+    GIT_REPOSITORY https://github.com/aiekick/ImGuiFileDialog.git
+    GIT_TAG        v0.6.8
+    GIT_SHALLOW    ON
+)
+FetchContent_Populate(ImGuiFileDialog)
+add_library(ImGuiFileDialog_lib STATIC
+    ${imguifiledialog_SOURCE_DIR}/ImGuiFileDialog.cpp
+)
+target_include_directories(ImGuiFileDialog_lib PUBLIC
+    ${imguifiledialog_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}
+)
+target_link_libraries(ImGuiFileDialog_lib PUBLIC imgui)
+
+# --- Настройка GLM ---
+FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG        1.0.1
+    GIT_SHALLOW    ON
+)
+FetchContent_MakeAvailable(glm)
+
+# --- Настройка bgfx ---
+FetchContent_Declare(
+    bgfx_cmake
+    GIT_REPOSITORY https://github.com/bkaradzic/bgfx.cmake.git
+    GIT_TAG        v1.142.9197-527
+    GIT_SHALLOW    ON
+    )
+set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(BGFX_BUILD_TOOLS    ON  CACHE BOOL "" FORCE)
+set(BGFX_WITH_WAYLAND   OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(bgfx_cmake)

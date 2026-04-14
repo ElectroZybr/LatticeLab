@@ -2,7 +2,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "shaders/shader_registry.h"
+#include "generated/shaders/shader_registry.h"
 
 Renderer3DBGFX::Renderer3DBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simBox) : RendererBGFX(t, gv, simBox) {
     camera.setMode(Camera::Mode::Orbit);

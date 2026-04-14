@@ -20,9 +20,9 @@
 #include <iostream>
 #endif
 
-#include "AppVersion.h"
-
 #include <SFML/Graphics.hpp>
+
+#include "generated/AppVersion.h"
 
 inline sf::RenderWindow createWindow() {
     sf::ContextSettings settings;

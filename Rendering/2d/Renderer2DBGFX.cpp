@@ -2,7 +2,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "shaders/shader_registry.h"
+#include "generated/shaders/shader_registry.h"
 
 Renderer2DBGFX::Renderer2DBGFX(sf::RenderTarget& t, sf::View& gv, SimBox& simBox) : RendererBGFX(t, gv, simBox) {
     camera.position = Vec2f(simBox.size.x, simBox.size.y) / 2.f;
