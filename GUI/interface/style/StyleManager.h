@@ -6,7 +6,7 @@
 class StyleManager {
 public:
     void applyCustomStyle();
-    void onResize(Vec2u newSize);
+    void onResize(Vec2i newSize);
     float getScale() const { return scale; }
 
 private:

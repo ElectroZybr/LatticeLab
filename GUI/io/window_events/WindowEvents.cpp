@@ -32,7 +32,7 @@ void WindowEvents::framebufferSizeCallback(GLFWwindow* window, int width, int he
         return;
     }
 
-    appInterface->styleManager.onResize(Vec2u(width, height));
+    appInterface->styleManager.onResize(Vec2i(width, height));
 
     if (appInterface->fontManager.load(appInterface->styleManager.getScale())) {
         ImGui_Implbgfx_InvalidateDeviceObjects();

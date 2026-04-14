@@ -190,7 +190,7 @@ std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirec
 
             tile.previewTexture = bgfx::createTexture2D(parsed.imageWidth, parsed.imageHeight, false, 1, bgfx::TextureFormat::RGBA8,
                                                         BGFX_TEXTURE_NONE | BGFX_SAMPLER_POINT, mem);
-            tile.previewSize = {parsed.imageWidth, parsed.imageHeight};
+            tile.previewSize = Vec2u(parsed.imageWidth, parsed.imageHeight);
             tile.hasPreview = bgfx::isValid(tile.previewTexture);
         }
 

@@ -6,5 +6,5 @@ class AddAtomTool final : public ITool {
 public:
     explicit AddAtomTool(ToolContext& context) noexcept;
 
-    void onLeftPressed(Vec2u mousePos) override;
+    void onLeftPressed(Vec2i mousePos) override;
 };

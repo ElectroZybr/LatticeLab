@@ -9,10 +9,10 @@ class Mouse {
     friend class EventManager;
 
 public:
-    static Vec2u getMousePos() {
+    static Vec2i getMousePos() {
         double x, y;
         glfwGetCursorPos(Mouse::window, &x, &y);
-        return Vec2u(x, y);
+        return Vec2i(x, y);
     }
 
     static void init(GLFWwindow* w, std::unique_ptr<IRenderer>& renderer, class Interface& appInterface);

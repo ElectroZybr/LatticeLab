@@ -15,7 +15,7 @@ public:
     static constexpr ImGuiWindowFlags PANEL_FLAGS =
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 
-    void draw(float uiScale, Vec2u windowSize, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
+    void draw(float uiScale, Vec2i windowSize, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
               CaptureController& captureController, FileDialogManager& fileDialog);
     void toggle() { visible = !visible; }
     void close() { visible = false; }

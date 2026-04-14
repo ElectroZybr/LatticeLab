@@ -13,7 +13,7 @@ public:
     static constexpr ImGuiWindowFlags PANEL_FLAGS = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse |
                                                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
 
-    void draw(float scale, Vec2u windowSize, ImFont* iconFont, ImFont* textFont = nullptr);
+    void draw(float scale, Vec2i windowSize, ImFont* iconFont, ImFont* textFont = nullptr);
 
     Tool getSelectedTool() const { return selectedTool; }
     void setSelectedTool(Tool tool) { selectedTool = tool; }

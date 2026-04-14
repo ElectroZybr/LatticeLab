@@ -78,7 +78,7 @@ namespace {
         visibleChildren.reserve(entry.childIndices.size());
         for (const size_t childIndex : entry.childIndices) {
             if (childIndex < entries.size() && isVisibleNode(entries[childIndex])) {
-                visibleChildren.push_back(childIndex);
+                visibleChildren.emplace_back(childIndex);
             }
         }
 
@@ -120,7 +120,7 @@ void drawProfilerTreeView(float uiScale) {
     for (size_t i = 0; i < treeEntries.size(); ++i) {
         const ProfileTreeEntry& entry = treeEntries[i];
         if (entry.parentIndex == ProfileTreeEntry::kNoParent && isVisibleNode(entry)) {
-            rootIndices.push_back(i);
+            rootIndices.emplace_back(i);
             accountedPercent += entry.smoothedPercentOfFrame;
         }
     }

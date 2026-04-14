@@ -12,7 +12,7 @@ class DebugPanel {
 public:
     DebugView* addView(DebugView view);
 
-    void draw(float uiScale, Vec2u windowSize);
+    void draw(float uiScale, Vec2i windowSize);
 
     void toggle() { visible = !visible; }
     void close() { visible = false; }

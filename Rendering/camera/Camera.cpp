@@ -44,7 +44,7 @@ void Camera::freeDrag(Vec2i delta) {
 }
 
 // Для 3д режимов возвращает cameraPos + cameraDir * 10
-Vec3f Camera::screenToWorld(Vec2u screenPos) const {
+Vec3f Camera::screenToWorld(Vec2i screenPos) const {
     if (mode == Mode::Mode2D) {
         Vec2f offset = Vec2f(screenPos) - screenSize * 0.5f;
         offset.y *= -1.f;
@@ -56,12 +56,12 @@ Vec3f Camera::screenToWorld(Vec2u screenPos) const {
     return ray.at(100.0);
 }
 
-Vec2u Camera::worldToScreen(Vec3f worldPos) const {
+Vec2i Camera::worldToScreen(Vec3f worldPos) const {
     if (mode == Mode::Mode2D) {
         Vec2f offset = worldPos.xy() - position;
         offset.y *= -1.f;
         const Vec2f s = offset * zoom + screenSize * 0.5f;
-        return Vec2u(s);
+        return Vec2i(s);
     }
 
     const glm::vec4 clip = getProjectionMatrix() * getViewMatrix() * glm::vec4(worldPos.x, worldPos.y, worldPos.z, 1.f);
@@ -73,7 +73,7 @@ Vec2u Camera::worldToScreen(Vec3f worldPos) const {
     const float ndcX = clip.x / clip.w;
     const float ndcY = clip.y / clip.w;
 
-    return Vec2u((ndcX + 1.f) * 0.5f * screenSize.x, (-ndcY + 1.f) * 0.5f * screenSize.y);
+    return Vec2i((ndcX + 1.f) * 0.5f * screenSize.x, (-ndcY + 1.f) * 0.5f * screenSize.y);
 }
 
 glm::vec3 Camera::getEyePosition() const {

@@ -31,7 +31,7 @@ void Mouse::onMouseButton(GLFWwindow*, int button, int action, int mods) {
         return;
     }
 
-    const Vec2u mouse_pos = Mouse::getMousePos();
+    const Vec2i mouse_pos = Mouse::getMousePos();
     std::unique_ptr<IRenderer>& rend = *renderer;
 
     if (action == GLFW_PRESS) {
@@ -68,7 +68,7 @@ void Mouse::onMouseMove(GLFWwindow*, double xpos, double ypos) {
         return;
     }
 
-    const Vec2u currentPixelPos(xpos, ypos);
+    const Vec2i currentPixelPos(xpos, ypos);
     Vec2i deltaPixel(currentPixelPos - rend->camera.dragStartPixelPos);
 
     if (rend->camera.mode == Camera::Mode::Orbit) {
@@ -103,19 +103,19 @@ void Mouse::onScroll(GLFWwindow*, double xoffset, double yoffset) {
             rend->camera.move3D(forward * distance);
         }
         else {
-            const Vec2u mouse_pos = getMousePos();
+            const Vec2i mouse_pos = getMousePos();
             rend->camera.zoomAt(static_cast<float>(yoffset), Vec2f(mouse_pos));
         }
     }
 }
 
 void Mouse::onFrame(float deltaTime) {
-    const Vec2u mouse_pos = getMousePos();
+    const Vec2i mouse_pos = getMousePos();
     ToolsManager::onFrame(mouse_pos, deltaTime);
 }
 
 void Mouse::logMousePos() {
-    const Vec2u mouse_pos = getMousePos();
+    const Vec2i mouse_pos = getMousePos();
     Vec3f world_pos = ToolsManager::screenToWorld(mouse_pos);
     std::cout << "<Mouse pos>"
               << " Screen: "

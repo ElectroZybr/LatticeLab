@@ -16,17 +16,17 @@ namespace {
 
 ThermalTool::ThermalTool(ToolContext& context) noexcept : ITool(context) {}
 
-void ThermalTool::onLeftPressed(Vec2u mousePos) {
+void ThermalTool::onLeftPressed(Vec2i mousePos) {
     active_ = true;
     applyAt(mousePos, 1.0f / 60.0f);
 }
 
-void ThermalTool::onLeftReleased(Vec2u mousePos) {
+void ThermalTool::onLeftReleased(Vec2i mousePos) {
     (void)mousePos;
     active_ = false;
 }
 
-void ThermalTool::onFrame(Vec2u mousePos, float deltaTime) {
+void ThermalTool::onFrame(Vec2i mousePos, float deltaTime) {
     if (!active_) {
         return;
     }
@@ -39,7 +39,7 @@ void ThermalTool::setRadius(float radius) noexcept { radius_ = std::clamp(radius
 
 void ThermalTool::setStrength(float strength) noexcept { strength_ = std::clamp(strength, kMinStrength, kMaxStrength); }
 
-void ThermalTool::applyAt(Vec2u mousePos, float deltaTime) {
+void ThermalTool::applyAt(Vec2i mousePos, float deltaTime) {
     ToolContext& ctx = context();
     if (!ctx.isValid() || strength_ <= 0.0f) {
         return;

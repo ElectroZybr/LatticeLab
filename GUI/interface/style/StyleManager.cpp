@@ -60,7 +60,7 @@ void StyleManager::applyCustomStyle() {
     ImGui::GetIO().FontGlobalScale = 1.0f;
 }
 
-void StyleManager::onResize(Vec2u newSize) {
+void StyleManager::onResize(Vec2i newSize) {
     Vec2f s = Vec2f(newSize) / Vec2f(BASE_W, BASE_H);
     scale = std::min(s.x, s.y);
 

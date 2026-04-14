@@ -46,7 +46,7 @@ void IOPanel::removeSceneTileByPath(std::string_view path) {
     }
 }
 
-void IOPanel::draw(float scale, Vec2u windowSize, Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState) {
+void IOPanel::draw(float scale, Vec2i windowSize, Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState) {
     const float target = visible_ ? 1.f : 0.f;
     const float step = ImGui::GetIO().DeltaTime * 12.f;
     animProgress_ += (target - animProgress_) * std::min(step, 1.f);
@@ -191,7 +191,7 @@ void IOPanel::draw(float scale, Vec2u windowSize, Simulation& simulation, FileDi
 
         if (tile.hasPreview) {
             const ImTextureID textureId = (ImTextureID)(uintptr_t)tile.previewTexture.idx;
-            const Vec2u textureSize(tile.previewSize);
+            const Vec2i textureSize(tile.previewSize);
             ImVec2 uvMin(0.0f, 0.0f);
             ImVec2 uvMax(1.0f, 1.0f);
 

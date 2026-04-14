@@ -42,22 +42,44 @@ namespace {
         return std::string(value.substr(begin, end - begin));
     }
 
-    std::string encodeBase64(const std::vector<std::uint8_t>& data) {
+    std::string encodeBase64(std::span<const std::uint8_t> data) {
         static constexpr char kAlphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
+        const size_t input_len = data.size();
+        if (input_len == 0) {
+            return "";
+        }
+
+        const size_t output_len = ((input_len + 2) / 3) * 4;
         std::string encoded;
-        encoded.reserve(((data.size() + 2) / 3) * 4);
+        encoded.resize(output_len);
 
-        for (size_t i = 0; i < data.size(); i += 3) {
-            const std::uint32_t a = data[i];
-            const std::uint32_t b = (i + 1 < data.size()) ? data[i + 1] : 0;
-            const std::uint32_t c = (i + 2 < data.size()) ? data[i + 2] : 0;
-            const std::uint32_t triple = (a << 16) | (b << 8) | c;
+        const uint8_t* bytes = reinterpret_cast<const uint8_t*>(data.data());
+        char* dst = &encoded[0];
 
-            encoded.push_back(kAlphabet[(triple >> 18) & 0x3F]);
-            encoded.push_back(kAlphabet[(triple >> 12) & 0x3F]);
-            encoded.push_back((i + 1 < data.size()) ? kAlphabet[(triple >> 6) & 0x3F] : '=');
-            encoded.push_back((i + 2 < data.size()) ? kAlphabet[triple & 0x3F] : '=');
+        size_t i = 0;
+
+        const size_t fast_len = (input_len / 3) * 3;
+        for (; i < fast_len; i += 3) {
+            uint32_t n = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+
+            dst[0] = kAlphabet[(n >> 18) & 0x3F];
+            dst[1] = kAlphabet[(n >> 12) & 0x3F];
+            dst[2] = kAlphabet[(n >> 6) & 0x3F];
+            dst[3] = kAlphabet[n & 0x3F];
+            dst += 4;
+        }
+
+        if (i < input_len) {
+            uint32_t n = bytes[i] << 16;
+            if (i + 1 < input_len) {
+                n |= bytes[i + 1] << 8;
+            }
+
+            dst[0] = kAlphabet[(n >> 18) & 0x3F];
+            dst[1] = kAlphabet[(n >> 12) & 0x3F];
+            dst[2] = (i + 1 < input_len) ? kAlphabet[(n >> 6) & 0x3F] : '=';
+            dst[3] = '=';
         }
 
         return encoded;

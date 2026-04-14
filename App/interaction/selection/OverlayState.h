@@ -16,13 +16,13 @@ struct OverlayState {
     bool lassoVisible = false;
     bool rulerVisible = false;
 
-    Vec2u boxStart;
-    Vec2u boxEnd;
-    Vec2u rulerStart;
-    Vec2u rulerEnd;
+    Vec2i boxStart;
+    Vec2i boxEnd;
+    Vec2i rulerStart;
+    Vec2i rulerEnd;
     std::string rulerLabel;
 
-    std::vector<Vec2u> lassoPoints;
+    std::vector<Vec2i> lassoPoints;
 
     void reset() {
         boxVisible = false;
@@ -61,7 +61,7 @@ struct OverlayState {
             const Vec2f line(Vec2f(rulerEnd) - Vec2f(rulerStart));
             const float lineLength = line.abs();
             Vec2f labelPos = 0.5f * Vec2f(rulerStart + rulerEnd);
-            float angleDeg = 0.0f;
+            float angle_rad = 0.0f;
             if (lineLength > 0.001f) {
                 Vec2f normal(-line.y / lineLength, line.x / lineLength);
                 if (normal.y > 0.0f) {
@@ -71,12 +71,12 @@ struct OverlayState {
                 constexpr float kLabelOffset = 16.0f;
                 labelPos += normal * kLabelOffset;
 
-                angleDeg = std::atan2(line.y, line.x) * 180.0f / std::numbers::pi;
-                if (angleDeg > 90.0f) {
-                    angleDeg -= 180.0f;
+                angle_rad = std::atan2(line.y, line.x);
+                if (angle_rad > std::numbers::pi_v<float> / 2.f) {
+                    angle_rad -= std::numbers::pi_v<float>;
                 }
-                else if (angleDeg < -90.0f) {
-                    angleDeg += 180.0f;
+                else if (angle_rad < -std::numbers::pi_v<float> / 2.f) {
+                    angle_rad += std::numbers::pi_v<float>;
                 }
             }
             else {
@@ -84,8 +84,7 @@ struct OverlayState {
             }
 
             if (!rulerLabel.empty()) {
-                const float angle_rad = angleDeg * std::numbers::pi_v<float> / 180.f;
-                AddTextRotated(dl, ImGui::GetFont(), 18.f, labelPos, angle_rad, IM_COL32(235, 235, 235, 255), rulerLabel.data());
+                AddTextRotated(dl, ImGui::GetFont(), 18.f, labelPos, angle_rad, IM_COL32(235, 235, 235, 255), rulerLabel);
             }
         }
     }

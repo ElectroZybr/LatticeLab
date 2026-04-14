@@ -64,7 +64,8 @@ namespace {
         file << kBlockIndent << "description " << simulation.sceneDescription() << "\n\n";
 
         file << "[scene]\n";
-        file << kBlockIndent << "box " << simulation.box().size.x << " " << simulation.box().size.y << " " << simulation.box().size.z << "\n";
+        file << kBlockIndent << "box " << simulation.box().size.x << " " << simulation.box().size.y << " " << simulation.box().size.z
+             << "\n";
         file << kBlockIndent << "step " << simulation.getSimStep() << "\n";
         file << kBlockIndent << "time_ns " << simulation.simTimeNs() << "\n";
         file << kBlockIndent << "dt " << simulation.getDt() << "\n";
@@ -87,9 +88,9 @@ namespace {
         for (size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
             const Vec3f pos = atoms.pos(atomIndex);
             const Vec3f vel = atoms.vel(atomIndex);
-            file << kBlockIndent << "atom " << pos.x << " " << pos.y << " " << pos.z << " " << vel.x << " " << vel.y << " "
-                 << vel.z << " " << static_cast<int>(atoms.type(atomIndex)) << " "
-                 << static_cast<int>(atoms.isAtomFixed(atomIndex)) << " " << atoms.charge(atomIndex) << "\n";
+            file << kBlockIndent << "atom " << pos.x << " " << pos.y << " " << pos.z << " " << vel.x << " " << vel.y << " " << vel.z << " "
+                 << static_cast<int>(atoms.type(atomIndex)) << " " << static_cast<int>(atoms.isAtomFixed(atomIndex)) << " "
+                 << atoms.charge(atomIndex) << "\n";
         }
         file << "\n";
 
@@ -185,7 +186,7 @@ namespace {
                 }
                 atom.fixed = (fixed != 0);
                 atom.charge = 0.0f;
-                atoms.push_back(atom);
+                atoms.emplace_back(atom);
             }
             else {
                 std::string ignoredLine;
@@ -327,7 +328,7 @@ namespace {
                 if (!(stream >> atom.charge)) {
                     atom.charge = 0.0f;
                 }
-                atoms.push_back(atom);
+                atoms.emplace_back(atom);
             }
             else if (tag == "bond") {
                 size_t aIndex = 0;
@@ -366,9 +367,7 @@ namespace {
     }
 }
 
-void SimulationStateIO::save(const Simulation& simulation, std::string_view path) {
-    saveNewFormat(simulation, path);
-}
+void SimulationStateIO::save(const Simulation& simulation, std::string_view path) { saveNewFormat(simulation, path); }
 
 void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
     std::ifstream probe(path.data());
