@@ -56,6 +56,13 @@ public:
         return *this;
     }
 
+    template <Arithmetic S> constexpr Vec2& operator*=(S s) {
+        const auto scalar = static_cast<T>(s);
+        x *= scalar;
+        y *= scalar;
+        return *this;
+    }
+
     template <Arithmetic S> [[nodiscard]] constexpr Vec2 operator+(S s) const { return {x + static_cast<T>(s), y + static_cast<T>(s)}; }
     template <Arithmetic S> [[nodiscard]] constexpr Vec2 operator-(S s) const { return {x - static_cast<T>(s), y - static_cast<T>(s)}; }
     template <Arithmetic S> [[nodiscard]] constexpr Vec2 operator*(S s) const { return {x * static_cast<T>(s), y * static_cast<T>(s)}; }
