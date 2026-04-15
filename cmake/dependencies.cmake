@@ -93,3 +93,19 @@ FetchContent_Declare(
 FetchContent_Populate(zpp_bits)
 add_library(zpp_bits INTERFACE)
 target_include_directories(zpp_bits INTERFACE "${zpp_bits_SOURCE_DIR}")
+
+# --- Настройка zstd ---
+FetchContent_Declare(
+    zstd
+    GIT_REPOSITORY https://github.com/facebook/zstd.git
+    GIT_TAG        v1.5.6
+    SOURCE_SUBDIR  build/cmake
+)
+set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "Build zstd programs")
+set(ZSTD_BUILD_TESTS OFF CACHE BOOL "Build zstd tests")
+set(ZSTD_BUILD_CONTRIB OFF CACHE BOOL "Build zstd contrib")
+set(ZSTD_BUILD_CONTRIB_TESTS OFF CACHE BOOL "Build zstd contrib tests")
+set(ZSTD_BUILD_CONTRIB_EXAMPLES OFF CACHE BOOL "Build zstd contrib examples")
+set(ZSTD_BUILD_CONTRIB_LIBS OFF CACHE BOOL "Build zstd contrib libs")
+set(ZSTD_INSTALL OFF CACHE BOOL "Build zstd install")
+FetchContent_MakeAvailable(zstd)

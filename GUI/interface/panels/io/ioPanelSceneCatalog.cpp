@@ -10,6 +10,8 @@
 #include <string_view>
 #include <vector>
 
+#include <zstd.h>
+
 #include "App/save_system/AppSaveState.h"
 
 namespace {
@@ -163,19 +165,28 @@ namespace {
             return {};
         }
 
-        constexpr size_t maxHeaderSize = 4 * 1024 * 1024;
-        std::vector<std::byte> buffer(maxHeaderSize);
-        file.read(reinterpret_cast<char*>(buffer.data()), maxHeaderSize);
-        std::streamsize bytesRead = file.gcount();
-
-        if (bytesRead <= 0) {
+        uint32_t originalSize = 0;
+        if (!file.read(reinterpret_cast<char*>(&originalSize), sizeof(originalSize))) {
             return {};
         }
-        buffer.resize(bytesRead);
+
+        constexpr size_t compressedChunkSize = 512 * 1024;
+        std::vector<std::byte> compressedBuffer(compressedChunkSize);
+        file.read(reinterpret_cast<char*>(compressedBuffer.data()), compressedChunkSize);
+        size_t bytesRead = static_cast<size_t>(file.gcount());
+
+        if (bytesRead == 0) {
+            return {};
+        }
+
+        size_t decompressedLimit = std::min(size_t(originalSize), size_t(4 * 1024 * 1024));
+        std::vector<std::byte> decompBuffer(decompressedLimit);
+
+        size_t const dSize = ZSTD_decompress(decompBuffer.data(), decompBuffer.size(), compressedBuffer.data(), bytesRead);
 
         AppSaveHeader header;
         try {
-            auto in = zpp::bits::in(buffer);
+            auto in = zpp::bits::in(decompBuffer);
             uint32_t _;
             in(_).or_throw();
             in(header).or_throw();

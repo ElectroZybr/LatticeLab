@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-#include <bgfx/bgfx.h>
+#include <zstd.h>
 
 #include "App/save_system/AppSaveState.h"
 #include "Engine/Simulation.h"
@@ -314,35 +314,47 @@ void AppStateIO::saveBinary(const PreviewFrameRect& previewRect, const Simulatio
 
     BgfxCallback& bgfxCallback = BgfxContext::instance().callback();
 
-    bgfxCallback.addScreenShotCallback(path,
-                                       [&bgfxCallback, path, previewRect, filePath = std::string(path), appState = std::move(appState)](
-                                           uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip) mutable {
-                                           bgfxCallback.removeScreenShotCallback(path);
+    bgfxCallback.addScreenShotCallback(
+        path, [&bgfxCallback, path, previewRect, filePath = std::string(path),
+               appState = std::move(appState)](uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip) mutable {
+            bgfxCallback.removeScreenShotCallback(path);
 
-                                           const uint32_t pitch = width * 4;
-                                           const ImageData preview = capturePreviewImage(width, height, data, pitch, yflip, previewRect);
+            const uint32_t pitch = width * 4;
+            const ImageData preview = capturePreviewImage(width, height, data, pitch, yflip, previewRect);
 
-                                           appState.header.previewWidth = preview.width;
-                                           appState.header.previewHeight = preview.height;
+            appState.header.previewWidth = preview.width;
+            appState.header.previewHeight = preview.height;
 
-                                           if (preview.width > 0 && preview.height > 0) {
-                                               const size_t byteCount = static_cast<size_t>(preview.width) * preview.height * 4;
-                                               const auto* pixels = reinterpret_cast<const std::byte*>(preview.pixels.data());
-                                               appState.header.previewPixels.assign(pixels, pixels + byteCount);
-                                           }
+            if (preview.width > 0 && preview.height > 0) {
+                const size_t byteCount = static_cast<size_t>(preview.width) * preview.height * 4;
+                const auto* pixels = reinterpret_cast<const std::byte*>(preview.pixels.data());
+                appState.header.previewPixels.assign(pixels, pixels + byteCount);
+            }
 
-                                           auto [bytes, out] = zpp::bits::data_out();
-                                           try {
-                                               out(appState).or_throw();
-                                           }
-                                           catch (const std::exception& e) {
-                                               std::cerr << "Failed to serialize app state: " << e.what() << std::endl;
-                                               return;
-                                           }
+            auto [bytes, out] = zpp::bits::data_out();
+            try {
+                out(appState).or_throw();
+            }
+            catch (const std::exception& e) {
+                std::cerr << "Failed to serialize app state: " << e.what() << std::endl;
+                return;
+            }
 
-                                           std::ofstream file(filePath, std::ios::binary);
-                                           file.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
-                                       });
+            // Сжатие
+            const size_t maxCompressedSize = ZSTD_compressBound(bytes.size());
+            std::vector<std::byte> compressed(maxCompressedSize);
+            const size_t compressedSize = ZSTD_compress(compressed.data(), compressed.size(), bytes.data(), bytes.size(), 3);
+
+            if (ZSTD_isError(compressedSize)) {
+                std::cerr << "Failed to compress app state: " << ZSTD_getErrorName(compressedSize) << std::endl;
+                return;
+            }
+
+            std::ofstream file(filePath, std::ios::binary);
+            uint32_t originalSize = static_cast<uint32_t>(bytes.size());
+            file.write(reinterpret_cast<const char*>(&originalSize), sizeof(originalSize));
+            file.write(reinterpret_cast<const char*>(compressed.data()), compressedSize);
+        });
 
     bgfx::requestScreenShot(BGFX_INVALID_HANDLE, path.data());
 }
@@ -359,17 +371,31 @@ void AppStateIO::loadBinary(Simulation& simulation, IRenderer& renderer, std::st
         throw std::runtime_error("Failed to open save file: " + std::string(path));
     }
 
-    std::streamsize size = file.tellg();
+    std::streamsize fileSize = file.tellg();
     file.seekg(0, std::ios::beg);
 
-    std::vector<std::byte> buffer(size);
-    if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
-        throw std::runtime_error("Failed to read save file: " + std::string(path));
+    uint32_t originalSize = 0;
+    file.read(reinterpret_cast<char*>(&originalSize), sizeof(originalSize));
+
+    size_t compressedSize = static_cast<size_t>(fileSize) - sizeof(uint32_t);
+    std::vector<std::byte> compressedBuffer(compressedSize);
+    if (!file.read(reinterpret_cast<char*>(compressedBuffer.data()), compressedSize)) {
+        throw std::runtime_error("Failed to read compressed data");
+    }
+
+    std::vector<std::byte> decompressedBuffer(originalSize);
+    size_t const dSize = ZSTD_decompress(decompressedBuffer.data(), originalSize, compressedBuffer.data(), compressedSize);
+    if (ZSTD_isError(dSize)) {
+        throw std::runtime_error(std::string("Zstd decompression failed: ") + ZSTD_getErrorName(dSize));
+    }
+
+    if (dSize != originalSize) {
+        throw std::runtime_error("Decompressed size mismatch");
     }
 
     AppSaveState appState{};
     try {
-        auto in = zpp::bits::in(buffer);
+        auto in = zpp::bits::in(decompressedBuffer);
         in(appState).or_throw();
     }
     catch (const std::exception& e) {

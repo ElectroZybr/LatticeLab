@@ -85,6 +85,7 @@ target_link_libraries(latticelab_lib PUBLIC
     glm::glm
     bgfx bx
     zpp_bits
+    libzstd_static
 )
 
 if (WIN32)
