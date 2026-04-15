@@ -60,6 +60,10 @@ include(shaders)
 add_dependencies(latticelab_lib bgfx_shaders)
 target_include_directories(latticelab_lib PUBLIC ${BGFX_SHADER_OUT})
 
+set(G_RES_HEADERS "")
+include(embedded_resources)
+add_dependencies(latticelab_lib embedded_resources)
+
 target_compile_options(latticelab_lib PRIVATE 
     -O3
     $<$<BOOL:${OPTIMIZE_FOR_NATIVE}>:-march=native>
