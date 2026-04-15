@@ -4,7 +4,7 @@
 
 class Renderer3DBGFX : public RendererBGFX {
 public:
-    Renderer3DBGFX(GLFWwindow* window, SimBox& simbox);
+    Renderer3DBGFX(SimBox& simbox);
     ~Renderer3DBGFX() override = default;
 
 protected:

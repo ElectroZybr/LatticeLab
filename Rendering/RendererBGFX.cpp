@@ -46,7 +46,7 @@ bgfx::ProgramHandle RendererBGFX::loadEmbeddedProgram(const bgfx::EmbeddedShader
     return bgfx::createProgram(vsh, fsh, true);
 }
 
-RendererBGFX::RendererBGFX(GLFWwindow* window, SimBox& simbox) : IRenderer(simbox), window(window) {
+RendererBGFX::RendererBGFX(SimBox& simbox) : IRenderer(simbox) {
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x212121ff, 1.0f, 0);
 
     uLightDir = bgfx::createUniform("u_lightDir", bgfx::UniformType::Vec4);
@@ -144,10 +144,9 @@ void RendererBGFX::initGridBuffers() {
 void RendererBGFX::drawShot(const AtomStorage& atoms, const Bond::List& bonds, const SimBox& box) {
     updateMatrices();
 
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-    bgfx::setViewRect(0, 0, 0, width, height);
-    bgfx::setViewRect(255, 0, 0, width, height);
+    Vec2i size(camera.getScreenSize());
+    bgfx::setViewRect(0, 0, 0, size.x, size.y);
+    bgfx::setViewRect(255, 0, 0, size.x, size.y);
     bgfx::setViewTransform(0, &view[0][0], &projection[0][0]);
     bgfx::touch(0);
 

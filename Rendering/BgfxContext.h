@@ -10,9 +10,11 @@
 #define GLFW_EXPOSE_NATIVE_COCOA
 #define GLFW_EXPOSE_NATIVE_NSGL
 #endif
+
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 #include <bgfx/bgfx.h>
+#include <bgfx/platform.h>
 
 #include "Rendering/BgfxCallback.h"
 
@@ -28,23 +30,33 @@ public:
             return;
         }
 
+        bgfx::PlatformData pd;
+#if defined(__linux__)
+        pd.ndt = glfwGetX11Display();
+#else
+        pd.ndt = nullptr;
+#endif
+        pd.nwh = nullptr;
+        pd.context = nullptr;
+        pd.backBuffer = nullptr;
+        pd.backBufferDS = nullptr;
+
+        if (window != nullptr) {
+#if defined(__linux__)
+            pd.nwh = reinterpret_cast<void*>(static_cast<uintptr_t>(glfwGetX11Window(window)));
+#elif defined(_WIN32)
+            pd.nwh = glfwGetWin32Window(window);
+#elif defined(__APPLE__)
+            pd.nwh = glfwGetCocoaWindow(window);
+#endif
+        }
+
         bgfx::renderFrame();
 
         bgfx::Init init;
         init.type = bgfx::RendererType::Count;
-
-#if defined(__linux__)
-        init.platformData.ndt = glfwGetX11Display();
-#endif
-        if (window != nullptr) {
-#if defined(__linux__)
-            init.platformData.nwh = reinterpret_cast<void*>(static_cast<uintptr_t>(glfwGetX11Window(window)));
-#elif defined(_WIN32)
-            init.platformData.nwh = glfwGetWin32Window(window);
-#elif defined(__APPLE__)
-            init.platformData.nwh = glfwGetCocoaWindow(window);
-#endif
-        }
+        init.vendorId = BGFX_PCI_ID_NONE;
+        init.platformData = pd;
 
         init.resolution.width = width;
         init.resolution.height = height;
@@ -54,6 +66,7 @@ public:
         if (!bgfx::init(init)) {
             throw std::runtime_error("bgfx::init failed");
         }
+
         initialized = true;
     }
 

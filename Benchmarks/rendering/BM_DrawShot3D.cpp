@@ -7,6 +7,7 @@
 BENCHMARK_TEMPLATE_DEFINE_F(RendererFixture, DrawShot3D, Renderer3DBGFX)(benchmark::State& state) {
     for (auto _ : state) {
         renderer_->drawShot(atomStorage_, bonds_, box_);
+        bgfx::frame();
         benchmark::ClobberMemory();
     }
     setCounters(state);

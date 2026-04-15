@@ -17,7 +17,7 @@ namespace AppActions {
 
     private:
         void trackIOPanel(UiState& uiState, Simulation& simulation, std::unique_ptr<IRenderer>& renderer);
-        void trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, GLFWwindow* window);
+        void trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer);
         void trackSettingsPanel(GLFWwindow* window);
         void trackKeyboard(Simulation& simulation);
         void trackSimControlPanel(Simulation& simulation);

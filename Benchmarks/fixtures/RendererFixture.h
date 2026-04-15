@@ -6,6 +6,7 @@
 #include <benchmark/benchmark.h>
 
 #include "App/interaction/ToolsManager.h"
+#include "App/interaction/picking/PickingSystem.h"
 #include "Engine/SimBox.h"
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
@@ -18,27 +19,23 @@ concept IsRenderer = std::derived_from<T, IRenderer>;
 
 template <IsRenderer TRenderer> class RendererFixture : public benchmark::Fixture {
 public:
+    RendererFixture() { BgfxContext::instance().init(nullptr, 800, 600); }
+
     void SetUp(benchmark::State& state) override {
-        renderTexture_ = std::make_unique<sf::RenderTexture>();
-        if (!renderTexture_->resize({800, 600})) {
-            state.SkipWithError("RenderTexture resize failed");
-            return;
+        atomStorage_ = makeGridAtoms(state.range(0));
+
+        renderer_ = std::make_unique<TRenderer>(box_);
+        renderer_->camera.setScreenSize({800.0f, 600.0f});
+
+        if (ToolsManager::pickingSystem) {
+            delete ToolsManager::pickingSystem;
         }
-
-        renderTexture_->setActive(true);
-
-        BgfxContext::instance().init(800, 600);
-
-        renderer_ = std::make_unique<TRenderer>(*renderTexture_, box_);
-        renderer_->camera.setScreenSize(Vec2f{800, 600});
         ToolsManager::pickingSystem = new PickingSystem(atomStorage_, box_, renderer_);
-
-        atomStorage_ = makeGridAtoms(static_cast<int>(state.range(0)));
     }
 
     void TearDown(benchmark::State&) override {
-        bgfx::frame();
         renderer_.reset();
+        bgfx::frame();
     }
 
 protected:
@@ -46,7 +43,6 @@ protected:
         state.SetItemsProcessed(state.iterations() * static_cast<int64_t>(atomStorage_.size()));
     }
 
-    std::unique_ptr<sf::RenderTexture> renderTexture_;
     std::unique_ptr<IRenderer> renderer_;
     AtomStorage atomStorage_;
     Bond::List bonds_;

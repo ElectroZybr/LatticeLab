@@ -4,7 +4,7 @@
 
 #include "generated/shaders/shader_registry.h"
 
-Renderer2DBGFX::Renderer2DBGFX(GLFWwindow* window, SimBox& simBox) : RendererBGFX(window, simBox) {
+Renderer2DBGFX::Renderer2DBGFX(SimBox& simBox) : RendererBGFX(simBox) {
     atomProgram = loadEmbeddedProgram(s_allShaders, "atom2d");
     bondProgram = loadEmbeddedProgram(s_allShaders, "bond");
     boxProgram = loadEmbeddedProgram(s_allShaders, "box");

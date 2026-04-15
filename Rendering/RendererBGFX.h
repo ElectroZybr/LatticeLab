@@ -13,7 +13,7 @@
 
 class RendererBGFX : public IRenderer {
 public:
-    RendererBGFX(GLFWwindow* window, SimBox& simbox);
+    RendererBGFX(SimBox& simbox);
     ~RendererBGFX() override;
 
     void drawShot(const AtomStorage& atoms, const Bond::List& bonds, const SimBox& box) override;
@@ -25,7 +25,6 @@ protected:
     virtual glm::vec3 getLightDir() = 0;
     virtual bool useLighting() = 0;
 
-    GLFWwindow* window;
     glm::mat4 projection{1.f};
     glm::mat4 view{1.f};
 

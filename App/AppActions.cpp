@@ -59,15 +59,15 @@ namespace AppActions {
         }));
     }
 
-    void Handler::trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer, GLFWwindow* window) {
-        track(AppSignals::UI::SetRender.connect([&, window](RendererType type) {
+    void Handler::trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
+        track(AppSignals::UI::SetRender.connect([&](RendererType type) {
             std::unique_ptr<IRenderer> newRenderer;
             switch (type) {
             case RendererType::Renderer2D:
-                newRenderer = std::make_unique<Renderer2DBGFX>(window, simulation.box());
+                newRenderer = std::make_unique<Renderer2DBGFX>(simulation.box());
                 break;
             case RendererType::Renderer3D:
-                newRenderer = std::make_unique<Renderer3DBGFX>(window, simulation.box());
+                newRenderer = std::make_unique<Renderer3DBGFX>(simulation.box());
                 break;
             }
 
@@ -99,7 +99,7 @@ namespace AppActions {
 
     Handler::Handler(GLFWwindow* window, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, UiState& uiState) {
         trackIOPanel(uiState, simulation, renderer);
-        trackToolsPanel(simulation, renderer, window);
+        trackToolsPanel(simulation, renderer);
         trackSettingsPanel(window);
         trackSimControlPanel(simulation);
         trackKeyboard(simulation);

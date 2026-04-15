@@ -6,7 +6,7 @@
 
 #include "generated/shaders/shader_registry.h"
 
-Renderer3DBGFX::Renderer3DBGFX(GLFWwindow* window, SimBox& simBox) : RendererBGFX(window, simBox) {
+Renderer3DBGFX::Renderer3DBGFX(SimBox& simBox) : RendererBGFX(simBox) {
     atomProgram = loadEmbeddedProgram(s_allShaders, "atom3d");
     bondProgram = loadEmbeddedProgram(s_allShaders, "bond");
     boxProgram = loadEmbeddedProgram(s_allShaders, "box");
