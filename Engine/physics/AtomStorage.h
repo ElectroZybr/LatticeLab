@@ -95,6 +95,7 @@ private:
 
         floatData_ = std::move(newFloatData);
         capacity_ = newCapacity;
+
         bindFloatViews();
     }
 
@@ -125,9 +126,20 @@ public:
 
     AtomData::Type* atomTypeData() { return atomType_.data(); }
 
+    std::span<const float> floatDataSpan() const { return {floatData_.data(), floatData_.size()}; }
+
     std::span<float> xDataSpan() const { return {x_, count_}; }
     std::span<float> yDataSpan() const { return {y_, count_}; }
     std::span<float> zDataSpan() const { return {z_, count_}; }
+
+    std::span<float> vxDataSpan() const { return {vx_, count_}; }
+    std::span<float> vyDataSpan() const { return {vy_, count_}; }
+    std::span<float> vzDataSpan() const { return {vz_, count_}; }
+
+    std::span<const AtomData::Type> atomTypeDataSpan() const { return {atomType_.data(), atomType_.size()}; }
+    std::span<const uint8_t> valenceDataSpan() const { return {valence_.data(), valence_.size()}; }
+
+    std::span<float> chargeDataSpan() const { return {charge_, count_}; }
 
     AtomStorage() = default;
     AtomStorage(const AtomStorage&) = delete;
@@ -159,6 +171,37 @@ public:
         other.bindFloatViews();
         return *this;
     }
+    // Фиксированные должны быть в конце массива
+    void init(size_t count, size_t mobileCount, std::span<const float> x, std::span<const float> y, std::span<const float> z,
+              std::span<const float> vx, std::span<const float> vy, std::span<const float> vz, std::span<const AtomData::Type> atomType,
+              std::span<const float> charge) {
+        clear();
+        resize(count);
+        mobileCount_ = mobileCount;
+
+        std::copy_n(x.data(), count, x_);
+        std::copy_n(y.data(), count, y_);
+        std::copy_n(z.data(), count, z_);
+        std::copy_n(vx.data(), count, vx_);
+        std::copy_n(vy.data(), count, vy_);
+        std::copy_n(vz.data(), count, vz_);
+        std::copy_n(atomType.data(), count, atomType_.data());
+        std::copy_n(charge.data(), count, charge_);
+
+        std::fill_n(fx_, count, 0.f);
+        std::fill_n(fy_, count, 0.f);
+        std::fill_n(fz_, count, 0.f);
+        std::fill_n(pfx_, count, 0.f);
+        std::fill_n(pfy_, count, 0.f);
+        std::fill_n(pfz_, count, 0.f);
+        std::fill_n(pe_, count, 0.f);
+
+        for (size_t i = 0; i < count; ++i) {
+            const auto& props = AtomData::getProps(atomType_[i]);
+            invMass_[i] = 1.0f / props.mass;
+            valence_[i] = props.maxValence;
+        }
+    }
 
     const AtomData::Type* atomTypeData() const { return atomType_.data(); }
 
@@ -189,6 +232,13 @@ public:
         ensureCapacity(count);
         atomType_.reserve(count);
         valence_.reserve(count);
+    }
+
+    void resize(size_t count) {
+        ensureCapacity(count);
+        count_ = count;
+        atomType_.resize(count);
+        valence_.resize(count);
     }
 
     void addAtom(const Vec3f& coords, const Vec3f& speed, AtomData::Type type, bool fixed = false) {

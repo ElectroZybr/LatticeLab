@@ -10,6 +10,8 @@
 #include <string_view>
 #include <vector>
 
+#include "App/save_system/AppSaveState.h"
+
 namespace {
     struct ParsedSceneInfo {
         std::string title;
@@ -17,7 +19,7 @@ namespace {
         unsigned imageWidth = 0;
         unsigned imageHeight = 0;
         bool hasEmbeddedPreview = false;
-        std::vector<std::uint8_t> imageBytes;
+        std::vector<std::byte> imageBytes;
     };
 
     std::string trim(std::string_view value) {
@@ -41,7 +43,7 @@ namespace {
         return trim(line.substr(tag.size()));
     }
 
-    std::vector<std::uint8_t> decodeBase64(std::string_view encoded) {
+    std::vector<std::byte> decodeBase64(std::string_view encoded) {
         std::array<int, 256> decodeTable{};
         decodeTable.fill(-1);
 
@@ -50,7 +52,7 @@ namespace {
             decodeTable[static_cast<unsigned char>(alphabet[i])] = i;
         }
 
-        std::vector<std::uint8_t> decoded;
+        std::vector<std::byte> decoded;
         decoded.reserve((encoded.size() / 4) * 3);
 
         int val = 0;
@@ -69,7 +71,7 @@ namespace {
             val = (val << 6) + decodedChar;
             valb += 6;
             if (valb >= 0) {
-                decoded.emplace_back(static_cast<std::uint8_t>((val >> valb) & 0xFF));
+                decoded.emplace_back(static_cast<std::byte>((val >> valb) & 0xFF));
                 valb -= 8;
             }
         }
@@ -77,7 +79,7 @@ namespace {
         return decoded;
     }
 
-    ParsedSceneInfo parseSceneInfo(const std::filesystem::path& path) {
+    ParsedSceneInfo parseTxtSceneInfo(const std::filesystem::path& path) {
         std::ifstream file(path);
         if (!file.is_open()) {
             return {};
@@ -154,6 +156,54 @@ namespace {
 
         return info;
     }
+
+    ParsedSceneInfo parseBinSceneInfo(const std::filesystem::path& path) {
+        std::ifstream file(path, std::ios::binary);
+        if (!file.is_open()) {
+            return {};
+        }
+
+        constexpr size_t maxHeaderSize = 4 * 1024 * 1024;
+        std::vector<std::byte> buffer(maxHeaderSize);
+        file.read(reinterpret_cast<char*>(buffer.data()), maxHeaderSize);
+        std::streamsize bytesRead = file.gcount();
+
+        if (bytesRead <= 0) {
+            return {};
+        }
+        buffer.resize(bytesRead);
+
+        AppSaveHeader header;
+        try {
+            auto in = zpp::bits::in(buffer);
+            uint32_t _;
+            in(_).or_throw();
+            in(header).or_throw();
+        }
+        catch (const std::exception& e) {
+            return {};
+        }
+
+        ParsedSceneInfo info;
+        info.title = header.title;
+        info.description = header.description;
+        info.imageWidth = header.previewWidth;
+        info.imageHeight = header.previewHeight;
+        info.imageBytes = header.previewPixels;
+        info.hasEmbeddedPreview = true;
+
+        return info;
+    }
+
+    ParsedSceneInfo parseSceneInfo(const std::filesystem::path& path) {
+        if (path.extension() == ".lat") {
+            return parseTxtSceneInfo(path);
+        }
+        else if (path.extension() == ".latbin") {
+            return parseBinSceneInfo(path);
+        }
+        return {};
+    }
 }
 
 std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirectory) {
@@ -169,7 +219,7 @@ std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirec
         if (!entry.is_regular_file()) {
             continue;
         }
-        if (entry.path().extension() == ".lat") {
+        if (entry.path().extension() == ".lat" || entry.path().extension() == ".latbin") {
             scenePaths.emplace_back(entry.path());
         }
     }

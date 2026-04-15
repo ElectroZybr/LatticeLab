@@ -84,6 +84,7 @@ target_link_libraries(latticelab_lib PUBLIC
     imgui ImGuiFileDialog_lib
     glm::glm
     bgfx bx
+    zpp_bits
 )
 
 if (WIN32)

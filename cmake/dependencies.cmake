@@ -81,3 +81,15 @@ set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_TOOLS    ON  CACHE BOOL "" FORCE)
 set(BGFX_WITH_WAYLAND   OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(bgfx_cmake)
+
+# --- Настройка zpp_bits ---
+FetchContent_Declare(
+    zpp_bits
+    GIT_REPOSITORY https://github.com/eyalz800/zpp_bits.git
+    GIT_TAG        v4.7
+    GIT_SHALLOW    ON
+
+)
+FetchContent_Populate(zpp_bits)
+add_library(zpp_bits INTERFACE)
+target_include_directories(zpp_bits INTERFACE "${zpp_bits_SOURCE_DIR}")

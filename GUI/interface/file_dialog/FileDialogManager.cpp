@@ -6,8 +6,8 @@
 #include <ImGuiFileDialog.h>
 #include <imgui.h>
 
-#include "App/AppSignals.h"
 #include "App/AppPaths.h"
+#include "App/AppSignals.h"
 
 namespace {
     std::string defaultSimulationPath(const std::string& currentPath) {
@@ -28,7 +28,7 @@ void FileDialogManager::openSave() {
     config.fileName = "scene";
     config.countSelectionMax = 1;
     config.flags = ImGuiFileDialogFlags_ConfirmOverwrite;
-    ImGuiFileDialog::Instance()->OpenDialog("SaveDlg", "Save scene", ".lat", config);
+    ImGuiFileDialog::Instance()->OpenDialog("SaveDlg", "Save scene", ".latbin,.lat", config);
     saveDialogOpen_ = true;
 }
 
@@ -36,7 +36,7 @@ void FileDialogManager::openLoad() {
     IGFD::FileDialogConfig config;
     config.path = defaultSimulationPath(simulationDirectory_);
     config.countSelectionMax = 1;
-    ImGuiFileDialog::Instance()->OpenDialog("LoadDlg", "Load scene", ".lat,.sim", config);
+    ImGuiFileDialog::Instance()->OpenDialog("LoadDlg", "Load scene", ".latbin,.lat,.sim", config);
 }
 
 void FileDialogManager::openCaptureDirectory(const std::string& currentPath) {
@@ -53,9 +53,7 @@ void FileDialogManager::openSceneDirectory(const std::string& currentPath) {
     ImGuiFileDialog::Instance()->OpenDialog("SceneDirDlg", "Select scenes directory", nullptr, config);
 }
 
-void FileDialogManager::setSimulationDirectory(const std::string& currentPath) {
-    simulationDirectory_ = currentPath;
-}
+void FileDialogManager::setSimulationDirectory(const std::string& currentPath) { simulationDirectory_ = currentPath; }
 
 std::string FileDialogManager::consumeSelectedSceneDirectory() {
     sceneDirectorySelected_ = false;

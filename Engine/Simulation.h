@@ -32,7 +32,7 @@ public:
     void setAccelDamping(float accelDamping) { integrator.setAccelDamping(accelDamping); }
     float getAccelDamping() const { return integrator.accelDamping(); }
 
-    int getSimStep() const { return sim_step; }
+    size_t getSimStep() const { return sim_step; }
     float simTimeNs() const { return sim_time_ns; }
     void restoreRuntimeState(int simStep, float simTimeNs) {
         sim_step = simStep;
@@ -128,7 +128,7 @@ private:
     NeighborList neighborList_;
     Bond::List bonds_;
     float Dt = 0.01f;
-    int sim_step = 0;
+    size_t sim_step = 0;
     float sim_time_ns = 0.0f;
     bool bondFormationEnabled_ = false;
     std::string sceneTitle_;

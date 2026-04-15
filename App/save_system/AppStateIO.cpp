@@ -4,6 +4,8 @@
 #include <cctype>
 #include <cstdint>
 #include <fstream>
+#include <iostream>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -11,6 +13,8 @@
 
 #include <bgfx/bgfx.h>
 
+#include "App/save_system/AppSaveState.h"
+#include "Engine/Simulation.h"
 #include "Engine/io/SimulationStateIO.h"
 #include "GUI/interface/UiState.h"
 #include "Rendering/BaseRenderer.h"
@@ -243,13 +247,178 @@ namespace {
 }
 
 void AppStateIO::save(const PreviewFrameRect& previewRect, const Simulation& simulation, const IRenderer& renderer, std::string_view path) {
+    if (path.ends_with(".lat")) {
+        AppStateIO::saveText(previewRect, simulation, renderer, path);
+    }
+    else if (path.ends_with(".latbin")) {
+        AppStateIO::saveBinary(previewRect, simulation, renderer, path);
+    }
+}
+
+void AppStateIO::load(Simulation& simulation, IRenderer& renderer, std::string_view path) {
+    if (path.ends_with(".lat")) {
+        AppStateIO::loadText(simulation, renderer, path);
+    }
+    else if (path.ends_with(".latbin")) {
+        AppStateIO::loadBinary(simulation, renderer, path);
+    }
+}
+
+void AppStateIO::saveText(const PreviewFrameRect& previewRect, const Simulation& simulation, const IRenderer& renderer,
+                          std::string_view path) {
     SimulationStateIO::save(simulation, path);
     saveRendererState(renderer, path);
     saveImageState(previewRect, path);
 }
 
-void AppStateIO::load(Simulation& simulation, IRenderer& renderer, std::string_view path) {
+void AppStateIO::saveBinary(const PreviewFrameRect& previewRect, const Simulation& simulation, const IRenderer& renderer,
+                            std::string_view path) {
+    SimulationSaveState simState;
+    simState.dt = simulation.getDt();
+    simState.time_ns = simulation.simTimeNs();
+    simState.step = simulation.getSimStep();
+    simState.integrator = simulation.getIntegrator();
+    simState.gravity = simulation.getGravity();
+    simState.bondFormationEnabled = simulation.isBondFormationEnabled();
+    simState.LJEnabled = simulation.isLJEnabled();
+    simState.coulombEnabled = simulation.isCoulombEnabled();
+    simState.boxSize = simulation.box().size;
+    simState.gridCellSize = simulation.box().grid.cellSize;
+    simState.neighborListCutoff = simulation.getNeighborListCutoff();
+    simState.neighborListSkin = simulation.getNeighborListSkin();
+    simState.maxParticleSpeed = simulation.getMaxParticleSpeed();
+    simState.accelDamping = simulation.getAccelDamping();
+    simState.atomMobileCount = simulation.atoms().mobileCount();
+    simState.x.assign(simulation.atoms().xDataSpan().begin(), simulation.atoms().xDataSpan().end());
+    simState.y.assign(simulation.atoms().yDataSpan().begin(), simulation.atoms().yDataSpan().end());
+    simState.z.assign(simulation.atoms().zDataSpan().begin(), simulation.atoms().zDataSpan().end());
+    simState.vx.assign(simulation.atoms().vxDataSpan().begin(), simulation.atoms().vxDataSpan().end());
+    simState.vy.assign(simulation.atoms().vyDataSpan().begin(), simulation.atoms().vyDataSpan().end());
+    simState.vz.assign(simulation.atoms().vzDataSpan().begin(), simulation.atoms().vzDataSpan().end());
+    simState.atomType.assign(simulation.atoms().atomTypeDataSpan().begin(), simulation.atoms().atomTypeDataSpan().end());
+    simState.atomCharge.assign(simulation.atoms().chargeDataSpan().begin(), simulation.atoms().chargeDataSpan().end());
+
+    auto view = simulation.bonds() | std::views::transform([](const Bond& b) { return std::pair{b.aIndex, b.bIndex}; });
+    simState.bonds.assign(view.begin(), view.end());
+
+    RendererSaveState rendState;
+    rendState.drawGrid = renderer.drawGrid;
+    rendState.drawBonds = renderer.drawBonds;
+    rendState.speedColorMode = renderer.speedColorMode;
+    rendState.speedGradientMax = renderer.speedGradientMax;
+    rendState.alpha = renderer.alpha;
+
+    AppSaveState appState;
+    appState.simulation = std::move(simState);
+    appState.renderer = std::move(rendState);
+
+    BgfxCallback& bgfxCallback = BgfxContext::instance().callback();
+
+    bgfxCallback.addScreenShotCallback(path,
+                                       [&bgfxCallback, path, previewRect, filePath = std::string(path), appState = std::move(appState)](
+                                           uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip) mutable {
+                                           bgfxCallback.removeScreenShotCallback(path);
+
+                                           const uint32_t pitch = width * 4;
+                                           const ImageData preview = capturePreviewImage(width, height, data, pitch, yflip, previewRect);
+
+                                           appState.header.previewWidth = preview.width;
+                                           appState.header.previewHeight = preview.height;
+
+                                           if (preview.width > 0 && preview.height > 0) {
+                                               const size_t byteCount = static_cast<size_t>(preview.width) * preview.height * 4;
+                                               const auto* pixels = reinterpret_cast<const std::byte*>(preview.pixels.data());
+                                               appState.header.previewPixels.assign(pixels, pixels + byteCount);
+                                           }
+
+                                           auto [bytes, out] = zpp::bits::data_out();
+                                           try {
+                                               out(appState).or_throw();
+                                           }
+                                           catch (const std::exception& e) {
+                                               std::cerr << "Failed to serialize app state: " << e.what() << std::endl;
+                                               return;
+                                           }
+
+                                           std::ofstream file(filePath, std::ios::binary);
+                                           file.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+                                       });
+
+    bgfx::requestScreenShot(BGFX_INVALID_HANDLE, path.data());
+}
+
+void AppStateIO::loadText(Simulation& simulation, IRenderer& renderer, std::string_view path) {
     SimulationStateIO::load(simulation, path);
     loadRendererState(renderer, path);
+    renderer.camera.resetView();
+}
+
+void AppStateIO::loadBinary(Simulation& simulation, IRenderer& renderer, std::string_view path) {
+    std::ifstream file(path.data(), std::ios::binary | std::ios::ate);
+    if (!file) {
+        throw std::runtime_error("Failed to open save file: " + std::string(path));
+    }
+
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    std::vector<std::byte> buffer(size);
+    if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
+        throw std::runtime_error("Failed to read save file: " + std::string(path));
+    }
+
+    AppSaveState appState{};
+    try {
+        auto in = zpp::bits::in(buffer);
+        in(appState).or_throw();
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Failed to deserialize save file: " << e.what() << std::endl;
+        return;
+    }
+
+    // Заголовок
+    const auto& header = appState.header;
+    simulation.setSceneTitle(header.title);
+    simulation.setSceneDescription(header.description);
+
+    // Симуляция
+    const auto& simState = appState.simulation;
+
+    simulation.clear();
+
+    simulation.box().setSizeBox(simState.boxSize, simState.gridCellSize);
+    simulation.setNeighborListCutoff(simState.neighborListCutoff);
+    simulation.setNeighborListSkin(simState.neighborListSkin);
+
+    simulation.setDt(simState.dt);
+    simulation.setIntegrator(simState.integrator);
+    simulation.setGravity(simState.gravity);
+    simulation.setBondFormationEnabled(simState.bondFormationEnabled);
+    simulation.setLJEnabled(simState.LJEnabled);
+    simulation.setCoulombEnabled(simState.coulombEnabled);
+    simulation.setMaxParticleSpeed(simState.maxParticleSpeed);
+    simulation.setAccelDamping(simState.accelDamping);
+
+    const uint64_t atomMobileCount = simState.atomMobileCount;
+    const uint64_t atomCount = simState.x.size();
+
+    AtomStorage& atoms = simulation.atoms();
+    atoms.init(atomCount, atomMobileCount, simState.x, simState.y, simState.z, simState.vx, simState.vy, simState.vz, simState.atomType,
+               simState.atomCharge);
+    simulation.finalizeAtomBatch();
+
+    for (const auto& [aIndex, bIndex] : simState.bonds) {
+        simulation.addBond(aIndex, bIndex);
+    }
+    simulation.restoreRuntimeState(simState.step, simState.time_ns);
+
+    // Рендер
+    const auto& rendState = appState.renderer;
+    renderer.drawGrid = rendState.drawGrid;
+    renderer.drawBonds = rendState.drawBonds;
+    renderer.speedColorMode = rendState.speedColorMode;
+    renderer.speedGradientMax = rendState.speedGradientMax;
+    renderer.alpha = rendState.alpha;
     renderer.camera.resetView();
 }
