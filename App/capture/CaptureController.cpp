@@ -71,18 +71,19 @@ void CaptureController::start() {
     activeSessionFps_ = std::max(1, settings_.fps);
 
     BgfxContext::instance().callback().addScreenShotCallback(
-        "capture", [this](uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip) {
+        "capture", [this](uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip, bgfx::TextureFormat::Enum format) {
             CapturedFrame frame;
             frame.width = width;
             frame.height = height;
-            frame.rgba.assign(static_cast<const uint8_t*>(data), static_cast<const uint8_t*>(data) + size);
+            frame.format = format;
+            frame.pixels.assign(static_cast<const std::byte*>(data), static_cast<const std::byte*>(data) + size);
 
-            if (yflip) {
+            if (yflip) { // TODO можно вынести в ffmpeg параметр
                 const size_t rowSize = width * 4;
 
                 for (uint32_t y = 0; y < height / 2; ++y) {
-                    uint8_t* top = frame.rgba.data() + y * rowSize;
-                    uint8_t* bottom = frame.rgba.data() + (height - 1 - y) * rowSize;
+                    std::byte* top = frame.pixels.data() + y * rowSize;
+                    std::byte* bottom = frame.pixels.data() + (height - 1 - y) * rowSize;
                     std::swap_ranges(top, top + rowSize, bottom);
                 }
             }

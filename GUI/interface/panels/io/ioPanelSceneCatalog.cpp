@@ -20,8 +20,9 @@ namespace {
         std::string description;
         unsigned imageWidth = 0;
         unsigned imageHeight = 0;
-        bool hasEmbeddedPreview = false;
+        bgfx::TextureFormat::Enum imageFormat;
         std::vector<std::byte> imageBytes;
+        bool hasEmbeddedPreview = false;
     };
 
     std::string trim(std::string_view value) {
@@ -90,7 +91,7 @@ namespace {
         ParsedSceneInfo info;
         std::string section;
         std::string imageEncoding;
-        std::string imageFormat;
+        bgfx::TextureFormat::Enum imageFormat;
         std::string imageDataBase64;
         bool readingImageData = false;
 
@@ -129,7 +130,7 @@ namespace {
                     imageEncoding = valueAfterTag(trimmed, "encoding");
                 }
                 else if (trimmed.starts_with("format ")) {
-                    imageFormat = valueAfterTag(trimmed, "format");
+                    imageFormat = static_cast<bgfx::TextureFormat::Enum>(std::stoi(valueAfterTag(trimmed, "format")));
                 }
                 else if (trimmed.starts_with("width ")) {
                     info.imageWidth = static_cast<unsigned>(std::max(0, std::stoi(valueAfterTag(trimmed, "width"))));
@@ -147,7 +148,8 @@ namespace {
             info.title = path.stem().string();
         }
 
-        if (imageEncoding == "base64" && imageFormat == "rgba8" && info.imageWidth > 0 && info.imageHeight > 0) {
+        if (imageEncoding == "base64" && info.imageWidth > 0 && info.imageHeight > 0) {
+            info.imageFormat = imageFormat;
             info.imageBytes = decodeBase64(imageDataBase64);
             const size_t expectedSize = static_cast<size_t>(info.imageWidth) * static_cast<size_t>(info.imageHeight) * 4;
             info.hasEmbeddedPreview = (info.imageBytes.size() == expectedSize);
@@ -188,7 +190,7 @@ namespace {
         try {
             auto in = zpp::bits::in(decompBuffer);
             uint32_t _;
-            in(_).or_throw();
+            in(_).or_throw(); // Пропускаем версию AppSaveState
             in(header).or_throw();
         }
         catch (const std::exception& e) {
@@ -200,6 +202,7 @@ namespace {
         info.description = header.description;
         info.imageWidth = header.previewWidth;
         info.imageHeight = header.previewHeight;
+        info.imageFormat = header.previewFormat;
         info.imageBytes = header.previewPixels;
         info.hasEmbeddedPreview = true;
 
@@ -249,7 +252,7 @@ std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirec
         if (parsed.hasEmbeddedPreview) {
             const bgfx::Memory* mem = bgfx::copy(parsed.imageBytes.data(), parsed.imageBytes.size());
 
-            tile.previewTexture = bgfx::createTexture2D(parsed.imageWidth, parsed.imageHeight, false, 1, bgfx::TextureFormat::RGBA8,
+            tile.previewTexture = bgfx::createTexture2D(parsed.imageWidth, parsed.imageHeight, false, 1, parsed.imageFormat,
                                                         BGFX_TEXTURE_NONE | BGFX_SAMPLER_POINT, mem);
             tile.previewSize = Vec2u(parsed.imageWidth, parsed.imageHeight);
             tile.hasPreview = bgfx::isValid(tile.previewTexture);

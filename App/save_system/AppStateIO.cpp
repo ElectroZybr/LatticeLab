@@ -46,7 +46,7 @@ namespace {
         return std::string(value.substr(begin, end - begin));
     }
 
-    std::string encodeBase64(std::span<const std::uint8_t> data) {
+    std::string encodeBase64(std::span<const std::byte> data) {
         static constexpr char kAlphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
         const size_t input_len = data.size();
@@ -58,14 +58,15 @@ namespace {
         std::string encoded;
         encoded.resize(output_len);
 
-        const uint8_t* bytes = reinterpret_cast<const uint8_t*>(data.data());
+        const std::byte* bytes = data.data();
         char* dst = &encoded[0];
 
         size_t i = 0;
 
         const size_t fast_len = (input_len / 3) * 3;
         for (; i < fast_len; i += 3) {
-            uint32_t n = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+            uint32_t n =
+                (static_cast<uint32_t>(bytes[i]) << 16) | (static_cast<uint32_t>(bytes[i + 1]) << 8) | static_cast<uint32_t>(bytes[i + 2]);
 
             dst[0] = kAlphabet[(n >> 18) & 0x3F];
             dst[1] = kAlphabet[(n >> 12) & 0x3F];
@@ -75,9 +76,9 @@ namespace {
         }
 
         if (i < input_len) {
-            uint32_t n = bytes[i] << 16;
+            uint32_t n = static_cast<uint32_t>(bytes[i]) << 16;
             if (i + 1 < input_len) {
-                n |= bytes[i + 1] << 8;
+                n |= static_cast<uint32_t>(bytes[i + 1]) << 8;
             }
 
             dst[0] = kAlphabet[(n >> 18) & 0x3F];
@@ -95,7 +96,7 @@ namespace {
             return {};
         }
 
-        const std::uint8_t* src = static_cast<const std::uint8_t*>(rawData);
+        const std::byte* src = static_cast<const std::byte*>(rawData);
 
         const unsigned cropX =
             std::min(srcWidth - 1, static_cast<unsigned>(std::clamp(previewRect.x, 0.0f, static_cast<float>(srcWidth - 1))));
@@ -125,8 +126,8 @@ namespace {
 
                 unsigned flippedY = yflip ? (srcHeight - 1 - srcSampleY) : srcSampleY;
 
-                const std::uint8_t* srcPixel = src + flippedY * pitch + srcSampleX * 4;
-                std::uint8_t* dstPixel = result.pixels.data() + (y * previewWidth + x) * 4;
+                const std::byte* srcPixel = src + flippedY * pitch + srcSampleX * 4;
+                std::byte* dstPixel = result.pixels.data() + (y * previewWidth + x) * 4;
 
                 dstPixel[0] = srcPixel[0];
                 dstPixel[1] = srcPixel[1];
@@ -140,40 +141,41 @@ namespace {
     void saveImageState(const PreviewFrameRect& previewRect, std::string_view path) {
         BgfxCallback& bgfxCallback = BgfxContext::instance().callback();
 
-        bgfxCallback.addScreenShotCallback(path, [&bgfxCallback, path, previewRect, filePath = std::string(path)](
-                                                     uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip) {
-            bgfxCallback.removeScreenShotCallback(path);
+        bgfxCallback.addScreenShotCallback(
+            path, [&bgfxCallback, path, previewRect, filePath = std::string(path)](
+                      uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip, bgfx::TextureFormat::Enum format) {
+                bgfxCallback.removeScreenShotCallback(path);
 
-            const uint32_t pitch = width * 4;
-            const ImageData preview = capturePreviewImage(width, height, data, pitch, yflip, previewRect);
+                const uint32_t pitch = width * 4;
+                const ImageData preview = capturePreviewImage(width, height, data, pitch, yflip, previewRect);
 
-            if (preview.width == 0 || preview.height == 0) {
-                return;
-            }
+                if (preview.width == 0 || preview.height == 0) {
+                    return;
+                }
 
-            const size_t byteCount = static_cast<size_t>(preview.width) * preview.height * 4;
-            const std::vector<std::uint8_t> bytes(preview.pixels.data(), preview.pixels.data() + byteCount);
-            const std::string encoded = encodeBase64(bytes);
+                const size_t byteCount = static_cast<size_t>(preview.width) * preview.height * 4;
+                const std::vector<std::byte> bytes(preview.pixels.data(), preview.pixels.data() + byteCount);
+                const std::string encoded = encodeBase64(bytes);
 
-            std::ofstream file(filePath, std::ios::app);
-            if (!file.is_open()) {
-                return;
-            }
+                std::ofstream file(filePath, std::ios::app);
+                if (!file.is_open()) {
+                    return;
+                }
 
-            file << "\n[image]\n";
-            file << kBlockIndent << "encoding base64\n";
-            file << kBlockIndent << "format rgba8\n";
-            file << kBlockIndent << "width " << preview.width << "\n";
-            file << kBlockIndent << "height " << preview.height << "\n";
-            file << kBlockIndent << "data_begin\n";
+                file << "\n[image]\n";
+                file << kBlockIndent << "encoding base64\n";
+                file << kBlockIndent << "format " << static_cast<int>(format) << "\n";
+                file << kBlockIndent << "width " << preview.width << "\n";
+                file << kBlockIndent << "height " << preview.height << "\n";
+                file << kBlockIndent << "data_begin\n";
 
-            constexpr size_t lineWidth = 120;
-            for (size_t offset = 0; offset < encoded.size(); offset += lineWidth) {
-                file << kBlockIndent << encoded.substr(offset, lineWidth) << "\n";
-            }
+                constexpr size_t lineWidth = 120;
+                for (size_t offset = 0; offset < encoded.size(); offset += lineWidth) {
+                    file << kBlockIndent << encoded.substr(offset, lineWidth) << "\n";
+                }
 
-            file << kBlockIndent << "data_end\n";
-        });
+                file << kBlockIndent << "data_end\n";
+            });
 
         bgfx::requestScreenShot(BGFX_INVALID_HANDLE, path.data());
     }
@@ -315,8 +317,8 @@ void AppStateIO::saveBinary(const PreviewFrameRect& previewRect, const Simulatio
     BgfxCallback& bgfxCallback = BgfxContext::instance().callback();
 
     bgfxCallback.addScreenShotCallback(
-        path, [&bgfxCallback, path, previewRect, filePath = std::string(path),
-               appState = std::move(appState)](uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip) mutable {
+        path, [&bgfxCallback, path, previewRect, filePath = std::string(path), appState = std::move(appState)](
+                  uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip, bgfx::TextureFormat::Enum format) mutable {
             bgfxCallback.removeScreenShotCallback(path);
 
             const uint32_t pitch = width * 4;
@@ -324,6 +326,7 @@ void AppStateIO::saveBinary(const PreviewFrameRect& previewRect, const Simulatio
 
             appState.header.previewWidth = preview.width;
             appState.header.previewHeight = preview.height;
+            appState.header.previewFormat = format;
 
             if (preview.width > 0 && preview.height > 0) {
                 const size_t byteCount = static_cast<size_t>(preview.width) * preview.height * 4;

@@ -11,7 +11,8 @@
 
 class BgfxCallback : public bgfx::CallbackI {
 public:
-    using ScreenShotFn = std::function<void(uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip)>;
+    using ScreenShotFn =
+        std::function<void(uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip, bgfx::TextureFormat::Enum format)>;
 
     void addScreenShotCallback(std::string_view filePath, ScreenShotFn fn) { callbacks_[filePath.data()] = std::move(fn); }
 
@@ -21,7 +22,7 @@ public:
                     const void* data, uint32_t size, bool yflip) override {
         auto it = callbacks_.find(filePath);
         if (it != callbacks_.end() && it->second) {
-            it->second(width, height, data, size, yflip);
+            it->second(width, height, data, size, yflip, format);
         }
     }
 

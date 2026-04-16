@@ -1,3 +1,4 @@
+#include <bgfx/bgfx.h>
 #include <zpp_bits.h>
 
 #include "Engine/math/Vec3.h"
@@ -97,6 +98,7 @@ struct AppSaveHeader {
     std::string description;
     uint32_t previewWidth = 0;
     uint32_t previewHeight = 0;
+    bgfx::TextureFormat::Enum previewFormat;
     std::vector<std::byte> previewPixels;
 
     constexpr static zpp::bits::errc serialize(auto& archive, auto& self) {
@@ -104,7 +106,7 @@ struct AppSaveHeader {
             return err;
         }
 
-        if (auto err = archive(self.title, self.description, self.previewWidth, self.previewHeight, self.previewPixels);
+        if (auto err = archive(self.title, self.description, self.previewWidth, self.previewHeight, self.previewFormat, self.previewPixels);
             zpp::bits::failure(err.code)) {
             return err;
         }

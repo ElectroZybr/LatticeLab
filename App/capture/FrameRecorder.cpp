@@ -44,6 +44,19 @@ namespace {
         return "veryfast";
     }
 
+    static const char* toInputPixelFormat(bgfx::TextureFormat::Enum format) {
+        switch (format) {
+        case bgfx::TextureFormat::RGBA8:
+            return "rgba";
+        case bgfx::TextureFormat::BGRA8:
+            return "bgra";
+        case bgfx::TextureFormat::RGB8:
+            return "rgb24";
+        default:
+            return "rgba";
+        }
+    }
+
     const char* toPixelFormatArg(CaptureSettings::PixelFormat pixelFormat) {
         switch (pixelFormat) {
         case CaptureSettings::PixelFormat::Yuv420p:
@@ -162,8 +175,8 @@ bool FrameRecorder::submit(CapturedFrame frame) {
         return false;
     }
 #else
-    const ssize_t written = write(reinterpret_cast<intptr_t>(encoderStdinWrite_), frame.rgba.data(), frame.rgba.size());
-    if (written != static_cast<ssize_t>(frame.rgba.size())) {
+    const ssize_t written = write(reinterpret_cast<intptr_t>(encoderStdinWrite_), frame.pixels.data(), frame.pixels.size());
+    if (written != static_cast<ssize_t>(frame.pixels.size())) {
         closeEncoder();
         recording_ = false;
         return false;
@@ -229,8 +242,8 @@ bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
     command << quoteForCmd(ffmpegPath_) << " -y"
             << " -loglevel error"
             << " -f rawvideo"
-            << " -pix_fmt rgba"
-            << " -s " << frameWidth_ << "x" << frameHeight_ << " -r " << settings_.fps << " -i -"
+            << " -pix_fmt " << toInputPixelFormat(frame.format) << " -s " << frameWidth_ << "x" << frameHeight_ << " -r " << settings_.fps
+            << " -i -"
             << " -an"
             << " -c:v libx264"
             << " -preset " << toPresetArg(settings_.preset) << " -crf " << settings_.crf;
@@ -304,7 +317,7 @@ bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
         "-f",
         "rawvideo",
         "-pix_fmt",
-        "rgba",
+        toInputPixelFormat(frame.format),
         "-s",
         sizeArg,
         "-r",

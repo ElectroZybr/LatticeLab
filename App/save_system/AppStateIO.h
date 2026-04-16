@@ -9,7 +9,7 @@ class IRenderer;
 struct PreviewFrameRect;
 
 struct ImageData {
-    std::vector<std::uint8_t> pixels; // RGBA
+    std::vector<std::byte> pixels;
     uint32_t width = 0;
     uint32_t height = 0;
 };
