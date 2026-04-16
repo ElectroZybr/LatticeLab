@@ -317,20 +317,21 @@ void AppStateIO::saveBinary(const PreviewFrameRect& previewRect, const Simulatio
 
     BgfxCallback& bgfxCallback = BgfxContext::instance().callback();
 
+    std::string title = simulation.sceneTitle();
+    if (title.empty() && !path.empty()) {
+        title = std::filesystem::path(path).stem().string();
+    }
+    appState.header.title = title;
+    appState.header.description = simulation.sceneDescription();
+
     bgfxCallback.addScreenShotCallback(
-        path, [&bgfxCallback, path, previewRect, filePath = std::string(path), appState = std::move(appState), simulation = &simulation](
+        path, [&bgfxCallback, path, previewRect, filePath = std::string(path), appState = std::move(appState)](
                   uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip, bgfx::TextureFormat::Enum format) mutable {
             bgfxCallback.removeScreenShotCallback(path);
 
             const uint32_t pitch = width * 4;
             const ImageData preview = capturePreviewImage(width, height, data, pitch, yflip, previewRect);
 
-            std::string title = simulation->sceneTitle();
-            if (title.empty() && !filePath.empty()) {
-                title = std::filesystem::path(filePath).stem().string();
-            }
-            appState.header.title = title;
-            appState.header.description = simulation->sceneDescription();
             appState.header.previewWidth = preview.width;
             appState.header.previewHeight = preview.height;
             appState.header.previewFormat = format;
@@ -423,7 +424,7 @@ void AppStateIO::loadBinary(Simulation& simulation, IRenderer& renderer, std::st
 
     simulation.clear();
 
-    simulation.box().setSizeBox(simState.boxSize, simState.gridCellSize);
+    simulation.setSizeBox(simState.boxSize, simState.gridCellSize);
     simulation.setNeighborListCutoff(simState.neighborListCutoff);
     simulation.setNeighborListSkin(simState.neighborListSkin);
 
@@ -440,6 +441,7 @@ void AppStateIO::loadBinary(Simulation& simulation, IRenderer& renderer, std::st
     const uint64_t atomCount = simState.x.size();
 
     AtomStorage& atoms = simulation.atoms();
+    simulation.reserveAtoms(atoms.size());
     atoms.init(atomCount, atomMobileCount, simState.x, simState.y, simState.z, simState.vx, simState.vy, simState.vz, simState.atomType,
                simState.atomCharge);
     simulation.finalizeAtomBatch();
