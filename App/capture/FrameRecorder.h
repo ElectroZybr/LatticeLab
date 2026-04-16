@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <mutex>
 #include <queue>
+#include <thread>
 #include <vector>
 
 #include <bgfx/bgfx.h>

@@ -1,5 +1,7 @@
 #include "PeriodicPanel.h"
 
+#include <algorithm>
+
 // clang-format off
 static const char* KEYS[] = {
     "H",  "Ze",  "##2",  "##3",  "##4",  "##5",  "##6",  "He",
