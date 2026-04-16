@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <ranges>
@@ -317,13 +318,19 @@ void AppStateIO::saveBinary(const PreviewFrameRect& previewRect, const Simulatio
     BgfxCallback& bgfxCallback = BgfxContext::instance().callback();
 
     bgfxCallback.addScreenShotCallback(
-        path, [&bgfxCallback, path, previewRect, filePath = std::string(path), appState = std::move(appState)](
+        path, [&bgfxCallback, path, previewRect, filePath = std::string(path), appState = std::move(appState), simulation = &simulation](
                   uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip, bgfx::TextureFormat::Enum format) mutable {
             bgfxCallback.removeScreenShotCallback(path);
 
             const uint32_t pitch = width * 4;
             const ImageData preview = capturePreviewImage(width, height, data, pitch, yflip, previewRect);
 
+            std::string title = simulation->sceneTitle();
+            if (title.empty() && !filePath.empty()) {
+                title = std::filesystem::path(filePath).stem().string();
+            }
+            appState.header.title = title;
+            appState.header.description = simulation->sceneDescription();
             appState.header.previewWidth = preview.width;
             appState.header.previewHeight = preview.height;
             appState.header.previewFormat = format;

@@ -38,9 +38,9 @@ public:
         sim_step = simStep;
         sim_time_ns = simTimeNs;
     }
-    void setSceneTitle(std::string title) { sceneTitle_ = std::move(title); }
+    void setSceneTitle(std::string_view title) { sceneTitle_ = title; }
     const std::string& sceneTitle() const { return sceneTitle_; }
-    void setSceneDescription(std::string description) { sceneDescription_ = std::move(description); }
+    void setSceneDescription(std::string_view description) { sceneDescription_ = description; }
     const std::string& sceneDescription() const { return sceneDescription_; }
 
     float averageKineticEnergyEv() const {

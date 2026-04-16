@@ -64,7 +64,7 @@ void IOPanel::draw(float scale, Vec2i windowSize, Simulation& simulation, FileDi
             pendingReloadFrames_ = 1;
         }
     }
-    // Задержка, что бы изображение успело записаться в файл сохранения
+    // Задержка, что бы изображение успело записаться в файл сохранения .lat
     if (pendingReloadFrames_ > 0 && --pendingReloadFrames_ == 0) {
         sceneCatalogLoaded_ = false;
     }

@@ -190,7 +190,7 @@ namespace {
         try {
             auto in = zpp::bits::in(decompBuffer);
             uint32_t _;
-            in(_).or_throw(); // Пропускаем версию AppSaveState
+            in(_).or_throw(); // Пропускаем AppSaveState::version
             in(header).or_throw();
         }
         catch (const std::exception& e) {
