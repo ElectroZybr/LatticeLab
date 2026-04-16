@@ -117,85 +117,112 @@ namespace {
 FrameRecorder::~FrameRecorder() { stop(); }
 
 void FrameRecorder::start(const std::filesystem::path& outputPath, CaptureSettings settings) {
-    std::lock_guard lock(mutex_);
     outputPath_ = outputPath;
-    ffmpegPath_ = findFfmpegExecutable();
     settings_ = settings;
-    nextFrameIndex_ = 0;
-    savedFrameCount_ = 0;
-    frameWidth_ = 0;
-    frameHeight_ = 0;
+    ffmpegPath_ = findFfmpegExecutable();
+
     recording_ = true;
+    savedFrameCount_ = 0;
+    droppedFrameCount_ = 0;
+    nextFrameIndex_ = 0;
+
+    writerThread_ = std::thread(&FrameRecorder::writerLoop, this);
 }
 
 void FrameRecorder::stop() {
-    std::lock_guard lock(mutex_);
+    {
+        std::lock_guard lock(queueMutex_);
+        recording_ = false;
+    }
+    cv_.notify_one();
+    if (writerThread_.joinable()) {
+        writerThread_.join();
+    }
     closeEncoder();
-    recording_ = false;
 }
 
 bool FrameRecorder::isAvailable() { return !findFfmpegExecutable().empty(); }
 
-bool FrameRecorder::isRecording() const {
-    std::lock_guard lock(mutex_);
-    return recording_;
-}
+bool FrameRecorder::isRecording() const { return recording_; }
 
-bool FrameRecorder::submit(CapturedFrame frame) {
+bool FrameRecorder::submit(const CapturedFrame& frame) {
     PROFILE_SCOPE("Capture::encodeFrame");
 
     if (frame.empty()) {
         return false;
     }
-
-    std::lock_guard lock(mutex_);
     if (!recording_) {
         return false;
     }
 
+    std::lock_guard lock(queueMutex_);
+    frameQueue_.push(std::move(frame));
+    cv_.notify_one();
+    return true;
+}
+
+void FrameRecorder::writerLoop() {
+    while (true) {
+        CapturedFrame frame;
+        {
+            std::unique_lock lock(queueMutex_);
+            cv_.wait(lock, [this] { return !frameQueue_.empty() || !recording_; });
+
+            if (frameQueue_.empty()) {
+                return; // recording_ == false и очередь пуста
+            }
+
+            frame = std::move(frameQueue_.front());
+            frameQueue_.pop();
+        }
+
+        if (!writeFrame(frame)) {
+            recording_ = false;
+            return;
+        }
+
+        ++nextFrameIndex_;
+        ++savedFrameCount_;
+    }
+}
+
+bool FrameRecorder::writeFrame(const CapturedFrame& frame) {
     if (encoderProcess_ == nullptr || encoderStdinWrite_ == nullptr) {
         if (!openEncoder(frame)) {
-            recording_ = false;
             return false;
         }
     }
     else if (frame.width != frameWidth_ || frame.height != frameHeight_) {
-        closeEncoder();
-        recording_ = false;
         return false;
     }
 
 #ifdef _WIN32
     DWORD bytesWritten = 0;
-    const BOOL writeOk = WriteFile(static_cast<HANDLE>(encoderStdinWrite_), frame.rgba.data(), static_cast<DWORD>(frame.rgba.size()),
+    const BOOL writeOk = WriteFile(static_cast<HANDLE>(encoderStdinWrite_), frame.pixels.data(), static_cast<DWORD>(frame.pixels.size()),
                                    &bytesWritten, nullptr);
-    if (!writeOk || bytesWritten != frame.rgba.size()) {
+    if (!writeOk || bytesWritten != frame.pixels.size()) {
         closeEncoder();
-        recording_ = false;
         return false;
     }
 #else
     const ssize_t written = write(reinterpret_cast<intptr_t>(encoderStdinWrite_), frame.pixels.data(), frame.pixels.size());
     if (written != static_cast<ssize_t>(frame.pixels.size())) {
         closeEncoder();
-        recording_ = false;
         return false;
     }
 #endif
 
-    ++nextFrameIndex_;
-    ++savedFrameCount_;
     return true;
 }
 
-uint64_t FrameRecorder::savedFrameCount() const {
-    std::lock_guard lock(mutex_);
-    return savedFrameCount_;
+uint64_t FrameRecorder::savedFrameCount() const { return savedFrameCount_; }
+
+uint64_t FrameRecorder::droppedFrameCount() const { return droppedFrameCount_; }
+
+size_t FrameRecorder::pendingFrameCount() const {
+    std::lock_guard lock(queueMutex_);
+    return frameQueue_.size();
 }
-
-uint64_t FrameRecorder::droppedFrameCount() const { return 0; }
-
-size_t FrameRecorder::pendingFrameCount() const { return 0; }
 
 bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
 #ifdef _WIN32

@@ -79,7 +79,7 @@ void CaptureController::start() {
             frame.pixels.assign(static_cast<const std::byte*>(data), static_cast<const std::byte*>(data) + size);
             frame.yflip = yflip;
 
-            frameRecorder_.submit(std::move(frame));
+            frameRecorder_.submit(frame);
         });
 
     frameRecorder_.start(makeCaptureOutputPath(), settings_);

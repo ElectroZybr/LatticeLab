@@ -53,7 +53,7 @@ BENCHMARK_DEFINE_F(CaptureFixture, CaptureEncodeFrame)(benchmark::State& state) 
 
     for (auto _ : state) {
         CapturedFrame frame = capturedFrame_;
-        const bool ok = frameRecorder_->submit(std::move(frame));
+        const bool ok = frameRecorder_->submit(frame);
         if (!ok) {
             state.SkipWithError("Frame recorder submit failed");
             break;

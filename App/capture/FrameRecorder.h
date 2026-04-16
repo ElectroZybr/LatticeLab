@@ -1,9 +1,11 @@
 #pragma once
 
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <mutex>
+#include <queue>
 #include <vector>
 
 #include <bgfx/bgfx.h>
@@ -53,26 +55,33 @@ public:
 
     [[nodiscard]] static bool isAvailable();
     bool isRecording() const;
-    bool submit(CapturedFrame frame);
+    bool submit(const CapturedFrame& frame);
 
     uint64_t savedFrameCount() const;
     uint64_t droppedFrameCount() const;
     size_t pendingFrameCount() const;
 
 private:
+    void writerLoop();
+    bool writeFrame(const CapturedFrame& frame);
     bool openEncoder(const CapturedFrame& frame);
     void closeEncoder();
     static std::filesystem::path findFfmpegExecutable();
 
-    mutable std::mutex mutex_;
+    std::thread writerThread_;
+    mutable std::mutex queueMutex_;
+    std::condition_variable cv_;
+    std::queue<CapturedFrame> frameQueue_;
+    bool recording_ = false;
+    std::atomic<uint64_t> savedFrameCount_ = 0;
+    std::atomic<uint64_t> droppedFrameCount_ = 0;
+
     std::filesystem::path outputPath_;
     std::filesystem::path ffmpegPath_;
     CaptureSettings settings_{};
     void* encoderProcess_ = nullptr;
     void* encoderStdinWrite_ = nullptr;
-    bool recording_ = false;
     uint32_t frameWidth_ = 0;
     uint32_t frameHeight_ = 0;
     uint64_t nextFrameIndex_ = 0;
-    uint64_t savedFrameCount_ = 0;
 };
