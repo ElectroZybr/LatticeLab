@@ -252,7 +252,13 @@ bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
         command << " -profile:v high444";
     }
 
-    if (needsPad) {
+    if (frame.yflip && needsPad) {
+        command << " -vf vflip,pad=ceil(iw/2)*2:ceil(ih/2)*2";
+    }
+    else if (frame.yflip) {
+        command << " -vf vflip";
+    }
+    else if (needsPad) {
         command << " -vf pad=ceil(iw/2)*2:ceil(ih/2)*2";
     }
 
@@ -337,7 +343,16 @@ bool FrameRecorder::openEncoder(const CapturedFrame& frame) {
         args.emplace_back("-profile:v");
         args.emplace_back("high444");
     }
-    if (needsPad) {
+
+    if (frame.yflip && needsPad) {
+        args.emplace_back("-vf");
+        args.emplace_back("vflip,pad=ceil(iw/2)*2:ceil(ih/2)*2");
+    }
+    else if (frame.yflip) {
+        args.emplace_back("-vf");
+        args.emplace_back("vflip");
+    }
+    else if (needsPad) {
         args.emplace_back("-vf");
         args.emplace_back("pad=ceil(iw/2)*2:ceil(ih/2)*2");
     }

@@ -13,6 +13,7 @@ struct CapturedFrame {
     uint32_t height = 0;
     bgfx::TextureFormat::Enum format;
     std::vector<std::byte> pixels;
+    bool yflip = false;
 
     bool empty() const { return width == 0 || height == 0 || pixels.empty(); }
 

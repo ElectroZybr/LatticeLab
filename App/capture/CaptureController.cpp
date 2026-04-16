@@ -77,16 +77,7 @@ void CaptureController::start() {
             frame.height = height;
             frame.format = format;
             frame.pixels.assign(static_cast<const std::byte*>(data), static_cast<const std::byte*>(data) + size);
-
-            if (yflip) { // TODO можно вынести в ffmpeg параметр
-                const size_t rowSize = width * 4;
-
-                for (uint32_t y = 0; y < height / 2; ++y) {
-                    std::byte* top = frame.pixels.data() + y * rowSize;
-                    std::byte* bottom = frame.pixels.data() + (height - 1 - y) * rowSize;
-                    std::swap_ranges(top, top + rowSize, bottom);
-                }
-            }
+            frame.yflip = yflip;
 
             frameRecorder_.submit(std::move(frame));
         });

@@ -32,6 +32,7 @@ private:
     [[nodiscard]] std::filesystem::path makeCaptureOutputPath() const;
     void resetSessionStats();
 
+    bool activeSessionYflip_ = false;
     bool available_ = FrameRecorder::isAvailable();
     CaptureSettings settings_{};
     std::filesystem::path outputDirectory_ = "captures";
