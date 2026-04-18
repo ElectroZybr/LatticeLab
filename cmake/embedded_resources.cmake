@@ -7,22 +7,21 @@ function(embed_bin_resource INPUT_FILE OUTPUT_DIR VAR_PREFIX)
     string(MAKE_C_IDENTIFIER "${SAFE_NAME}" VAR_IDENTIFIER)
 
     set(H_FILE "${OUTPUT_DIR}/${SAFE_NAME}.h")
-    set(TMP_FILE "${H_FILE}.tmp")
     set(ARR_NAME "s_${VAR_PREFIX}_${VAR_IDENTIFIER}")
 
     file(MAKE_DIRECTORY "${OUTPUT_DIR}")
 
     add_custom_command(
         OUTPUT ${H_FILE}
-        COMMAND ${BIN2C_BIN} -f ${INPUT_FILE} -o ${TMP_FILE} -n ${ARR_NAME}
-        COMMAND ${CMAKE_COMMAND} -E echo "#include <cstdint>" > "${H_FILE}"
-        COMMAND ${CMAKE_COMMAND} -E cat "${TMP_FILE}" >> "${H_FILE}"
-        COMMAND ${CMAKE_COMMAND} -E remove "${TMP_FILE}"
-        DEPENDS ${INPUT_FILE} bin2c
-        COMMENT "Embedding resource: ${RAW_NAME}"
+        COMMAND ${CMAKE_COMMAND} -DINPUT_FILE=${INPUT_FILE} 
+                                 -DOUTPUT_FILE=${H_FILE} 
+                                 -DVAR_NAME=${VAR_NAME} 
+                                 -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/bin2c.cmake"
+        DEPENDS ${INPUT_FILE} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/bin2c.cmake"
+        COMMENT "Embedding resource: ${RAW_NAME} using native CMake"
         VERBATIM
     )
-    
+
     set(G_RES_HEADERS ${G_RES_HEADERS} ${H_FILE} PARENT_SCOPE)
 endfunction()
 

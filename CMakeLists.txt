@@ -56,10 +56,6 @@ configure_file(
 
 add_library(latticelab_lib STATIC ${CORE_SOURCES})
 
-include(shaders)
-add_dependencies(latticelab_lib bgfx_shaders)
-target_include_directories(latticelab_lib PUBLIC ${BGFX_SHADER_OUT})
-
 set(G_RES_HEADERS "")
 include(embedded_resources)
 add_dependencies(latticelab_lib embedded_resources)
@@ -75,18 +71,17 @@ target_include_directories(latticelab_lib PUBLIC
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
     ${imguifiledialog_SOURCE_DIR}
-    ${bgfx_cmake_SOURCE_DIR}/bgfx/include
-    ${bgfx_cmake_SOURCE_DIR}/bx/include
 )
 
 target_link_libraries(latticelab_lib PUBLIC
     glfw
     imgui ImGuiFileDialog_lib
     glm::glm
-    bgfx bx
+    webgpu webgpu_cpp
     zpp_bits
     libzstd_static
 )
+target_copy_webgpu_binaries(latticelab_lib)
 
 if (WIN32)
     add_executable(${APP_NAME} WIN32 main.cpp)

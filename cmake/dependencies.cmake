@@ -70,17 +70,25 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glm)
 
-# --- Настройка bgfx ---
+# --- Настройка WebGPU ---
+set(WEBGPU_BACKEND "wgpu" CACHE STRING "WebGPU backend: wgpu or dawn")
+set_property(CACHE WEBGPU_BACKEND PROPERTY STRINGS wgpu dawn)
+
 FetchContent_Declare(
-    bgfx_cmake
-    GIT_REPOSITORY https://github.com/bkaradzic/bgfx.cmake.git
-    GIT_TAG        v1.142.9197-527
+    webgpu_distribution
+    GIT_REPOSITORY https://github.com/eliemichel/WebGPU-distribution.git
+    GIT_TAG        wgpu-v24.0.0.2
     GIT_SHALLOW    ON
-    )
-set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(BGFX_BUILD_TOOLS    ON  CACHE BOOL "" FORCE)
-set(BGFX_WITH_WAYLAND   OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(bgfx_cmake)
+)
+FetchContent_MakeAvailable(webgpu_distribution)
+
+FetchContent_Declare(
+    webgpu_cpp
+    GIT_REPOSITORY https://github.com/eliemichel/WebGPU-Cpp.git
+    GIT_TAG        wgpu-v24.0.3.1
+    GIT_SHALLOW    ON
+)
+FetchContent_MakeAvailable(webgpu_cpp)
 
 # --- Настройка zpp_bits ---
 FetchContent_Declare(
