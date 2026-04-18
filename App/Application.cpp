@@ -66,7 +66,13 @@ int Application::run() {
     appInterface.state().pause = true;
 
     // создание сцены
-    Scenes::crystal(simulation, 50, AtomData::Type::Z, false);
+    // Scenes::crystal(simulation, 50, AtomData::Type::Z, false);
+    std::vector<Scenes::AtomTypeSpec> gasSpecs = {
+        // {AtomData::Type::O, 0, 80.0f},    // 80% водорода
+        {AtomData::Type::Na, 0, 50.0f},   // 10% натрия
+        {AtomData::Type::Cl, 0, 50.0f}    // 10% хлора
+    };
+    Scenes::randomGasMixed(simulation, 500, gasSpecs, false, 6.0, 6.0, 1.0f, 5.0f, 0);
     // simulation.createAtom(Vec3f(24, 25, 3), Vec3f(1, 0, 0), AtomData::Type::Na);
     // simulation.createAtom(Vec3f(28, 25, 3), Vec3f(-1, 0, 0), AtomData::Type::Na);
 

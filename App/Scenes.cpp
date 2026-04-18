@@ -165,4 +165,92 @@ namespace Scenes {
         randomGasInCurrentBox(sim, atomCount, type, is3d, 4.0f, speedScale, 20, seed);
     }
 
+    void randomGasMixed(Simulation& sim, int totalAtomCount, const std::vector<AtomTypeSpec>& atomSpecs, bool is3d, double spacing,
+                        double margin, float density, float speedScale, uint32_t seed) {
+        if (atomSpecs.empty() || totalAtomCount <= 0) {
+            return;
+        }
+
+        // Вычисляем количество атомов каждого типа
+        int remainingAtoms = totalAtomCount;
+        std::vector<int> atomCountsPerType(atomSpecs.size(), 0);
+        bool useConcentration = false;
+        float totalConcentration = 0.0f;
+
+        // Первый проход: определяем, используются ли проценты
+        for (const auto& spec : atomSpecs) {
+            if (spec.concentrationPercent > 0.0f) {
+                useConcentration = true;
+                totalConcentration += spec.concentrationPercent;
+            }
+        }
+
+        // Вычисляем количество атомов для каждого типа
+        if (useConcentration) {
+            // Используем проценты
+            for (size_t i = 0; i < atomSpecs.size(); ++i) {
+                if (atomSpecs[i].concentrationPercent > 0.0f) {
+                    atomCountsPerType[i] = static_cast<int>(
+                        std::round(totalAtomCount * atomSpecs[i].concentrationPercent / 100.0f));
+                }
+            }
+            // Убеждаемся, что сумма равна totalAtomCount (корректируем последний тип)
+            int sum = 0;
+            for (int count : atomCountsPerType) {
+                sum += count;
+            }
+            if (sum != totalAtomCount) {
+                for (size_t i = atomSpecs.size(); i > 0; --i) {
+                    if (atomSpecs[i - 1].concentrationPercent > 0.0f) {
+                        atomCountsPerType[i - 1] += (totalAtomCount - sum);
+                        break;
+                    }
+                }
+            }
+        } else {
+            // Используем абсолютные значения
+            int reservedAtoms = 0;
+            for (size_t i = 0; i < atomSpecs.size(); ++i) {
+                atomCountsPerType[i] = atomSpecs[i].absoluteCount;
+                reservedAtoms += atomSpecs[i].absoluteCount;
+            }
+            // Если сумма абсолютных значений меньше totalAtomCount, распределяем остаток
+            if (reservedAtoms < totalAtomCount) {
+                int remainder = totalAtomCount - reservedAtoms;
+                for (size_t i = 0; i < atomSpecs.size() && remainder > 0; ++i) {
+                    int toAdd = (remainder + atomSpecs.size() - i - 1) / (atomSpecs.size() - i);
+                    atomCountsPerType[i] += toAdd;
+                    remainder -= toAdd;
+                }
+            }
+        }
+
+        // Вычисляем размер симуляционного ящика на основе totalAtomCount
+        const float clampedDensity = std::clamp(density, 0.25f, 3.0f);
+        const double effectiveSpacing = spacing / static_cast<double>(clampedDensity);
+
+        const int sideCount =
+            is3d ? std::max(1, static_cast<int>(std::ceil(std::cbrt(static_cast<double>(totalAtomCount)))))
+                 : std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<double>(totalAtomCount)))));
+
+        const double span = sideCount * effectiveSpacing + 2.0 * margin;
+        sim.setSizeBox(Vec3f(span, span, is3d ? span : 6));
+
+        // Создаем газ для каждого типа атома
+        uint32_t currentSeed = detail::resolveSeed(seed);
+        for (size_t i = 0; i < atomSpecs.size(); ++i) {
+            if (atomCountsPerType[i] > 0) {
+                randomGasInCurrentBox(sim, atomCountsPerType[i], atomSpecs[i].type, is3d, 4.0f, speedScale, 20, currentSeed);
+                // Меняем seed для каждого типа атома для хорошего распределения
+                currentSeed = (currentSeed != 0) ? currentSeed + 1 : 1;
+            }
+        }
+    }
+
+    void randomGasByConcentration(Simulation& sim, int totalAtomCount, const std::vector<AtomTypeSpec>& concentrations, bool is3d,
+                                  double spacing, double margin, float density, float speedScale, uint32_t seed) {
+        // Просто передаем в randomGasMixed с концентрациями
+        randomGasMixed(sim, totalAtomCount, concentrations, is3d, spacing, margin, density, speedScale, seed);
+    }
+
 }

@@ -75,7 +75,7 @@ void ForceField::compute(AtomStorage& atoms, Bond::List& bonds, SimBox& box, Nei
 
     wallForceField_.compute(atoms, static_force_);
     computePairInteractions(atoms, neighborList);
-    // bondForceField_.compute(atoms, bonds, neighborList, allowBondFormation, dt);
+    bondForceField_.compute(atoms, bonds, neighborList, allowBondFormation, dt);
 }
 
 void ForceField::computePairInteractions(AtomStorage& atoms, NeighborList& neighborList) const {

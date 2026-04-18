@@ -68,10 +68,10 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     const float stepsPerSecond = stepsRateSample.rate;
 
     debugViews.sim->add_data("Средняя скорость (км/ч)", simulation.averageSpeedKmPerHour());
-    debugViews.sim->add_data("Полная энергия (pj)", simulation.fullEnegryPJ());
+    // debugViews.sim->add_data("Полная энергия (pj)", simulation.fullEnegryPJ());
     debugViews.sim->add_data("Полная средняя энергия (eV)", simulation.fullAverageEnergyEv());
-    debugViews.sim->add_data("Температура (K)", simulation.temperatureK());
-    debugViews.sim->add_data("Температура (°C)", simulation.temperatureC());
+    // debugViews.sim->add_data("Температура (K)", simulation.temperatureK());
+    // debugViews.sim->add_data("Температура (°C)", simulation.temperatureC());
     debugViews.sim->add_data("Память (МБ)", MemoryMetrics::getRSS() / 1024.f / 1024.f);
     debugViews.sim->add_data("Рендер (мс)", renderMs);
     debugViews.sim->add_data("Capture readback (ms)", captureReadbackMs);
