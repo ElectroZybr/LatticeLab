@@ -95,7 +95,8 @@ struct OverlayState {
             return;
         }
 
-        // const float scale = font_size / font->FontSize;
+        ImFontBaked* baked = font->GetFontBaked(font_size);
+        const float scale = font_size / baked->Size;
         const float cos_a = std::cos(angle_rad);
         const float sin_a = std::sin(angle_rad);
 
@@ -108,38 +109,38 @@ struct OverlayState {
 
         ImVec2 cursor(pos.x, pos.y);
 
-        // for (const char* p = text_begin; p < text_end;) {
-        //     unsigned int c;
-        //     int char_len = ImTextCharFromUtf8(&c, p, text_end);
-        //     if (char_len <= 0) {
-        //         break;
-        //     }
-        //     p += char_len;
+        for (const char* p = text_begin; p < text_end;) {
+            unsigned int c;
+            int char_len = ImTextCharFromUtf8(&c, p, text_end);
+            if (char_len <= 0) {
+                break;
+            }
+            p += char_len;
 
-        //     const ImFontGlyph* glyph = font->FindGlyph((ImWchar)c);
-        //     if (!glyph) {
-        //         continue;
-        //     }
+            const ImFontGlyph* glyph = baked->FindGlyph((ImWchar)c);
+            if (!glyph) {
+                continue;
+            }
 
-        //     const float x0 = cursor.x + glyph->X0 * scale;
-        //     const float y0 = cursor.y + glyph->Y0 * scale;
-        //     const float x1 = cursor.x + glyph->X1 * scale;
-        //     const float y1 = cursor.y + glyph->Y1 * scale;
+            const float x0 = cursor.x + glyph->X0 * scale;
+            const float y0 = cursor.y + glyph->Y0 * scale;
+            const float x1 = cursor.x + glyph->X1 * scale;
+            const float y1 = cursor.y + glyph->Y1 * scale;
 
-        //     ImVec2 corners[4] = {{x0, y0}, {x1, y0}, {x1, y1}, {x0, y1}};
+            ImVec2 corners[4] = {{x0, y0}, {x1, y0}, {x1, y1}, {x0, y1}};
 
-        //     for (auto& corner : corners) {
-        //         const float dx = corner.x - pos.x;
-        //         const float dy = corner.y - pos.y;
-        //         corner.x = pos.x + dx * cos_a - dy * sin_a;
-        //         corner.y = pos.y + dx * sin_a + dy * cos_a;
-        //     }
+            for (auto& corner : corners) {
+                const float dx = corner.x - pos.x;
+                const float dy = corner.y - pos.y;
+                corner.x = pos.x + dx * cos_a - dy * sin_a;
+                corner.y = pos.y + dx * sin_a + dy * cos_a;
+            }
 
-        //     dl->PrimReserve(6, 4);
-        //     dl->PrimQuadUV(corners[0], corners[1], corners[2], corners[3], {glyph->U0, glyph->V0}, {glyph->U1, glyph->V0},
-        //                    {glyph->U1, glyph->V1}, {glyph->U0, glyph->V1}, color);
+            dl->PrimReserve(6, 4);
+            dl->PrimQuadUV(corners[0], corners[1], corners[2], corners[3], {glyph->U0, glyph->V0}, {glyph->U1, glyph->V0},
+                           {glyph->U1, glyph->V1}, {glyph->U0, glyph->V1}, color);
 
-        //     cursor.x += glyph->AdvanceX * scale;
-        // }
+            cursor.x += glyph->AdvanceX * scale;
+        }
     }
 };
