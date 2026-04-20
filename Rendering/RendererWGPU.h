@@ -27,6 +27,11 @@ protected:
 
     wgpu::Device device = nullptr;
 
+    void initAtomPipeline(const char* atomWGSL);
+    void initGridPipeline(const char* gridWGSL);
+    void initBoxPipeline(const char* boxWGSL);
+    void initBondPipeline(const char* bondWGSL);
+
 private:
     struct SceneUniforms {
         glm::mat4 view;
@@ -77,15 +82,12 @@ private:
 
     wgpu::TextureFormat surfaceFormat;
 
-    // Init
     void initAtomColors();
     void initAtomQuadBuffer();
     void initBoxBuffer();
     void initBondBuffer();
     void initGridLineBuffer();
-    void initAtomPipeline();
     void initLinePipeline(wgpu::RenderPipeline& outPipeline, const char* wgsl);
-    void initGridPipeline();
 
     // Helpers
     wgpu::Buffer createBuffer(uint64_t size, wgpu::BufferUsage usage);

@@ -17,9 +17,8 @@ struct SceneUniforms {
 struct VertOut {
     @builtin(position) pos    : vec4<f32>,
     @location(0)       uv     : vec2<f32>,
-    @location(1)       color  : vec4<f32>,
-    @location(2)       normal : vec3<f32>,
-    @location(3)       sel    : f32,
+    @location(1)       color  : vec3<f32>,
+    @location(2)       sel    : f32,
 }
 
 fn turboColor(t: f32) -> vec3<f32> {
@@ -48,7 +47,6 @@ fn vs_main(
     let pos = sPos[iid].xyz;
     let r  = sRadius[iid];
 
-    // billboard: вытаскиваем правый и верхний векторы из view матрицы
     let right = vec3<f32>(uScene.view[0][0], uScene.view[1][0], uScene.view[2][0]);
     let up    = vec3<f32>(uScene.view[0][1], uScene.view[1][1], uScene.view[2][1]);
 
@@ -56,12 +54,12 @@ fn vs_main(
                  + right * quadPos.x * r
                  + up    * quadPos.y * r;
 
-    let colorMode = u32(uScene.colorMode.x);
-    var color: vec4<f32>;
+    let mode = u32(uScene.colorMode.x);
+    var color: vec3<f32>;
 
-    if (colorMode == 0u) {
+    if (mode == 0u) {
         let t = u32(sType[iid]);
-        color = uScene.typeColors[t];
+        color = uScene.typeColors[t].rgb;
     }
     else {
         let v = sVel[iid];
@@ -76,30 +74,31 @@ fn vs_main(
     }
 
     var out: VertOut;
-    out.pos    = uScene.projection * uScene.view * vec4<f32>(worldPos, 1.0);
-    out.uv     = quadPos;
+    out.pos = uScene.projection * uScene.view * vec4<f32>(worldPos, 1.0);
+    out.uv     = quadPos; 
     out.color  = color;
-    out.normal = normalize(vec3<f32>(quadPos, 1.0));
     out.sel    = sSel[iid];
     return out;
 }
 
 @fragment
 fn fs_main(in: VertOut) -> @location(0) vec4<f32> {
-    if (dot(in.uv, in.uv) > 1.0) { discard; }
+    let d2 = dot(in.uv, in.uv);
+    if (d2 > 1.0) { discard; }
 
     var color = in.color;
 
     // простое освещение
-    let n = normalize(vec3<f32>(in.uv, sqrt(max(0.0, 1.0 - dot(in.uv, in.uv)))));
+    let z = sqrt(1.0 - d2);
+    let n = normalize(vec3<f32>(in.uv, z));
     let light = normalize(uScene.lightDir.xyz);
     let diff  = max(dot(n, light), 0.0);
-    color = vec4<f32>(color.rgb * (0.3 + 0.7 * diff), color.a);
+    color = vec3<f32>(color.rgb * (0.3 + 0.7 * diff));
 
     // выделение
     if (in.sel > 0.5) {
-        color = mix(color, vec4<f32>(1.0, 0.85, 0.0, 1.0), 0.5);
+        color = mix(color, vec3<f32>(1.0, 0.85, 0.0), 0.5);
     }
 
-    return color;
+    return vec4<f32>(color, 1.0);
 }

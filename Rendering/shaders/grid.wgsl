@@ -23,7 +23,7 @@ fn vs_main(
 ) -> VertOut {
     let worldPos = origin.xyz + localPos * cellSize;
     let t = clamp(atomCount / uScene.maxCount.x, 0.0, 1.0);
-    let color = mix(vec4<f32>(0.0, 1.0, 0.0, 0.8), vec4<f32>(1.0, 0.0, 0.0, 0.8), t);
+    let color = mix(vec4<f32>(0.0, 1.0, 0.0, 0.3), vec4<f32>(1.0, 0.0, 0.0, 0.3), t);
 
     var out: VertOut;
     out.pos   = uScene.projection * uScene.view * vec4<f32>(worldPos, 1.0);
@@ -34,4 +34,4 @@ fn vs_main(
 @fragment
 fn fs_main(in: VertOut) -> @location(0) vec4<f32> {
     return in.color;
-}
+} 

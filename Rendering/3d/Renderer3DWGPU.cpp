@@ -4,14 +4,16 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-// #include "generated/shaders/shader_registry.h"
+#include "generated/shaders/atom3d.wgsl.h"
+#include "generated/shaders/grid.wgsl.h"
+#include "generated/shaders/line.wgsl.h"
 
 Renderer3DWGPU::Renderer3DWGPU(SimBox& simBox, wgpu::Device device, wgpu::TextureFormat surfaceFormat)
     : RendererWGPU(simBox, device, surfaceFormat) {
-    // atomProgram = loadEmbeddedProgram(s_allShaders, "atom3d");
-    // bondProgram = loadEmbeddedProgram(s_allShaders, "bond");
-    // boxProgram = loadEmbeddedProgram(s_allShaders, "box");
-    // gridProgram = loadEmbeddedProgram(s_allShaders, "grid");
+    initAtomPipeline(atom3dWGSL);
+    initBoxPipeline(lineWGSL);
+    initBondPipeline(lineWGSL);
+    initGridPipeline(gridWGSL);
 
     camera.setMode(Camera::Mode::Orbit);
     camera.resetView();

@@ -6,9 +6,6 @@
 #include <webgpu/webgpu.hpp>
 
 #include "App/interaction/ToolsManager.h"
-#include "generated/shaders/atom2d.wgsl.h"
-#include "generated/shaders/grid.wgsl.h"
-#include "generated/shaders/line.wgsl.h"
 
 namespace {
     wgpu::ShaderModule createShaderModule(wgpu::Device device, const char* wgsl) {
@@ -35,10 +32,6 @@ RendererWGPU::RendererWGPU(SimBox& simbox, wgpu::Device device, wgpu::TextureFor
     initBoxBuffer();
     initBondBuffer();
     initGridLineBuffer();
-    initAtomPipeline();
-    initLinePipeline(boxPipeline, lineWGSL);
-    initLinePipeline(bondPipeline, lineWGSL);
-    initGridPipeline();
 }
 
 void RendererWGPU::initAtomColors() {
@@ -81,8 +74,8 @@ void RendererWGPU::initGridLineBuffer() {
     device.getQueue().writeBuffer(gridLineVb, 0, lines, sizeof(lines));
 }
 
-void RendererWGPU::initAtomPipeline() {
-    auto shader = createShaderModule(device, atom2dWGSL);
+void RendererWGPU::initAtomPipeline(const char* atomWGSL) {
+    wgpu::ShaderModule shader = createShaderModule(device, atomWGSL);
 
     std::array<wgpu::BindGroupLayoutEntry, 6> entries;
     entries[0].binding = 0;
@@ -215,7 +208,7 @@ void RendererWGPU::initLinePipeline(wgpu::RenderPipeline& outPipeline, const cha
     lineBindGroupLayout = bgl;
 }
 
-void RendererWGPU::initGridPipeline() {
+void RendererWGPU::initGridPipeline(const char* gridWGSL) {
     auto shader = createShaderModule(device, gridWGSL);
 
     wgpu::BindGroupLayoutEntry uboEntry{};
@@ -232,7 +225,6 @@ void RendererWGPU::initGridPipeline() {
     plDesc.bindGroupLayoutCount = 1;
     plDesc.bindGroupLayouts = (WGPUBindGroupLayout*)&bgl;
 
-    // vertex: vec3 localPos | instance: vec4 origin, float cellSize, float atomCount
     wgpu::VertexAttribute vertAttr{};
     vertAttr.format = wgpu::VertexFormat::Float32x3;
     vertAttr.offset = 0;
@@ -302,6 +294,9 @@ void RendererWGPU::initGridPipeline() {
     gridBindGroupLayout = bgl;
 }
 
+void RendererWGPU::initBoxPipeline(const char* boxWGSL) { initLinePipeline(boxPipeline, boxWGSL); }
+void RendererWGPU::initBondPipeline(const char* bondWGSL) { initLinePipeline(bondPipeline, bondWGSL); }
+
 void RendererWGPU::ensureStorageBuffers(size_t count) {
     if (count <= sbCapacity_) {
         return;
@@ -355,7 +350,6 @@ void RendererWGPU::drawShot(wgpu::TextureView targetView, wgpu::TextureView dept
     currentDepthView = depthView;
     updateMatrices();
 
-    // Заполняем uniform buffer
     SceneUniforms uniforms{};
     uniforms.view = view;
     uniforms.projection = projection;
@@ -369,7 +363,6 @@ void RendererWGPU::drawShot(wgpu::TextureView targetView, wgpu::TextureView dept
 
     device.getQueue().writeBuffer(uniformBuffer, 0, &uniforms, sizeof(uniforms));
 
-    // Создаём command encoder и render pass
     wgpu::CommandEncoderDescriptor encDesc;
     currentEncoder = device.createCommandEncoder(encDesc);
 

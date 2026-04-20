@@ -4,14 +4,16 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "Rendering/RendererWGPU.h"
-// #include "generated/shaders/shader_registry.h"
+#include "generated/shaders/atom2d.wgsl.h"
+#include "generated/shaders/grid.wgsl.h"
+#include "generated/shaders/line.wgsl.h"
 
 Renderer2DWGPU::Renderer2DWGPU(SimBox& simBox, wgpu::Device device, wgpu::TextureFormat surfaceFormat)
     : RendererWGPU(simBox, device, surfaceFormat) {
-    // atomProgram = loadEmbeddedProgram(s_allShaders, "atom2d");
-    // bondProgram = loadEmbeddedProgram(s_allShaders, "bond");
-    // boxProgram = loadEmbeddedProgram(s_allShaders, "box");
-    // gridProgram = loadEmbeddedProgram(s_allShaders, "grid");
+    initAtomPipeline(atom2dWGSL);
+    initBoxPipeline(lineWGSL);
+    initBondPipeline(lineWGSL);
+    initGridPipeline(gridWGSL);
 
     camera.setMode(Camera::Mode::Mode2D);
     camera.resetView();
