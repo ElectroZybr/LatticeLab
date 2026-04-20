@@ -60,6 +60,9 @@ set(G_RES_HEADERS "")
 include(embedded_resources)
 add_dependencies(latticelab_lib embedded_resources)
 
+include(shaders)
+add_dependencies(latticelab_lib wgsl_shaders)
+
 target_compile_options(latticelab_lib PRIVATE 
     -O3
     $<$<BOOL:${OPTIMIZE_FOR_NATIVE}>:-march=native>
@@ -71,17 +74,17 @@ target_include_directories(latticelab_lib PUBLIC
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
     ${imguifiledialog_SOURCE_DIR}
+    ${webgpu_cpp_SOURCE_DIR}/wgpu-native
 )
 
 target_link_libraries(latticelab_lib PUBLIC
     glfw
     imgui ImGuiFileDialog_lib
     glm::glm
-    webgpu webgpu_cpp
+    webgpu
     zpp_bits
     libzstd_static
 )
-target_copy_webgpu_binaries(latticelab_lib)
 
 if (WIN32)
     add_executable(${APP_NAME} WIN32 main.cpp)
@@ -93,8 +96,8 @@ include(CheckIPOSupported)
 check_ipo_supported(RESULT lto_supported OUTPUT lto_error)
 if(lto_supported AND NOT MINGW)
     message(STATUS "LTO (IPO) is supported and enabled")
-    set_target_properties(latticelab_lib PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-    set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+    set_target_properties(latticelab_lib PROPERTIES INTERPROCEDURAL_OPTIMIZATION FALSE)
+    set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION FALSE)
 elseif(lto_supported AND MINGW)
     message(STATUS "LTO (IPO) is disabled for MinGW due to linker/LTO instability")
 else()
@@ -106,6 +109,7 @@ target_compile_options(latticelab_lib PRIVATE
     $<$<BOOL:${OPTIMIZE_FOR_NATIVE}>:-march=native>
 )
 target_link_libraries(${APP_NAME} PRIVATE latticelab_lib)
+target_copy_webgpu_binaries(${APP_NAME})
 
 include(windows_resources)
 

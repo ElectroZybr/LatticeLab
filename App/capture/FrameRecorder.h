@@ -9,12 +9,12 @@
 #include <thread>
 #include <vector>
 
-#include <bgfx/bgfx.h>
+#include <webgpu/webgpu.hpp>
 
 struct CapturedFrame {
     uint32_t width = 0;
     uint32_t height = 0;
-    bgfx::TextureFormat::Enum format;
+    wgpu::TextureFormat format;
     std::vector<std::byte> pixels;
     bool yflip = false;
 

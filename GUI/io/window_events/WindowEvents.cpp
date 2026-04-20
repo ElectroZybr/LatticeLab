@@ -1,9 +1,11 @@
 #include "WindowEvents.h"
 
-#include "imgui_impl_bgfx.h"
+#include <backends/imgui_impl_wgpu.h>
 
+#include "Engine/math/Vec2.h"
 #include "GUI/interface/interface.h"
 #include "Rendering/BaseRenderer.h"
+#include "Rendering/WGPUContext.h"
 
 GLFWwindow* WindowEvents::window = nullptr;
 std::unique_ptr<IRenderer>* WindowEvents::renderer = nullptr;
@@ -26,7 +28,7 @@ void WindowEvents::framebufferSizeCallback(GLFWwindow* window, int width, int he
     }
 
     (*renderer)->camera.setScreenSize(Vec2f(width, height));
-    bgfx::reset(static_cast<uint32_t>(width), static_cast<uint32_t>(height), BGFX_RESET_NONE);
+    WGPUContext::instance().resize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 
     if (appInterface == nullptr) {
         return;
@@ -35,7 +37,7 @@ void WindowEvents::framebufferSizeCallback(GLFWwindow* window, int width, int he
     appInterface->styleManager.onResize(Vec2i(width, height));
 
     if (appInterface->fontManager.load(appInterface->styleManager.getScale())) {
-        ImGui_Implbgfx_InvalidateDeviceObjects();
-        ImGui_Implbgfx_CreateDeviceObjects();
+        ImGui_ImplWGPU_InvalidateDeviceObjects();
+        ImGui_ImplWGPU_CreateDeviceObjects();
     }
 }

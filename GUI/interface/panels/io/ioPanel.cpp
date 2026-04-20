@@ -13,6 +13,7 @@
 #include "GUI/interface/UiState.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/panels/io/ioPanelWidgets.h"
+#include "Rendering/WGPUContext.h"
 
 namespace {
     constexpr float kSceneTileRounding = 10.0f;
@@ -23,7 +24,7 @@ void IOPanel::ensureSceneCatalogLoaded() {
         return;
     }
 
-    sceneTiles_ = loadIOPanelSceneTiles(scenesDirectory_.string());
+    sceneTiles_ = loadIOPanelSceneTiles(scenesDirectory_.string(), WGPUContext::instance().device());
     sceneCatalogLoaded_ = true;
 }
 
@@ -190,7 +191,7 @@ void IOPanel::draw(float scale, Vec2i windowSize, Simulation& simulation, FileDi
         const bool isHovered = ImGui::IsItemHovered();
 
         if (tile.hasPreview) {
-            const ImTextureID textureId = (ImTextureID)(uintptr_t)tile.previewTexture.idx;
+            const ImTextureID textureId = (ImTextureID)tile.previewTextureView;
             const Vec2i textureSize(tile.previewSize);
             ImVec2 uvMin(0.0f, 0.0f);
             ImVec2 uvMax(1.0f, 1.0f);

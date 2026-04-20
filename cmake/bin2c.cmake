@@ -5,4 +5,3 @@ string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1, " C_ARRAY ${HEX_CONTENT})
 
 file(WRITE ${OUTPUT_FILE} "#include <cstdint>\n\n")
 file(APPEND ${OUTPUT_FILE} "const uint8_t ${VAR_NAME}[] = {\n${C_ARRAY}\n};\n")
-file(APPEND ${OUTPUT_FILE} "const unsigned int ${VAR_NAME}_len = sizeof(${VAR_NAME});\n")

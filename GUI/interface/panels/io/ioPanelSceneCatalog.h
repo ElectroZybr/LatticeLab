@@ -4,7 +4,7 @@
 #include <string_view>
 #include <vector>
 
-#include <bgfx/bgfx.h>
+#include <webgpu/webgpu.hpp>
 
 #include "Engine/math/Vec2.h"
 
@@ -12,9 +12,10 @@ struct IOPanelSceneTile {
     std::string path;
     std::string title;
     std::string description;
-    bgfx::TextureHandle previewTexture = BGFX_INVALID_HANDLE;
+    wgpu::Texture previewTexture = nullptr;
+    wgpu::TextureView previewTextureView = nullptr;
     Vec2u previewSize;
     bool hasPreview = false;
 };
 
-std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirectory);
+std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirectory, wgpu::Device device);

@@ -1,4 +1,4 @@
-#include <bgfx/bgfx.h>
+#include <webgpu/webgpu.hpp>
 #include <zpp_bits.h>
 
 #include "Engine/math/Vec3.h"
@@ -98,7 +98,7 @@ struct AppSaveHeader {
     std::string description;
     uint32_t previewWidth = 0;
     uint32_t previewHeight = 0;
-    bgfx::TextureFormat::Enum previewFormat;
+    WGPUTextureFormat previewFormat;
     std::vector<std::byte> previewPixels;
 
     constexpr static zpp::bits::errc serialize(auto& archive, auto& self) {

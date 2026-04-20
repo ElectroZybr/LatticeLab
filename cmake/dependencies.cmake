@@ -16,14 +16,33 @@ set(GLFW_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_DOCS     OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL        OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_WAYLAND  OFF CACHE BOOL "" FORCE)
+set(GLFW_EXPOSE_NATIVE_WAYLAND  OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(glfw)
+
+# --- Настройка WebGPU ---
+FetchContent_Declare(
+    webgpu_distribution
+    GIT_REPOSITORY https://github.com/eliemichel/WebGPU-distribution.git
+    GIT_TAG        wgpu-v24.0.0.2
+    GIT_SHALLOW    ON
+)
+set(WEBGPU_BACKEND "WGPU" CACHE STRING "WebGPU backend" FORCE)
+FetchContent_MakeAvailable(webgpu_distribution)
+
+FetchContent_Declare(
+    webgpu_cpp
+    GIT_REPOSITORY https://github.com/eliemichel/WebGPU-Cpp.git
+    GIT_TAG        wgpu-v24.0.3.1
+    GIT_SHALLOW    ON
+)
+FetchContent_MakeAvailable(webgpu_cpp)
 
 # --- Настройка ImGui ---
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG        v1.91.9
+    GIT_TAG        v1.92.3
     GIT_SHALLOW    ON
 )
 FetchContent_MakeAvailable(imgui)
@@ -33,16 +52,18 @@ add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
-    ${CMAKE_SOURCE_DIR}/GUI/imgui_bgfx/imgui_impl_bgfx.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_wgpu.cpp
 )
 target_include_directories(imgui PUBLIC
     ${imgui_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/GUI/imgui_bgfx
-    ${bgfx_cmake_SOURCE_DIR}/bgfx/include
-    ${bgfx_cmake_SOURCE_DIR}/bgfx/examples/common/imgui
-    ${bgfx_cmake_SOURCE_DIR}/bx/include
+    ${imgui_SOURCE_DIR}/backends
 )
-target_link_libraries(imgui PUBLIC bgfx bx glfw)
+target_link_libraries(imgui PUBLIC
+    webgpu
+    glfw
+)
+target_compile_definitions(imgui PUBLIC IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
+set(GLFW_EXPOSE_NATIVE_WAYLAND 0)
 
 # --- Настройка ImGuiFileDialog ---
 FetchContent_Declare(
@@ -69,26 +90,6 @@ FetchContent_Declare(
     GIT_SHALLOW    ON
 )
 FetchContent_MakeAvailable(glm)
-
-# --- Настройка WebGPU ---
-set(WEBGPU_BACKEND "wgpu" CACHE STRING "WebGPU backend: wgpu or dawn")
-set_property(CACHE WEBGPU_BACKEND PROPERTY STRINGS wgpu dawn)
-
-FetchContent_Declare(
-    webgpu_distribution
-    GIT_REPOSITORY https://github.com/eliemichel/WebGPU-distribution.git
-    GIT_TAG        wgpu-v24.0.0.2
-    GIT_SHALLOW    ON
-)
-FetchContent_MakeAvailable(webgpu_distribution)
-
-FetchContent_Declare(
-    webgpu_cpp
-    GIT_REPOSITORY https://github.com/eliemichel/WebGPU-Cpp.git
-    GIT_TAG        wgpu-v24.0.3.1
-    GIT_SHALLOW    ON
-)
-FetchContent_MakeAvailable(webgpu_cpp)
 
 # --- Настройка zpp_bits ---
 FetchContent_Declare(

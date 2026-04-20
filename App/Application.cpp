@@ -1,11 +1,9 @@
 ﻿#include "Application.h"
 
-#include "imgui_impl_bgfx.h"
-
 #include <cmath>
 #include <cstdlib>
 
-#include <bgfx/bgfx.h>
+#include <imgui_impl_wgpu.h>
 
 #include "App/AppActions.h"
 #include "App/CreateWindow.h"
@@ -17,8 +15,8 @@
 #include "GUI/interface/interface.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
-#include "Rendering/2d/Renderer2DBGFX.h"
-#include "Rendering/BgfxContext.h"
+#include "Rendering/2d/Renderer2DWGPU.h"
+#include "Rendering/WGPUContext.h"
 #include "capture/CaptureActions.h"
 #include "capture/CaptureController.h"
 #include "debug/CreateDebugPanels.h"
@@ -37,13 +35,14 @@ int Application::run() {
 
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
-    BgfxContext::instance().init(window, width, height);
+    WGPUContext::instance().init(window, width, height);
 
     // инициализация систем
     SimBox box(Vec3f(50, 50, 6));
     Simulation simulation(box);
     CaptureController captureController;
-    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer2DBGFX>(simulation.box());
+    std::unique_ptr<IRenderer> renderer =
+        std::make_unique<Renderer2DWGPU>(simulation.box(), WGPUContext::instance().device(), WGPUContext::instance().surfaceFormat());
     Interface appInterface(window, simulation, renderer, captureController);
     AppActions::Handler appActions(window, simulation, renderer, appInterface.state());
     CaptureActions::Handler captureActions(captureController);
@@ -120,18 +119,27 @@ int Application::run() {
             appInterface.update();
             refreshAtomDebugViews(debugViews, simulation);
 
-            renderer->drawShot(simulation.atoms(), simulation.bonds(), simulation.box());
+            auto& ctx = WGPUContext::instance();
+
+            // получаем surface текстуру один раз на кадр
+            wgpu::SurfaceTexture surfaceTex;
+            ctx.surface().getCurrentTexture(&surfaceTex);
+            wgpu::Texture texture = surfaceTex.texture;
+            auto surfaceView = texture.createView();
+
+            renderer->drawShot(surfaceView, ctx.depthView(), simulation.atoms(), simulation.bonds(), simulation.box());
+
             ToolsManager::pickingSystem->getOverlay().draw();
+
+            // ImGui
             ImGui::Render();
-            ImGui_Implbgfx_RenderDrawLists(ImGui::GetDrawData());
+            auto* wgpuRenderer = static_cast<RendererWGPU*>(renderer.get());
+            ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), wgpuRenderer->getCurrentPass());
 
             // захват кадра для видео
+            renderer->endFrame();
             captureController.onFrameRendered();
-
-            bgfx::frame();
-            if (bgfx::getRendererType() == bgfx::RendererType::OpenGL) {
-                glfwSwapBuffers(window);
-            }
+            ctx.present();
         }
 
         Profiler::instance().endFrame();

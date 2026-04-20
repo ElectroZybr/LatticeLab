@@ -1,9 +1,10 @@
 #include "interface.h"
 
-#include "imgui_impl_bgfx.h"
-#include "imgui_impl_glfw.h"
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_wgpu.h>
 
 #include "App/capture/CaptureController.h"
+#include "Rendering/WGPUContext.h"
 
 #define ICON_MIN_FA 0xf000
 #define ICON_MAX_FA 0xf897
@@ -72,20 +73,25 @@ int Interface::init() {
         return EXIT_FAILURE;
     }
     ImGui_ImplGlfw_InitForOther(window_, true);
-    ImGui_Implbgfx_Init(255);
-    ImGui_Implbgfx_CreateDeviceObjects();
+
+    auto& ctx = WGPUContext::instance();
+    ImGui_ImplWGPU_InitInfo wgpuInfo{};
+    wgpuInfo.Device = (WGPUDevice)ctx.device();
+    wgpuInfo.RenderTargetFormat = (WGPUTextureFormat)ctx.surfaceFormat();
+    wgpuInfo.DepthStencilFormat = WGPUTextureFormat_Depth24Plus;
+    ImGui_ImplWGPU_Init(&wgpuInfo);
 
     return EXIT_SUCCESS;
 }
 
 void Interface::shutdown() {
-    ImGui_Implbgfx_Shutdown();
+    ImGui_ImplWGPU_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 }
 
 int Interface::update() {
-    ImGui_Implbgfx_NewFrame();
+    ImGui_ImplWGPU_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 

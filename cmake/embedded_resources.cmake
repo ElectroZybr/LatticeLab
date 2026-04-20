@@ -15,10 +15,10 @@ function(embed_bin_resource INPUT_FILE OUTPUT_DIR VAR_PREFIX)
         OUTPUT ${H_FILE}
         COMMAND ${CMAKE_COMMAND} -DINPUT_FILE=${INPUT_FILE} 
                                  -DOUTPUT_FILE=${H_FILE} 
-                                 -DVAR_NAME=${VAR_NAME} 
+                                 -DVAR_NAME=${ARR_NAME} 
                                  -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/bin2c.cmake"
         DEPENDS ${INPUT_FILE} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/bin2c.cmake"
-        COMMENT "Embedding resource: ${RAW_NAME} using native CMake"
+        COMMENT "Embedding resource: ${RAW_NAME}"
         VERBATIM
     )
 

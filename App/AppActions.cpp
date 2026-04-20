@@ -6,8 +6,9 @@
 #include "App/save_system/AppStateIO.h"
 #include "Engine/Simulation.h"
 #include "GUI/interface/UiState.h"
-#include "Rendering/2d/Renderer2DBGFX.h"
-#include "Rendering/3d/Renderer3DBGFX.h"
+#include "Rendering/2d/Renderer2DWGPU.h"
+#include "Rendering/3d/Renderer3DWGPU.h"
+#include "Rendering/WGPUContext.h"
 
 namespace {
     void shiftAtoms(AtomStorage& atomStorage, Vec3f delta) {
@@ -64,10 +65,12 @@ namespace AppActions {
             std::unique_ptr<IRenderer> newRenderer;
             switch (type) {
             case RendererType::Renderer2D:
-                newRenderer = std::make_unique<Renderer2DBGFX>(simulation.box());
+                newRenderer = std::make_unique<Renderer2DWGPU>(simulation.box(), WGPUContext::instance().device(),
+                                                               WGPUContext::instance().surfaceFormat());
                 break;
             case RendererType::Renderer3D:
-                newRenderer = std::make_unique<Renderer3DBGFX>(simulation.box());
+                newRenderer = std::make_unique<Renderer3DWGPU>(simulation.box(), WGPUContext::instance().device(),
+                                                               WGPUContext::instance().surfaceFormat());
                 break;
             }
 

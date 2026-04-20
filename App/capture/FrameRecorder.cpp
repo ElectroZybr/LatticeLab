@@ -44,14 +44,14 @@ namespace {
         return "veryfast";
     }
 
-    static const char* toInputPixelFormat(bgfx::TextureFormat::Enum format) {
+    static const char* toInputPixelFormat(wgpu::TextureFormat format) {
         switch (format) {
-        case bgfx::TextureFormat::RGBA8:
+        case wgpu::TextureFormat::RGBA8Unorm:
+        case wgpu::TextureFormat::RGBA8UnormSrgb:
             return "rgba";
-        case bgfx::TextureFormat::BGRA8:
+        case wgpu::TextureFormat::BGRA8Unorm:
+        case wgpu::TextureFormat::BGRA8UnormSrgb:
             return "bgra";
-        case bgfx::TextureFormat::RGB8:
-            return "rgb24";
         default:
             return "rgba";
         }

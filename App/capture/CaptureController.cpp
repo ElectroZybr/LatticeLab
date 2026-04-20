@@ -6,10 +6,10 @@
 #include <filesystem>
 
 #include <GLFW/glfw3.h>
-#include <bgfx/bgfx.h>
 
 #include "GUI/io/keyboard/Keyboard.h"
-#include "Rendering/BgfxContext.h"
+#include "Rendering/WGPUContext.h"
+#include "Rendering/WGPUScreenShot.h"
 
 CaptureSettings CaptureController::settings() const noexcept { return settings_; }
 
@@ -70,15 +70,15 @@ void CaptureController::start() {
     }
     activeSessionFps_ = std::max(1, settings_.fps);
 
-    BgfxContext::instance().callback().addScreenShotCallback(
-        "capture", [this](uint32_t width, uint32_t height, const void* data, uint32_t size, bool yflip, bgfx::TextureFormat::Enum format) {
+    auto& ctx = WGPUContext::instance();
+    WGPUScreenShot::instance().addScreenShotCallback(
+        "capture", [this, format = ctx.surfaceFormat()](uint32_t width, uint32_t height, const void* data, uint32_t size) {
             CapturedFrame frame;
             frame.width = width;
             frame.height = height;
             frame.format = format;
+            frame.yflip = false;
             frame.pixels.assign(static_cast<const std::byte*>(data), static_cast<const std::byte*>(data) + size);
-            frame.yflip = yflip;
-
             frameRecorder_.submit(frame);
         });
 
@@ -91,7 +91,7 @@ void CaptureController::stop() {
     captureFps_ = 0.0f;
     blinkElapsed_ = 0.0;
     toggleShortcutHeld_ = false;
-    BgfxContext::instance().callback().removeScreenShotCallback("capture");
+    WGPUScreenShot::instance().removeScreenShotCallback("capture");
 }
 
 void CaptureController::toggle() {
@@ -114,7 +114,11 @@ void CaptureController::onFrameRendered() {
     }
     captureSubmitAccum_ -= frameInterval;
 
-    bgfx::requestScreenShot(BGFX_INVALID_HANDLE, "capture"); // Вызывает кэллбэк с frameRecorder_.submit
+    auto& ctx = WGPUContext::instance();
+    wgpu::SurfaceTexture surfaceTexture;
+    ctx.surface().getCurrentTexture(&surfaceTexture);
+
+    WGPUScreenShot::instance().capture(ctx.device(), wgpu::Texture(surfaceTexture.texture), ctx.width(), ctx.height(), "capture");
 }
 
 bool CaptureController::isRecording() const { return frameRecorder_.isRecording(); }

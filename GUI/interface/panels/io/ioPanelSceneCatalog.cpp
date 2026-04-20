@@ -20,7 +20,7 @@ namespace {
         std::string description;
         unsigned imageWidth = 0;
         unsigned imageHeight = 0;
-        bgfx::TextureFormat::Enum imageFormat;
+        wgpu::TextureFormat imageFormat;
         std::vector<std::byte> imageBytes;
         bool hasEmbeddedPreview = false;
     };
@@ -91,7 +91,7 @@ namespace {
         ParsedSceneInfo info;
         std::string section;
         std::string imageEncoding;
-        bgfx::TextureFormat::Enum imageFormat;
+        wgpu::TextureFormat imageFormat;
         std::string imageDataBase64;
         bool readingImageData = false;
 
@@ -130,7 +130,7 @@ namespace {
                     imageEncoding = valueAfterTag(trimmed, "encoding");
                 }
                 else if (trimmed.starts_with("format ")) {
-                    imageFormat = static_cast<bgfx::TextureFormat::Enum>(std::stoi(valueAfterTag(trimmed, "format")));
+                    imageFormat = wgpu::TextureFormat(static_cast<WGPUTextureFormat>(std::stoi(valueAfterTag(trimmed, "format"))));
                 }
                 else if (trimmed.starts_with("width ")) {
                     info.imageWidth = static_cast<unsigned>(std::max(0, std::stoi(valueAfterTag(trimmed, "width"))));
@@ -220,7 +220,7 @@ namespace {
     }
 }
 
-std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirectory) {
+std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirectory, wgpu::Device device) {
     std::vector<IOPanelSceneTile> sceneTiles;
 
     const std::filesystem::path scenesDir = scenesDirectory.empty() ? std::filesystem::path(".") : std::filesystem::path(scenesDirectory);
@@ -249,14 +249,34 @@ std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirec
         tile.title = std::move(parsed.title);
         tile.description = std::move(parsed.description);
 
-        if (parsed.hasEmbeddedPreview) {
-            const bgfx::Memory* mem = bgfx::copy(parsed.imageBytes.data(), parsed.imageBytes.size());
+        // TODO заменить сохранения на новый формат
+        // if (parsed.hasEmbeddedPreview && parsed.imageWidth > 0 && parsed.imageHeight > 0) {
+        //     wgpu::TextureDescriptor texDesc{};
+        //     texDesc.size = {parsed.imageWidth, parsed.imageHeight, 1};
+        //     texDesc.format = parsed.imageFormat;
+        //     texDesc.usage = wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::CopyDst;
+        //     texDesc.mipLevelCount = 1;
+        //     texDesc.sampleCount = 1;
+        //     texDesc.dimension = wgpu::TextureDimension::_2D;
+        //     auto texture = device.createTexture(texDesc);
 
-            tile.previewTexture = bgfx::createTexture2D(parsed.imageWidth, parsed.imageHeight, false, 1, parsed.imageFormat,
-                                                        BGFX_TEXTURE_NONE | BGFX_SAMPLER_POINT, mem);
-            tile.previewSize = Vec2u(parsed.imageWidth, parsed.imageHeight);
-            tile.hasPreview = bgfx::isValid(tile.previewTexture);
-        }
+        //     wgpu::TexelCopyTextureInfo dst{};
+        //     dst.texture = texture;
+        //     dst.mipLevel = 0;
+        //     dst.aspect = wgpu::TextureAspect::All;
+
+        //     wgpu::TexelCopyBufferLayout layout{};
+        //     layout.bytesPerRow = parsed.imageWidth * 4;
+        //     layout.rowsPerImage = parsed.imageHeight;
+
+        //     wgpu::Extent3D extent{parsed.imageWidth, parsed.imageHeight, 1};
+        //     device.getQueue().writeTexture(dst, parsed.imageBytes.data(), parsed.imageBytes.size(), layout, extent);
+
+        //     tile.previewTexture = texture;
+        //     tile.previewTextureView = texture.createView();
+        //     tile.previewSize = Vec2u(parsed.imageWidth, parsed.imageHeight);
+        //     tile.hasPreview = true;
+        // }
 
         sceneTiles.emplace_back(std::move(tile));
     }
