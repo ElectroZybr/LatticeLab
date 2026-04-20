@@ -100,10 +100,10 @@ private:
 
     // Data
     struct GridInstance {
-        glm::vec3 origin;
+        glm::vec4 origin;
         float cellSize;
         float atomCount;
-        float pad[3] = {};
+        float pad[2] = {};
     };
 
     struct AtomVec4 {

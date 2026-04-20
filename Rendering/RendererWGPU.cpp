@@ -6,20 +6,9 @@
 #include <webgpu/webgpu.hpp>
 
 #include "App/interaction/ToolsManager.h"
-#include "Rendering/WGPUContext.h"
 #include "generated/shaders/atom2d.wgsl.h"
 #include "generated/shaders/grid.wgsl.h"
 #include "generated/shaders/line.wgsl.h"
-
-#ifdef Always
-#undef Always
-#endif
-#ifdef True
-#undef True
-#endif
-#ifdef False
-#undef False
-#endif
 
 namespace {
     wgpu::ShaderModule createShaderModule(wgpu::Device device, const char* wgsl) {
@@ -33,10 +22,6 @@ namespace {
     }
 
 }
-
-// ---------------------------------------------------------------------------
-// RendererWGPU
-// ---------------------------------------------------------------------------
 
 RendererWGPU::RendererWGPU(SimBox& simbox, wgpu::Device device, wgpu::TextureFormat surfaceFormat)
     : IRenderer(simbox), device(device), surfaceFormat(surfaceFormat) {
@@ -80,7 +65,7 @@ void RendererWGPU::initAtomQuadBuffer() {
     device.getQueue().writeBuffer(atomQuadVb, 0, quad, sizeof(quad));
 }
 
-void RendererWGPU::initBoxBuffer() { boxVb = createBuffer(36 * 3 * sizeof(float), wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst); }
+void RendererWGPU::initBoxBuffer() { boxVb = createBuffer(24 * 3 * sizeof(float), wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst); }
 
 void RendererWGPU::initBondBuffer() {
     bondVb = createBuffer(128, wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst);
@@ -247,7 +232,7 @@ void RendererWGPU::initGridPipeline() {
     plDesc.bindGroupLayoutCount = 1;
     plDesc.bindGroupLayouts = (WGPUBindGroupLayout*)&bgl;
 
-    // vertex: vec3 localPos | instance: vec3 origin, float cellSize, float atomCount
+    // vertex: vec3 localPos | instance: vec4 origin, float cellSize, float atomCount
     wgpu::VertexAttribute vertAttr{};
     vertAttr.format = wgpu::VertexFormat::Float32x3;
     vertAttr.offset = 0;
@@ -260,7 +245,7 @@ void RendererWGPU::initGridPipeline() {
     vertLayout.attributes = &vertAttr;
 
     std::array<wgpu::VertexAttribute, 3> instAttrs{};
-    instAttrs[0].format = wgpu::VertexFormat::Float32x3;
+    instAttrs[0].format = wgpu::VertexFormat::Float32x4;
     instAttrs[0].offset = offsetof(GridInstance, origin);
     instAttrs[0].shaderLocation = 1;
     instAttrs[1].format = wgpu::VertexFormat::Float32;
@@ -310,6 +295,8 @@ void RendererWGPU::initGridPipeline() {
     pDesc.depthStencil = &depthState;
     pDesc.primitive.topology = wgpu::PrimitiveTopology::LineList;
     pDesc.multisample.count = 1;
+    pDesc.multisample.mask = 0xFFFFFFFF;
+    pDesc.multisample.alphaToCoverageEnabled = false;
 
     gridPipeline = device.createRenderPipeline(pDesc);
     gridBindGroupLayout = bgl;
@@ -374,9 +361,9 @@ void RendererWGPU::drawShot(wgpu::TextureView targetView, wgpu::TextureView dept
     uniforms.projection = projection;
     uniforms.lightDir = glm::vec4(getLightDir(), 0.f);
     uniforms.colorMode = glm::vec4(static_cast<float>(speedColorMode), 0, 0, 0);
-    uniforms.maxSpeedSqr = glm::vec4(1.f, 0, 0, 0); // обновится ниже
+    uniforms.maxSpeedSqr = glm::vec4(1.f, 0, 0, 0);
     uniforms.maxCount = glm::vec4(1.f, 0, 0, 0);
-    for (int i = 0; i < (int)typeColorsData.size() && i < 16; ++i) {
+    for (size_t i = 0; i < typeColorsData.size(); ++i) {
         uniforms.typeColors[i] = typeColorsData[i];
     }
 
@@ -559,7 +546,7 @@ void RendererWGPU::drawGridImpl(const SpatialGrid& grid) {
             for (int x = 1; x < grid.sizeX - 1; ++x) {
                 const int cnt = grid.countAtomsInCell(x, y, z);
                 if (cnt > 0) {
-                    gridData.emplace_back(glm::vec3((x - 1) * grid.cellSize, (y - 1) * grid.cellSize, (z - 1) * grid.cellSize),
+                    gridData.emplace_back(glm::vec4((x - 1) * grid.cellSize, (y - 1) * grid.cellSize, (z - 1) * grid.cellSize, 0.f),
                                           (float)grid.cellSize, (float)cnt);
                     maxCount = std::max(maxCount, cnt);
                 }

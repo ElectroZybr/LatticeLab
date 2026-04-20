@@ -16,14 +16,14 @@ struct VertOut {
 
 @vertex
 fn vs_main(
-    @location(0)             localPos  : vec3<f32>,
-    @location(1)             origin    : vec3<f32>,
-    @location(2)             cellSize  : f32,
-    @location(3)             atomCount : f32,
+    @location(0) localPos  : vec3<f32>,
+    @location(1) origin    : vec4<f32>,
+    @location(2) cellSize  : f32,
+    @location(3) atomCount : f32,
 ) -> VertOut {
-    let worldPos = origin + localPos * cellSize;
+    let worldPos = origin.xyz + localPos * cellSize;
     let t = clamp(atomCount / uScene.maxCount.x, 0.0, 1.0);
-    let color = mix(vec4<f32>(0.0, 0.5, 1.0, 0.3), vec4<f32>(1.0, 0.2, 0.0, 0.8), t);
+    let color = mix(vec4<f32>(0.0, 1.0, 0.0, 0.8), vec4<f32>(1.0, 0.0, 0.0, 0.8), t);
 
     var out: VertOut;
     out.pos   = uScene.projection * uScene.view * vec4<f32>(worldPos, 1.0);
