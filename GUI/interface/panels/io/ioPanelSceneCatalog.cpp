@@ -10,6 +10,7 @@
 #include <string_view>
 #include <vector>
 
+#include <webgpu/webgpu.hpp>
 #include <zstd.h>
 
 #include "App/save_system/AppSaveState.h"
@@ -202,7 +203,7 @@ namespace {
         info.description = header.description;
         info.imageWidth = header.previewWidth;
         info.imageHeight = header.previewHeight;
-        info.imageFormat = header.previewFormat;
+        info.imageFormat = wgpu::TextureFormat::BGRA8Unorm; // TODO заменить на header.previewFormat
         info.imageBytes = header.previewPixels;
         info.hasEmbeddedPreview = true;
 
@@ -249,34 +250,33 @@ std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirec
         tile.title = std::move(parsed.title);
         tile.description = std::move(parsed.description);
 
-        // TODO заменить сохранения на новый формат
-        // if (parsed.hasEmbeddedPreview && parsed.imageWidth > 0 && parsed.imageHeight > 0) {
-        //     wgpu::TextureDescriptor texDesc{};
-        //     texDesc.size = {parsed.imageWidth, parsed.imageHeight, 1};
-        //     texDesc.format = parsed.imageFormat;
-        //     texDesc.usage = wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::CopyDst;
-        //     texDesc.mipLevelCount = 1;
-        //     texDesc.sampleCount = 1;
-        //     texDesc.dimension = wgpu::TextureDimension::_2D;
-        //     auto texture = device.createTexture(texDesc);
+        if (parsed.hasEmbeddedPreview && parsed.imageWidth > 0 && parsed.imageHeight > 0) {
+            wgpu::TextureDescriptor texDesc{};
+            texDesc.size = {parsed.imageWidth, parsed.imageHeight, 1};
+            texDesc.format = parsed.imageFormat;
+            texDesc.usage = wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::CopyDst;
+            texDesc.mipLevelCount = 1;
+            texDesc.sampleCount = 1;
+            texDesc.dimension = wgpu::TextureDimension::_2D;
+            auto texture = device.createTexture(texDesc);
 
-        //     wgpu::TexelCopyTextureInfo dst{};
-        //     dst.texture = texture;
-        //     dst.mipLevel = 0;
-        //     dst.aspect = wgpu::TextureAspect::All;
+            wgpu::TexelCopyTextureInfo dst{};
+            dst.texture = texture;
+            dst.mipLevel = 0;
+            dst.aspect = wgpu::TextureAspect::All;
 
-        //     wgpu::TexelCopyBufferLayout layout{};
-        //     layout.bytesPerRow = parsed.imageWidth * 4;
-        //     layout.rowsPerImage = parsed.imageHeight;
+            wgpu::TexelCopyBufferLayout layout{};
+            layout.bytesPerRow = parsed.imageWidth * 4;
+            layout.rowsPerImage = parsed.imageHeight;
 
-        //     wgpu::Extent3D extent{parsed.imageWidth, parsed.imageHeight, 1};
-        //     device.getQueue().writeTexture(dst, parsed.imageBytes.data(), parsed.imageBytes.size(), layout, extent);
+            wgpu::Extent3D extent{parsed.imageWidth, parsed.imageHeight, 1};
+            device.getQueue().writeTexture(dst, parsed.imageBytes.data(), parsed.imageBytes.size(), layout, extent);
 
-        //     tile.previewTexture = texture;
-        //     tile.previewTextureView = texture.createView();
-        //     tile.previewSize = Vec2u(parsed.imageWidth, parsed.imageHeight);
-        //     tile.hasPreview = true;
-        // }
+            tile.previewTexture = texture;
+            tile.previewTextureView = texture.createView();
+            tile.previewSize = Vec2u(parsed.imageWidth, parsed.imageHeight);
+            tile.hasPreview = true;
+        }
 
         sceneTiles.emplace_back(std::move(tile));
     }
