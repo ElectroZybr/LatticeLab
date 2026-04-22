@@ -56,7 +56,7 @@ public:
     }
 
 private:
-    void reserveListBuffers(const AtomStorage& atoms, const SpatialGrid& grid);
+    void reserveListBuffers(const AtomStorage& atoms);
 
     // uint32_t - 4 байта, максимальное количество пар в NL ~ 4 млрд
     std::vector<uint32_t> neighbors_;

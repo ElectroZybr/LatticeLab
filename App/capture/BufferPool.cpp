@@ -10,7 +10,7 @@
 void BufferPool::init(size_t bufferSize, size_t initialCount) {
     this->bufferSize = bufferSize;
     for (size_t i = 0; i < initialCount; ++i) {
-        free.push_back(createBuffer());
+        free.emplace_back(createBuffer());
     }
 }
 
@@ -27,7 +27,7 @@ void BufferPool::release(wgpu::Buffer buffer) { free.emplace_back(std::move(buff
 
 wgpu::Buffer BufferPool::createBuffer() const {
     wgpu::BufferDescriptor desc{};
-    desc.label = {"CaptureReadback", WGPU_STRLEN};
+    desc.label = wgpu::StringView("CaptureReadback");
     desc.size = bufferSize;
     desc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::MapRead;
     desc.mappedAtCreation = false;

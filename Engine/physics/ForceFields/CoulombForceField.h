@@ -3,7 +3,6 @@
 #include <cmath>
 
 #include "Engine/Consts.h"
-#include "Engine/SimBox.h"
 #include "Engine/physics/AtomStorage.h"
 
 class NeighborList;
@@ -14,8 +13,8 @@ public:
 
     static constexpr float kCoulombEvAngstrom = 140.399645f; // eV*A/e^2
 
-    inline void pairInteraction(AtomStorage& atoms, uint32_t bIndex, float dx, float dy, float dz, float d2, float chargeA,
-                                        float& forceX, float& forceY, float& forceZ, float& potentialEnergy) const {
+    inline void pairInteraction(AtomStorage& atoms, uint32_t bIndex, float dx, float dy, float dz, float d2, float chargeA, float& forceX,
+                                float& forceY, float& forceZ, float& potentialEnergy) const {
         const float chargeB = atoms.charge(bIndex);
         if (chargeB == 0.0f) {
             return;

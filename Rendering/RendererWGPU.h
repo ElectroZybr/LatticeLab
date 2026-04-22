@@ -90,7 +90,7 @@ private:
     void initLinePipeline(wgpu::RenderPipeline& outPipeline, const char* wgsl);
 
     // Helpers
-    wgpu::Buffer createBuffer(uint64_t size, wgpu::BufferUsage usage);
+    wgpu::Buffer createBuffer(uint64_t size, wgpu::BufferUsage usage, wgpu::StringView label = wgpu::StringView());
     void ensureStorageBuffers(size_t count);
     template <typename T> void uploadStorageBuffer(wgpu::Buffer& buf, const T* data, size_t count);
 

@@ -59,7 +59,7 @@ void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
     const float* RESTRICT y = atoms.yData();
     const float* RESTRICT z = atoms.zData();
 
-    reserveListBuffers(atoms, grid);
+    reserveListBuffers(atoms);
 
     offsets_[0] = 0;
     for (uint32_t i = 0; i < atomCount; ++i) {
@@ -97,7 +97,7 @@ bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
     const float* RESTRICT refZ = refPosZ_.data();
 
     int rebuild = false;
-    #pragma GCC ivdep
+#pragma GCC ivdep
     for (uint32_t i = 0; i < n; ++i) {
         const float dx = x[i] - refX[i];
         const float dy = y[i] - refY[i];
@@ -131,7 +131,7 @@ void NeighborList::recordRebuild(int simStep) {
     stats_.recordRebuild(simStep, rebuildTimeMs);
 }
 
-void NeighborList::reserveListBuffers(const AtomStorage& atoms, const SpatialGrid& grid) {
+void NeighborList::reserveListBuffers(const AtomStorage& atoms) {
     const size_t prevCapacity = neighbors_.capacity();
     neighbors_.clear();
     offsets_.resize(atoms.size() + 1);

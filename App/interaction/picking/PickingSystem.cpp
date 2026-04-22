@@ -15,8 +15,6 @@ void PickingSystem::clearSelection() {
 }
 
 void PickingSystem::processClick(Vec2i screenPos, bool cumulative) {
-    IRenderer* rend = renderer->get();
-
     AtomHit hit;
     bool found = pickAtom(screenPos, 10.0f, hit);
 

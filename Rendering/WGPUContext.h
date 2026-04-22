@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 #include <webgpu/webgpu.hpp>
+#include <wgpu.h>
 
 #if defined(__linux__)
 #define GLFW_EXPOSE_NATIVE_X11
@@ -28,6 +29,14 @@ public:
         }
 
         wgpu::InstanceDescriptor instanceDesc{};
+
+#ifndef NDEBUG
+        WGPUInstanceExtras extras{};
+        extras.chain.sType = (WGPUSType)WGPUNativeSType::WGPUSType_InstanceExtras;
+        extras.flags = WGPUInstanceFlag_Debug;
+        instanceDesc.nextInChain = &extras.chain;
+#endif
+
         instance_ = wgpu::createInstance(instanceDesc);
         if (!instance_) {
             throw std::runtime_error("wgpu: failed to create instance");
@@ -148,17 +157,6 @@ public:
         height_ = height;
     }
 
-    // Возвращает TextureView текущего swapchain кадра (вызывать в начале кадра)
-    wgpu::TextureView currentSurfaceView() {
-        wgpu::SurfaceTexture surfaceTexture;
-        surface_.getCurrentTexture(&surfaceTexture);
-        if (surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessOptimal &&
-            surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::SuccessSuboptimal) {
-            throw std::runtime_error("wgpu: failed to get current surface texture");
-        }
-        return wgpu::Texture(surfaceTexture.texture).createView();
-    }
-
     void present() { surface_.present(); }
     void processEvents() { device_.poll(false, nullptr); }
 
@@ -197,6 +195,7 @@ private:
         xlibSrc.window = glfwGetX11Window(window);
 
         wgpu::SurfaceDescriptor desc{};
+        desc.label = wgpu::StringView("Surface");
         desc.nextInChain = &xlibSrc.chain;
         return instance_.createSurface(desc);
 
@@ -206,6 +205,7 @@ private:
         hwndSrc.hwnd = glfwGetWin32Window(window);
 
         wgpu::SurfaceDescriptor desc{};
+        desc.label = wgpu::StringView("Surface");
         desc.nextInChain = &hwndSrc.chain;
         return instance_.createSurface(desc);
 
@@ -214,6 +214,7 @@ private:
         metalSrc.layer = glfwGetCocoaWindow(window);
 
         wgpu::SurfaceDescriptor desc{};
+        desc.label = wgpu::StringView("Surface");
         desc.nextInChain = &metalSrc.chain;
         return instance_.createSurface(desc);
 #endif
@@ -224,6 +225,7 @@ private:
         depthTexture_ = nullptr;
 
         wgpu::TextureDescriptor depthDesc{};
+        depthDesc.label = wgpu::StringView("Depth Texture");
         depthDesc.size = {width, height, 1};
         depthDesc.format = wgpu::TextureFormat::Depth24Plus;
         depthDesc.usage = wgpu::TextureUsage::RenderAttachment;
@@ -233,6 +235,7 @@ private:
         depthTexture_ = device_.createTexture(depthDesc);
 
         wgpu::TextureViewDescriptor viewDesc{};
+        viewDesc.label = wgpu::StringView("Depth Texture View");
         viewDesc.format = wgpu::TextureFormat::Depth24Plus;
         viewDesc.dimension = wgpu::TextureViewDimension::_2D;
         viewDesc.mipLevelCount = 1;
