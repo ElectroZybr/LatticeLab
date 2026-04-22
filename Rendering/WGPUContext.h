@@ -75,7 +75,7 @@ public:
         wgpu::SurfaceConfiguration surfaceConfig{};
         surfaceConfig.device = device_;
         surfaceConfig.format = surfaceFormat_;
-        surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment;
+        surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopyDst;
         surfaceConfig.width = width;
         surfaceConfig.height = height;
         surfaceConfig.presentMode = wgpu::PresentMode::Mailbox;
@@ -96,7 +96,7 @@ public:
         wgpu::SurfaceConfiguration surfaceConfig{};
         surfaceConfig.device = device_;
         surfaceConfig.format = surfaceFormat_;
-        surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment;
+        surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopyDst;
         surfaceConfig.width = width;
         surfaceConfig.height = height;
         surfaceConfig.presentMode = wgpu::PresentMode::Mailbox;
@@ -120,6 +120,7 @@ public:
     }
 
     void present() { surface_.present(); }
+    void processEvents() { device_.poll(false, nullptr); }
 
     void shutdown() {
         if (!initialized_) {

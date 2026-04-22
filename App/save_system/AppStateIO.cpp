@@ -14,13 +14,13 @@
 
 #include <zstd.h>
 
+#include "App/capture/CaptureController.h"
 #include "App/save_system/AppSaveState.h"
 #include "Engine/Simulation.h"
 #include "Engine/io/SimulationStateIO.h"
 #include "GUI/interface/UiState.h"
 #include "Rendering/BaseRenderer.h"
 #include "Rendering/WGPUContext.h"
-#include "Rendering/WGPUScreenShot.h"
 
 namespace {
     constexpr const char* kBlockIndent = "  ";
@@ -140,45 +140,38 @@ namespace {
         return result;
     }
 
-    void saveImageState(const PreviewFrameRect& previewRect, std::string_view path) {
+    void saveImageState(CaptureController& captureController, const PreviewFrameRect& previewRect, std::string_view path) {
         auto& ctx = WGPUContext::instance();
 
-        WGPUScreenShot::instance().addScreenShotCallback(
-            path, [path, previewRect, filePath = std::string(path), format = ctx.surfaceFormat()](uint32_t width, uint32_t height,
-                                                                                                  const void* data, uint32_t size) {
-                WGPUScreenShot::instance().removeScreenShotCallback(path);
+        captureController.requestScreenshot([previewRect, filePath = std::string(path), format = ctx.surfaceFormat()](ImageData img) {
+            const uint32_t pitch = img.width * 4;
+            const ImageData preview = capturePreviewImage(img.width, img.height, img.pixels.data(), pitch, false, previewRect);
+            if (preview.width == 0 || preview.height == 0) {
+                return;
+            }
 
-                const uint32_t pitch = width * 4;
-                const ImageData preview = capturePreviewImage(width, height, data, pitch, false, previewRect);
-                if (preview.width == 0 || preview.height == 0) {
-                    return;
-                }
+            const size_t byteCount = static_cast<size_t>(preview.width) * preview.height * 4;
+            const std::string encoded = encodeBase64({preview.pixels.data(), byteCount});
 
-                const size_t byteCount = static_cast<size_t>(preview.width) * preview.height * 4;
-                const std::string encoded = encodeBase64({preview.pixels.data(), byteCount});
+            std::ofstream file(filePath, std::ios::app);
+            if (!file.is_open()) {
+                return;
+            }
 
-                std::ofstream file(filePath, std::ios::app);
-                if (!file.is_open()) {
-                    return;
-                }
+            file << "\n[image]\n";
+            file << kBlockIndent << "encoding base64\n";
+            file << kBlockIndent << "format " << static_cast<int>(img.format) << "\n";
+            file << kBlockIndent << "width " << preview.width << "\n";
+            file << kBlockIndent << "height " << preview.height << "\n";
+            file << kBlockIndent << "data_begin\n";
 
-                file << "\n[image]\n";
-                file << kBlockIndent << "encoding base64\n";
-                file << kBlockIndent << "format " << static_cast<int>(format) << "\n";
-                file << kBlockIndent << "width " << preview.width << "\n";
-                file << kBlockIndent << "height " << preview.height << "\n";
-                file << kBlockIndent << "data_begin\n";
+            constexpr size_t lineWidth = 120;
+            for (size_t offset = 0; offset < encoded.size(); offset += lineWidth) {
+                file << kBlockIndent << encoded.substr(offset, lineWidth) << "\n";
+            }
 
-                constexpr size_t lineWidth = 120;
-                for (size_t offset = 0; offset < encoded.size(); offset += lineWidth) {
-                    file << kBlockIndent << encoded.substr(offset, lineWidth) << "\n";
-                }
-                file << kBlockIndent << "data_end\n";
-            });
-
-        wgpu::SurfaceTexture surfaceTex;
-        ctx.surface().getCurrentTexture(&surfaceTex);
-        WGPUScreenShot::instance().capture(ctx.device(), wgpu::Texture(surfaceTex.texture), ctx.width(), ctx.height(), std::string(path));
+            file << kBlockIndent << "data_end\n";
+        });
     }
 
     void saveRendererState(const IRenderer& renderer, std::string_view path) {
@@ -249,12 +242,13 @@ namespace {
     }
 }
 
-void AppStateIO::save(const PreviewFrameRect& previewRect, const Simulation& simulation, const IRenderer& renderer, std::string_view path) {
+void AppStateIO::save(CaptureController& captureController, const PreviewFrameRect& previewRect, const Simulation& simulation,
+                      const IRenderer& renderer, std::string_view path) {
     if (path.ends_with(".lat")) {
-        AppStateIO::saveText(previewRect, simulation, renderer, path);
+        AppStateIO::saveText(captureController, previewRect, simulation, renderer, path);
     }
     else if (path.ends_with(".latbin")) {
-        AppStateIO::saveBinary(previewRect, simulation, renderer, path);
+        AppStateIO::saveBinary(captureController, previewRect, simulation, renderer, path);
     }
 }
 
@@ -267,15 +261,15 @@ void AppStateIO::load(Simulation& simulation, IRenderer& renderer, std::string_v
     }
 }
 
-void AppStateIO::saveText(const PreviewFrameRect& previewRect, const Simulation& simulation, const IRenderer& renderer,
-                          std::string_view path) {
+void AppStateIO::saveText(CaptureController& captureController, const PreviewFrameRect& previewRect, const Simulation& simulation,
+                          const IRenderer& renderer, std::string_view path) {
     SimulationStateIO::save(simulation, path);
     saveRendererState(renderer, path);
-    saveImageState(previewRect, path);
+    saveImageState(captureController, previewRect, path);
 }
 
-void AppStateIO::saveBinary(const PreviewFrameRect& previewRect, const Simulation& simulation, const IRenderer& renderer,
-                            std::string_view path) {
+void AppStateIO::saveBinary(CaptureController& captureController, const PreviewFrameRect& previewRect, const Simulation& simulation,
+                            const IRenderer& renderer, std::string_view path) {
     SimulationSaveState simState;
     simState.dt = simulation.getDt();
     simState.time_ns = simulation.simTimeNs();
@@ -322,52 +316,42 @@ void AppStateIO::saveBinary(const PreviewFrameRect& previewRect, const Simulatio
     appState.header.title = title;
     appState.header.description = simulation.sceneDescription();
 
-    auto& ctx = WGPUContext::instance();
+    captureController.requestScreenshot([previewRect, filePath = std::string(path), appState = std::move(appState)](ImageData img) mutable {
+        const uint32_t pitch = img.width * 4;
+        const ImageData preview = capturePreviewImage(img.width, img.height, img.pixels.data(), pitch, false, previewRect);
 
-    WGPUScreenShot::instance().addScreenShotCallback(
-        path, [path, previewRect, filePath = std::string(path), format = ctx.surfaceFormat(),
-               appState = std::move(appState)](uint32_t width, uint32_t height, const void* data, uint32_t size) mutable {
-            WGPUScreenShot::instance().removeScreenShotCallback(path);
+        appState.header.previewWidth = preview.width;
+        appState.header.previewHeight = preview.height;
+        appState.header.previewFormat = img.format;
 
-            const uint32_t pitch = width * 4;
-            const ImageData preview = capturePreviewImage(width, height, data, pitch, false, previewRect);
+        if (preview.width > 0 && preview.height > 0) {
+            const size_t byteCount = static_cast<size_t>(preview.width) * preview.height * 4;
+            const auto* pixels = reinterpret_cast<const std::byte*>(preview.pixels.data());
+            appState.header.previewPixels.assign(pixels, pixels + byteCount);
+        }
 
-            appState.header.previewWidth = preview.width;
-            appState.header.previewHeight = preview.height;
-            appState.header.previewFormat = format;
+        auto [bytes, out] = zpp::bits::data_out();
+        try {
+            out(appState).or_throw();
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Failed to serialize app state: " << e.what() << "\n";
+            return;
+        }
 
-            if (preview.width > 0 && preview.height > 0) {
-                const size_t byteCount = static_cast<size_t>(preview.width) * preview.height * 4;
-                const auto* pixels = reinterpret_cast<const std::byte*>(preview.pixels.data());
-                appState.header.previewPixels.assign(pixels, pixels + byteCount);
-            }
+        const size_t maxCompressedSize = ZSTD_compressBound(bytes.size());
+        std::vector<std::byte> compressed(maxCompressedSize);
+        const size_t compressedSize = ZSTD_compress(compressed.data(), compressed.size(), bytes.data(), bytes.size(), 3);
+        if (ZSTD_isError(compressedSize)) {
+            std::cerr << "Failed to compress: " << ZSTD_getErrorName(compressedSize) << "\n";
+            return;
+        }
 
-            auto [bytes, out] = zpp::bits::data_out();
-            try {
-                out(appState).or_throw();
-            }
-            catch (const std::exception& e) {
-                std::cerr << "Failed to serialize app state: " << e.what() << "\n";
-                return;
-            }
-
-            const size_t maxCompressedSize = ZSTD_compressBound(bytes.size());
-            std::vector<std::byte> compressed(maxCompressedSize);
-            const size_t compressedSize = ZSTD_compress(compressed.data(), compressed.size(), bytes.data(), bytes.size(), 3);
-            if (ZSTD_isError(compressedSize)) {
-                std::cerr << "Failed to compress: " << ZSTD_getErrorName(compressedSize) << "\n";
-                return;
-            }
-
-            std::ofstream file(filePath, std::ios::binary);
-            uint32_t originalSize = static_cast<uint32_t>(bytes.size());
-            file.write(reinterpret_cast<const char*>(&originalSize), sizeof(originalSize));
-            file.write(reinterpret_cast<const char*>(compressed.data()), compressedSize);
-        });
-
-    wgpu::SurfaceTexture surfaceTex;
-    ctx.surface().getCurrentTexture(&surfaceTex);
-    WGPUScreenShot::instance().capture(ctx.device(), wgpu::Texture(surfaceTex.texture), ctx.width(), ctx.height(), std::string(path));
+        std::ofstream file(filePath, std::ios::binary);
+        uint32_t originalSize = static_cast<uint32_t>(bytes.size());
+        file.write(reinterpret_cast<const char*>(&originalSize), sizeof(originalSize));
+        file.write(reinterpret_cast<const char*>(compressed.data()), compressedSize);
+    });
 }
 
 void AppStateIO::loadText(Simulation& simulation, IRenderer& renderer, std::string_view path) {

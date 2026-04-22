@@ -44,7 +44,7 @@ int Application::run() {
     std::unique_ptr<IRenderer> renderer =
         std::make_unique<Renderer2DWGPU>(simulation.box(), WGPUContext::instance().device(), WGPUContext::instance().surfaceFormat());
     Interface appInterface(window, simulation, renderer, captureController);
-    AppActions::Handler appActions(window, simulation, renderer, appInterface.state());
+    AppActions::Handler appActions(window, captureController, simulation, renderer, appInterface.state());
     CaptureActions::Handler captureActions(captureController);
     if (appInterface.init() != EXIT_SUCCESS) {
         return EXIT_FAILURE;
@@ -119,27 +119,29 @@ int Application::run() {
             appInterface.update();
             refreshAtomDebugViews(debugViews, simulation);
 
-            auto& ctx = WGPUContext::instance();
+            WGPUContext& ctx = WGPUContext::instance();
 
             // получаем surface текстуру один раз на кадр
             wgpu::SurfaceTexture surfaceTex;
             ctx.surface().getCurrentTexture(&surfaceTex);
-            wgpu::Texture texture = surfaceTex.texture;
-            auto surfaceView = texture.createView();
+            wgpu::Texture surfaceTexture(surfaceTex.texture);
 
-            renderer->drawShot(surfaceView, ctx.depthView(), simulation.atoms(), simulation.bonds(), simulation.box());
+            // - нет захвата → возвращает view от surface напрямую
+            // - идёт захват → возвращает view intermediate текстуры
+            wgpu::TextureView renderTarget = captureController.acquireRenderTarget(surfaceTexture);
 
+            renderer->drawShot(renderTarget, ctx.depthView(), simulation.atoms(), simulation.bonds(), simulation.box());
             ToolsManager::pickingSystem->getOverlay().draw();
-
-            // ImGui
             ImGui::Render();
             auto* wgpuRenderer = static_cast<RendererWGPU*>(renderer.get());
             ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), wgpuRenderer->getCurrentPass());
+            renderer->endFrame();
 
             // захват кадра для видео
-            renderer->endFrame();
-            captureController.onFrameRendered();
+            captureController.onFrameRendered(surfaceTexture);
+
             ctx.present();
+            ctx.processEvents();
         }
 
         Profiler::instance().endFrame();

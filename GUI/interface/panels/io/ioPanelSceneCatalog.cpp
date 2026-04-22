@@ -185,7 +185,7 @@ namespace {
         size_t decompressedLimit = std::min(size_t(originalSize), size_t(4 * 1024 * 1024));
         std::vector<std::byte> decompBuffer(decompressedLimit);
 
-        size_t const dSize = ZSTD_decompress(decompBuffer.data(), decompBuffer.size(), compressedBuffer.data(), bytesRead);
+        ZSTD_decompress(decompBuffer.data(), decompBuffer.size(), compressedBuffer.data(), bytesRead);
 
         AppSaveHeader header;
         try {
@@ -203,7 +203,7 @@ namespace {
         info.description = header.description;
         info.imageWidth = header.previewWidth;
         info.imageHeight = header.previewHeight;
-        info.imageFormat = wgpu::TextureFormat::BGRA8Unorm; // TODO заменить на header.previewFormat
+        info.imageFormat = header.previewFormat;
         info.imageBytes = header.previewPixels;
         info.hasEmbeddedPreview = true;
 

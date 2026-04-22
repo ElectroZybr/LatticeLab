@@ -35,9 +35,9 @@ public:
     OverlayState& getOverlay() { return overlay; }
 
 private:
-    std::unique_ptr<IRenderer>* renderer;
     AtomStorage& atomStorage;
     SimBox& box;
+    std::unique_ptr<IRenderer>* renderer;
     OverlayState overlay;
     std::unordered_set<size_t> selectedIndices;
 

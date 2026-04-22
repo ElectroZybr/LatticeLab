@@ -2,6 +2,7 @@
 
 #include "App/AppSignals.h"
 #include "App/Scenes.h"
+#include "App/capture/CaptureController.h"
 #include "App/interaction/ToolsManager.h"
 #include "App/save_system/AppStateIO.h"
 #include "Engine/Simulation.h"
@@ -36,9 +37,10 @@ namespace {
 }
 
 namespace AppActions {
-    void Handler::trackIOPanel(UiState& uiState, Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
+    void Handler::trackIOPanel(CaptureController& captureController, UiState& uiState, Simulation& simulation,
+                               std::unique_ptr<IRenderer>& renderer) {
         track(AppSignals::UI::SaveSimulation.connect(
-            [&](std::string_view path) { AppStateIO::save(uiState.scenePreviewRect, simulation, *renderer, path); }));
+            [&](std::string_view path) { AppStateIO::save(captureController, uiState.scenePreviewRect, simulation, *renderer, path); }));
         track(AppSignals::UI::LoadSimulation.connect([&](std::string_view path) {
             AppStateIO::load(simulation, *renderer, path);
             ToolsManager::resetInteractionState();
@@ -100,8 +102,9 @@ namespace AppActions {
         track(AppSignals::UI::StepPhysics.connect([&]() { simulation.update(); }));
     }
 
-    Handler::Handler(GLFWwindow* window, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, UiState& uiState) {
-        trackIOPanel(uiState, simulation, renderer);
+    Handler::Handler(GLFWwindow* window, CaptureController& captureController, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
+                     UiState& uiState) {
+        trackIOPanel(captureController, uiState, simulation, renderer);
         trackToolsPanel(simulation, renderer);
         trackSettingsPanel(window);
         trackSimControlPanel(simulation);

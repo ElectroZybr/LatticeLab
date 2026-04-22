@@ -36,7 +36,7 @@ void FrameTool::onLeftReleased(Vec2i mousePos) {
     overlay.reset();
 }
 
-void FrameTool::onFrame(Vec2i mousePos, float deltaTime) {
+void FrameTool::onFrame(Vec2i mousePos, float) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;

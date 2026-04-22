@@ -36,6 +36,8 @@ if(CCACHE_PROGRAM)
     message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
 endif()
 
+set(COMMON_WARNINGS -Wall -Wextra)
+
 include(dependencies)
 
 file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
@@ -65,6 +67,7 @@ add_dependencies(latticelab_lib wgsl_shaders)
 
 target_compile_options(latticelab_lib PRIVATE 
     -O3
+    ${COMMON_WARNINGS}
     $<$<BOOL:${OPTIMIZE_FOR_NATIVE}>:-march=native>
 )
 
@@ -104,8 +107,9 @@ else()
     message(WARNING "LTO is not supported: ${lto_error}")
 endif()
 
-target_compile_options(latticelab_lib PRIVATE 
+target_compile_options(${APP_NAME} PRIVATE 
     -O3
+    ${COMMON_WARNINGS}
     $<$<BOOL:${OPTIMIZE_FOR_NATIVE}>:-march=native>
 )
 target_link_libraries(${APP_NAME} PRIVATE latticelab_lib)

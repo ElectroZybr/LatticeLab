@@ -1,0 +1,76 @@
+#pragma once
+
+#include "BufferPool.h"
+#include "CaptureSettings.h"
+
+#include <cstddef>
+#include <cstdint>
+#include <vector>
+
+#include <webgpu/webgpu.hpp>
+
+struct ImageData {
+    std::vector<std::byte> pixels;
+    wgpu::TextureFormat format = wgpu::TextureFormat::Undefined;
+    uint32_t width = 0;
+    uint32_t height = 0;
+};
+
+class FFmpegStreamer;
+
+class FrameProducer {
+public:
+    void startVideoCapture(FFmpegStreamer* streamer, const CaptureSettings& settings, uint32_t renderFps);
+    void stopVideoCapture();
+
+    using ScreenshotCallback = std::function<void(ImageData)>;
+    void requestScreenshot(ScreenshotCallback callback);
+
+    wgpu::TextureView acquireRenderTarget(wgpu::Texture surfaceTexture);
+    void onFrameRendered(wgpu::Texture texture);
+    void blitToSurface(wgpu::Texture surfaceTexture);
+
+    uint64_t capturedFrameCount() const { return capturedFrameCount_; }
+    void setFrameSkip(uint32_t renderFps, uint32_t targetFps) { frameSkip = std::max(1u, renderFps / targetFps); }
+
+private:
+    struct MapContext {
+        wgpu::Buffer buffer;
+        BufferPool* pool;
+        FFmpegStreamer* streamer; // nullptr для скриншота
+        uint32_t width;
+        uint32_t height;
+        uint32_t bytesPerRow;    // WebGPU-aligned stride (кратно 256)
+        const char* inputPixFmt; // статическая строка "rgba"/"bgra"
+        wgpu::TextureFormat format;
+        ScreenshotCallback onScreenshot; // пустой если это видеокадр
+    };
+
+    static void onBufferMapped(WGPUMapAsyncStatus status, WGPUStringView view, void* userdata1, void* userdata2);
+
+    static std::vector<std::byte> stripPadding(const std::byte* src, uint32_t width, uint32_t height, uint32_t bytesPerRow);
+
+    // bytesPerRow должен быть кратен 256 (wgpu::COPY_BYTES_PER_ROW_ALIGNMENT)
+    static uint32_t calcBytesPerRow(uint32_t width) {
+        constexpr uint32_t kAlign = 256;
+        return (width * kBytesPerPixel + kAlign - 1) & ~(kAlign - 1);
+    }
+
+    static constexpr uint32_t kBytesPerPixel = 4;
+    static constexpr size_t kPoolBufferCount = 3;
+
+    BufferPool pool;
+
+    FFmpegStreamer* streamer = nullptr;
+    bool videoActive = false;
+    uint64_t frameSkip = 1;
+    uint64_t frameCount = 0;
+    uint64_t capturedFrameCount_ = 0;
+
+    ScreenshotCallback pendingScreenshot_;
+
+    void ensureIntermediateTexture(uint32_t width, uint32_t height, wgpu::TextureFormat format);
+
+    wgpu::Texture intermediate_;
+    wgpu::TextureView intermediateView_;
+};
