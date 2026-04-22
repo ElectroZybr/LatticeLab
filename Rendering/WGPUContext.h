@@ -88,6 +88,46 @@ public:
         initialized_ = true;
     }
 
+    void initHeadless(uint32_t width, uint32_t height) {
+        if (initialized_) {
+            return;
+        }
+
+        wgpu::InstanceDescriptor instanceDesc{};
+        instance_ = wgpu::createInstance(instanceDesc);
+        if (!instance_) {
+            throw std::runtime_error("wgpu: failed to create instance");
+        }
+
+        // Без surface — просто берём любой адаптер
+        wgpu::RequestAdapterOptions adapterOpts{};
+        adapterOpts.powerPreference = wgpu::PowerPreference::HighPerformance;
+        adapter_ = instance_.requestAdapter(adapterOpts);
+        if (!adapter_) {
+            throw std::runtime_error("wgpu: failed to get adapter");
+        }
+
+        wgpu::DeviceDescriptor deviceDesc{};
+        deviceDesc.deviceLostCallbackInfo.callback = [](WGPUDevice const*, WGPUDeviceLostReason reason, WGPUStringView msg, void*, void*) {
+            std::cerr << "wgpu device lost (" << reason << "): " << std::string_view(msg.data, msg.length) << "\n";
+        };
+        deviceDesc.uncapturedErrorCallbackInfo.callback = [](WGPUDevice const*, WGPUErrorType type, WGPUStringView msg, void*, void*) {
+            std::cerr << "wgpu error (" << type << "): " << std::string_view(msg.data, msg.length) << "\n";
+        };
+        device_ = adapter_.requestDevice(deviceDesc);
+        if (!device_) {
+            throw std::runtime_error("wgpu: failed to get device");
+        }
+
+        queue_ = device_.getQueue();
+        surfaceFormat_ = wgpu::TextureFormat::RGBA8Unorm; // фиксированный формат для headless
+
+        createDepthTexture(width, height);
+        width_ = width;
+        height_ = height;
+        initialized_ = true;
+    }
+
     void resize(uint32_t width, uint32_t height) {
         if (!initialized_ || (width == width_ && height == height_)) {
             return;

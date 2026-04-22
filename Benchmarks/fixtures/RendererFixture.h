@@ -12,36 +12,50 @@
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/physics/Bond.h"
 #include "Rendering/BaseRenderer.h"
-#include "Rendering/BgfxContext.h"
+#include "Rendering/WGPUContext.h"
 
 template <typename T>
 concept IsRenderer = std::derived_from<T, IRenderer>;
 
 template <IsRenderer TRenderer> class RendererFixture : public benchmark::Fixture {
 public:
-    RendererFixture() { BgfxContext::instance().init(nullptr, 800, 600); }
-
     void SetUp(benchmark::State& state) override {
-        atomStorage_ = makeGridAtoms(state.range(0));
+        auto& ctx = WGPUContext::instance();
+        ctx.initHeadless(800, 600);
 
-        renderer_ = std::make_unique<TRenderer>(box_);
+        // Offscreen render target
+        wgpu::TextureDescriptor colorDesc{};
+        colorDesc.size = {800, 600, 1};
+        colorDesc.format = ctx.surfaceFormat();
+        colorDesc.usage = wgpu::TextureUsage::RenderAttachment;
+        colorDesc.mipLevelCount = 1;
+        colorDesc.sampleCount = 1;
+        colorDesc.dimension = wgpu::TextureDimension::_2D;
+        colorTexture_ = ctx.device().createTexture(colorDesc);
+        colorTextureView_ = colorTexture_.createView();
+
+        atomStorage_ = makeGridAtoms(static_cast<int>(state.range(0)));
+        renderer_ = std::make_unique<TRenderer>(box_, ctx.device(), ctx.surfaceFormat());
         renderer_->camera.setScreenSize({800.0f, 600.0f});
 
-        if (ToolsManager::pickingSystem) {
-            delete ToolsManager::pickingSystem;
-        }
         ToolsManager::pickingSystem = new PickingSystem(atomStorage_, box_, renderer_);
     }
 
     void TearDown(benchmark::State&) override {
+        // Дожидаемся завершения GPU работы
+        WGPUContext::instance().device().poll(true, nullptr);
+        colorTextureView_ = nullptr;
+        colorTexture_ = nullptr;
         renderer_.reset();
-        bgfx::frame();
     }
 
 protected:
     void setCounters(benchmark::State& state) const {
         state.SetItemsProcessed(state.iterations() * static_cast<int64_t>(atomStorage_.size()));
     }
+
+    wgpu::Texture colorTexture_;
+    wgpu::TextureView colorTextureView_;
 
     std::unique_ptr<IRenderer> renderer_;
     AtomStorage atomStorage_;
@@ -54,8 +68,8 @@ private:
         atoms.reserve(count);
         const int side = static_cast<int>(std::cbrt(count)) + 1;
         for (int i = 0; i < count; ++i) {
-            atoms.addAtom(Vec3f((i % side) * 3.0, ((i / side) % side) * 3.0, (i / static_cast<double>(side * side)) * 3.0),
-                          Vec3f::Random() * 0.5, AtomData::Type::H);
+            atoms.addAtom(Vec3f((i % side) * 3.0f, ((i / side) % side) * 3.0f, (i / static_cast<float>(side * side)) * 3.0f),
+                          Vec3f::Random() * 0.5f, AtomData::Type::H);
         }
         return atoms;
     }
