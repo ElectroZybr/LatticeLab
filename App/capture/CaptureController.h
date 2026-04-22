@@ -61,6 +61,7 @@ private:
     uint32_t measuredRenderFps_ = 60;
     double renderFpsAccum_ = 0.0;
     uint32_t renderFrameCount_ = 0;
+    std::chrono::steady_clock::time_point lastRenderTime_;
 
     bool toggleShortcutHeld_ = false;
 

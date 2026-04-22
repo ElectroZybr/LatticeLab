@@ -20,18 +20,17 @@ class FFmpegStreamer;
 
 class FrameProducer {
 public:
-    void startVideoCapture(FFmpegStreamer* streamer, const CaptureSettings& settings, uint32_t renderFps);
+    void startVideoCapture(FFmpegStreamer* streamer, const CaptureSettings& settings);
     void stopVideoCapture();
 
     using ScreenshotCallback = std::function<void(ImageData)>;
     void requestScreenshot(ScreenshotCallback callback);
 
     wgpu::TextureView acquireRenderTarget(wgpu::Texture surfaceTexture);
-    void onFrameRendered(wgpu::Texture texture);
+    void onFrameRendered(wgpu::Texture texture, float renderDeltaTime);
     void blitToSurface(wgpu::Texture surfaceTexture);
 
     uint64_t capturedFrameCount() const { return capturedFrameCount_; }
-    void setFrameSkip(uint32_t renderFps, uint32_t targetFps) { frameSkip = std::max(1u, renderFps / targetFps); }
 
 private:
     struct MapContext {
@@ -63,8 +62,8 @@ private:
 
     FFmpegStreamer* streamer = nullptr;
     bool videoActive = false;
-    uint64_t frameSkip = 1;
-    uint64_t frameCount = 0;
+    double frameAccum_ = 0.0;
+    uint32_t targetFps_ = 30;
     uint64_t capturedFrameCount_ = 0;
 
     ScreenshotCallback pendingScreenshot_;

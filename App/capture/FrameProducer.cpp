@@ -13,10 +13,10 @@
 #include "Engine/metrics/Profiler.h"
 #include "Rendering/WGPUContext.h"
 
-void FrameProducer::startVideoCapture(FFmpegStreamer* streamer, const CaptureSettings& settings, uint32_t renderFps) {
+void FrameProducer::startVideoCapture(FFmpegStreamer* streamer, const CaptureSettings& settings) {
     this->streamer = streamer;
-    frameSkip = std::max(1u, renderFps / static_cast<uint32_t>(settings.fps));
-    frameCount = 0;
+    targetFps_ = settings.fps;
+    frameAccum_ = 0.0;
     capturedFrameCount_ = 0;
     videoActive = true;
 }
@@ -24,6 +24,7 @@ void FrameProducer::startVideoCapture(FFmpegStreamer* streamer, const CaptureSet
 void FrameProducer::stopVideoCapture() {
     videoActive = false;
     streamer = nullptr;
+    capturedFrameCount_ = 0;
 }
 
 void FrameProducer::requestScreenshot(ScreenshotCallback callback) { pendingScreenshot_ = std::move(callback); }
@@ -37,10 +38,18 @@ wgpu::TextureView FrameProducer::acquireRenderTarget(wgpu::Texture surfaceTextur
     return intermediateView_;
 }
 
-void FrameProducer::onFrameRendered(wgpu::Texture surfaceTexture) {
+void FrameProducer::onFrameRendered(wgpu::Texture surfaceTexture, float renderDeltaTime) {
     PROFILE_SCOPE("FrameProducer::onFrameRendered");
 
-    const bool wantVideo = videoActive && (frameCount++ % frameSkip == 0);
+    bool wantVideo = false;
+    if (videoActive) {
+        frameAccum_ += renderDeltaTime;
+        if (frameAccum_ >= 1.0 / targetFps_) {
+            frameAccum_ -= 1.0 / targetFps_;
+            wantVideo = true;
+        }
+    }
+
     const bool wantScreenshot = static_cast<bool>(pendingScreenshot_);
     const bool captureActive = videoActive || wantScreenshot;
 

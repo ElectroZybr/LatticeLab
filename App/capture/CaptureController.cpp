@@ -27,6 +27,11 @@ void CaptureController::start() {
         return;
     }
 
+    lastRenderTime_ = std::chrono::steady_clock::now();
+    renderFrameCount_ = 0;
+    renderFpsAccum_ = 0.0;
+    measuredRenderFps_ = 0;
+
     std::filesystem::create_directories(outputDirectory_);
     const std::filesystem::path outputPath = makeCaptureOutputPath();
     const char* pixFmt = capture_utils::toInputPixelFormat(activeFormat_);
@@ -35,7 +40,7 @@ void CaptureController::start() {
         return;
     }
 
-    producer_.startVideoCapture(&streamer_, settings_, measuredRenderFps_);
+    producer_.startVideoCapture(&streamer_, settings_);
     resetSessionStats();
 }
 
@@ -71,19 +76,20 @@ void CaptureController::onFrameRendered(wgpu::Texture texture) {
     activeWidth_ = texture.getWidth();
     activeHeight_ = texture.getHeight();
 
-    producer_.onFrameRendered(texture);
+    auto now = std::chrono::steady_clock::now();
+    std::chrono::duration<float> diff = now - lastRenderTime_;
+    lastRenderTime_ = now;
+
+    producer_.onFrameRendered(texture, diff.count());
+    ++renderFrameCount_;
 }
 
 void CaptureController::update(double deltaTime) {
-    ++renderFrameCount_;
     renderFpsAccum_ += deltaTime;
     if (renderFpsAccum_ >= 1.0) {
         measuredRenderFps_ = static_cast<uint32_t>(renderFrameCount_ / renderFpsAccum_);
         renderFrameCount_ = 0;
         renderFpsAccum_ = 0.0;
-        if (isRecording()) {
-            producer_.setFrameSkip(measuredRenderFps_, settings_.fps);
-        }
     }
 
     constexpr double kFpsSampleInterval = 1.0;
@@ -118,7 +124,7 @@ std::filesystem::path CaptureController::makeCaptureOutputPath() const {
 }
 
 void CaptureController::resetSessionStats() {
-    lastFrameCountSample_ = 0;
+    lastFrameCountSample_ = producer_.capturedFrameCount();
     captureRateAccum_ = 0.0;
     captureFps_ = 0.0f;
     blinkElapsed_ = 0.0;
