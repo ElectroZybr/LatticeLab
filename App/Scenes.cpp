@@ -8,6 +8,54 @@
 
 namespace Scenes {
     namespace detail {
+        Vec3f makeCrystalBoxSize(double side, bool is3d, CrystalPlane plane) {
+            if (is3d) {
+                return Vec3f(side, side, side);
+            }
+
+            constexpr double flatSide = 6.0;
+            switch (plane) {
+            case CrystalPlane::XY:
+                return Vec3f(side, side, flatSide);
+            case CrystalPlane::XZ:
+                return Vec3f(side, flatSide, side);
+            case CrystalPlane::YZ:
+                return Vec3f(flatSide, side, side);
+            default:
+                return Vec3f(side, side, flatSide);
+            }
+        }
+
+        Vec3f makeCrystalCoords(int first, int second, int depth, CrystalPlane plane) {
+            switch (plane) {
+            case CrystalPlane::XY:
+                return Vec3f(first, second, depth);
+            case CrystalPlane::XZ:
+                return Vec3f(first, depth, second);
+            case CrystalPlane::YZ:
+                return Vec3f(depth, first, second);
+            default:
+                return Vec3f(first, second, depth);
+            }
+        }
+
+        Vec3f makeCrystalMargin(bool is3d, CrystalPlane plane, double margin) {
+            if (is3d) {
+                return Vec3f(margin, margin, margin);
+            }
+
+            switch (plane) {
+            case CrystalPlane::XY:
+                return Vec3f(margin, margin, 0.0);
+            case CrystalPlane::XZ:
+                return Vec3f(margin, 0.0, margin);
+            case CrystalPlane::YZ:
+                return Vec3f(0.0, margin, margin);
+            default:
+                return Vec3f(margin, margin, 0.0);
+            }
+        }
+
         bool hasNeighborInStorage(const Simulation& sim, const Vec3f& coords, float delta) {
             const SimBox& box = sim.box();
             const AtomStorage& atoms = sim.atoms();
@@ -45,24 +93,55 @@ namespace Scenes {
         uint32_t resolveSeed(uint32_t seed) { return seed == 0 ? std::random_device{}() : seed; }
     }
 
-    void crystal(Simulation& sim, int n, AtomData::Type type, bool is3d, double padding, double margin) {
+    void crystal(Simulation& sim, int n, AtomData::Type type, bool is3d, CrystalPlane plane, double padding, double margin) {
         const double side = n * padding + padding + 2.0 * margin;
 
-        sim.setSizeBox(Vec3f(side, side, is3d ? side : sim.box().size.z));
+        sim.setSizeBox(detail::makeCrystalBoxSize(side, is3d, plane));
 
-        const Vec3f vecMargin(margin, margin, is3d ? margin : 0.0);
-        const int zMax = is3d ? n : 1;
-        const size_t atomTotal = static_cast<size_t>(n) * static_cast<size_t>(n) * static_cast<size_t>(zMax);
+        const Vec3f vecMargin = detail::makeCrystalMargin(is3d, plane, margin);
+        const int depthMax = is3d ? n : 1;
+        const size_t atomTotal = static_cast<size_t>(n) * static_cast<size_t>(n) * static_cast<size_t>(depthMax);
         sim.reserveAtoms(sim.atoms().size() + atomTotal);
 
-        for (int x = 1; x <= n; ++x) {
-            for (int y = 1; y <= n; ++y) {
-                for (int z = 1; z <= zMax; ++z) {
-                    sim.appendAtomFast(Vec3f(x, y, z) * padding + vecMargin, Vec3f::Random() * 0.5f, type);
+        for (int first = 1; first <= n; ++first) {
+            for (int second = 1; second <= n; ++second) {
+                for (int depth = 1; depth <= depthMax; ++depth) {
+                    const Vec3f latticeCoords = detail::makeCrystalCoords(first, second, depth, plane);
+                    sim.appendAtomFast(latticeCoords * padding + vecMargin, Vec3f::Random() * 0.5f, type);
                 }
             }
         }
 
+        sim.finalizeAtomBatch();
+    }
+
+    void hexLattice(Simulation& sim, Vec3f count, AtomData::Type type, float start_force, float margin) {
+        const size_t atomTotal = static_cast<size_t>(count.x) * static_cast<size_t>(count.y) * static_cast<size_t>(count.z);
+
+        const float lj_min = AtomData::getProps(type).ljA0 * std::pow(2.0f, 1.0f / 6.0f);
+        const float rowStep = lj_min * std::sqrt(3.0f) * 0.5f;
+        const float layerShiftY = lj_min * std::sqrt(3.0f) / 6.0f;
+        const float layerStep = lj_min * std::sqrt(2.0f / 3.0f);
+
+        sim.setSizeBox(Vec3f(2.0f * margin + count.x * lj_min + 1.5f * lj_min,
+                             2.0f * margin + count.y * rowStep + 1.5f * lj_min,
+                             2.0f * margin + count.z * layerStep + lj_min));
+
+        sim.reserveAtoms(sim.atoms().size() + atomTotal);
+        for (int z = 0; z < count.z; ++z) {
+            const bool isBLayer = (z % 2) == 1;
+            for (int y = 0; y < count.y; ++y) {
+                const bool oddRow = (y % 2) == 1;
+                const float xOffset = (oddRow ? 0.5f * lj_min : 0.0f) + (isBLayer ? 0.5f * lj_min : 0.0f) + lj_min;
+                const float yCoord = (margin + y * rowStep + (isBLayer ? layerShiftY : 0.0f)) + lj_min;
+                const float zCoord = (margin + z * layerStep) + 2;
+
+                for (int x = 0; x < count.x; ++x) {
+                    const float xCoord = margin + x * lj_min + xOffset;
+                    sim.appendAtomFast(Vec3f(xCoord, yCoord, zCoord), Vec3f::Random() * start_force, type);
+                }
+            }
+        }
         sim.finalizeAtomBatch();
     }
 

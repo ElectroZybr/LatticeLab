@@ -7,6 +7,12 @@
 #include "Engine/physics/AtomData.h"
 
 namespace Scenes {
+    enum class CrystalPlane : uint8_t {
+        XY,
+        XZ,
+        YZ,
+    };
+
     struct AtomTypeSpec {
         AtomData::Type type;
         int absoluteCount = 0;
@@ -20,7 +26,10 @@ namespace Scenes {
     /// @param is3d 2D или 3D режим
     /// @param padding Расстояние между атомами в сетке
     /// @param margin Отступ от границ симуляционного ящика
-    void crystal(Simulation& sim, int n, AtomData::Type type, bool is3d, double padding = 3.0, double margin = 15.0);
+    void crystal(Simulation& sim, int n, AtomData::Type type, bool is3d, CrystalPlane plane = CrystalPlane::XY,
+                 double padding = 3.0, double margin = 15.0);
+
+    void hexLattice(Simulation& sim, Vec3f count, AtomData::Type type, float start_force = 1.0f, float margin = 15.0);
 
     /// Создает рандомный газ в уже существующем ящике симуляции
     /// @param sim Симуляция
