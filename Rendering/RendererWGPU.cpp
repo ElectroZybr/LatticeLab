@@ -216,6 +216,17 @@ void RendererWGPU::initLinePipeline(wgpu::RenderPipeline& outPipeline, const cha
     outPipeline = device.createRenderPipeline(pDesc);
 
     lineBindGroupLayout = bgl;
+
+    wgpu::BindGroupEntry entry{};
+    entry.binding = 0;
+    entry.buffer = uniformBuffer;
+    entry.size = sizeof(SceneUniforms);
+
+    wgpu::BindGroupDescriptor bgDesc{};
+    bgDesc.layout = lineBindGroupLayout;
+    bgDesc.entryCount = 1;
+    bgDesc.entries = &entry;
+    lineBindGroup = device.createBindGroup(bgDesc);
 }
 
 void RendererWGPU::initGridPipeline(const char* gridWGSL) {
@@ -305,6 +316,17 @@ void RendererWGPU::initGridPipeline(const char* gridWGSL) {
 
     gridPipeline = device.createRenderPipeline(pDesc);
     gridBindGroupLayout = bgl;
+
+    wgpu::BindGroupEntry entry{};
+    entry.binding = 0;
+    entry.buffer = uniformBuffer;
+    entry.size = sizeof(SceneUniforms);
+
+    wgpu::BindGroupDescriptor bgDesc{};
+    bgDesc.layout = gridBindGroupLayout;
+    bgDesc.entryCount = 1;
+    bgDesc.entries = &entry;
+    gridBindGroup = device.createBindGroup(bgDesc);
 }
 
 void RendererWGPU::initBoxPipeline(const char* boxWGSL) { initLinePipeline(boxPipeline, boxWGSL); }
@@ -433,22 +455,19 @@ void RendererWGPU::drawAtomsImpl(const AtomStorage& atoms) {
     velData_.resize(count);
     radii.resize(count);
     typeData.resize(count);
-    selectedData.resize(count);
+    selectedData.assign(count, 0.0f);
 
     for (size_t i = 0; i < count; ++i) {
         posData_[i] = {atoms.xData()[i], atoms.yData()[i], atoms.zData()[i]};
         velData_[i] = {atoms.vxData()[i], atoms.vyData()[i], atoms.vzData()[i]};
-        radii[i] = AtomData::getProps(atoms.type(i)).radius;
-        typeData[i] = static_cast<float>(atoms.type(i));
-    }
-
-    for (size_t i = 0; i < count; ++i) {
         const auto& props = AtomData::getProps(atoms.type(i));
         radii[i] = props.radius;
         typeData[i] = static_cast<float>(atoms.type(i));
     }
     for (const size_t idx : ToolsManager::pickingSystem->getSelectedIndices()) {
-        selectedData[idx] = idx < count ? 1.f : 0.f;
+        if (idx < count) {
+            selectedData[idx] = 1.0f;
+        }
     }
 
     uploadStorageBuffer(sbPos, posData_.data(), count);
@@ -477,28 +496,22 @@ void RendererWGPU::drawAtomsImpl(const AtomStorage& atoms) {
 }
 
 void RendererWGPU::drawBoxImpl(const SimBox& box) {
-    const float x1 = box.size.x, y1 = box.size.y, z1 = box.size.z;
-    const float lines[] = {
-        0, y1, 0, x1, y1, 0, x1, y1, 0, x1, y1, z1, x1, y1, z1, 0,  y1, z1, 0, y1, z1, 0, y1, 0,
-        0, 0,  0, x1, 0,  0, x1, 0,  0, x1, 0,  z1, x1, 0,  z1, 0,  0,  z1, 0, 0,  z1, 0, 0,  0,
-        0, 0,  0, 0,  y1, 0, x1, 0,  0, x1, y1, 0,  x1, 0,  z1, x1, y1, z1, 0, 0,  z1, 0, y1, z1,
-    };
-    device.getQueue().writeBuffer(boxVb, 0, lines, sizeof(lines));
-
-    wgpu::BindGroupEntry entry;
-    entry.binding = 0;
-    entry.buffer = uniformBuffer;
-    entry.size = sizeof(SceneUniforms);
-
-    wgpu::BindGroupDescriptor bgDesc;
-    bgDesc.layout = lineBindGroupLayout;
-    bgDesc.entryCount = 1;
-    bgDesc.entries = &entry;
-    auto bg = device.createBindGroup(bgDesc);
+    if (box.size.x != cachedBoxSize_.x || box.size.y != cachedBoxSize_.y || box.size.z != cachedBoxSize_.z) {
+        cachedBoxSize_ = box.size;
+        const float x1 = box.size.x;
+        const float y1 = box.size.y;
+        const float z1 = box.size.z;
+        boxVertices_ = {
+            0, y1, 0, x1, y1, 0, x1, y1, 0, x1, y1, z1, x1, y1, z1, 0,  y1, z1, 0, y1, z1, 0, y1, 0,
+            0, 0,  0, x1, 0,  0, x1, 0,  0, x1, 0,  z1, x1, 0,  z1, 0,  0,  z1, 0, 0,  z1, 0, 0,  0,
+            0, 0,  0, 0,  y1, 0, x1, 0,  0, x1, y1, 0,  x1, 0,  z1, x1, y1, z1, 0, 0,  z1, 0, y1, z1,
+        };
+        device.getQueue().writeBuffer(boxVb, 0, boxVertices_.data(), sizeof(boxVertices_));
+    }
 
     currentPass.setPipeline(boxPipeline);
-    currentPass.setBindGroup(0, bg, 0, nullptr);
-    currentPass.setVertexBuffer(0, boxVb, 0, sizeof(lines));
+    currentPass.setBindGroup(0, lineBindGroup, 0, nullptr);
+    currentPass.setVertexBuffer(0, boxVb, 0, sizeof(boxVertices_));
     currentPass.draw(24, 1, 0, 0);
 }
 
@@ -529,19 +542,8 @@ void RendererWGPU::drawBondsImpl(const AtomStorage& atoms, const Bond::List& bon
     }
     device.getQueue().writeBuffer(bondVb, 0, verts.data(), bytes);
 
-    wgpu::BindGroupEntry entry;
-    entry.binding = 0;
-    entry.buffer = uniformBuffer;
-    entry.size = sizeof(SceneUniforms);
-
-    wgpu::BindGroupDescriptor bgDesc;
-    bgDesc.layout = lineBindGroupLayout;
-    bgDesc.entryCount = 1;
-    bgDesc.entries = &entry;
-    auto bg = device.createBindGroup(bgDesc);
-
     currentPass.setPipeline(bondPipeline);
-    currentPass.setBindGroup(0, bg, 0, nullptr);
+    currentPass.setBindGroup(0, lineBindGroup, 0, nullptr);
     currentPass.setVertexBuffer(0, bondVb, 0, bytes);
     currentPass.draw(verts.size(), 1, 0, 0);
 }
@@ -576,19 +578,8 @@ void RendererWGPU::drawGridImpl(const SpatialGrid& grid) {
     }
     device.getQueue().writeBuffer(gridInstVb, 0, gridData.data(), instBytes);
 
-    wgpu::BindGroupEntry entry;
-    entry.binding = 0;
-    entry.buffer = uniformBuffer;
-    entry.size = sizeof(SceneUniforms);
-
-    wgpu::BindGroupDescriptor bgDesc;
-    bgDesc.layout = gridBindGroupLayout;
-    bgDesc.entryCount = 1;
-    bgDesc.entries = &entry;
-    auto bg = device.createBindGroup(bgDesc);
-
     currentPass.setPipeline(gridPipeline);
-    currentPass.setBindGroup(0, bg, 0, nullptr);
+    currentPass.setBindGroup(0, gridBindGroup, 0, nullptr);
     currentPass.setVertexBuffer(0, gridLineVb, 0, gridLineVb.getSize());
     currentPass.setVertexBuffer(1, gridInstVb, 0, instBytes);
     currentPass.draw(24, gridData.size(), 0, 0);

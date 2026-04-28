@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -54,6 +55,8 @@ private:
     wgpu::BindGroupLayout atomBindGroupLayout = nullptr;
     wgpu::BindGroupLayout lineBindGroupLayout = nullptr;
     wgpu::BindGroupLayout gridBindGroupLayout = nullptr;
+    wgpu::BindGroup lineBindGroup = nullptr;
+    wgpu::BindGroup gridBindGroup = nullptr;
 
     // Vertex buffers
     wgpu::Buffer atomQuadVb = nullptr;
@@ -119,6 +122,8 @@ private:
     std::vector<float> selectedData;
     std::vector<float> radii;
     std::vector<float> typeData;
+    std::array<float, 24 * 3> boxVertices_{};
+    Vec3f cachedBoxSize_{-1.0, -1.0, -1.0};
 
     wgpu::CommandEncoder currentEncoder = nullptr;
 };
