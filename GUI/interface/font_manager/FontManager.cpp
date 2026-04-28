@@ -62,6 +62,5 @@ bool FontManager::load(float uiScale) {
         return false;
     }
 
-    fonts->Build();
     return true;
 }

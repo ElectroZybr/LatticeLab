@@ -12,20 +12,45 @@
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/physics/Bond.h"
 #include "Rendering/BaseRenderer.h"
-#include "Rendering/BgfxContext.h"
 
 template <typename T>
 concept IsRenderer = std::derived_from<T, IRenderer>;
 
-template <IsRenderer TRenderer> class RendererFixture : public benchmark::Fixture {
+class RendererFixtureBase : public benchmark::Fixture {
+protected:
+    void prepareAtoms(benchmark::State& state);
+    void createRenderTargets(wgpu::Device device, wgpu::TextureFormat colorFormat);
+    void drawFrame();
+    void setCounters(benchmark::State& state) const;
+
+    std::unique_ptr<IRenderer> renderer_;
+    AtomStorage atomStorage_;
+    Bond::List bonds_;
+    SimBox box_{Vec3f(300, 300, 300)};
+
+private:
+    static AtomStorage makeGridAtoms(int count);
+
+    wgpu::Texture targetTexture_ = nullptr;
+    wgpu::TextureView targetTextureView_ = nullptr;
+    wgpu::Texture depthTexture_ = nullptr;
+    wgpu::TextureView depthTextureView_ = nullptr;
+};
+
+wgpu::Device benchmarkDevice();
+wgpu::TextureFormat benchmarkSurfaceFormat();
+
+template <IsRenderer TRenderer> class RendererFixture : public RendererFixtureBase {
 public:
-    RendererFixture() { BgfxContext::instance().init(nullptr, 800, 600); }
+    RendererFixture() = default;
 
     void SetUp(benchmark::State& state) override {
-        atomStorage_ = makeGridAtoms(state.range(0));
+        prepareAtoms(state);
 
-        renderer_ = std::make_unique<TRenderer>(box_);
+        renderer_ = std::make_unique<TRenderer>(box_, benchmarkDevice(), benchmarkSurfaceFormat());
         renderer_->camera.setScreenSize({800.0f, 600.0f});
+        renderer_->camera.resetView();
+        createRenderTargets(benchmarkDevice(), benchmarkSurfaceFormat());
 
         if (ToolsManager::pickingSystem) {
             delete ToolsManager::pickingSystem;
@@ -35,28 +60,5 @@ public:
 
     void TearDown(benchmark::State&) override {
         renderer_.reset();
-        bgfx::frame();
-    }
-
-protected:
-    void setCounters(benchmark::State& state) const {
-        state.SetItemsProcessed(state.iterations() * static_cast<int64_t>(atomStorage_.size()));
-    }
-
-    std::unique_ptr<IRenderer> renderer_;
-    AtomStorage atomStorage_;
-    Bond::List bonds_;
-    SimBox box_{Vec3f(300, 300, 300)};
-
-private:
-    static AtomStorage makeGridAtoms(int count) {
-        AtomStorage atoms;
-        atoms.reserve(count);
-        const int side = static_cast<int>(std::cbrt(count)) + 1;
-        for (int i = 0; i < count; ++i) {
-            atoms.addAtom(Vec3f((i % side) * 3.0, ((i / side) % side) * 3.0, (i / static_cast<double>(side * side)) * 3.0),
-                          Vec3f::Random() * 0.5, AtomData::Type::H);
-        }
-        return atoms;
     }
 };

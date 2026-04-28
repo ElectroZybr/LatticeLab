@@ -19,7 +19,8 @@ public:
         const uint32_t w = 800, h = 600;
         capturedFrame_.width = w;
         capturedFrame_.height = h;
-        capturedFrame_.rgba.resize(size_t(w) * h * 4, 128);
+        capturedFrame_.format = wgpu::TextureFormat::RGBA8Unorm;
+        capturedFrame_.pixels.resize(size_t(w) * h * 4, std::byte{128});
 
         captureDir_ = makeCaptureBenchDir();
         frameRecorder_ = std::make_unique<FrameRecorder>();

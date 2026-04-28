@@ -38,16 +38,15 @@ public:
             throw std::runtime_error("wgpu: failed to create surface");
         }
 
-        wgpu::RequestAdapterOptions adapterOpts{};
+        wgpu::RequestAdapterOptions adapterOpts = wgpu::Default;
         adapterOpts.compatibleSurface = surface_;
         adapterOpts.powerPreference = wgpu::PowerPreference::HighPerformance;
-
         adapter_ = instance_.requestAdapter(adapterOpts);
         if (!adapter_) {
             throw std::runtime_error("wgpu: failed to get adapter");
         }
 
-        wgpu::DeviceDescriptor deviceDesc{};
+        wgpu::DeviceDescriptor deviceDesc = wgpu::Default;
         deviceDesc.deviceLostCallbackInfo.callback = [](WGPUDevice const*, WGPUDeviceLostReason reason, WGPUStringView msg, void*, void*) {
             std::cerr << "wgpu device lost (" << reason << "): " << std::string_view(msg.data, msg.length) << "\n";
         };
@@ -160,7 +159,7 @@ private:
         return instance_.createSurface(desc);
 
 #elif defined(_WIN32)
-        wgpu::SurfaceSourceWindowsHWND hwndSrc{};
+        wgpu::SurfaceSourceWindowsHWND hwndSrc = wgpu::Default;
         hwndSrc.hinstance = GetModuleHandle(nullptr);
         hwndSrc.hwnd = glfwGetWin32Window(window);
 

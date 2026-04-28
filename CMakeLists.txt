@@ -104,10 +104,6 @@ else()
     message(WARNING "LTO is not supported: ${lto_error}")
 endif()
 
-target_compile_options(latticelab_lib PRIVATE 
-    -O3
-    $<$<BOOL:${OPTIMIZE_FOR_NATIVE}>:-march=native>
-)
 target_link_libraries(${APP_NAME} PRIVATE latticelab_lib)
 target_copy_webgpu_binaries(${APP_NAME})
 

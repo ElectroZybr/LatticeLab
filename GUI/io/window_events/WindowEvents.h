@@ -16,6 +16,8 @@ public:
     static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 
 private:
+    static void syncFramebufferSize(int width, int height, bool updateInterface);
+
     static GLFWwindow* window;
     static std::unique_ptr<IRenderer>* renderer;
     static Interface* appInterface;

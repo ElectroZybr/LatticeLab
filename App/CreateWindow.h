@@ -37,13 +37,17 @@ inline GLFWwindow* createWindow() {
 
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-    GLFWwindow* window = glfwCreateWindow(mode->width, mode->height, "LatticeLab " LATTICELAB_VERSION_STRING, monitor, nullptr);
+    int monitorX = 0;
+    int monitorY = 0;
+    glfwGetMonitorPos(monitor, &monitorX, &monitorY);
+    GLFWwindow* window = glfwCreateWindow(mode->width, mode->height, "LatticeLab " LATTICELAB_VERSION_STRING, nullptr, nullptr);
 
     if (!window) {
         std::cerr << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return nullptr;
     }
+    glfwSetWindowPos(window, monitorX, monitorY);
 
 #ifdef _WIN32
     if (HWND hwnd = glfwGetWin32Window(window)) {

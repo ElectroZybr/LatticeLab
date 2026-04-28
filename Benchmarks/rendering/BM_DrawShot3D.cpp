@@ -1,13 +1,12 @@
 #include <benchmark/benchmark.h>
 
 #include "Benchmarks/fixtures/RendererFixture.h"
-#include "Rendering/3d/Renderer3DBGFX.h"
+#include "Rendering/3d/Renderer3DWGPU.h"
 
 // @bench_meta {"id":"RendererFixture<Renderer3D>/DrawShot3D","ru":"Отрисовка кадра 3D","group":"Рендер/3D"}
-BENCHMARK_TEMPLATE_DEFINE_F(RendererFixture, DrawShot3D, Renderer3DBGFX)(benchmark::State& state) {
+BENCHMARK_TEMPLATE_DEFINE_F(RendererFixture, DrawShot3D, Renderer3DWGPU)(benchmark::State& state) {
     for (auto _ : state) {
-        renderer_->drawShot(atomStorage_, bonds_, box_);
-        bgfx::frame();
+        drawFrame();
         benchmark::ClobberMemory();
     }
     setCounters(state);

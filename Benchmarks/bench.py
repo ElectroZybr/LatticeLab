@@ -696,6 +696,25 @@ def list_available_filters() -> list[str]:
     return list(groups.keys())
 
 
+def expand_legacy_filter_regex(filter_regex: str | None) -> str | None:
+    if not filter_regex:
+        return filter_regex
+
+    aliases = {
+        "RendererFixture<Renderer3D>": "RendererFixture<Renderer3DWGPU>",
+        "RendererFixture<Renderer2D>": "RendererFixture<Renderer2DWGPU>",
+    }
+
+    expanded = [filter_regex]
+    for old, new in aliases.items():
+        if old in filter_regex:
+            expanded.append(filter_regex.replace(old, new))
+
+    if len(expanded) == 1:
+        return filter_regex
+    return "(" + "|".join(f"(?:{item})" for item in expanded) + ")"
+
+
 def list_benchmark_cases(filter_regex: str | None = None) -> list[str]:
     if not BINARY.exists():
         die(f"Бинарник не найден: {BINARY}\nСобери проект перед запуском.")
@@ -713,7 +732,7 @@ def list_benchmark_cases(filter_regex: str | None = None) -> list[str]:
         return names
 
     try:
-        rx = re.compile(filter_regex)
+        rx = re.compile(expand_legacy_filter_regex(filter_regex))
     except re.error:
         return names
     return [name for name in names if rx.search(name)]
@@ -1490,9 +1509,9 @@ def pretty_filter_name(filter_name: str, metadata: dict[str, dict[str, str]]) ->
         return filter_name
 
     fixture, test_name = parts[0], parts[1]
-    if fixture.startswith("RendererFixture<Renderer3D>"):
+    if fixture.startswith("RendererFixture<Renderer3DWGPU>") or fixture.startswith("RendererFixture<Renderer3D>"):
         return f"3D: {test_name}"
-    if fixture.startswith("RendererFixture<Renderer2D>"):
+    if fixture.startswith("RendererFixture<Renderer2DWGPU>") or fixture.startswith("RendererFixture<Renderer2D>"):
         return f"2D: {test_name}"
     if fixture.startswith("SimulationFixture"):
         return re.sub(r"([a-z])([A-Z])", r"\1 \2", test_name)

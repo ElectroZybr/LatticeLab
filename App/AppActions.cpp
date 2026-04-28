@@ -81,6 +81,7 @@ namespace AppActions {
                 newRenderer->speedColorMode = renderer->speedColorMode;
                 newRenderer->speedGradientMax = renderer->speedGradientMax;
                 newRenderer->camera.setScreenSize(renderer->camera.getScreenSize());
+                newRenderer->camera.resetView();
                 renderer = std::move(newRenderer);
             }
         }));

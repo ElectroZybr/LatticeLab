@@ -13,6 +13,7 @@ private:
     ImGuiStyle baseStyle;
     float scale = 1.0f;
 
-    static constexpr int BASE_W = 800;
-    static constexpr int BASE_H = 600;
+    // базовый размер окна
+    static constexpr int BASE_W = 1920;
+    static constexpr int BASE_H = 1080;
 };
