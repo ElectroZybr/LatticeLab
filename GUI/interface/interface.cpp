@@ -1,9 +1,11 @@
 #include "interface.h"
 
-#include "App/capture/CaptureController.h"
-#include "imgui_impl_opengl3.h"
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_wgpu.h>
 
-#include <SFML/Graphics.hpp>
+#include "App/capture/CaptureController.h"
+#include "Rendering/WGPUContext.h"
+
 #define ICON_MIN_FA 0xf000
 #define ICON_MAX_FA 0xf897
 
@@ -40,7 +42,7 @@ namespace {
         };
     }
 
-    void drawScenePreviewFrame(const sf::RenderWindow& window, float uiScale, UiState& uiState) {
+    void drawScenePreviewFrame(float uiScale, UiState& uiState) {
         ImDrawList* drawList = ImGui::GetBackgroundDrawList();
         const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
         uiState.scenePreviewRect = computeScenePreviewRect(displaySize, uiScale);
@@ -59,53 +61,63 @@ namespace {
     }
 }
 
-Interface::Interface(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r, CaptureController& c)
-    : window_(&w), simulation_(&s), renderer_(&r), captureController_(&c) {}
+Interface::Interface(GLFWwindow* w, Simulation& s, std::unique_ptr<IRenderer>& r, CaptureController& c)
+    : window_(w), simulation_(&s), renderer_(&r), captureController_(&c) {}
 
 int Interface::init() {
-    if (!ImGui::SFML::Init(*window_, false)) {
-        return EXIT_FAILURE;
-    }
+    ImGui::CreateContext();
 
     styleManager.applyCustomStyle();
 
     if (!fontManager.load(styleManager.getScale())) {
         return EXIT_FAILURE;
     }
-    if (!ImGui_ImplOpenGL3_Init("#version 150")) {
-        return EXIT_FAILURE;
-    }
-    if (!ImGui_ImplOpenGL3_CreateFontsTexture()) {
-        return EXIT_FAILURE;
-    }
+    ImGui_ImplGlfw_InitForOther(window_, true);
+
+    auto& ctx = WGPUContext::instance();
+    ImGui_ImplWGPU_InitInfo wgpuInfo{};
+    wgpuInfo.Device = (WGPUDevice)ctx.device();
+    wgpuInfo.RenderTargetFormat = (WGPUTextureFormat)ctx.surfaceFormat();
+    wgpuInfo.DepthStencilFormat = WGPUTextureFormat_Depth24Plus;
+    ImGui_ImplWGPU_Init(&wgpuInfo);
+
     return EXIT_SUCCESS;
 }
 
 void Interface::shutdown() {
-    ImGui_ImplOpenGL3_DestroyFontsTexture();
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui::SFML::Shutdown();
+    ImGui_ImplWGPU_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 }
 
 int Interface::update() {
-    ImGui_ImplOpenGL3_NewFrame();
-    const sf::Time delta = clock_.restart();
-    ImGui::SFML::Update(*window_, delta);
+    ImGui_ImplWGPU_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGuiIO& io = ImGui::GetIO();
+    const auto currentTime = std::chrono::high_resolution_clock::now();
+    const float deltaTime = std::chrono::duration<float>(currentTime - lastTime_).count();
+    io.DeltaTime = deltaTime;
+    lastTime_ = currentTime;
+
+    int width, height;
+    glfwGetFramebufferSize(window_, &width, &height);
 
     ImGui::PushFont(fontManager.main);
-    toolsPanel.draw(styleManager.getScale(), *window_, debugPanel, settingsPanel, ioPanel);
-    periodicPanel.draw(styleManager.getScale(), window_->getSize(), uiState_.selectedAtom);
-    simControlPanel.draw(styleManager.getScale(), window_->getSize(), uiState_.pause, uiState_.simulationSpeed, uiState_.simStep,
-                         delta.asSeconds());
-    sideToolsPanel.draw(styleManager.getScale(), window_->getSize(), fontManager.icons, fontManager.dialog);
-    statsPanel.draw(styleManager.getScale(), window_->getSize());
+    toolsPanel.draw(styleManager.getScale(), debugPanel, settingsPanel, ioPanel);
+    periodicPanel.draw(styleManager.getScale(), Vec2i(width, height), uiState_.selectedAtom);
+    simControlPanel.draw(styleManager.getScale(), Vec2i(width, height), uiState_.pause, uiState_.simulationSpeed, uiState_.simStep,
+                         deltaTime);
+    sideToolsPanel.draw(styleManager.getScale(), Vec2i(width, height), fontManager.icons, fontManager.dialog);
+    statsPanel.draw(styleManager.getScale(), Vec2i(width, height));
     if (uiState_.drawToolTrip) {
         const ImVec2 mouse = ImGui::GetMousePos();
         ImGui::SetNextWindowPos(ImVec2(mouse.x + 3 * styleManager.getScale(), mouse.y + 3 * styleManager.getScale()));
 
         ImGui::BeginTooltip();
         if (!uiState_.toolTooltipText.empty()) {
-            ImGui::TextUnformatted(uiState_.toolTooltipText.c_str());
+            ImGui::TextUnformatted(uiState_.toolTooltipText.data());
         }
         else {
             ImGui::Text("Selected: %d", uiState_.selectedAtomCount);
@@ -116,14 +128,14 @@ int Interface::update() {
 
     ImGui::PushFont(fontManager.dialog);
     fileDialog.draw(styleManager.getScale());
-    debugPanel.draw(styleManager.getScale(), window_->getSize());
-    settingsPanel.draw(styleManager.getScale(), window_->getSize(), *simulation_, *renderer_, *captureController_, fileDialog);
-    ioPanel.draw(styleManager.getScale(), window_->getSize(), *simulation_, fileDialog, uiState_);
+    debugPanel.draw(styleManager.getScale(), Vec2i(width, height));
+    settingsPanel.draw(styleManager.getScale(), Vec2i(width, height), *simulation_, *renderer_, *captureController_, fileDialog);
+    ioPanel.draw(styleManager.getScale(), Vec2i(width, height), *simulation_, fileDialog, uiState_);
     ImGui::PopFont();
 
     uiState_.scenePreviewMode = fileDialog.isSaveDialogOpen();
     if (uiState_.scenePreviewMode) {
-        drawScenePreviewFrame(*window_, styleManager.getScale(), uiState_);
+        drawScenePreviewFrame(styleManager.getScale(), uiState_);
     }
     else {
         uiState_.scenePreviewRect = {};

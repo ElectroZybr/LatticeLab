@@ -17,28 +17,28 @@ namespace {
         std::string_view shortName;
     };
 
-constexpr std::array<ProfileNameAlias, 21> kProfileNameAliases{{
-    {"Application::RenderFrame", "Render"},
-    {"Capture::readback", "capture"},
-    {"Capture::encodeFrame", "encode"},
-    {"Simulation::update", "Physics"},
-    {"RendererGL::drawShot", "drawShot"},
-    {"RendererGL::drawAtoms", "drawAtoms"},
-    {"RendererGL::drawBox", "drawBox"},
-    {"RendererGL::drawBondsGL", "drawBonds"},
-    {"RendererGL::drawGridGL", "drawGrid"},
-    {"ForceField::compute", "compute"},
-    {"ForceField::ComputeForces(NL)", "forces NL"},
-    {"StepOps::computeForces", "step forces"},
-    {"VerletScheme::pipeline", "verlet"},
-    {"VerletScheme::correct", "verlet correct"},
-    {"KDKScheme::pipeline", "kdk"},
-    {"KDKScheme::halfKick", "kick"},
-    {"KDKScheme::drift", "drift"},
-    {"NeighborList::build", "nl build"},
-    {"SpatialGrid::rebuild", "sg rebuild"},
-    {"ForceField::Coulomb", "coulomb"},
-}};
+    constexpr std::array<ProfileNameAlias, 21> kProfileNameAliases{{
+        {"Application::RenderFrame", "Render"},
+        {"Capture::readback", "capture"},
+        {"Capture::encodeFrame", "encode"},
+        {"Simulation::update", "Physics"},
+        {"RendererGL::drawShot", "drawShot"},
+        {"RendererGL::drawAtoms", "drawAtoms"},
+        {"RendererGL::drawBox", "drawBox"},
+        {"RendererGL::drawBondsGL", "drawBonds"},
+        {"RendererGL::drawGridGL", "drawGrid"},
+        {"ForceField::compute", "compute"},
+        {"ForceField::ComputeForces(NL)", "forces NL"},
+        {"StepOps::computeForces", "step forces"},
+        {"VerletScheme::pipeline", "verlet"},
+        {"VerletScheme::correct", "verlet correct"},
+        {"KDKScheme::pipeline", "kdk"},
+        {"KDKScheme::halfKick", "kick"},
+        {"KDKScheme::drift", "drift"},
+        {"NeighborList::build", "nl build"},
+        {"SpatialGrid::rebuild", "sg rebuild"},
+        {"ForceField::Coulomb", "coulomb"},
+    }};
 
     std::string shortenProfileName(std::string_view name) {
         for (const ProfileNameAlias& alias : kProfileNameAliases) {
@@ -78,7 +78,7 @@ constexpr std::array<ProfileNameAlias, 21> kProfileNameAliases{{
         visibleChildren.reserve(entry.childIndices.size());
         for (const size_t childIndex : entry.childIndices) {
             if (childIndex < entries.size() && isVisibleNode(entries[childIndex])) {
-                visibleChildren.push_back(childIndex);
+                visibleChildren.emplace_back(childIndex);
             }
         }
 
@@ -95,11 +95,11 @@ constexpr std::array<ProfileNameAlias, 21> kProfileNameAliases{{
         }
         if (visibleChildren.empty()) {
             flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-            ImGui::TreeNodeEx(nodeLabel.c_str(), flags);
+            ImGui::TreeNodeEx(nodeLabel.data(), flags);
             return;
         }
 
-        if (ImGui::TreeNodeEx(nodeLabel.c_str(), flags)) {
+        if (ImGui::TreeNodeEx(nodeLabel.data(), flags)) {
             for (const size_t childIndex : visibleChildren) {
                 drawTreeNode(entries, childIndex, totalTrackedMs);
             }
@@ -120,7 +120,7 @@ void drawProfilerTreeView(float uiScale) {
     for (size_t i = 0; i < treeEntries.size(); ++i) {
         const ProfileTreeEntry& entry = treeEntries[i];
         if (entry.parentIndex == ProfileTreeEntry::kNoParent && isVisibleNode(entry)) {
-            rootIndices.push_back(i);
+            rootIndices.emplace_back(i);
             accountedPercent += entry.smoothedPercentOfFrame;
         }
     }

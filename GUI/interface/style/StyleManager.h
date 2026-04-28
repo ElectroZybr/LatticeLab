@@ -1,17 +1,19 @@
 #pragma once
-#include <SFML/System/Vector2.hpp>
 #include <imgui.h>
+
+#include "Engine/math/Vec2.h"
 
 class StyleManager {
 public:
     void applyCustomStyle();
-    void onResize(sf::Vector2u newSize);
+    void onResize(Vec2i newSize);
     float getScale() const { return scale; }
 
 private:
     ImGuiStyle baseStyle;
     float scale = 1.0f;
 
-    static constexpr int BASE_W = 800;
-    static constexpr int BASE_H = 600;
+    // базовый размер окна
+    static constexpr int BASE_W = 1920;
+    static constexpr int BASE_H = 1080;
 };

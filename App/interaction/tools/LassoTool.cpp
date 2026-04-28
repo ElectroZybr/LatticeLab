@@ -1,13 +1,12 @@
 #include "LassoTool.h"
 
-#include <SFML/Window/Keyboard.hpp>
-
 #include "App/interaction/picking/PickingSystem.h"
 #include "GUI/interface/UiState.h"
+#include "GUI/io/keyboard/Keyboard.h"
 
 LassoTool::LassoTool(ToolContext& context) noexcept : ITool(context) {}
 
-void LassoTool::onLeftPressed(sf::Vector2i mousePos) {
+void LassoTool::onLeftPressed(Vec2i mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -16,22 +15,21 @@ void LassoTool::onLeftPressed(sf::Vector2i mousePos) {
     auto& overlay = ctx.pickingSystem->getOverlay();
     overlay.lassoVisible = true;
     overlay.lassoPoints.clear();
-    overlay.lassoPoints.push_back(mousePos);
+    overlay.lassoPoints.emplace_back(mousePos);
 }
 
-void LassoTool::onLeftReleased(sf::Vector2i mousePos) {
+void LassoTool::onLeftReleased(Vec2i mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
     }
 
-    const bool cumulative =
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RControl);
+    const bool cumulative = Keyboard::isPressed(GLFW_KEY_LEFT_CONTROL) || Keyboard::isPressed(GLFW_KEY_RIGHT_CONTROL);
 
     auto& overlay = ctx.pickingSystem->getOverlay();
     if (overlay.lassoVisible) {
-        if (overlay.lassoPoints.empty() || overlay.lassoPoints.back() != mousePos) {
-            overlay.lassoPoints.push_back(mousePos);
+        if (overlay.lassoPoints.empty() || overlay.lassoPoints.back() != Vec2i(mousePos)) {
+            overlay.lassoPoints.emplace_back(mousePos);
         }
         ctx.pickingSystem->processLasso(overlay.lassoPoints, cumulative);
         if (ctx.uiState != nullptr) {
@@ -41,7 +39,7 @@ void LassoTool::onLeftReleased(sf::Vector2i mousePos) {
     overlay.reset();
 }
 
-void LassoTool::onFrame(sf::Vector2i mousePos, float deltaTime) {
+void LassoTool::onFrame(Vec2i mousePos, float deltaTime) {
     (void)deltaTime;
 
     ToolContext& ctx = context();
@@ -56,14 +54,14 @@ void LassoTool::onFrame(sf::Vector2i mousePos, float deltaTime) {
 
     constexpr float kMinStepSqr = 25.0f;
     if (overlay.lassoPoints.empty()) {
-        overlay.lassoPoints.push_back(mousePos);
+        overlay.lassoPoints.emplace_back(mousePos);
         return;
     }
 
-    const sf::Vector2f currentPos(mousePos.x, mousePos.y);
-    const sf::Vector2f lastPos(overlay.lassoPoints.back().x, overlay.lassoPoints.back().y);
-    if ((currentPos - lastPos).lengthSquared() >= kMinStepSqr) {
-        overlay.lassoPoints.push_back(mousePos);
+    const Vec2f currentPos(mousePos.x, mousePos.y);
+    const Vec2f lastPos(overlay.lassoPoints.back().x, overlay.lassoPoints.back().y);
+    if ((currentPos - lastPos).sqrAbs() >= kMinStepSqr) {
+        overlay.lassoPoints.emplace_back(mousePos);
     }
 }
 

@@ -1,12 +1,11 @@
 #pragma once
-#include <memory>
-#include <cstdint>
+#include <chrono>
 #include <filesystem>
-#include <string>
+#include <memory>
 
-#include <SFML/Graphics.hpp>
-#include <imgui-SFML.h>
+#include <GLFW/glfw3.h>
 
+#include "GUI/interface/UiState.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/font_manager/FontManager.h"
 #include "GUI/interface/panels/debug/DebugPanel.h"
@@ -18,11 +17,10 @@
 #include "GUI/interface/panels/tools/SideToolsPanel.h"
 #include "GUI/interface/panels/tools/ToolsPanel.h"
 #include "GUI/interface/style/StyleManager.h"
-#include "GUI/interface/UiState.h"
 
 class Interface {
 public:
-    Interface(sf::RenderWindow& w, Simulation& s, std::unique_ptr<IRenderer>& r, class CaptureController& c);
+    Interface(GLFWwindow* w, Simulation& s, std::unique_ptr<IRenderer>& r, class CaptureController& c);
 
     int init();
     void shutdown();
@@ -46,10 +44,10 @@ public:
     SettingsPanel settingsPanel;
 
 private:
-    sf::RenderWindow* window_;
+    GLFWwindow* window_;
     Simulation* simulation_;
     std::unique_ptr<IRenderer>* renderer_;
     class CaptureController* captureController_;
-    sf::Clock clock_;
+    std::chrono::high_resolution_clock::time_point lastTime_;
     UiState uiState_;
 };

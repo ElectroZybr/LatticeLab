@@ -3,7 +3,7 @@
 #include <filesystem>
 
 #include "App/AppPaths.h"
-#include "App/capture/FrameRecorder.h"
+#include "App/capture/CaptureSettings.h"
 #include "Engine/physics/Integrator.h"
 #include "Rendering/BaseRenderer.h"
 
@@ -21,7 +21,6 @@ struct UserSettings {
     bool simulationBondFormationEnabled = false;
     bool simulationLJEnabled = true;
     bool simulationCoulombEnabled = true;
-
 };
 
 class UserSettingsIO {

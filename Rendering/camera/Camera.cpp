@@ -7,21 +7,38 @@
 
 #include "Engine/SimBox.h"
 
-Camera::Camera(sf::View* view, SimBox& simBox, float moveSpeed, float zoomSpeed)
-    : view(view), simBox(simBox), moveSpeed(moveSpeed), zoomSpeed(zoomSpeed), isDragging(false), lastMousePos(0, 0) {}
+Camera::Camera(SimBox& simBox, float moveSpeed, float zoomSpeed)
+    : simBox(simBox), moveSpeed(moveSpeed), zoomSpeed(zoomSpeed), isDragging(false), lastMousePos(0, 0) {}
 
-void Camera::update(sf::RenderTarget& target) {
-    screenSize = sf::Vector2f(target.getSize());
-    view->setCenter(position);
-    view->setSize((screenSize / zoom).componentWiseMul({1.f, -1.f}));
+void Camera::resetView() {
+    azimuth = 0.f;
+    elevation = 0.f;
+
+    const float max_side = std::max({simBox.size.x, simBox.size.y, simBox.size.z});
+    const float distance = (max_side * 0.5f * 1.1f) / std::tan(glm::radians(Camera::FOV_ORBIT) * 0.5f);
+    freePosition = simBox.size * 0.5f;
+    freePosition.z = -distance;
+    position = freePosition.xy();
+
+    if (mode == Camera::Mode::Mode2D) {
+        constexpr float margin = 0.85f;
+
+        const float zoomX = (screenSize.x * margin) / simBox.size.x;
+        const float zoomY = (screenSize.y * margin) / simBox.size.y;
+
+        setZoom(std::min(zoomX, zoomY));
+    }
+    else {
+        setZoom(1.15f);
+    }
 }
 
 void Camera::setZoom(float new_zoom) {
-    zoom = std::clamp(new_zoom, 1.f, 500.f);
+    zoom = std::clamp(new_zoom, 0.1f, 10000.f);
     speed = moveSpeed / zoom;
 }
 
-void Camera::zoomAt(float factor, sf::Vector2f mousePos, sf::RenderWindow& window) {
+void Camera::zoomAt(float factor, Vec2f mousePos) {
     // Изменяем уровень зума с учетом направления к курсору
     zoom *= (1.f + factor * zoomSpeed);
     zoom = std::clamp(zoom, 1.f, 500.f);
@@ -29,20 +46,20 @@ void Camera::zoomAt(float factor, sf::Vector2f mousePos, sf::RenderWindow& windo
 
     // Плавное следование за указателем мыши при зуме
     if (zoom > 1.f && zoom < 500.f) {
-        sf::Vector2i deltaPos = sf::Mouse::getPosition(window) - sf::Vector2i(screenSize) / 2;
-        deltaPos.y *= -1;
-        position += Vec2f(deltaPos.x, deltaPos.y) * 0.1f / zoom * factor;
+        Vec2f deltaPos(mousePos - screenSize * 0.5f);
+        deltaPos.y *= -1.f;
+        position += deltaPos * 0.1f / zoom * factor;
     }
 }
 
-void Camera::orbitDrag(sf::Vector2i delta) {
+void Camera::orbitDrag(Vec2i delta) {
     constexpr float sensitivity = 0.005f;
     azimuth -= delta.x * sensitivity;
     elevation += delta.y * sensitivity;
     elevation = std::clamp(elevation, -1.5f, 1.5f);
 }
 
-void Camera::freeDrag(sf::Vector2i delta) {
+void Camera::freeDrag(Vec2i delta) {
     constexpr float sensitivity = 0.003f;
     azimuth -= delta.x * sensitivity;
     elevation -= delta.y * sensitivity;
@@ -50,38 +67,36 @@ void Camera::freeDrag(sf::Vector2i delta) {
 }
 
 // Для 3д режимов возвращает cameraPos + cameraDir * 10
-Vec3f Camera::screenToWorld(sf::Vector2i screenPos) const {
+Vec3f Camera::screenToWorld(Vec2i screenPos) const {
     if (mode == Mode::Mode2D) {
-        const sf::Vector2f viewSize = view->getSize();
-        const sf::Vector2f viewCenter = view->getCenter();
-        const float wx = viewCenter.x + (screenPos.x - screenSize.x * 0.5f) * (viewSize.x / screenSize.x);
-        const float wy = viewCenter.y + (screenPos.y - screenSize.y * 0.5f) * (viewSize.y / screenSize.y);
-        return Vec3f(wx, wy, 1.f);
+        Vec2f offset = Vec2f(screenPos) - screenSize * 0.5f;
+        offset.y *= -1.f;
+        const Vec2f w = position + offset / zoom;
+        return Vec3f(w);
     }
 
     const Ray ray = screenToRay(screenPos.x, screenPos.y);
     return ray.at(100.0);
 }
 
-sf::Vector2i Camera::worldToScreen(Vec3f worldPos) const {
+Vec2i Camera::worldToScreen(Vec3f worldPos) const {
     if (mode == Mode::Mode2D) {
-        const sf::Vector2f viewSize = view->getSize();
-        const sf::Vector2f viewCenter = view->getCenter();
-        const float sx = (worldPos.x - viewCenter.x) * (screenSize.x / viewSize.x) + screenSize.x * 0.5f;
-        const float sy = (worldPos.y - viewCenter.y) * (screenSize.y / viewSize.y) + screenSize.y * 0.5f;
-        return sf::Vector2i(static_cast<int>(sx), static_cast<int>(sy));
+        Vec2f offset = worldPos.xy() - position;
+        offset.y *= -1.f;
+        const Vec2f s = offset * zoom + screenSize * 0.5f;
+        return Vec2i(s);
     }
 
     const glm::vec4 clip = getProjectionMatrix() * getViewMatrix() * glm::vec4(worldPos.x, worldPos.y, worldPos.z, 1.f);
 
     if (clip.w <= 0.f) {
-        return {-1, -1};
+        return {0, 0};
     }
 
     const float ndcX = clip.x / clip.w;
     const float ndcY = clip.y / clip.w;
 
-    return sf::Vector2i(static_cast<int>((ndcX + 1.f) * 0.5f * screenSize.x), static_cast<int>((-ndcY + 1.f) * 0.5f * screenSize.y));
+    return Vec2i((ndcX + 1.f) * 0.5f * screenSize.x, (-ndcY + 1.f) * 0.5f * screenSize.y);
 }
 
 glm::vec3 Camera::getEyePosition() const {
@@ -89,7 +104,7 @@ glm::vec3 Camera::getEyePosition() const {
         return glm::vec3(freePosition.x, freePosition.y, freePosition.z);
     }
 
-    const Vec3f center = simBox.size / 2.f;
+    const Vec3f center = simBox.size * 0.5f;
     const glm::vec3 glmCenter(center.x, center.y, center.z);
     const float r = moveSpeed / zoom;
     return glmCenter + r * glm::vec3(std::cos(elevation) * std::sin(azimuth), std::sin(elevation), std::cos(elevation) * std::cos(azimuth));
@@ -103,7 +118,7 @@ glm::mat4 Camera::getViewMatrix() const {
     }
 
     // камера всегда смотрит в центр коробки
-    Vec3f center = simBox.size / 2.f;
+    Vec3f center = simBox.size * 0.5f;
     glm::vec3 eye = getEyePosition();
     return glm::lookAt(eye, glm::vec3(center.x, center.y, center.z), glm::vec3(0.f, 1.f, 0.f));
 }
@@ -114,17 +129,19 @@ glm::mat4 Camera::getProjectionMatrix() const {
 }
 
 Ray Camera::screenToRay(float screenX, float screenY) const {
-    const float ndcX = (screenX / screenSize.x) * 2.f - 1.f;
-    const float ndcY = 1.f - (screenY / screenSize.y) * 2.f;
+    const float ndcX = (2.0f * screenX) / screenSize.x - 1.0f;
+    const float ndcY = 1.0f - (2.0f * screenY) / screenSize.y;
 
-    const glm::vec4 rayClip(ndcX, ndcY, -1.f, 1.f);
+    const glm::mat4 invProj = glm::inverse(getProjectionMatrix());
 
-    glm::vec4 rayEye = glm::inverse(getProjectionMatrix()) * rayClip;
-    rayEye = glm::vec4(rayEye.x / rayEye.w, rayEye.y / rayEye.w, -1.f, 0.f);
+    const glm::vec4 rayClip(ndcX, ndcY, -1.0f, 1.0f);
+    glm::vec4 rayEye = invProj * rayClip;
 
-    const glm::vec3 rayDirGLM = glm::normalize(glm::vec3(glm::inverse(getViewMatrix()) * rayEye));
+    rayEye.z = -1.0f;
+    rayEye.w = 0.0f;
 
-    const glm::vec3 eye = getEyePosition();
+    const glm::mat4 invView = glm::inverse(getViewMatrix());
+    const glm::vec3 rayDirWorld = glm::normalize(glm::vec3(invView * rayEye));
 
-    return Ray(Vec3f(eye.x, eye.y, eye.z), Vec3f(rayDirGLM.x, rayDirGLM.y, rayDirGLM.z));
+    return Ray(Vec3f(getEyePosition()), Vec3f(rayDirWorld));
 }

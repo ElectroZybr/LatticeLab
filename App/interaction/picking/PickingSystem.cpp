@@ -14,12 +14,7 @@ void PickingSystem::clearSelection() {
     selectedIndices.clear();
 }
 
-void PickingSystem::processClick(sf::Vector2i screenPos, bool cumulative) {
-    IRenderer* rend = renderer->get();
-    const sf::Vector2f vSize = rend->camera.getView().getSize();
-    const sf::Vector2f vCenter = rend->camera.getView().getCenter();
-    // Предположим, у тебя есть метод получения размера экрана в камере
-    // Если нет, просто выведи то, что доступно внутри camera.worldToScreen
+void PickingSystem::processClick(Vec2i screenPos, bool cumulative) {
     AtomHit hit;
     bool found = pickAtom(screenPos, 10.0f, hit);
 
@@ -41,25 +36,22 @@ void PickingSystem::processClick(sf::Vector2i screenPos, bool cumulative) {
     }
 }
 
-void PickingSystem::processRect(sf::Vector2i start, sf::Vector2i end, bool cumulative) {
+void PickingSystem::processRect(Vec2i start, Vec2i end, bool cumulative) {
     if (!cumulative) {
         clearSelection();
     }
     IRenderer* rend = renderer->get();
 
-    const sf::Vector2f vSize = rend->camera.getView().getSize();
-    const sf::Vector2f vCenter = rend->camera.getView().getCenter();
-
     for (size_t i = 0; i < atomStorage.size(); ++i) {
         const Vec3f worldPos = atomStorage.pos(i);
-        const sf::Vector2i atomScreen = rend->camera.worldToScreen(worldPos);
+        const Vec2i atomScreen = rend->camera.worldToScreen(worldPos);
         if (pointInRect(atomScreen, start, end)) {
             selectedIndices.insert(i);
         }
     }
 }
 
-void PickingSystem::processLasso(std::span<sf::Vector2i> points, bool cumulative) {
+void PickingSystem::processLasso(std::span<Vec2i> points, bool cumulative) {
     if (points.size() < 3) {
         return;
     }
@@ -70,7 +62,7 @@ void PickingSystem::processLasso(std::span<sf::Vector2i> points, bool cumulative
 
     for (size_t i = 0; i < atomStorage.size(); ++i) {
         const Vec3f worldPos = atomStorage.pos(i);
-        const sf::Vector2i screenPos = rend->camera.worldToScreen(worldPos);
+        const Vec2i screenPos = rend->camera.worldToScreen(worldPos);
         if (pointInPolygon(screenPos, points)) {
             selectedIndices.insert(i);
         }
@@ -89,7 +81,7 @@ void PickingSystem::handleAtomRemoval(size_t index) {
     }
 }
 
-bool PickingSystem::pickAtom(sf::Vector2i screenPos, float tolerance, AtomHit& hit) const {
+bool PickingSystem::pickAtom(Vec2i screenPos, float tolerance, AtomHit& hit) const {
     IRenderer* rend = renderer->get();
     switch (rend->camera.getMode()) {
     case Camera::Mode::Mode2D:
@@ -101,15 +93,15 @@ bool PickingSystem::pickAtom(sf::Vector2i screenPos, float tolerance, AtomHit& h
     return false;
 }
 
-bool PickingSystem::pickAtom2D(sf::Vector2i screenPos, float tolerance, AtomHit& hit) const {
+bool PickingSystem::pickAtom2D(Vec2i screenPos, float tolerance, AtomHit& hit) const {
     IRenderer* rend = renderer->get();
     float bestDistSqr = std::numeric_limits<float>::max();
     size_t bestIndex = static_cast<size_t>(-1);
 
     for (size_t i = 0; i < atomStorage.size(); ++i) {
         const Vec3f worldPos = atomStorage.pos(i);
-        const sf::Vector2i atomScreen = rend->camera.worldToScreen(worldPos);
-        const float distSqr = (atomScreen - screenPos).lengthSquared();
+        const Vec2i atomScreen = rend->camera.worldToScreen(worldPos);
+        const float distSqr = (atomScreen - Vec2i(screenPos)).sqrAbs();
 
         // радиус атома в экранных пикселях
         const float atomRadius = AtomData::getProps(atomStorage.type(i)).radius;
@@ -130,7 +122,7 @@ bool PickingSystem::pickAtom2D(sf::Vector2i screenPos, float tolerance, AtomHit&
 }
 
 // 3D: ray cast — ищем ближайший атом вдоль луча
-bool PickingSystem::pickAtom3D(sf::Vector2i screenPos, AtomHit& hit) const {
+bool PickingSystem::pickAtom3D(Vec2i screenPos, AtomHit& hit) const {
     const Ray ray = (*renderer)->camera.screenToRay(static_cast<float>(screenPos.x), static_cast<float>(screenPos.y));
 
     float bestT = std::numeric_limits<float>::max();
@@ -158,7 +150,7 @@ bool PickingSystem::pickAtom3D(sf::Vector2i screenPos, AtomHit& hit) const {
 }
 
 // Ray casting алгоритм для point-in-polygon
-bool PickingSystem::pointInPolygon(sf::Vector2i point, std::span<sf::Vector2i> polygon) {
+template <typename T> bool PickingSystem::pointInPolygon(Vec2<T> point, std::span<Vec2<T>> polygon) {
     bool inside = false;
     const int x = point.x;
     const int y = point.y;
@@ -177,7 +169,7 @@ bool PickingSystem::pointInPolygon(sf::Vector2i point, std::span<sf::Vector2i> p
     return inside;
 }
 
-bool PickingSystem::pointInRect(sf::Vector2i point, sf::Vector2i start, sf::Vector2i end) {
+template <typename T> bool PickingSystem::pointInRect(Vec2<T> point, Vec2<T> start, Vec2<T> end) {
     int minX = std::min(start.x, end.x);
     int maxX = std::max(start.x, end.x);
     int minY = std::min(start.y, end.y);

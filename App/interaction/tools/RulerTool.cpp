@@ -9,16 +9,10 @@
 #include "Rendering/BaseRenderer.h"
 
 namespace {
-
-    Vec3f mapMouseToRulerWorld(const ToolContext& ctx, sf::Vector2i mousePos) {
+    Vec3f mapMouseToRulerWorld(const ToolContext& ctx, Vec2i mousePos) {
         IRenderer* renderer = ctx.activeRenderer();
         if (renderer == nullptr) {
             return Vec3f();
-        }
-
-        if (renderer->camera.getMode() == Camera::Mode::Mode2D && ctx.window != nullptr && ctx.gameView != nullptr) {
-            const sf::Vector2f world = ctx.window->mapPixelToCoords(mousePos, *ctx.gameView);
-            return Vec3f(world.x, world.y, 1.0f);
         }
 
         return renderer->camera.screenToWorld(mousePos);
@@ -36,7 +30,7 @@ namespace {
 
 RulerTool::RulerTool(ToolContext& context) noexcept : ITool(context) {}
 
-void RulerTool::onLeftPressed(sf::Vector2i mousePos) {
+void RulerTool::onLeftPressed(Vec2i mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -57,7 +51,7 @@ void RulerTool::onLeftPressed(sf::Vector2i mousePos) {
     overlay.rulerLabel = makeRulerTooltip(startWorld_, endWorld_);
 }
 
-void RulerTool::onLeftReleased(sf::Vector2i mousePos) {
+void RulerTool::onLeftReleased(Vec2i mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -72,13 +66,13 @@ void RulerTool::onLeftReleased(sf::Vector2i mousePos) {
     }
 }
 
-bool RulerTool::onRightPressed(sf::Vector2i mousePos) {
+bool RulerTool::onRightPressed(Vec2i mousePos) {
     (void)mousePos;
     clearMeasurement();
     return true;
 }
 
-void RulerTool::onFrame(sf::Vector2i mousePos, float deltaTime) {
+void RulerTool::onFrame(Vec2i mousePos, float deltaTime) {
     (void)deltaTime;
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
@@ -119,7 +113,7 @@ void RulerTool::clearMeasurement() {
     reset();
 }
 
-void RulerTool::updateMeasurement(sf::Vector2i mousePos) {
+void RulerTool::updateMeasurement(Vec2i mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -148,12 +142,6 @@ void RulerTool::syncOverlayFromWorld() {
     auto& overlay = ctx.pickingSystem->getOverlay();
     IRenderer* renderer = ctx.activeRenderer();
     if (renderer == nullptr) {
-        return;
-    }
-
-    if (renderer->camera.getMode() == Camera::Mode::Mode2D && ctx.window != nullptr && ctx.gameView != nullptr) {
-        overlay.rulerStart = ctx.window->mapCoordsToPixel(sf::Vector2f(startWorld_.x, startWorld_.y), *ctx.gameView);
-        overlay.rulerEnd = ctx.window->mapCoordsToPixel(sf::Vector2f(endWorld_.x, endWorld_.y), *ctx.gameView);
         return;
     }
 

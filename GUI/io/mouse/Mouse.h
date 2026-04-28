@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 
-#include <SFML/Graphics.hpp>
+#include <GLFW/glfw3.h>
 
 #include "Rendering/BaseRenderer.h"
 
@@ -9,16 +9,26 @@ class Mouse {
     friend class EventManager;
 
 public:
-    static void init(sf::RenderWindow& w, std::unique_ptr<IRenderer>& renderer, class Simulation& simulation,
-                     class Interface& appInterface);
+    static Vec2i getMousePos() {
+        double x, y;
+        glfwGetCursorPos(Mouse::window, &x, &y);
+        return Vec2i(x, y);
+    }
 
-    static void onEvent(const sf::Event& event);
+    static void init(GLFWwindow* w, std::unique_ptr<IRenderer>& renderer, class Interface& appInterface);
+
+    static void onMouseButton(GLFWwindow* window, int button, int action, int mods);
+    static void onMouseMove(GLFWwindow* window, double xpos, double ypos);
+    static void onScroll(GLFWwindow* window, double xoffset, double yoffset);
     static void onFrame(float deltaTime);
 
     static void logMousePos();
 
 private:
-    static sf::RenderWindow* window;
+    static GLFWwindow* window;
     static std::unique_ptr<IRenderer>* renderer;
     static class Interface* appInterface;
+    static GLFWmousebuttonfun imgui_mouse_callback;
+    static GLFWcursorposfun imgui_cursor_pos_callback;
+    static GLFWscrollfun imgui_scroll_callback;
 };

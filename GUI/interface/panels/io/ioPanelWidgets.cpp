@@ -1,7 +1,5 @@
 #include "ioPanelWidgets.h"
 
-#include <imgui-SFML.h>
-
 #include <algorithm>
 #include <array>
 #include <cmath>

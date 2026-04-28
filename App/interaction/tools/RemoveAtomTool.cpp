@@ -10,7 +10,7 @@
 
 RemoveAtomTool::RemoveAtomTool(ToolContext& context) noexcept : ITool(context) {}
 
-void RemoveAtomTool::onLeftPressed(sf::Vector2i mousePos) {
+void RemoveAtomTool::onLeftPressed(Vec2i mousePos) {
     ToolContext& ctx = context();
     if (ctx.simulation == nullptr || ctx.simulation->atoms().empty() || ctx.pickingSystem == nullptr) {
         return;

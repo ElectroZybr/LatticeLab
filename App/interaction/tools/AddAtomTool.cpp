@@ -7,7 +7,7 @@
 
 AddAtomTool::AddAtomTool(ToolContext& context) noexcept : ITool(context) {}
 
-void AddAtomTool::onLeftPressed(sf::Vector2i mousePos) {
+void AddAtomTool::onLeftPressed(Vec2i mousePos) {
     ToolContext& ctx = context();
     if (!ctx.isValid()) {
         return;

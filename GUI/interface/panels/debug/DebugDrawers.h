@@ -1,13 +1,14 @@
 #pragma once
 #include <any>
 #include <cmath>
+#include <cstdint>
 #include <string>
 #include <string_view>
 
 #include <imgui.h>
 
-#include "Engine/math/Vec2f.h"
-#include "Engine/math/Vec3f.h"
+#include "Engine/math/Vec2.h"
+#include "Engine/math/Vec3.h"
 
 namespace DebugDrawers {
     inline float toFloat(const std::any& a) {

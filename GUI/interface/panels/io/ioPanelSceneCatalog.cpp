@@ -1,7 +1,5 @@
 #include "ioPanelSceneCatalog.h"
 
-#include <SFML/Graphics/Image.hpp>
-
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -12,14 +10,20 @@
 #include <string_view>
 #include <vector>
 
+#include <webgpu/webgpu.hpp>
+#include <zstd.h>
+
+#include "App/save_system/AppSaveState.h"
+
 namespace {
     struct ParsedSceneInfo {
         std::string title;
         std::string description;
         unsigned imageWidth = 0;
         unsigned imageHeight = 0;
+        wgpu::TextureFormat imageFormat;
+        std::vector<std::byte> imageBytes;
         bool hasEmbeddedPreview = false;
-        std::vector<std::uint8_t> imageBytes;
     };
 
     std::string trim(std::string_view value) {
@@ -43,7 +47,7 @@ namespace {
         return trim(line.substr(tag.size()));
     }
 
-    std::vector<std::uint8_t> decodeBase64(std::string_view encoded) {
+    std::vector<std::byte> decodeBase64(std::string_view encoded) {
         std::array<int, 256> decodeTable{};
         decodeTable.fill(-1);
 
@@ -52,7 +56,7 @@ namespace {
             decodeTable[static_cast<unsigned char>(alphabet[i])] = i;
         }
 
-        std::vector<std::uint8_t> decoded;
+        std::vector<std::byte> decoded;
         decoded.reserve((encoded.size() / 4) * 3);
 
         int val = 0;
@@ -71,7 +75,7 @@ namespace {
             val = (val << 6) + decodedChar;
             valb += 6;
             if (valb >= 0) {
-                decoded.push_back(static_cast<std::uint8_t>((val >> valb) & 0xFF));
+                decoded.emplace_back(static_cast<std::byte>((val >> valb) & 0xFF));
                 valb -= 8;
             }
         }
@@ -79,7 +83,7 @@ namespace {
         return decoded;
     }
 
-    ParsedSceneInfo parseSceneInfo(const std::filesystem::path& path) {
+    ParsedSceneInfo parseTxtSceneInfo(const std::filesystem::path& path) {
         std::ifstream file(path);
         if (!file.is_open()) {
             return {};
@@ -88,7 +92,7 @@ namespace {
         ParsedSceneInfo info;
         std::string section;
         std::string imageEncoding;
-        std::string imageFormat;
+        wgpu::TextureFormat imageFormat;
         std::string imageDataBase64;
         bool readingImageData = false;
 
@@ -127,7 +131,7 @@ namespace {
                     imageEncoding = valueAfterTag(trimmed, "encoding");
                 }
                 else if (trimmed.starts_with("format ")) {
-                    imageFormat = valueAfterTag(trimmed, "format");
+                    imageFormat = wgpu::TextureFormat(static_cast<WGPUTextureFormat>(std::stoi(valueAfterTag(trimmed, "format"))));
                 }
                 else if (trimmed.starts_with("width ")) {
                     info.imageWidth = static_cast<unsigned>(std::max(0, std::stoi(valueAfterTag(trimmed, "width"))));
@@ -145,7 +149,8 @@ namespace {
             info.title = path.stem().string();
         }
 
-        if (imageEncoding == "base64" && imageFormat == "rgba8" && info.imageWidth > 0 && info.imageHeight > 0) {
+        if (imageEncoding == "base64" && info.imageWidth > 0 && info.imageHeight > 0) {
+            info.imageFormat = imageFormat;
             info.imageBytes = decodeBase64(imageDataBase64);
             const size_t expectedSize = static_cast<size_t>(info.imageWidth) * static_cast<size_t>(info.imageHeight) * 4;
             info.hasEmbeddedPreview = (info.imageBytes.size() == expectedSize);
@@ -156,9 +161,67 @@ namespace {
 
         return info;
     }
+
+    ParsedSceneInfo parseBinSceneInfo(const std::filesystem::path& path) {
+        std::ifstream file(path, std::ios::binary);
+        if (!file.is_open()) {
+            return {};
+        }
+
+        uint32_t originalSize = 0;
+        if (!file.read(reinterpret_cast<char*>(&originalSize), sizeof(originalSize))) {
+            return {};
+        }
+
+        constexpr size_t compressedChunkSize = 512 * 1024;
+        std::vector<std::byte> compressedBuffer(compressedChunkSize);
+        file.read(reinterpret_cast<char*>(compressedBuffer.data()), compressedChunkSize);
+        size_t bytesRead = static_cast<size_t>(file.gcount());
+
+        if (bytesRead == 0) {
+            return {};
+        }
+
+        size_t decompressedLimit = std::min(size_t(originalSize), size_t(4 * 1024 * 1024));
+        std::vector<std::byte> decompBuffer(decompressedLimit);
+
+        ZSTD_decompress(decompBuffer.data(), decompBuffer.size(), compressedBuffer.data(), bytesRead);
+
+        AppSaveHeader header;
+        try {
+            auto in = zpp::bits::in(decompBuffer);
+            uint32_t _;
+            in(_).or_throw(); // Пропускаем AppSaveState::version
+            in(header).or_throw();
+        }
+        catch (const std::exception& e) {
+            return {};
+        }
+
+        ParsedSceneInfo info;
+        info.title = header.title;
+        info.description = header.description;
+        info.imageWidth = header.previewWidth;
+        info.imageHeight = header.previewHeight;
+        info.imageFormat = header.previewFormat;
+        info.imageBytes = header.previewPixels;
+        info.hasEmbeddedPreview = true;
+
+        return info;
+    }
+
+    ParsedSceneInfo parseSceneInfo(const std::filesystem::path& path) {
+        if (path.extension() == ".lat") {
+            return parseTxtSceneInfo(path);
+        }
+        else if (path.extension() == ".latbin") {
+            return parseBinSceneInfo(path);
+        }
+        return {};
+    }
 }
 
-std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirectory) {
+std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirectory, wgpu::Device device) {
     std::vector<IOPanelSceneTile> sceneTiles;
 
     const std::filesystem::path scenesDir = scenesDirectory.empty() ? std::filesystem::path(".") : std::filesystem::path(scenesDirectory);
@@ -171,8 +234,8 @@ std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirec
         if (!entry.is_regular_file()) {
             continue;
         }
-        if (entry.path().extension() == ".lat") {
-            scenePaths.push_back(entry.path());
+        if (entry.path().extension() == ".lat" || entry.path().extension() == ".latbin") {
+            scenePaths.emplace_back(entry.path());
         }
     }
 
@@ -187,13 +250,35 @@ std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirec
         tile.title = std::move(parsed.title);
         tile.description = std::move(parsed.description);
 
-        if (parsed.hasEmbeddedPreview) {
-            sf::Image image;
-            image.resize({parsed.imageWidth, parsed.imageHeight}, parsed.imageBytes.data());
-            tile.hasPreview = tile.previewTexture.loadFromImage(image);
+        if (parsed.hasEmbeddedPreview && parsed.imageWidth > 0 && parsed.imageHeight > 0) {
+            wgpu::TextureDescriptor texDesc{};
+            texDesc.size = {parsed.imageWidth, parsed.imageHeight, 1};
+            texDesc.format = parsed.imageFormat;
+            texDesc.usage = wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::CopyDst;
+            texDesc.mipLevelCount = 1;
+            texDesc.sampleCount = 1;
+            texDesc.dimension = wgpu::TextureDimension::_2D;
+            auto texture = device.createTexture(texDesc);
+
+            wgpu::TexelCopyTextureInfo dst{};
+            dst.texture = texture;
+            dst.mipLevel = 0;
+            dst.aspect = wgpu::TextureAspect::All;
+
+            wgpu::TexelCopyBufferLayout layout{};
+            layout.bytesPerRow = parsed.imageWidth * 4;
+            layout.rowsPerImage = parsed.imageHeight;
+
+            wgpu::Extent3D extent{parsed.imageWidth, parsed.imageHeight, 1};
+            device.getQueue().writeTexture(dst, parsed.imageBytes.data(), parsed.imageBytes.size(), layout, extent);
+
+            tile.previewTexture = texture;
+            tile.previewTextureView = texture.createView();
+            tile.previewSize = Vec2u(parsed.imageWidth, parsed.imageHeight);
+            tile.hasPreview = true;
         }
 
-        sceneTiles.push_back(std::move(tile));
+        sceneTiles.emplace_back(std::move(tile));
     }
 
     return sceneTiles;

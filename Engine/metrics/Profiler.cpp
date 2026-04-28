@@ -137,7 +137,7 @@ size_t Profiler::beginScope(const char* name) noexcept {
     const size_t parentIndex = activeTreeStack_.empty() ? ProfileTreeEntry::kNoParent : activeTreeStack_.back();
     ProfileTreeEntry& entry = treeEntryFor(name, parentIndex);
     const size_t treeIndex = static_cast<size_t>(&entry - treeEntries_.data());
-    activeTreeStack_.push_back(treeIndex);
+    activeTreeStack_.emplace_back(treeIndex);
     return treeIndex;
 }
 
@@ -234,7 +234,7 @@ ProfileEntry& Profiler::entryFor(const char* name) {
 
     ProfileEntry entry{};
     entry.name = name;
-    entries_.push_back(entry);
+    entries_.emplace_back(entry);
     return entries_.back();
 }
 
@@ -259,10 +259,10 @@ ProfileTreeEntry& Profiler::treeEntryFor(const char* name, size_t parentIndex) {
     ProfileTreeEntry entry{};
     entry.name = name;
     entry.parentIndex = parentIndex;
-    treeEntries_.push_back(entry);
+    treeEntries_.emplace_back(entry);
     const size_t entryIndex = treeEntries_.size() - 1;
     if (parentIndex != ProfileTreeEntry::kNoParent) {
-        treeEntries_[parentIndex].childIndices.push_back(entryIndex);
+        treeEntries_[parentIndex].childIndices.emplace_back(entryIndex);
     }
     return treeEntries_.back();
 }
@@ -276,14 +276,27 @@ ProfileCounter& Profiler::counterFor(const char* name) {
 
     ProfileCounter counter{};
     counter.name = name;
-    counters_.push_back(counter);
+    counters_.emplace_back(counter);
     return counters_.back();
 }
 
 ProfileScope::ProfileScope(const char* name) noexcept
-    : name_(name), treeIndex_(Profiler::instance().beginScope(name)), start_(Clock::now()) {}
+    : name_(name), treeIndex_(0) {
+    Profiler& profiler = Profiler::instance();
+    enabled_ = profiler.isFrameActive();
+    if (!enabled_) {
+        return;
+    }
+
+    treeIndex_ = profiler.beginScope(name);
+    start_ = Clock::now();
+}
 
 ProfileScope::~ProfileScope() {
+    if (!enabled_) {
+        return;
+    }
+
     const double ms = std::chrono::duration<double, std::milli>(Clock::now() - start_).count();
     Profiler::instance().endScope(treeIndex_, name_, ms);
 }

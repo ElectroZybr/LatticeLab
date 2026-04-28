@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include <webgpu/webgpu.hpp>
+
 #include "Engine/SimBox.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/physics/Bond.h"
@@ -17,7 +19,9 @@ public:
 
     virtual ~IRenderer() = default;
 
-    virtual void drawShot(const AtomStorage& atoms, const Bond::List& bonds, const SimBox& box) = 0;
+    virtual void drawShot(wgpu::TextureView targetView, wgpu::TextureView depthView, const AtomStorage& atoms, const Bond::List& bonds,
+                          const SimBox& box) = 0;
+    virtual void endFrame() = 0;
 
     bool drawGrid = false;
     bool drawBonds = false;
@@ -28,5 +32,5 @@ public:
     Camera camera;
 
 protected:
-    IRenderer(sf::View& gv, SimBox& box) : camera(&gv, box) {}
+    IRenderer(SimBox& box) : camera(box) {}
 };

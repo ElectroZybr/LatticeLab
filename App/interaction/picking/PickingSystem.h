@@ -1,10 +1,9 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <span>
 #include <unordered_set>
-
-#include <SFML/System/Vector2.hpp>
 
 #include "App/interaction/selection/OverlayState.h"
 #include "Engine/physics/AtomStorage.h"
@@ -23,11 +22,11 @@ public:
 
     void clearSelection();
 
-    bool pickAtom(sf::Vector2i screenPos, float tolerance, AtomHit& hit) const;
+    bool pickAtom(Vec2i screenPos, float tolerance, AtomHit& hit) const;
 
-    void processClick(sf::Vector2i screenPos, bool cumulative = false);
-    void processRect(sf::Vector2i start, sf::Vector2i end, bool cumulative = false);
-    void processLasso(std::span<sf::Vector2i> points, bool cumulative = false);
+    void processClick(Vec2i screenPos, bool cumulative = false);
+    void processRect(Vec2i start, Vec2i end, bool cumulative = false);
+    void processLasso(std::span<Vec2i> points, bool cumulative = false);
 
     void handleAtomRemoval(size_t removedIndex);
 
@@ -36,18 +35,18 @@ public:
     OverlayState& getOverlay() { return overlay; }
 
 private:
-    std::unique_ptr<IRenderer>* renderer;
     AtomStorage& atomStorage;
     SimBox& box;
+    std::unique_ptr<IRenderer>* renderer;
     OverlayState overlay;
     std::unordered_set<size_t> selectedIndices;
 
     // 2D пикинг одного атома — расстояние в экранных координатах
-    bool pickAtom2D(sf::Vector2i screenPos, float tolerance, AtomHit& hit) const;
+    bool pickAtom2D(Vec2i screenPos, float tolerance, AtomHit& hit) const;
     // 3D пикинг одного атома — ray cast
-    bool pickAtom3D(sf::Vector2i screenPos, AtomHit& hit) const;
+    bool pickAtom3D(Vec2i screenPos, AtomHit& hit) const;
 
     // Проверка точки внутри фигуры
-    static bool pointInPolygon(sf::Vector2i point, std::span<sf::Vector2i> polygon);
-    static bool pointInRect(sf::Vector2i point, sf::Vector2i start, sf::Vector2i end);
+    template <typename T> static bool pointInPolygon(Vec2<T> point, std::span<Vec2<T>> polygon);
+    template <typename T> static bool pointInRect(Vec2<T> point, Vec2<T> start, Vec2<T> end);
 };

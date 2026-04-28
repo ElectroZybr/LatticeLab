@@ -96,7 +96,7 @@ namespace Signals {
             requires std::invocable<Fn, Args...>
         [[nodiscard]] Connection connect(Fn&& fn) {
             auto state = std::make_shared<Connection::State>();
-            slots.push_back({std::forward<Fn>(fn), state});
+            slots.emplace_back(std::forward<Fn>(fn), state);
             return Connection{state};
         }
 

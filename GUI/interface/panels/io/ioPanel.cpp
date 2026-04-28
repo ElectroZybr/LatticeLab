@@ -1,7 +1,5 @@
 #include "ioPanel.h"
 
-#include <imgui-SFML.h>
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -12,9 +10,10 @@
 
 #include "App/AppSignals.h"
 #include "Engine/Simulation.h"
+#include "GUI/interface/UiState.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/panels/io/ioPanelWidgets.h"
-#include "GUI/interface/UiState.h"
+#include "Rendering/WGPUContext.h"
 
 namespace {
     constexpr float kSceneTileRounding = 10.0f;
@@ -25,8 +24,8 @@ void IOPanel::ensureSceneCatalogLoaded() {
         return;
     }
 
+    sceneTiles_ = loadIOPanelSceneTiles(scenesDirectory_.string(), WGPUContext::instance().device());
     sceneCatalogLoaded_ = true;
-    sceneTiles_ = loadIOPanelSceneTiles(scenesDirectory_.string());
 }
 
 void IOPanel::clearPendingDeleteState() {
@@ -48,7 +47,7 @@ void IOPanel::removeSceneTileByPath(std::string_view path) {
     }
 }
 
-void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState) {
+void IOPanel::draw(float scale, Vec2i windowSize, Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState) {
     const float target = visible_ ? 1.f : 0.f;
     const float step = ImGui::GetIO().DeltaTime * 12.f;
     animProgress_ += (target - animProgress_) * std::min(step, 1.f);
@@ -63,8 +62,12 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     if (fileDialog.hasSavedSimulationPath()) {
         const std::filesystem::path savedSimulationPath = fileDialog.consumeSavedSimulationPath();
         if (savedSimulationPath.parent_path().lexically_normal() == scenesDirectory_.lexically_normal()) {
-            sceneCatalogLoaded_ = false;
+            pendingReloadFrames_ = 1;
         }
+    }
+    // Задержка, что бы изображение успело записаться в файл сохранения .lat
+    if (pendingReloadFrames_ > 0 && --pendingReloadFrames_ == 0) {
+        sceneCatalogLoaded_ = false;
     }
 
     fileDialog.setSimulationDirectory(scenesDirectory_.string());
@@ -154,7 +157,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
     ImGui::SeparatorText("Сцены");
     std::array<char, 512> scenesDirBuffer{};
     const std::string scenesDir = scenesDirectory_.string();
-    std::snprintf(scenesDirBuffer.data(), scenesDirBuffer.size(), "%s", scenesDir.c_str());
+    std::snprintf(scenesDirBuffer.data(), scenesDirBuffer.size(), "%s", scenesDir.data());
     const float browseButtonWidth = ImGui::GetFrameHeight();
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseButtonWidth - ImGui::GetStyle().ItemSpacing.x);
     ImGui::InputText("##scenes_dir", scenesDirBuffer.data(), scenesDirBuffer.size(), ImGuiInputTextFlags_ReadOnly);
@@ -175,7 +178,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
         IOPanelSceneTile& tile = sceneTiles_[i];
         ImGui::PushID(static_cast<int>(i));
 
-        if ((i % 2) != 0) {
+        if (i % 2 != 0) {
             ImGui::SameLine();
         }
 
@@ -188,8 +191,8 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
         const bool isHovered = ImGui::IsItemHovered();
 
         if (tile.hasPreview) {
-            const ImTextureID textureId = static_cast<ImTextureID>(tile.previewTexture.getNativeHandle());
-            const sf::Vector2u textureSize = tile.previewTexture.getSize();
+            const ImTextureID textureId = (ImTextureID)(WGPUTextureView)tile.previewTextureView;
+            const Vec2i textureSize(tile.previewSize);
             ImVec2 uvMin(0.0f, 0.0f);
             ImVec2 uvMax(1.0f, 1.0f);
 
@@ -230,18 +233,16 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
         const bool deleteClicked = deleteHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
 
         drawList->AddRectFilled(deleteMin, deleteMax,
-                                ImGui::GetColorU32(deleteHovered ? ImVec4(0.76f, 0.24f, 0.28f, 0.96f)
-                                                                 : ImVec4(0.10f, 0.12f, 0.16f, 0.86f)),
+                                ImGui::GetColorU32(deleteHovered ? ImVec4(0.76f, 0.24f, 0.28f, 0.96f) : ImVec4(0.10f, 0.12f, 0.16f, 0.86f)),
                                 6.0f * scale);
-        const ImVec2 deleteCenter(deleteMin.x + deleteButtonSize * 0.5f - 0.5f * scale, deleteMin.y + deleteButtonSize * 0.5f - 0.5f * scale);
+        const ImVec2 deleteCenter(deleteMin.x + deleteButtonSize * 0.5f - 0.5f * scale,
+                                  deleteMin.y + deleteButtonSize * 0.5f - 0.5f * scale);
         const float crossHalfExtent = deleteButtonSize * 0.18f;
         const ImU32 crossColor = ImGui::GetColorU32(ImVec4(0.96f, 0.97f, 0.99f, 1.0f));
         drawList->AddLine(ImVec2(deleteCenter.x - crossHalfExtent, deleteCenter.y - crossHalfExtent),
-                          ImVec2(deleteCenter.x + crossHalfExtent, deleteCenter.y + crossHalfExtent), crossColor,
-                          1.4f * scale);
+                          ImVec2(deleteCenter.x + crossHalfExtent, deleteCenter.y + crossHalfExtent), crossColor, 1.4f * scale);
         drawList->AddLine(ImVec2(deleteCenter.x - crossHalfExtent, deleteCenter.y + crossHalfExtent),
-                          ImVec2(deleteCenter.x + crossHalfExtent, deleteCenter.y - crossHalfExtent), crossColor,
-                          1.4f * scale);
+                          ImVec2(deleteCenter.x + crossHalfExtent, deleteCenter.y - crossHalfExtent), crossColor, 1.4f * scale);
 
         if (!deleteHovered && isHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
             AppSignals::UI::LoadSimulation.emit(tile.path);
@@ -256,14 +257,14 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
         }
 
         const ImVec2 titlePos(tileMin.x + 10.0f, tileMax.y - 25.0f);
-        drawList->AddText(ImVec2(titlePos.x + 1.0f, titlePos.y + 1.0f),
-                          ImGui::GetColorU32(ImVec4(0.02f, 0.03f, 0.05f, 0.85f)), tile.title.c_str());
-        drawList->AddText(titlePos, ImGui::GetColorU32(ImVec4(0.95f, 0.96f, 0.98f, 1.0f)), tile.title.c_str());
+        drawList->AddText(ImVec2(titlePos.x + 1.0f, titlePos.y + 1.0f), ImGui::GetColorU32(ImVec4(0.02f, 0.03f, 0.05f, 0.85f)),
+                          tile.title.data());
+        drawList->AddText(titlePos, ImGui::GetColorU32(ImVec4(0.95f, 0.96f, 0.98f, 1.0f)), tile.title.data());
         if (!tile.description.empty()) {
             const ImVec2 descriptionPos(tileMin.x + 10.0f, tileMax.y - 15.0f);
             drawList->AddText(ImVec2(descriptionPos.x + 1.0f, descriptionPos.y + 1.0f),
-                              ImGui::GetColorU32(ImVec4(0.02f, 0.03f, 0.05f, 0.80f)), tile.description.c_str());
-            drawList->AddText(descriptionPos, ImGui::GetColorU32(ImVec4(0.82f, 0.86f, 0.90f, 0.98f)), tile.description.c_str());
+                              ImGui::GetColorU32(ImVec4(0.02f, 0.03f, 0.05f, 0.80f)), tile.description.data());
+            drawList->AddText(descriptionPos, ImGui::GetColorU32(ImVec4(0.82f, 0.86f, 0.90f, 0.98f)), tile.description.data());
         }
 
         ImGui::PopID();
@@ -283,8 +284,8 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
         ImGui::PushStyleColor(ImGuiCol_PopupBg, ImVec4(0.08f, 0.10f, 0.13f, 0.96f));
         ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.33f, 0.38f, 0.46f, 0.95f));
 
-        if (ImGui::BeginPopup(kDeletePopupId, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
-                                                 ImGuiWindowFlags_NoSavedSettings)) {
+        if (ImGui::BeginPopup(kDeletePopupId,
+                              ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings)) {
             const char* deleteTitle = "Удалить сцену?";
             const float titleWidth = ImGui::CalcTextSize(deleteTitle).x;
             const float titleOffsetX = std::max(0.0f, (ImGui::GetContentRegionAvail().x - titleWidth) * 0.5f);
@@ -319,7 +320,7 @@ void IOPanel::draw(float scale, sf::Vector2u windowSize, Simulation& simulation,
             if (!pendingDeleteError_.empty()) {
                 ImGui::Spacing();
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.48f, 0.48f, 1.0f));
-                ImGui::TextWrapped("%s", pendingDeleteError_.c_str());
+                ImGui::TextWrapped("%s", pendingDeleteError_.data());
                 ImGui::PopStyleColor();
             }
 

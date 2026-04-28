@@ -1,21 +1,19 @@
 #pragma once
+#include <memory>
 
-#include <vector>
-
-#include <SFML/Graphics.hpp>
+#include <GLFW/glfw3.h>
 
 class IRenderer;
-class Simulation;
 class Interface;
 
 class EventManager {
 public:
-    static void init(sf::RenderWindow& window, sf::View& sceneView, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
-                     Interface& appInterface);
+    static void init(GLFWwindow* window, std::unique_ptr<IRenderer>& renderer, Interface& appInterface);
+
     static void poll();
     static void frame(float deltaTime);
 
 private:
-    static sf::RenderWindow* window;
+    static GLFWwindow* window;
     static std::unique_ptr<IRenderer>* renderer;
 };

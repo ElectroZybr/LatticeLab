@@ -1,14 +1,13 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
-#include <imgui.h>
-
 #include <filesystem>
 #include <string>
 #include <vector>
 
+#include <imgui.h>
+
 #include "App/AppPaths.h"
-#include "Engine/math/Vec3f.h"
+#include "Engine/math/Vec3.h"
 #include "Engine/physics/AtomData.h"
 #include "GUI/interface/panels/io/ioPanelSceneCatalog.h"
 
@@ -21,7 +20,7 @@ public:
     static constexpr ImGuiWindowFlags PANEL_FLAGS =
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 
-    void draw(float scale, sf::Vector2u windowSize, Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState);
+    void draw(float scale, Vec2i windowSize, Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState);
     void setScenesDirectory(std::filesystem::path scenesDirectory);
     [[nodiscard]] const std::filesystem::path& scenesDirectory() const { return scenesDirectory_; }
 
@@ -42,6 +41,7 @@ private:
     void clearPendingDeleteState();
     void removeSceneTileByPath(std::string_view path);
 
+    uint8_t pendingReloadFrames_ = 0;
     bool visible_ = false;
     bool sceneCatalogLoaded_ = false;
     float animProgress_ = 0.f;

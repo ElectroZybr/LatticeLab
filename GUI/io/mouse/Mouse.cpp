@@ -4,31 +4,41 @@
 #include <iostream>
 
 #include "App/interaction/ToolsManager.h"
-#include "Engine/Simulation.h"
 #include "GUI/interface/interface.h"
 
-sf::RenderWindow* Mouse::window = nullptr;
+GLFWwindow* Mouse::window = nullptr;
 std::unique_ptr<IRenderer>* Mouse::renderer = nullptr;
 Interface* Mouse::appInterface = nullptr;
+GLFWmousebuttonfun Mouse::imgui_mouse_callback = nullptr;
+GLFWcursorposfun Mouse::imgui_cursor_pos_callback = nullptr;
+GLFWscrollfun Mouse::imgui_scroll_callback = nullptr;
 
-void Mouse::init(sf::RenderWindow& w, std::unique_ptr<IRenderer>& r, Simulation& simulation, Interface& appInterface) {
-    window = &w;
+void Mouse::init(GLFWwindow* w, std::unique_ptr<IRenderer>& r, Interface& appInterface) {
+    window = w;
     renderer = &r;
     Mouse::appInterface = &appInterface;
-    (void)simulation;
+
+    imgui_mouse_callback = glfwSetMouseButtonCallback(window, onMouseButton);
+    imgui_cursor_pos_callback = glfwSetCursorPosCallback(window, onMouseMove);
+    imgui_scroll_callback = glfwSetScrollCallback(window, onScroll);
 }
 
-void Mouse::onEvent(const sf::Event& event) {
-    const sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
-    std::unique_ptr<IRenderer>& rend = *renderer;
-    constexpr float kFreeWheelMoveScale = 0.008f;
+void Mouse::onMouseButton(GLFWwindow*, int button, int action, int mods) {
+    if (imgui_mouse_callback) {
+        imgui_mouse_callback(window, button, action, mods);
+    }
+    if (ImGui::GetIO().WantCaptureMouse) {
+        return;
+    }
 
-    if (const auto* e = event.getIf<sf::Event::MouseButtonPressed>()) {
-        if (e->button == sf::Mouse::Button::Left) {
+    const Vec2i mouse_pos = Mouse::getMousePos();
+    std::unique_ptr<IRenderer>& rend = *renderer;
+
+    if (action == GLFW_PRESS) {
+        if (button == GLFW_MOUSE_BUTTON_LEFT) {
             ToolsManager::onLeftPressed(mouse_pos);
         }
-
-        if (e->button == sf::Mouse::Button::Right && appInterface != nullptr && !appInterface->state().cursorHovered &&
+        if (button == GLFW_MOUSE_BUTTON_RIGHT && appInterface != nullptr && !appInterface->state().cursorHovered &&
             !ToolsManager::isInteractingNow()) {
             if (!ToolsManager::onRightPressed(mouse_pos)) {
                 rend->camera.isDragging = true;
@@ -38,59 +48,74 @@ void Mouse::onEvent(const sf::Event& event) {
         }
     }
 
-    if (const auto* e = event.getIf<sf::Event::MouseButtonReleased>()) {
-        if (e->button == sf::Mouse::Button::Left) {
+    if (action == GLFW_RELEASE) {
+        if (button == GLFW_MOUSE_BUTTON_LEFT) {
             ToolsManager::onLeftReleased(mouse_pos);
         }
-
-        if (e->button == sf::Mouse::Button::Right) {
+        if (button == GLFW_MOUSE_BUTTON_RIGHT) {
             rend->camera.isDragging = false;
         }
     }
+}
 
-    if (event.getIf<sf::Event::MouseMoved>() && rend->camera.isDragging) {
-        const sf::Vector2i currentPixelPos = sf::Mouse::getPosition(*window);
-        sf::Vector2i deltaPixel = currentPixelPos - rend->camera.dragStartPixelPos;
-
-        if (rend->camera.mode == Camera::Mode::Orbit) {
-            rend->camera.orbitDrag(deltaPixel);
-            rend->camera.dragStartPixelPos = currentPixelPos;
-        }
-        else if (rend->camera.mode == Camera::Mode::Free) {
-            rend->camera.freeDrag(deltaPixel);
-            rend->camera.dragStartPixelPos = currentPixelPos;
-        }
-        else {
-            Vec3f deltaWorld = ToolsManager::screenToWorld(rend->camera.dragStartPixelPos) - ToolsManager::screenToWorld(currentPixelPos);
-            rend->camera.position = rend->camera.dragStartCameraPos + Vec2f(deltaWorld.x, deltaWorld.y);
-        }
+void Mouse::onMouseMove(GLFWwindow*, double xpos, double ypos) {
+    if (imgui_cursor_pos_callback) {
+        imgui_cursor_pos_callback(window, xpos, ypos);
     }
 
-    if (const auto* e = event.getIf<sf::Event::MouseWheelScrolled>()) {
-        if (e->wheel == sf::Mouse::Wheel::Vertical && appInterface != nullptr && !appInterface->state().cursorHovered &&
-            !ToolsManager::isInteractingNow()) {
-            if (rend->camera.getMode() == Camera::Mode::Free) {
-                const float wheelStep = rend->camera.moveSpeed * kFreeWheelMoveScale;
-                const float distance = e->delta * wheelStep;
+    std::unique_ptr<IRenderer>& rend = *renderer;
+    if (!rend->camera.isDragging) {
+        return;
+    }
 
-                const Vec3f forward(std::cos(rend->camera.elevation) * std::sin(rend->camera.azimuth), std::sin(rend->camera.elevation),
-                                    std::cos(rend->camera.elevation) * std::cos(rend->camera.azimuth));
-                rend->camera.move3D(forward * distance);
-            }
-            else {
-                rend->camera.zoomAt(e->delta, sf::Vector2f(e->position), *window);
-            }
+    const Vec2i currentPixelPos(xpos, ypos);
+    Vec2i deltaPixel(currentPixelPos - rend->camera.dragStartPixelPos);
+
+    if (rend->camera.mode == Camera::Mode::Orbit) {
+        rend->camera.orbitDrag(deltaPixel);
+        rend->camera.dragStartPixelPos = currentPixelPos;
+    }
+    else if (rend->camera.mode == Camera::Mode::Free) {
+        rend->camera.freeDrag(deltaPixel);
+        rend->camera.dragStartPixelPos = currentPixelPos;
+    }
+    else {
+        Vec3f deltaWorld = ToolsManager::screenToWorld(rend->camera.dragStartPixelPos) - ToolsManager::screenToWorld(currentPixelPos);
+        rend->camera.position = rend->camera.dragStartCameraPos + Vec2f(deltaWorld.x, deltaWorld.y);
+    }
+}
+
+void Mouse::onScroll(GLFWwindow*, double xoffset, double yoffset) {
+    if (imgui_scroll_callback) {
+        imgui_scroll_callback(window, xoffset, yoffset);
+    }
+
+    std::unique_ptr<IRenderer>& rend = *renderer;
+    constexpr float kFreeWheelMoveScale = 0.008f;
+
+    if (appInterface != nullptr && !appInterface->state().cursorHovered && !ToolsManager::isInteractingNow()) {
+        if (rend->camera.getMode() == Camera::Mode::Free) {
+            const float wheelStep = rend->camera.moveSpeed * kFreeWheelMoveScale;
+            const float distance = static_cast<float>(yoffset) * wheelStep;
+
+            const Vec3f forward(std::cos(rend->camera.elevation) * std::sin(rend->camera.azimuth), std::sin(rend->camera.elevation),
+                                std::cos(rend->camera.elevation) * std::cos(rend->camera.azimuth));
+            rend->camera.move3D(forward * distance);
+        }
+        else {
+            const Vec2i mouse_pos = getMousePos();
+            rend->camera.zoomAt(static_cast<float>(yoffset), Vec2f(mouse_pos));
         }
     }
 }
 
 void Mouse::onFrame(float deltaTime) {
-    const sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
+    const Vec2i mouse_pos = getMousePos();
     ToolsManager::onFrame(mouse_pos, deltaTime);
 }
 
 void Mouse::logMousePos() {
-    sf::Vector2i mouse_pos = sf::Mouse::getPosition(*window);
+    const Vec2i mouse_pos = getMousePos();
     Vec3f world_pos = ToolsManager::screenToWorld(mouse_pos);
     std::cout << "<Mouse pos>"
               << " Screen: "

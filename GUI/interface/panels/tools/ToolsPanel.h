@@ -1,8 +1,6 @@
 #pragma once
 #include <cstdint>
 
-#include <SFML/Graphics.hpp>
-#include <SFML/Window.hpp>
 #include <imgui.h>
 
 enum class RendererType : uint8_t {
@@ -20,7 +18,7 @@ public:
     static constexpr ImGuiWindowFlags PANEL_FLAGS = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse |
                                                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
 
-    void draw(float scale, sf::RenderWindow& window, DebugPanel& debug, SettingsPanel& settings, IOPanel& ioPanel);
+    void draw(float scale, DebugPanel& debug, SettingsPanel& settings, IOPanel& ioPanel);
 
 private:
     bool is3D = false;

@@ -1,13 +1,14 @@
 #pragma once
-#include <SFML/Graphics.hpp>
 #include <imgui.h>
+
+#include "Engine/math/Vec2.h"
 
 class PeriodicPanel {
 public:
     static constexpr ImGuiWindowFlags PANEL_FLAGS = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse |
                                                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
 
-    void draw(float scale, sf::Vector2u windowSize, int& selectedAtom);
+    void draw(float scale, Vec2i windowSize, int& selectedAtom);
 
     static int decodeAtom(int index);
 

@@ -1,27 +1,32 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
 #include <glm/glm.hpp>
 
 #include "Engine/math/Ray.h"
 
 class SimBox;
 class Renderer2D;
-class Renderer3D;
+class Renderer3DWGPU;
+class Renderer2DWGPU;
 
 class Camera {
     friend class Mouse;
     friend class Keyboard;
 
     friend Renderer2D;
-    friend Renderer3D;
+    friend Renderer3DWGPU;
+
+    friend Renderer2DWGPU;
 
 public:
     enum class Mode : uint8_t { Mode2D, Orbit, Free };
 
-    Camera(sf::View* view, SimBox& simBox, float moveSpeed = 500.f, float zoomSpeed = 0.1f);
+    Camera(SimBox& simBox, float moveSpeed = 500.f, float zoomSpeed = 0.1f);
 
-    void update(sf::RenderTarget& target);
+    void resetView();
+
+    void setScreenSize(Vec2f screenSize) { this->screenSize = screenSize; }
+    Vec2f getScreenSize() const { return screenSize; }
 
     void move(Vec2f offset) { position += offset; }
     void move3D(Vec3f offset) { freePosition += offset; }
@@ -32,18 +37,15 @@ public:
     void setMode(Mode newMode) { mode = newMode; }
     Mode getMode() const { return mode; }
 
-    void orbitDrag(sf::Vector2i delta);
-    void freeDrag(sf::Vector2i delta); // для Free mode
+    void orbitDrag(Vec2i delta);
+    void freeDrag(Vec2i delta); // для Free mode
 
-    Vec3f screenToWorld(sf::Vector2i screenPos) const;
-    sf::Vector2i worldToScreen(Vec3f worldPos) const;
+    Vec3f screenToWorld(Vec2i screenPos) const;
+    Vec2i worldToScreen(Vec3f worldPos) const;
 
-    void zoomAt(float factor, sf::Vector2f mousePos, sf::RenderWindow& target);
+    void zoomAt(float factor, Vec2f mousePos);
     float getZoom() const { return zoom; }
     void setZoom(float new_zoom);
-
-    sf::View& getView() { return *view; }
-    const sf::View& getView() const { return *view; }
 
     glm::vec3 getEyePosition() const;
     glm::mat4 getViewMatrix() const;
@@ -52,8 +54,7 @@ public:
     Ray screenToRay(float screenX, float screenY) const;
 
 private:
-    sf::Vector2f screenSize;
-    sf::View* view;
+    Vec2f screenSize;
     Vec2f position;
     Vec3f freePosition{0.f, 0.f, -100.f};
     float zoom;
@@ -64,7 +65,7 @@ private:
     bool isDragging;
     Vec2f lastMousePos;
 
-    sf::Vector2i dragStartPixelPos;
+    Vec2i dragStartPixelPos;
     Vec2f dragStartCameraPos;
 
     Mode mode = Mode::Mode2D;

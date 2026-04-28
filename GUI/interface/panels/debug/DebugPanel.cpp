@@ -7,7 +7,7 @@ DebugView* DebugPanel::addView(DebugView view) {
     return &views.back();
 }
 
-void DebugPanel::draw(float uiScale, sf::Vector2u windowSize) {
+void DebugPanel::draw(float uiScale, Vec2i windowSize) {
     float target = visible ? 1.f : 0.f;
     float step = ImGui::GetIO().DeltaTime * 12.f;
     animProgress += (target - animProgress) * std::min(step, 1.f);

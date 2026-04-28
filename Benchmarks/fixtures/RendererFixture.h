@@ -3,40 +3,87 @@
 #include <cmath>
 #include <memory>
 
-#include <SFML/Graphics.hpp>
 #include <benchmark/benchmark.h>
 
+#include "App/interaction/ToolsManager.h"
+#include "App/interaction/picking/PickingSystem.h"
 #include "Engine/SimBox.h"
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/physics/Bond.h"
 #include "Rendering/BaseRenderer.h"
+#include "Rendering/WGPUContext.h"
 
-template <typename TRenderer> class RendererFixture : public benchmark::Fixture {
+template <typename T>
+concept IsRenderer = std::derived_from<T, IRenderer>;
+
+class RendererFixtureBase : public benchmark::Fixture {
+protected:
+    void prepareAtoms(benchmark::State& state);
+    void createRenderTargets(wgpu::Device device, wgpu::TextureFormat colorFormat);
+    void drawFrame();
+    void setCounters(benchmark::State& state) const;
+
+    std::unique_ptr<IRenderer> renderer_;
+    AtomStorage atomStorage_;
+    Bond::List bonds_;
+    SimBox box_{Vec3f(300, 300, 300)};
+
+private:
+    static AtomStorage makeGridAtoms(int count);
+
+    wgpu::Texture targetTexture_ = nullptr;
+    wgpu::TextureView targetTextureView_ = nullptr;
+    wgpu::Texture depthTexture_ = nullptr;
+    wgpu::TextureView depthTextureView_ = nullptr;
+};
+
+wgpu::Device benchmarkDevice();
+wgpu::TextureFormat benchmarkSurfaceFormat();
+
+template <IsRenderer TRenderer> class RendererFixture : public RendererFixtureBase {
 public:
     void SetUp(benchmark::State& state) override {
-        renderTexture_ = std::make_unique<sf::RenderTexture>();
-        if (!renderTexture_->resize({800, 600})) {
-            state.SkipWithError("RenderTexture resize failed");
-            return;
-        }
+        auto& ctx = WGPUContext::instance();
+        ctx.initHeadless(800, 600);
 
-        view_ = renderTexture_->getView();
-        renderer_ = std::make_unique<TRenderer>(*renderTexture_, view_, box_);
+        // Offscreen render target
+        wgpu::TextureDescriptor colorDesc{};
+        colorDesc.size = {800, 600, 1};
+        colorDesc.format = ctx.surfaceFormat();
+        colorDesc.usage = wgpu::TextureUsage::RenderAttachment;
+        colorDesc.mipLevelCount = 1;
+        colorDesc.sampleCount = 1;
+        colorDesc.dimension = wgpu::TextureDimension::_2D;
+        colorTexture_ = ctx.device().createTexture(colorDesc);
+        colorTextureView_ = colorTexture_.createView();
 
         atomStorage_ = makeGridAtoms(static_cast<int>(state.range(0)));
+        renderer_ = std::make_unique<TRenderer>(box_, ctx.device(), ctx.surfaceFormat());
+        renderer_->camera.setScreenSize({800.0f, 600.0f});
+        renderer_->camera.resetView();
+        createRenderTargets(ctx.device(), ctx.surfaceFormat());
+
+        ToolsManager::pickingSystem = new PickingSystem(atomStorage_, box_, renderer_);
     }
 
-    void TearDown(benchmark::State&) override { renderer_.reset(); }
+    void TearDown(benchmark::State&) override {
+        // Дожидаемся завершения GPU работы
+        WGPUContext::instance().device().poll(true, nullptr);
+        colorTextureView_ = nullptr;
+        colorTexture_ = nullptr;
+        renderer_.reset();
+    }
 
 protected:
     void setCounters(benchmark::State& state) const {
         state.SetItemsProcessed(state.iterations() * static_cast<int64_t>(atomStorage_.size()));
     }
 
-    std::unique_ptr<sf::RenderTexture> renderTexture_;
+    wgpu::Texture colorTexture_;
+    wgpu::TextureView colorTextureView_;
+
     std::unique_ptr<IRenderer> renderer_;
-    sf::View view_;
     AtomStorage atomStorage_;
     Bond::List bonds_;
     SimBox box_{Vec3f(300, 300, 300)};
@@ -47,8 +94,8 @@ private:
         atoms.reserve(count);
         const int side = static_cast<int>(std::cbrt(count)) + 1;
         for (int i = 0; i < count; ++i) {
-            atoms.addAtom(Vec3f((i % side) * 3.0, ((i / side) % side) * 3.0, (i / static_cast<double>(side * side)) * 3.0),
-                          Vec3f::Random() * 0.5, AtomData::Type::H);
+            atoms.addAtom(Vec3f((i % side) * 3.0f, ((i / side) % side) * 3.0f, (i / static_cast<float>(side * side)) * 3.0f),
+                          Vec3f::Random() * 0.5f, AtomData::Type::H);
         }
         return atoms;
     }

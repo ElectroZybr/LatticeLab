@@ -1,11 +1,10 @@
 #pragma once
 
-#include <SFML/Graphics.hpp>
 #include <string>
 
-#include "Engine/Consts.h"
 #include "Engine/NeighborSearch/NeighborList.h"
 #include "Engine/SimBox.h"
+#include "Engine/math/Vec3.h"
 #include "Engine/metrics/EnergyMetrics.h"
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
@@ -33,15 +32,15 @@ public:
     void setAccelDamping(float accelDamping) { integrator.setAccelDamping(accelDamping); }
     float getAccelDamping() const { return integrator.accelDamping(); }
 
-    int getSimStep() const { return sim_step; }
+    size_t getSimStep() const { return sim_step; }
     float simTimeNs() const { return sim_time_ns; }
     void restoreRuntimeState(int simStep, float simTimeNs) {
         sim_step = simStep;
         sim_time_ns = simTimeNs;
     }
-    void setSceneTitle(std::string title) { sceneTitle_ = std::move(title); }
+    void setSceneTitle(std::string_view title) { sceneTitle_ = title; }
     const std::string& sceneTitle() const { return sceneTitle_; }
-    void setSceneDescription(std::string description) { sceneDescription_ = std::move(description); }
+    void setSceneDescription(std::string_view description) { sceneDescription_ = description; }
     const std::string& sceneDescription() const { return sceneDescription_; }
 
     float averageKineticEnergyEv() const {
@@ -59,9 +58,7 @@ public:
         return metricsCache_.fullAverageEnergyEv();
     }
 
-    float fullEnegryPJ() const {
-        return fullAverageEnergyEv() * atomStorage_.size() * Units::kEvToPJ;
-    }
+    float fullEnegryPJ() const { return fullAverageEnergyEv() * atomStorage_.size() * Units::kEvToPJ; }
 
     float temperatureK() const {
         refreshMetricsCache();
@@ -131,7 +128,7 @@ private:
     NeighborList neighborList_;
     Bond::List bonds_;
     float Dt = 0.01f;
-    int sim_step = 0;
+    size_t sim_step = 0;
     float sim_time_ns = 0.0f;
     bool bondFormationEnabled_ = false;
     std::string sceneTitle_;

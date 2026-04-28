@@ -1,13 +1,14 @@
 #pragma once
-#include <SFML/Graphics.hpp>
 #include <imgui.h>
+
+#include "Engine/math/Vec2.h"
 
 class SimControlPanel {
 public:
     static constexpr ImGuiWindowFlags PANEL_FLAGS = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse |
                                                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
 
-    void draw(float scale, sf::Vector2u windowSize, bool& pause, float& simulationSpeed, int simStep, float deltaTime);
+    void draw(float scale, Vec2i windowSize, bool& pause, float& simulationSpeed, int simStep, float deltaTime);
 
 private:
     float displayedStepsPerSecond_ = 0.0f;

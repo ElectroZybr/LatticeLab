@@ -1,8 +1,7 @@
 #pragma once
 #include <deque>
 
-#include <SFML/Graphics.hpp>
-
+#include "Engine/math/Vec2.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
 
 class DebugPanel {
@@ -13,7 +12,7 @@ class DebugPanel {
 public:
     DebugView* addView(DebugView view);
 
-    void draw(float uiScale, sf::Vector2u windowSize);
+    void draw(float uiScale, Vec2i windowSize);
 
     void toggle() { visible = !visible; }
     void close() { visible = false; }

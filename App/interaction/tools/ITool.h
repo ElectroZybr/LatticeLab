@@ -2,10 +2,9 @@
 
 #include <memory>
 
-#include <SFML/Graphics.hpp>
+#include <GLFW/glfw3.h>
 
-#include "Engine/math/Vec3f.h"
-#include "Engine/physics/AtomData.h"
+#include "Engine/math/Vec3.h"
 
 class AtomStorage;
 class IRenderer;
@@ -14,16 +13,13 @@ class Simulation;
 struct UiState;
 
 struct ToolContext {
-    sf::RenderWindow* window = nullptr;
-    sf::View* gameView = nullptr;
+    GLFWwindow* window = nullptr;
     Simulation* simulation = nullptr;
     std::unique_ptr<IRenderer>* renderer = nullptr;
     PickingSystem* pickingSystem = nullptr;
     UiState* uiState = nullptr;
 
-    [[nodiscard]] bool isValid() const noexcept {
-        return window != nullptr && gameView != nullptr && simulation != nullptr && renderer != nullptr;
-    }
+    [[nodiscard]] bool isValid() const noexcept { return window != nullptr && simulation != nullptr && renderer != nullptr; }
 
     [[nodiscard]] IRenderer* activeRenderer() const noexcept { return (renderer != nullptr) ? renderer->get() : nullptr; }
 };
@@ -36,18 +32,18 @@ public:
     ITool(const ITool&) = delete;
     ITool& operator=(const ITool&) = delete;
 
-    virtual void onLeftPressed(sf::Vector2i mousePos);
-    virtual void onLeftReleased(sf::Vector2i mousePos);
-    virtual bool onRightPressed(sf::Vector2i mousePos);
-    virtual void onFrame(sf::Vector2i mousePos, float deltaTime);
+    virtual void onLeftPressed(Vec2i mousePos);
+    virtual void onLeftReleased(Vec2i mousePos);
+    virtual bool onRightPressed(Vec2i mousePos);
+    virtual void onFrame(Vec2i mousePos, float deltaTime);
     virtual void reset();
 
 protected:
     [[nodiscard]] ToolContext& context() noexcept { return context_; }
     [[nodiscard]] const ToolContext& context() const noexcept { return context_; }
 
-    [[nodiscard]] Vec3f screenToWorld(sf::Vector2i mousePos) const;
-    [[nodiscard]] sf::Vector2i worldToScreen(Vec3f worldPos) const;
+    [[nodiscard]] Vec3f screenToWorld(Vec2i mousePos) const;
+    [[nodiscard]] Vec2i worldToScreen(Vec3f worldPos) const;
 
 private:
     ToolContext& context_;

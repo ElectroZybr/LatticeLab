@@ -71,6 +71,7 @@ public:
     void addCount(const char* name, size_t delta = 1);
     void updateRates(double intervalSeconds);
 
+    [[nodiscard]] bool isFrameActive() const noexcept { return frameActive_; }
     [[nodiscard]] const ProfilerFrameData& frameData() const noexcept { return frameData_; }
     [[nodiscard]] const ProfilerFrameData& lastFrameData() const noexcept { return lastFrameData_; }
     [[nodiscard]] const std::vector<ProfileEntry>& entries() const noexcept { return entries_; }
@@ -114,6 +115,7 @@ private:
     using Clock = std::chrono::steady_clock;
 
     const char* name_;
+    bool enabled_ = false;
     size_t treeIndex_;
     Clock::time_point start_;
 };

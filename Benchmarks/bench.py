@@ -33,10 +33,24 @@ from datetime import datetime
 from pathlib import Path
 
 BINARY_NAME = "benchmarks" if sys.platform != "win32" else "benchmarks.exe"
-BINARY = Path(__file__).parent.parent / BINARY_NAME
 RESULTS_DIR = Path(__file__).parent / "results"
 VIEW_HTML = Path(__file__).parent / "view.html"
 BENCHMARKS_ROOT = Path(__file__).parent
+
+
+def resolve_benchmark_binary() -> Path:
+    candidates = [
+        Path(__file__).parent.parent / "build" / "bench" / BINARY_NAME,
+        Path(__file__).parent.parent / "build" / "release" / BINARY_NAME,
+        Path(__file__).parent.parent / BINARY_NAME,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
+BINARY = resolve_benchmark_binary()
 
 COLOR_RESET = "\033[0m"
 COLOR_TITLE = "\033[1;97m"
@@ -717,7 +731,6 @@ def list_benchmark_cases(filter_regex: str | None = None) -> list[str]:
     except re.error:
         return names
     return [name for name in names if rx.search(name)]
-
 
 def normalize_benchmark_case(name: str) -> str:
     for suffix in ("_mean", "_median", "_stddev", "_cv"):
@@ -1528,6 +1541,8 @@ def run_benchmark(
 ) -> tuple[dict, dict[str, dict[str, float]]]:
     if not BINARY.exists():
         die(f"Бинарник не найден: {BINARY}")
+
+    print(paint(f"Бенч-бинарник: {BINARY}", COLOR_HINT))
 
     ensure_results_dir()
     total_cases_list = list_benchmark_cases(filter_regex)

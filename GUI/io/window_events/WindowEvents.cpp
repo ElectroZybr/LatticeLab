@@ -1,36 +1,45 @@
 #include "WindowEvents.h"
 
-#include <imgui-SFML.h>
-
+#include "Engine/math/Vec2.h"
 #include "GUI/interface/interface.h"
+#include "Rendering/BaseRenderer.h"
+#include "Rendering/WGPUContext.h"
 
-sf::RenderWindow* WindowEvents::window = nullptr;
-sf::View* WindowEvents::gameView = nullptr;
+GLFWwindow* WindowEvents::window = nullptr;
+std::unique_ptr<IRenderer>* WindowEvents::renderer = nullptr;
 Interface* WindowEvents::appInterface = nullptr;
 
-void WindowEvents::init(sf::RenderWindow& w, sf::View& sceneView, Interface& appInterface) {
-    window = &w;
-    gameView = &sceneView;
+void WindowEvents::init(GLFWwindow* w, std::unique_ptr<IRenderer>& r, Interface& appInterface) {
+    window = w;
+    renderer = &r;
     WindowEvents::appInterface = &appInterface;
+
+    glfwSetWindowCloseCallback(window, windowCloseCallback);
+    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+
+    int width = 0;
+    int height = 0;
+    glfwGetFramebufferSize(window, &width, &height);
+    syncFramebufferSize(width, height, false);
 }
 
-void WindowEvents::onEvent(const sf::Event& event) {
-    if (event.is<sf::Event::Closed>()) {
-        window->close();
+void WindowEvents::windowCloseCallback(GLFWwindow* window) { glfwSetWindowShouldClose(window, GLFW_TRUE); }
+
+void WindowEvents::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
+    syncFramebufferSize(width, height, true);
+}
+
+void WindowEvents::syncFramebufferSize(int width, int height, bool updateInterface) {
+    if (width <= 0 || height <= 0) {
+        return;
     }
 
-    if (const auto* e = event.getIf<sf::Event::Resized>()) {
-        gameView->setSize(sf::Vector2f(e->size));
-        gameView->setCenter(sf::Vector2f(e->size) / 2.f);
-        if (appInterface == nullptr) {
-            return;
-        }
+    (*renderer)->camera.setScreenSize(Vec2f(width, height));
+    WGPUContext::instance().resize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 
-        appInterface->styleManager.onResize(e->size);
-        if (appInterface->fontManager.load(appInterface->styleManager.getScale())) {
-            if (!ImGui::SFML::UpdateFontTexture()) {
-                // Keep current font pointers if texture update failed.
-            }
-        }
+    if (!updateInterface || appInterface == nullptr) {
+        return;
     }
+
+    appInterface->styleManager.onResize(Vec2i(width, height));
 }

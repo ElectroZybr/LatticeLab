@@ -2,8 +2,8 @@
 
 #include <string_view>
 
+#include "Engine/math/Vec3.h"
 #include "Engine/physics/AtomData.h"
-#include "Engine/math/Vec3f.h"
 #include "GUI/interface/panels/tools/ToolsPanel.h"
 #include "Rendering/camera/Camera.h"
 #include "Signals/Signals.h"
