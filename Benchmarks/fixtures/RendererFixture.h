@@ -17,7 +17,31 @@
 template <typename T>
 concept IsRenderer = std::derived_from<T, IRenderer>;
 
-template <IsRenderer TRenderer> class RendererFixture : public benchmark::Fixture {
+class RendererFixtureBase : public benchmark::Fixture {
+protected:
+    void prepareAtoms(benchmark::State& state);
+    void createRenderTargets(wgpu::Device device, wgpu::TextureFormat colorFormat);
+    void drawFrame();
+    void setCounters(benchmark::State& state) const;
+
+    std::unique_ptr<IRenderer> renderer_;
+    AtomStorage atomStorage_;
+    Bond::List bonds_;
+    SimBox box_{Vec3f(300, 300, 300)};
+
+private:
+    static AtomStorage makeGridAtoms(int count);
+
+    wgpu::Texture targetTexture_ = nullptr;
+    wgpu::TextureView targetTextureView_ = nullptr;
+    wgpu::Texture depthTexture_ = nullptr;
+    wgpu::TextureView depthTextureView_ = nullptr;
+};
+
+wgpu::Device benchmarkDevice();
+wgpu::TextureFormat benchmarkSurfaceFormat();
+
+template <IsRenderer TRenderer> class RendererFixture : public RendererFixtureBase {
 public:
     void SetUp(benchmark::State& state) override {
         auto& ctx = WGPUContext::instance();
@@ -37,6 +61,8 @@ public:
         atomStorage_ = makeGridAtoms(static_cast<int>(state.range(0)));
         renderer_ = std::make_unique<TRenderer>(box_, ctx.device(), ctx.surfaceFormat());
         renderer_->camera.setScreenSize({800.0f, 600.0f});
+        renderer_->camera.resetView();
+        createRenderTargets(ctx.device(), ctx.surfaceFormat());
 
         ToolsManager::pickingSystem = new PickingSystem(atomStorage_, box_, renderer_);
     }

@@ -1,7 +1,5 @@
 #include "WindowEvents.h"
 
-#include <backends/imgui_impl_wgpu.h>
-
 #include "Engine/math/Vec2.h"
 #include "GUI/interface/interface.h"
 #include "Rendering/BaseRenderer.h"
@@ -18,11 +16,20 @@ void WindowEvents::init(GLFWwindow* w, std::unique_ptr<IRenderer>& r, Interface&
 
     glfwSetWindowCloseCallback(window, windowCloseCallback);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+
+    int width = 0;
+    int height = 0;
+    glfwGetFramebufferSize(window, &width, &height);
+    syncFramebufferSize(width, height, false);
 }
 
 void WindowEvents::windowCloseCallback(GLFWwindow* window) { glfwSetWindowShouldClose(window, GLFW_TRUE); }
 
 void WindowEvents::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
+    syncFramebufferSize(width, height, true);
+}
+
+void WindowEvents::syncFramebufferSize(int width, int height, bool updateInterface) {
     if (width <= 0 || height <= 0) {
         return;
     }
@@ -30,14 +37,9 @@ void WindowEvents::framebufferSizeCallback(GLFWwindow* window, int width, int he
     (*renderer)->camera.setScreenSize(Vec2f(width, height));
     WGPUContext::instance().resize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 
-    if (appInterface == nullptr) {
+    if (!updateInterface || appInterface == nullptr) {
         return;
     }
 
     appInterface->styleManager.onResize(Vec2i(width, height));
-
-    if (appInterface->fontManager.load(appInterface->styleManager.getScale())) {
-        ImGui_ImplWGPU_InvalidateDeviceObjects();
-        ImGui_ImplWGPU_CreateDeviceObjects();
-    }
 }

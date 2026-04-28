@@ -8,8 +8,9 @@ set(APP_VERSION_MINOR 1)
 set(APP_VERSION_PATCH 01)
 set(APP_VERSION_STRING "${APP_VERSION_MAJOR}.${APP_VERSION_MINOR}.${APP_VERSION_PATCH}")
 
-option(OPTIMIZE_FOR_NATIVE "Enable -march=native optimization" ON)
+option(OPTIMIZE_FOR_NATIVE "Enable native CPU optimizations outside Debug builds" OFF)
 option(BUILD_BENCHMARKS "Build benchmarks" OFF)
+option(ENABLE_IPO "Enable link-time optimization for non-Debug builds when supported" ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -35,8 +36,6 @@ if(CCACHE_PROGRAM)
     set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
     message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
 endif()
-
-set(COMMON_WARNINGS -Wall -Wextra)
 
 include(dependencies)
 
@@ -65,10 +64,8 @@ add_dependencies(latticelab_lib embedded_resources)
 include(shaders)
 add_dependencies(latticelab_lib wgsl_shaders)
 
-target_compile_options(latticelab_lib PRIVATE 
-    -O3
-    ${COMMON_WARNINGS}
-    $<$<BOOL:${OPTIMIZE_FOR_NATIVE}>:-march=native>
+target_compile_options(latticelab_lib PRIVATE
+    $<$<AND:$<BOOL:${OPTIMIZE_FOR_NATIVE}>,$<NOT:$<CONFIG:Debug>>,$<CXX_COMPILER_ID:GNU,Clang,AppleClang>>:-march=native>
 )
 
 target_include_directories(latticelab_lib PUBLIC
@@ -96,22 +93,26 @@ else()
 endif()
 
 include(CheckIPOSupported)
-check_ipo_supported(RESULT lto_supported OUTPUT lto_error)
-if(lto_supported AND NOT MINGW)
-    message(STATUS "LTO (IPO) is supported and enabled")
-    set_target_properties(latticelab_lib PROPERTIES INTERPROCEDURAL_OPTIMIZATION FALSE)
-    set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION FALSE)
-elseif(lto_supported AND MINGW)
-    message(STATUS "LTO (IPO) is disabled for MinGW due to linker/LTO instability")
-else()
-    message(WARNING "LTO is not supported: ${lto_error}")
+if(ENABLE_IPO)
+    check_ipo_supported(RESULT lto_supported OUTPUT lto_error)
+    if(lto_supported AND NOT MINGW)
+        set_target_properties(latticelab_lib PROPERTIES
+            INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE
+            INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE
+            INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL TRUE
+        )
+        set_target_properties(${APP_NAME} PROPERTIES
+            INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE
+            INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE
+            INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL TRUE
+        )
+    elseif(MINGW)
+        message(STATUS "IPO is disabled for MinGW")
+    else()
+        message(STATUS "IPO is not supported: ${lto_error}")
+    endif()
 endif()
 
-target_compile_options(${APP_NAME} PRIVATE 
-    -O3
-    ${COMMON_WARNINGS}
-    $<$<BOOL:${OPTIMIZE_FOR_NATIVE}>:-march=native>
-)
 target_link_libraries(${APP_NAME} PRIVATE latticelab_lib)
 target_copy_webgpu_binaries(${APP_NAME})
 

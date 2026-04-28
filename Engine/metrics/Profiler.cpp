@@ -281,9 +281,22 @@ ProfileCounter& Profiler::counterFor(const char* name) {
 }
 
 ProfileScope::ProfileScope(const char* name) noexcept
-    : name_(name), treeIndex_(Profiler::instance().beginScope(name)), start_(Clock::now()) {}
+    : name_(name), treeIndex_(0) {
+    Profiler& profiler = Profiler::instance();
+    enabled_ = profiler.isFrameActive();
+    if (!enabled_) {
+        return;
+    }
+
+    treeIndex_ = profiler.beginScope(name);
+    start_ = Clock::now();
+}
 
 ProfileScope::~ProfileScope() {
+    if (!enabled_) {
+        return;
+    }
+
     const double ms = std::chrono::duration<double, std::milli>(Clock::now() - start_).count();
     Profiler::instance().endScope(treeIndex_, name_, ms);
 }
