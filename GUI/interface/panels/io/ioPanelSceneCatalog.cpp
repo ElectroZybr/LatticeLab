@@ -92,7 +92,7 @@ namespace {
         ParsedSceneInfo info;
         std::string section;
         std::string imageEncoding;
-        wgpu::TextureFormat imageFormat;
+        wgpu::TextureFormat imageFormat = wgpu::TextureFormat::RGBA8Unorm;
         std::string imageDataBase64;
         bool readingImageData = false;
 
@@ -127,20 +127,25 @@ namespace {
                 }
             }
             else if (section == "[image]") {
-                if (trimmed.starts_with("encoding ")) {
-                    imageEncoding = valueAfterTag(trimmed, "encoding");
+                try {
+                    if (trimmed.starts_with("encoding ")) {
+                        imageEncoding = valueAfterTag(trimmed, "encoding");
+                    }
+                    else if (trimmed.starts_with("format ")) {
+                        imageFormat = wgpu::TextureFormat(static_cast<WGPUTextureFormat>(std::stoi(valueAfterTag(trimmed, "format"))));
+                    }
+                    else if (trimmed.starts_with("width ")) {
+                        info.imageWidth = static_cast<unsigned>(std::max(0, std::stoi(valueAfterTag(trimmed, "width"))));
+                    }
+                    else if (trimmed.starts_with("height ")) {
+                        info.imageHeight = static_cast<unsigned>(std::max(0, std::stoi(valueAfterTag(trimmed, "height"))));
+                    }
+                    else if (trimmed == "data_begin") {
+                        readingImageData = true;
+                    }
                 }
-                else if (trimmed.starts_with("format ")) {
-                    imageFormat = wgpu::TextureFormat(static_cast<WGPUTextureFormat>(std::stoi(valueAfterTag(trimmed, "format"))));
-                }
-                else if (trimmed.starts_with("width ")) {
-                    info.imageWidth = static_cast<unsigned>(std::max(0, std::stoi(valueAfterTag(trimmed, "width"))));
-                }
-                else if (trimmed.starts_with("height ")) {
-                    info.imageHeight = static_cast<unsigned>(std::max(0, std::stoi(valueAfterTag(trimmed, "height"))));
-                }
-                else if (trimmed == "data_begin") {
-                    readingImageData = true;
+                catch (const std::exception&) {
+                    return {};
                 }
             }
         }
@@ -225,13 +230,18 @@ std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirec
     std::vector<IOPanelSceneTile> sceneTiles;
 
     const std::filesystem::path scenesDir = scenesDirectory.empty() ? std::filesystem::path(".") : std::filesystem::path(scenesDirectory);
-    if (!std::filesystem::exists(scenesDir) || !std::filesystem::is_directory(scenesDir)) {
+    std::error_code fsError;
+    if (!std::filesystem::exists(scenesDir, fsError) || fsError || !std::filesystem::is_directory(scenesDir, fsError) || fsError) {
         return sceneTiles;
     }
 
     std::vector<std::filesystem::path> scenePaths;
-    for (const auto& entry : std::filesystem::directory_iterator(scenesDir)) {
-        if (!entry.is_regular_file()) {
+    for (std::filesystem::directory_iterator it(scenesDir, fsError), end; !fsError && it != end; it.increment(fsError)) {
+        if (fsError) {
+            break;
+        }
+        const auto& entry = *it;
+        if (!entry.is_regular_file(fsError) || fsError) {
             continue;
         }
         if (entry.path().extension() == ".lat" || entry.path().extension() == ".latbin") {
@@ -251,6 +261,10 @@ std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirec
         tile.description = std::move(parsed.description);
 
         if (parsed.hasEmbeddedPreview && parsed.imageWidth > 0 && parsed.imageHeight > 0) {
+            if (!device) {
+                sceneTiles.emplace_back(std::move(tile));
+                continue;
+            }
             wgpu::TextureDescriptor texDesc{};
             texDesc.size = {parsed.imageWidth, parsed.imageHeight, 1};
             texDesc.format = parsed.imageFormat;

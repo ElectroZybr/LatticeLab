@@ -24,7 +24,12 @@ void IOPanel::ensureSceneCatalogLoaded() {
         return;
     }
 
-    sceneTiles_ = loadIOPanelSceneTiles(scenesDirectory_.string(), WGPUContext::instance().device());
+    try {
+        sceneTiles_ = loadIOPanelSceneTiles(scenesDirectory_.string(), WGPUContext::instance().device());
+    }
+    catch (const std::exception&) {
+        sceneTiles_.clear();
+    }
     sceneCatalogLoaded_ = true;
 }
 
