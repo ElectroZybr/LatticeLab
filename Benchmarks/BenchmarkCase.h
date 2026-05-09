@@ -5,6 +5,7 @@
 
 namespace Benchmarks {
     enum class SceneKind {
+        IdealCrystal3D,
         Crystal2D,
         Crystal3D,
         RandomGas2D,

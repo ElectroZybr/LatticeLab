@@ -12,6 +12,7 @@ bench.py — запускалка бенчмарков для Chemical Simulator
 """
 
 SCENES: list[tuple[str, str]] = [
+    ("ideal_crystal3d", "Идеальный кристалл 3D"),
     ("crystal3d", "Кристалл 3D"),
     ("crystal2d", "Кристалл 2D"),
     ("random_gas2d", "Случайный газ 2D"),

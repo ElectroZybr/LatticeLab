@@ -16,6 +16,9 @@ namespace Benchmarks {
         simulation.setIntegrator(benchmarkCase.integrator);
 
         switch (benchmarkCase.scene) {
+        case SceneKind::IdealCrystal3D:
+            buildCrystal2D(simulation, benchmarkCase);
+            break;            
         case SceneKind::Crystal2D:
             buildCrystal2D(simulation, benchmarkCase);
             break;
@@ -26,6 +29,11 @@ namespace Benchmarks {
             buildRandomGas2D(simulation, benchmarkCase);
             break;
         }
+    }
+
+    void BenchmarkScenes::buildIdealCrystal3D(Simulation& simulation, const BenchmarkCase& benchmarkCase) {
+        const int side = cubeSideFromCount(benchmarkCase.atomCount);
+        Scenes::hexLattice(simulation, side, AtomData::Type::Z, true);
     }
 
     void BenchmarkScenes::buildCrystal2D(Simulation& simulation, const BenchmarkCase& benchmarkCase) {

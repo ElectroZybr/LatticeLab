@@ -16,6 +16,7 @@ public:
     ForceField();
 
     void compute(AtomStorage& atoms, Bond::List& bonds, SimBox& box, NeighborList& neighborList, bool allowBondFormation, float dt) const;
+    void computePairInteractions(AtomStorage& atoms, NeighborList& neighborList) const;
     void syncWalls(const SimBox& box);
 
     void setGravity(Vec3f gravity = Vec3f(0, 5, 0)) { static_force_ = gravity; }
@@ -26,8 +27,6 @@ public:
     [[nodiscard]] bool isCoulombEnabled() const { return enableCoulomb_; }
 
 private:
-    void computePairInteractions(AtomStorage& atoms, NeighborList& neighborList) const;
-
     Vec3f static_force_;
     WallForceField wallForceField_;
     LJForceField ljForceField_;

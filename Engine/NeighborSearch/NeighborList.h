@@ -17,6 +17,7 @@ public:
 
     void clear();
     void build(const AtomStorage& atoms, SimBox& box);
+    void rebuildPipeline(const AtomStorage& atoms, SimBox& box);
     bool needsRebuild(const AtomStorage& atoms) const;
 
     [[nodiscard]] uint32_t atomCount() const;

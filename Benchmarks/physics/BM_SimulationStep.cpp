@@ -32,4 +32,6 @@ BENCHMARK_DEFINE_F(SimulationFixture, FullStepWithNeighborList)(benchmark::State
     setCounters(state);
 }
 
-BENCHMARK_REGISTER_F(SimulationFixture, FullStepWithNeighborList)->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);
+BENCHMARK_REGISTER_F(SimulationFixture, FullStepWithNeighborList)->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax)
+    ->Args({15625})   // 25^3
+    ->Args({103823}); // 47^3;
