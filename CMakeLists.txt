@@ -18,7 +18,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-set(FETCHCONTENT_BASE_DIR "C:/fc" CACHE PATH "Shared FetchContent base directory" FORCE)
+set(FETCHCONTENT_BASE_DIR "${CMAKE_BINARY_DIR}/_deps" CACHE PATH "FetchContent base directory" FORCE)
 
 # CMake 4.x: allow legacy dependencies that declare very old minimum policies.
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")

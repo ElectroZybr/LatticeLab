@@ -86,7 +86,7 @@ public:
         surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopyDst;
         surfaceConfig.width = width;
         surfaceConfig.height = height;
-        surfaceConfig.presentMode = wgpu::PresentMode::Mailbox;
+        surfaceConfig.presentMode = choosePresentMode(caps);
         surface_.configure(surfaceConfig);
 
         createDepthTexture(width, height);
@@ -141,13 +141,16 @@ public:
             return;
         }
 
+        wgpu::SurfaceCapabilities caps{};
+        surface_.getCapabilities(adapter_, &caps);
+
         wgpu::SurfaceConfiguration surfaceConfig{};
         surfaceConfig.device = device_;
         surfaceConfig.format = surfaceFormat_;
         surfaceConfig.usage = wgpu::TextureUsage::RenderAttachment | wgpu::TextureUsage::CopyDst;
         surfaceConfig.width = width;
         surfaceConfig.height = height;
-        surfaceConfig.presentMode = wgpu::PresentMode::Mailbox;
+        surfaceConfig.presentMode = choosePresentMode(caps);
         surface_.configure(surfaceConfig);
 
         createDepthTexture(width, height);
@@ -186,6 +189,28 @@ public:
 
 private:
     WGPUContext() = default;
+
+    static wgpu::PresentMode choosePresentMode(const wgpu::SurfaceCapabilities& caps) {
+        auto supports = [&](wgpu::PresentMode mode) {
+            for (size_t i = 0; i < caps.presentModeCount; ++i) {
+                if (caps.presentModes[i] == mode) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        if (supports(wgpu::PresentMode::Mailbox)) {
+            return wgpu::PresentMode::Mailbox;
+        }
+        if (supports(wgpu::PresentMode::FifoRelaxed)) {
+            return wgpu::PresentMode::FifoRelaxed;
+        }
+        if (supports(wgpu::PresentMode::Immediate)) {
+            return wgpu::PresentMode::Immediate;
+        }
+        return wgpu::PresentMode::Fifo;
+    }
 
     wgpu::Surface createSurface(GLFWwindow* window) {
 #if defined(__linux__)
