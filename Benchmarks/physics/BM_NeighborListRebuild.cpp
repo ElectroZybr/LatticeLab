@@ -2,12 +2,16 @@
 
 #include "Benchmarks/fixtures/SimulationFixture.h"
 
-// @bench_meta {"id":"SimulationFixture/NeighborListRebuild","ru":"Перестройка NeighborList","group":"Симуляция/Сетка и соседи"}
-BENCHMARK_DEFINE_F(SimulationFixture, NeighborListRebuild)(benchmark::State& state) {
+// @bench_meta {"id":"SimulationFixture/NeighborListRebuildOnly","ru":"Перестройка NeighborList","group":"Симуляция/Сетка и соседи"}
+BENCHMARK_DEFINE_F(SimulationFixture, NeighborListRebuildOnly)(benchmark::State& state) {
     rebuildScene();
 
+    auto& atoms = simulation_->atoms();
+    auto& box = simulation_->box();
+    box.grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
+
     for (auto _ : state) {
-        simulation_->neighborList().build(simulation_->atoms(), simulation_->box());
+        simulation_->neighborList().build(atoms, box);
         benchmark::DoNotOptimize(simulation_->neighborList().pairStorageSize());
         benchmark::ClobberMemory();
     }
@@ -15,8 +19,8 @@ BENCHMARK_DEFINE_F(SimulationFixture, NeighborListRebuild)(benchmark::State& sta
     setCounters(state);
 }
 
-BENCHMARK_REGISTER_F(SimulationFixture, NeighborListRebuild)
+BENCHMARK_REGISTER_F(SimulationFixture, NeighborListRebuildOnly)
     ->RangeMultiplier(8)
     ->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax)
-    ->Args({10648})   // 22^3
+    ->Args({15625})   // 25^3
     ->Args({103823}); // 47^3

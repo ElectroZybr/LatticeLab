@@ -23,6 +23,9 @@ namespace Benchmarks {
             return SceneKind::Crystal3D;
         }
         const std::string value(raw);
+        if (value == "ideal_crystal3d") {
+            return SceneKind::IdealCrystal3D;
+        }
         if (value == "crystal2d") {
             return SceneKind::Crystal2D;
         }

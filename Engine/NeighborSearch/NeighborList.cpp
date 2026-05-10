@@ -48,9 +48,14 @@ void NeighborList::clear() {
     resetStats();
 }
 
-void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
+void NeighborList::rebuildPipeline(const AtomStorage& atoms, SimBox& box) {
     // перестройка пространственной сетки
     box.grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
+    // перестройка списка соседей
+    build(atoms, box);
+}
+
+void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
     PROFILE_SCOPE("NeighborList::build");
 
     const SpatialGrid& grid = box.grid;

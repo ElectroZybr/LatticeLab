@@ -72,7 +72,7 @@ int Application::run() {
     // создание сцены
     // Scenes::crystal(simulation, 400, AtomData::Type::Z, false);
     // Scenes::crystal(simulation, 400, AtomData::Type::Z, false, Scenes::CrystalPlane::XZ);
-    Scenes::hexLattice(simulation, Vec3f(250, 250, 1), AtomData::Type::Z, 0.1f, 0.0f);
+    Scenes::hexLattice(simulation, Vec3f(25, 25, 25), AtomData::Type::Z);
     // std::vector<Scenes::AtomTypeSpec> gasSpecs = {
     //     // {AtomData::Type::O, 0, 80.0f},    // 80% водорода
     //     {AtomData::Type::Na, 0, 50.0f},   // 10% натрия
