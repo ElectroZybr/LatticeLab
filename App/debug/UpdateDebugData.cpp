@@ -68,10 +68,10 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     const float stepsPerSecond = stepsRateSample.rate;
 
     debugViews.sim->add_data("Средняя скорость (км/ч)", simulation.averageSpeedKmPerHour());
-    // debugViews.sim->add_data("Полная энергия (pj)", simulation.fullEnegryPJ());
+    debugViews.sim->add_data("Полная энергия (pj)", simulation.fullEnegryPJ());
     debugViews.sim->add_data("Полная средняя энергия (eV)", simulation.fullAverageEnergyEv());
-    // debugViews.sim->add_data("Температура (K)", simulation.temperatureK());
-    // debugViews.sim->add_data("Температура (°C)", simulation.temperatureC());
+    debugViews.sim->add_data("Температура (K)", simulation.temperatureK());
+    debugViews.sim->add_data("Температура (°C)", simulation.temperatureC());
     debugViews.sim->add_data("Память (МБ)", MemoryMetrics::getRSS() / 1024.f / 1024.f);
     debugViews.sim->add_data("Рендер (мс)", renderMs);
     debugViews.sim->add_data("Capture readback (ms)", captureReadbackMs);
@@ -95,10 +95,7 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     debugViews.neighbor->add_data("Память NeighborList (МБ)", static_cast<float>(neighborList.memoryBytes()) / 1024.0f / 1024.0f);
     debugViews.neighbor->add_data("Память SpatialGrid (МБ)", static_cast<float>(box.grid.memoryBytes()) / 1024.0f / 1024.0f);
     debugViews.neighbor->add_data("Пар в NL", neighborList.pairStorageSize());
-    const float avgNeighborsPerAtom = neighborList.atomCount() > 0
-        ? (2.0f * static_cast<float>(neighborList.pairStorageSize())) / static_cast<float>(neighborList.atomCount())
-        : 0.0f;
-    debugViews.neighbor->add_data("Ср. соседей на атом", avgNeighborsPerAtom);
+    debugViews.neighbor->add_data("Ср. соседей на атом", neighborList.stats().avgNeighborsPerAtom(neighborList));
     debugViews.neighbor->add_data("Cutoff", neighborList.cutoff());
     debugViews.neighbor->add_data("Skin", neighborList.skin());
     debugViews.neighbor->add_data("List radius", neighborList.listRadius());

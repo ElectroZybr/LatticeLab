@@ -3,6 +3,8 @@
 #include <array>
 #include <cstddef>
 
+class NeighborList;
+
 class NeighborListStats {
 public:
     void reset() {
@@ -44,6 +46,14 @@ public:
     }
 
     [[nodiscard]] size_t rebuildCount() const { return rebuildCount_; }
+
+    // [[nodiscard]] size_t tightness() const { return tightness_; }
+
+    [[nodiscard]] float avgNeighborsPerAtom(NeighborList& neighborList) const {
+        return neighborList.atomCount() > 0
+        ? (2.0f * static_cast<float>(neighborList.pairStorageSize())) / static_cast<float>(neighborList.atomCount())
+        : 0.0f;
+    }
 
     [[nodiscard]] float averageStepsBetweenRebuilds() const {
         if (rebuildCount_ <= 1) {
