@@ -37,8 +37,7 @@ StepData Simulation::makeStepData() {
 void Simulation::update() {
     PROFILE_SCOPE("Simulation::update");
     if (neighborList_.needsRebuild(atomStorage_)) {
-        neighborList_.build(atomStorage_, sim_box_);
-        neighborList_.recordRebuild(sim_step);
+        neighborList_.rebuildPipeline(atomStorage_, sim_box_, sim_step);
     }
 
     StepData stepData = makeStepData();

@@ -49,11 +49,7 @@ public:
 
     // [[nodiscard]] size_t tightness() const { return tightness_; }
 
-    [[nodiscard]] float avgNeighborsPerAtom(NeighborList& neighborList) const {
-        return neighborList.atomCount() > 0
-        ? (2.0f * static_cast<float>(neighborList.pairStorageSize())) / static_cast<float>(neighborList.atomCount())
-        : 0.0f;
-    }
+    [[nodiscard]] float avgNeighborsPerAtom(const NeighborList& neighborList) const;
 
     [[nodiscard]] float averageStepsBetweenRebuilds() const {
         if (rebuildCount_ <= 1) {

@@ -17,7 +17,7 @@ public:
 
     void clear();
     void build(const AtomStorage& atoms, SimBox& box);
-    void rebuildPipeline(const AtomStorage& atoms, SimBox& box);
+    void rebuildPipeline(const AtomStorage& atoms, SimBox& box, int simStep);
     bool needsRebuild(const AtomStorage& atoms) const;
 
     [[nodiscard]] uint32_t atomCount() const;
@@ -31,7 +31,6 @@ public:
     [[nodiscard]] const std::vector<uint32_t>& offsets() const { return offsets_; }
     [[nodiscard]] const NeighborListStats& stats() const { return stats_; }
     void resetStats();
-    void recordRebuild(int simStep);
 
     // Hot-path helper для записи соседей одного атома.
     inline void writeAtomNeighbors(const SpatialGrid& grid, const float* x, const float* y, const float* z, const uint32_t atomIndex,

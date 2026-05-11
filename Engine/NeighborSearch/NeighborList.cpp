@@ -48,11 +48,14 @@ void NeighborList::clear() {
     resetStats();
 }
 
-void NeighborList::rebuildPipeline(const AtomStorage& atoms, SimBox& box) {
+void NeighborList::rebuildPipeline(const AtomStorage& atoms, SimBox& box, int simStep) {
     // перестройка пространственной сетки
     box.grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
     // перестройка списка соседей
     build(atoms, box);
+    // обновление метрик
+    const float rebuildTimeMs = static_cast<float>(Profiler::instance().lastMs("NeighborList::build"));
+    stats_.recordRebuild(simStep, rebuildTimeMs);
 }
 
 void NeighborList::build(const AtomStorage& atoms, SimBox& box) {
@@ -130,11 +133,6 @@ uint32_t NeighborList::memoryBytes() const {
 }
 
 void NeighborList::resetStats() { stats_.reset(); }
-
-void NeighborList::recordRebuild(int simStep) {
-    const float rebuildTimeMs = static_cast<float>(Profiler::instance().lastMs("NeighborList::build"));
-    stats_.recordRebuild(simStep, rebuildTimeMs);
-}
 
 void NeighborList::reserveListBuffers(const AtomStorage& atoms) {
     const size_t prevCapacity = neighbors_.capacity();
