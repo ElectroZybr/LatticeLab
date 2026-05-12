@@ -69,6 +69,11 @@ target_compile_options(latticelab_lib PRIVATE
     $<$<AND:$<BOOL:${OPTIMIZE_FOR_NATIVE}>,$<NOT:$<CONFIG:Debug>>,$<CXX_COMPILER_ID:GNU,Clang,AppleClang>>:-march=native>
 )
 
+target_compile_definitions(latticelab_lib PUBLIC
+    $<$<PLATFORM_ID:Windows>:NOMINMAX>
+    $<$<PLATFORM_ID:Windows>:WIN32_LEAN_AND_MEAN>
+)
+
 target_include_directories(latticelab_lib PUBLIC
     ${CMAKE_SOURCE_DIR}
     ${GENERATED_ROOT}

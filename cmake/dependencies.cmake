@@ -110,6 +110,8 @@ FetchContent_Declare(
     GIT_TAG        v1.5.6
     SOURCE_SUBDIR  build/cmake
 )
+set(ZSTD_BUILD_SHARED OFF CACHE BOOL "Build zstd shared library" FORCE)
+set(ZSTD_BUILD_STATIC ON CACHE BOOL "Build zstd static library" FORCE)
 set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "Build zstd programs")
 set(ZSTD_BUILD_TESTS OFF CACHE BOOL "Build zstd tests")
 set(ZSTD_BUILD_CONTRIB OFF CACHE BOOL "Build zstd contrib")
