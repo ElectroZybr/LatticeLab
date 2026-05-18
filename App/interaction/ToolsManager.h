@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "App/interaction/picking/PickingSystem.h"
+#include "App/interaction/selection/NeighborListOverlay.h"
 #include "App/interaction/tools/ITool.h"
 #include "Engine/Simulation.h"
 #include "Engine/math/Vec3.h"
@@ -17,6 +18,14 @@ struct UiState;
 
 class ToolsManager {
 public:
+    class Overlay {
+    public:
+        void draw();
+
+    private:
+        NeighborListOverlay neighborListOverlay_;
+    };
+
     enum class Mode : uint8_t {
         Cursor,
         Frame,
@@ -41,6 +50,7 @@ public:
     static Mode currentMode();
     static bool isSelectionMode(Mode mode);
 
+    static Overlay overlay;
     static PickingSystem* pickingSystem;
 
 private:

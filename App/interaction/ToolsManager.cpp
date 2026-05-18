@@ -32,6 +32,7 @@ namespace {
 GLFWwindow* ToolsManager::window = nullptr;
 std::unique_ptr<IRenderer>* ToolsManager::renderer = nullptr;
 PickingSystem* ToolsManager::pickingSystem = nullptr;
+ToolsManager::Overlay ToolsManager::overlay = {};
 Simulation* ToolsManager::simulation = nullptr;
 UiState* ToolsManager::uiState = nullptr;
 SideToolsPanel* ToolsManager::sideToolsPanel = nullptr;
@@ -172,6 +173,15 @@ ToolsManager::Mode ToolsManager::currentMode() {
 }
 
 bool ToolsManager::isSelectionMode(ToolsManager::Mode mode) { return mode == Mode::Frame || mode == Mode::Lasso; }
+
+void ToolsManager::Overlay::draw() {
+    if (!ToolsManager::simulation || !ToolsManager::renderer || !ToolsManager::renderer->get() || !ToolsManager::pickingSystem) {
+        return;
+    }
+
+    neighborListOverlay_.draw(*ToolsManager::simulation, *ToolsManager::pickingSystem, **ToolsManager::renderer);
+    ToolsManager::pickingSystem->getOverlay().draw();
+}
 
 ITool* ToolsManager::activeTool() noexcept { return toolInstances[toIndex(currentMode())].get(); }
 
