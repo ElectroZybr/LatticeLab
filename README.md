@@ -64,5 +64,6 @@ LatticeLab — это desktop-приложение, где можно экспе
 
 ## Ссылки
 
+#### [Официальный сайт](https://latticelab.dev)
 #### [Канал на YouTube](https://www.youtube.com/@ElectroChajnik)
-#### [Поддержать проект](https://www.donationalerts.com/r/electrozybr)
+#### [Поддержать проект](https://latticelab.dev/donate.html)
