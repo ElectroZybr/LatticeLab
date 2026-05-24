@@ -84,7 +84,7 @@ using Setter = std::function<void(GlobalStrings&, std::string)>;
 
 // we may consider moving this to a source file if compile
 // time becomes an issue
-inline std::unordered_map<const char*, Setter> global_string_setters = {
+inline std::unordered_map<std::string, Setter> global_string_setters = {
     STRING_SETTER(integrator_velocity_verlet),
     STRING_SETTER(integrator_kdk),
     STRING_SETTER(integrator_runge_kutta_4),
@@ -150,4 +150,4 @@ inline std::unordered_map<const char*, Setter> global_string_setters = {
     STRING_SETTER(version_text_after),
 };
 
-static GlobalStrings* global_strings = new GlobalStrings;
+inline GlobalStrings* global_strings = new GlobalStrings;
