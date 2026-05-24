@@ -1,0 +1,6 @@
+integrator_velocity_verlet = "Velocity Verlet",
+integrator_kdk = "KDK",
+integrator_runge_kutta_4 = "Runge-Kutta 4",
+integrator_langevin = "Langevin",
+
+integrator_unknown = "\"Unknown",
