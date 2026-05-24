@@ -55,11 +55,17 @@ void LanguageStringParser::loadGlobalStringByPath(std::string path) {
     std::string_view rhs{};
     std::string rhs_s{};
 
+    char prev = ' ';
+
     CurrentAction current_token_type = CurrentAction::lhs;
     for (char symbol; stream.get(symbol);) {
+        if (symbol == '\\') {
+            prev = symbol;
+            continue;
+        }
         switch (current_token_type) {
         case CurrentAction::lhs:
-            if (symbol == '=') {
+            if (symbol == '=' && prev != '\\') {
                 lhs = {strdup(lhs_s.data()), lhs_s.length()};
                 current_token_type = CurrentAction::rhs;
             }
@@ -68,8 +74,8 @@ void LanguageStringParser::loadGlobalStringByPath(std::string path) {
             }
             break;
         case CurrentAction::rhs:
-            if (symbol == ',') {
-                rhs = { strdup(rhs_s.data()), rhs_s.length() };
+            if (symbol == ',' && prev != '\\') {
+                rhs = {strdup(rhs_s.data()), rhs_s.length()};
                 line_finished(lhs, rhs);
                 lhs_s.clear();
                 rhs_s.clear();
@@ -80,11 +86,13 @@ void LanguageStringParser::loadGlobalStringByPath(std::string path) {
             }
             break;
         }
+
+        prev = symbol;
     }
 
     if (current_token_type == CurrentAction::rhs) {
-      rhs = { strdup(rhs_s.data()), rhs_s.length() };
-      line_finished(lhs, rhs);
+        rhs = {strdup(rhs_s.data()), rhs_s.length()};
+        line_finished(lhs, rhs);
     }
 }
 
