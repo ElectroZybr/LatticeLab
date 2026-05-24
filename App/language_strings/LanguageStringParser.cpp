@@ -9,11 +9,12 @@
 
 enum class CurrentAction { lhs, rhs };
 
+// TODO: check for `\n\r` instead, if this doesn't work.
 void trimString(std::string_view& str) {
-    if (str.starts_with(' ')) {
+    while (str.starts_with(' ') || str.starts_with('\n')) {
         str.remove_prefix(1);
     }
-    if (str.ends_with(' ')) {
+    while (str.ends_with(' ') || str.starts_with('\n')) {
         str.remove_suffix(1);
     }
 }
@@ -69,7 +70,9 @@ void LanguageStringParser::loadGlobalStringByPath(std::string path) {
         case CurrentAction::rhs:
             if (symbol == ',') {
                 rhs = { strdup(rhs_s.data()), rhs_s.length() };
-		line_finished(lhs, rhs);
+                line_finished(lhs, rhs);
+                lhs_s.clear();
+                rhs_s.clear();
                 current_token_type = CurrentAction::lhs;
             }
             else {
