@@ -12,3 +12,13 @@ std::string LanguagePath::getPathByLanguage(Language lang) {
     break;
   }
 }
+
+std::string& CachedString::str() { return this->original_str; }
+
+const char* CachedString::c_str() {
+    if (!cached) {
+        this->cached_c_str = this->original_str.c_str();
+        cached = true;
+    }
+    return this->cached_c_str;
+}

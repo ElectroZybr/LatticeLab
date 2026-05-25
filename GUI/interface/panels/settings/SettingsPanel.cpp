@@ -352,7 +352,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
     }
 
     const float exitButtonWidth = ImGui::GetContentRegionAvail().x;
-    const std::string versionText = global_strings->version_text_pre + LATTICELAB_VERSION_STRING + global_strings->version_text_after;
+    const std::string versionText = global_strings->version_text_pre.str() + LATTICELAB_VERSION_STRING + global_strings->version_text_after.str();
     const float versionWidth = ImGui::CalcTextSize(versionText.c_str()).x;
     const float footerHeight = ImGui::GetFrameHeightWithSpacing() + ImGui::GetTextLineHeightWithSpacing();
     const float remaining = ImGui::GetContentRegionAvail().y - footerHeight;

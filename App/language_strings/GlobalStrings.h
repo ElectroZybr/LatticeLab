@@ -11,76 +11,86 @@ public:
     static std::string getPathByLanguage(Language lang);
 };
 
+class CachedString {
+public:
+    std::string& str();
+    const char* c_str();
+private:
+  std::string original_str;
+  bool cached = false;
+  const char* cached_c_str;
+};
+
 class GlobalStrings {
 public:
-    std::string integrator_velocity_verlet;
-    std::string integrator_kdk;
-    std::string integrator_runge_kutta_4;
-    std::string integrator_langevin;
-    std::string integrator_unknown;
+    CachedString integrator_velocity_verlet;
+    CachedString integrator_kdk;
+    CachedString integrator_runge_kutta_4;
+    CachedString integrator_langevin;
+    CachedString integrator_unknown;
 
-    std::string speed_color_normal_coloring;
-    std::string speed_color_gradient_coloring;
-    std::string speed_color_turbo_coloring;
+    CachedString speed_color_normal_coloring;
+    CachedString speed_color_gradient_coloring;
+    CachedString speed_color_turbo_coloring;
 
-    std::string capture_preset_ultrafast;
-    std::string capture_preset_veryfast;
-    std::string capture_preset_faster;
-    std::string capture_preset_fast;
-    std::string capture_preset_medium;
+    CachedString capture_preset_ultrafast;
+    CachedString capture_preset_veryfast;
+    CachedString capture_preset_faster;
+    CachedString capture_preset_fast;
+    CachedString capture_preset_medium;
 
-    std::string capture_pixel_format_Yuv420p;
-    std::string capture_pixel_format_Yuv444p;
+    CachedString capture_pixel_format_Yuv420p;
+    CachedString capture_pixel_format_Yuv444p;
 
-    std::string imgui_settings_panel;
-    std::string imgui_simulation;
-    std::string imgui_gravity;
-    std::string imgui_reset_gravity;
-    std::string imgui_gravity_x;
-    std::string imgui_gravity_y;
-    std::string imgui_gravity_z;
-    std::string imgui_integrator;
-    std::string imgui_warning_not_implemented_used_as_velocity_verlet;
-    std::string imgui_speed_of_light;
-    std::string imgui_speed_of_light_unlimited;
-    std::string imgui_accel_damping;
-    std::string imgui_time_step;
-    std::string imgui_bond_formation;
-    std::string imgui_lj;
-    std::string imgui_coulomb;
-    std::string imgui_render;
-    std::string imgui_grid;
-    std::string imgui_connections;
-    std::string imgui_color_scheme;
-    std::string imgui_speed_color_mode;
-    std::string imgui_max_gradien_velocity;
-    std::string imgui_speed_gradient_max_slider;
-    std::string imgui_auto_speed_gradien;
-    std::string imgui_neighbour_list;
-    std::string imgui_cell_size;
-    std::string imgui_cutoff_nl;
-    std::string imgui_skin_nl;
-    std::string imgui_write;
-    std::string imgui_video_saving_folder;
-    std::string imgui_capture_dir;
-    std::string imgui_capture_dir_browse;
-    std::string imgui_capture_settings_table;
-    std::string imgui_fps_capture;
-    std::string imgui_crf_capture;
-    std::string imgui_preset_capture;
-    std::string imgui_color_capture;
-    std::string imgui_reset_settings;
-    std::string imgui_exit_button;
+    CachedString imgui_settings_panel;
+    CachedString imgui_simulation;
+    CachedString imgui_gravity;
+    CachedString imgui_reset_gravity;
+    CachedString imgui_gravity_x;
+    CachedString imgui_gravity_y;
+    CachedString imgui_gravity_z;
+    CachedString imgui_integrator;
+    CachedString imgui_warning_not_implemented_used_as_velocity_verlet;
+    CachedString imgui_speed_of_light;
+    CachedString imgui_speed_of_light_unlimited;
+    CachedString imgui_accel_damping;
+    CachedString imgui_time_step;
+    CachedString imgui_bond_formation;
+    CachedString imgui_lj;
+    CachedString imgui_coulomb;
+    CachedString imgui_render;
+    CachedString imgui_grid;
+    CachedString imgui_connections;
+    CachedString imgui_color_scheme;
+    CachedString imgui_speed_color_mode;
+    CachedString imgui_max_gradien_velocity;
+    CachedString imgui_speed_gradient_max_slider;
+    CachedString imgui_auto_speed_gradien;
+    CachedString imgui_neighbour_list;
+    CachedString imgui_cell_size;
+    CachedString imgui_cutoff_nl;
+    CachedString imgui_skin_nl;
+    CachedString imgui_write;
+    CachedString imgui_video_saving_folder;
+    CachedString imgui_capture_dir;
+    CachedString imgui_capture_dir_browse;
+    CachedString imgui_capture_settings_table;
+    CachedString imgui_fps_capture;
+    CachedString imgui_crf_capture;
+    CachedString imgui_preset_capture;
+    CachedString imgui_color_capture;
+    CachedString imgui_reset_settings;
+    CachedString imgui_exit_button;
 
-    std::string version_text_pre;
-    std::string version_text_after;
+    CachedString version_text_pre;
+    CachedString version_text_after;
 };
+
+using Setter = std::function<void(GlobalStrings&, std::string)>;
 
 // cool macro """hack"""
 #define STRING_SETTER(member) \
-    {#member, [](GlobalStrings& s, const std::string& v) { s.member = v; }}
-
-using Setter = std::function<void(GlobalStrings&, std::string)>;
+    {#member, [](GlobalStrings& s, const std::string& v) { s.member.str() = v; }}
 
 // we may consider moving this to a source file if compile
 // time becomes an issue
