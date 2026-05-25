@@ -8,7 +8,7 @@
 #include "App/AppSignals.h"
 #include "App/UserSettings.h"
 #include "App/capture/CaptureController.h"
-#include "App/language_strings/GlobalStrings.h"
+#include "App/localization/i18n.h"
 #include "Engine/Simulation.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/style/ComboStyle.h"
@@ -16,57 +16,59 @@
 #include "generated/AppVersion.h"
 
 namespace {
-    const char* integratorName(Integrator::Scheme scheme) {
+    std::string_view integratorName(Integrator::Scheme scheme) {
         switch (scheme) {
         case Integrator::Scheme::Verlet:
-            return global_strings->integrator_velocity_verlet.c_str();
+            return i18n::tr("integrator_velocity_verlet");
         case Integrator::Scheme::KDK:
-            return global_strings->integrator_kdk.c_str();
+            return i18n::tr("integrator_kdk");
         case Integrator::Scheme::RK4:
-            return global_strings->integrator_runge_kutta_4.c_str();
+            return i18n::tr("integrator_runge_kutta_4");
         case Integrator::Scheme::Langevin:
-            return global_strings->integrator_langevin.c_str();
+            return i18n::tr("integrator_langevin");
+        default:
+            return i18n::tr("integrator_unknown");
         }
-
-        return global_strings->integrator_unknown.c_str();
     }
 
-    const char* speedColorModeName(IRenderer::SpeedColorMode mode) {
+    std::string_view speedColorModeName(IRenderer::SpeedColorMode mode) {
         switch (mode) {
         case IRenderer::SpeedColorMode::AtomColor:
-            return global_strings->speed_color_normal_coloring.c_str();
+            return i18n::tr("speed_color_normal_coloring");
         case IRenderer::SpeedColorMode::GradientClassic:
-            return global_strings->speed_color_gradient_coloring.c_str();
+            return i18n::tr("speed_color_gradient_coloring");
         case IRenderer::SpeedColorMode::GradientTurbo:
-            return global_strings->speed_color_turbo_coloring.c_str();
+            return i18n::tr("speed_color_turbo_coloring");
+        default:
+            return i18n::tr("speed_color_normal_coloring");
         }
-        return global_strings->speed_color_normal_coloring.c_str();
     }
 
-    const char* capturePresetName(CaptureSettings::Preset preset) {
+    std::string_view capturePresetName(CaptureSettings::Preset preset) {
         switch (preset) {
         case CaptureSettings::Preset::Ultrafast:
-            return global_strings->capture_preset_ultrafast.c_str();
+            return i18n::tr("capture_preset_ultrafast");
         case CaptureSettings::Preset::Veryfast:
-            return global_strings->capture_preset_veryfast.c_str();
+            return i18n::tr("capture_preset_veryfast");
         case CaptureSettings::Preset::Faster:
-            return global_strings->capture_preset_faster.c_str();
+            return i18n::tr("capture_preset_faster");
         case CaptureSettings::Preset::Fast:
-            return global_strings->capture_preset_fast.c_str();
+            return i18n::tr("capture_preset_fast");
         case CaptureSettings::Preset::Medium:
-            return global_strings->capture_preset_medium.c_str();
+            return i18n::tr("capture_preset_medium");
+        default:
+            return i18n::tr("capture_preset_veryfast");
         }
-        return global_strings->capture_preset_veryfast.c_str();
     }
 
-    const char* capturePixelFormatName(CaptureSettings::PixelFormat pixelFormat) {
+    std::string_view capturePixelFormatName(CaptureSettings::PixelFormat pixelFormat) {
         switch (pixelFormat) {
         case CaptureSettings::PixelFormat::Yuv420p:
-            return global_strings->capture_pixel_format_Yuv420p.c_str();
+            return i18n::tr("capture_pixel_format_Yuv420p");
         case CaptureSettings::PixelFormat::Yuv444p:
-            return global_strings->capture_pixel_format_Yuv444p.c_str();
+            return i18n::tr("capture_pixel_format_Yuv444p");
         }
-        return global_strings->capture_pixel_format_Yuv444p.c_str();
+        return i18n::tr("capture_pixel_format_Yuv444p");
     }
 }
 
@@ -88,14 +90,14 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
 
     ImGui::SetNextWindowPos(ImVec2(x, topOffset));
     ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
-    ImGui::Begin(global_strings->imgui_settings_panel.c_str(), nullptr, PANEL_FLAGS);
+    ImGui::Begin("##SettingsPanel", nullptr, PANEL_FLAGS);
 
-    ImGui::SeparatorText(global_strings->imgui_simulation.c_str());
+    ImGui::SeparatorText(i18n::tr("imgui_simulation").data());
 
-    ImGui::TextUnformatted(global_strings->imgui_gravity.c_str());
+    ImGui::TextUnformatted(i18n::tr("imgui_gravity").data());
     ImGui::SameLine();
     Vec3f gravity = simulation.getGravity();
-    if (ImGui::Button(global_strings->imgui_reset_gravity.c_str(), ImVec2(50.f * uiScale, 0.f))) {
+    if (ImGui::Button(i18n::tr("imgui_reset_gravity").data(), ImVec2(50.f * uiScale, 0.f))) {
         simulation.setGravity(Vec3f(0, 0, 0));
         gravity = simulation.getGravity();
     }
@@ -103,15 +105,15 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
     float gy = gravity.y;
     float gz = gravity.z;
     bool gravityChanged = false;
-    gravityChanged |= ImGui::SliderFloat(global_strings->imgui_gravity_x.c_str(), &gx, -10.0f, 10.0f, "%.2f");
-    gravityChanged |= ImGui::SliderFloat(global_strings->imgui_gravity_y.c_str(), &gy, -10.0f, 10.0f, "%.2f");
-    gravityChanged |= ImGui::SliderFloat(global_strings->imgui_gravity_z.c_str(), &gz, -10.0f, 10.0f, "%.2f");
+    gravityChanged |= ImGui::SliderFloat(i18n::tr("imgui_gravity_x").data(), &gx, -10.0f, 10.0f, "%.2f");
+    gravityChanged |= ImGui::SliderFloat(i18n::tr("imgui_gravity_y").data(), &gy, -10.0f, 10.0f, "%.2f");
+    gravityChanged |= ImGui::SliderFloat(i18n::tr("imgui_gravity_z").data(), &gz, -10.0f, 10.0f, "%.2f");
     if (gravityChanged) {
         simulation.setGravity(Vec3f(gx, gy, gz));
     }
 
     Integrator::Scheme currentIntegrator = simulation.getIntegrator();
-    if (ComboStyle::beginCombo(global_strings->imgui_integrator.c_str(), integratorName(currentIntegrator), 0.0f, uiScale)) {
+    if (ComboStyle::beginCombo(i18n::tr("imgui_integrator").data(), integratorName(currentIntegrator).data(), 0.0f, uiScale)) {
         const Integrator::Scheme schemes[] = {
             Integrator::Scheme::Verlet,
             Integrator::Scheme::KDK,
@@ -121,7 +123,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
 
         for (Integrator::Scheme scheme : schemes) {
             const bool isSelected = (scheme == currentIntegrator);
-            if (ImGui::Selectable(integratorName(scheme), isSelected)) {
+            if (ImGui::Selectable(integratorName(scheme).data(), isSelected)) {
                 simulation.setIntegrator(scheme);
                 currentIntegrator = scheme;
             }
@@ -134,55 +136,56 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
 
     if (currentIntegrator == Integrator::Scheme::RK4 || currentIntegrator == Integrator::Scheme::Langevin) {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.00f, 0.75f, 0.25f, 1.00f));
-        ImGui::TextWrapped(global_strings->imgui_warning_not_implemented_used_as_velocity_verlet.c_str(), integratorName(currentIntegrator));
+        ImGui::TextWrapped(i18n::tr("imgui_warning_not_implemented_used_as_velocity_verlet").data(),
+                           integratorName(currentIntegrator).data());
         ImGui::PopStyleColor();
     }
 
     float maxParticleSpeed = simulation.getMaxParticleSpeed();
     ImGui::PushItemWidth(150.0f * uiScale);
-    if (ImGui::SliderFloat(global_strings->imgui_speed_of_light.c_str(), &maxParticleSpeed, 0.0f, 100.0f,
-                           maxParticleSpeed <= 0.0f ? global_strings->imgui_speed_of_light_unlimited.c_str() : "%.2f")) {
+    if (ImGui::SliderFloat(i18n::tr("imgui_speed_of_light").data(), &maxParticleSpeed, 0.0f, 100.0f,
+                           maxParticleSpeed <= 0.0f ? i18n::tr("imgui_speed_of_light_unlimited").data() : "%.2f")) {
         simulation.setMaxParticleSpeed(maxParticleSpeed);
     }
     ImGui::PopItemWidth();
 
     float accelDamping = simulation.getAccelDamping();
     ImGui::PushItemWidth(150.0f * uiScale);
-    if (ImGui::SliderFloat(global_strings->imgui_accel_damping.c_str(), &accelDamping, 0.0f, 1.0f, "%.3f")) {
+    if (ImGui::SliderFloat(i18n::tr("imgui_accel_damping").data(), &accelDamping, 0.0f, 1.0f, "%.3f")) {
         simulation.setAccelDamping(accelDamping);
     }
     ImGui::PopItemWidth();
 
     float dt = simulation.getDt();
     ImGui::PushItemWidth(150.0f * uiScale);
-    if (ImGui::SliderFloat(global_strings->imgui_time_step.c_str(), &dt, 0.0001f, 0.05f, "%.4f",
+    if (ImGui::SliderFloat(i18n::tr("imgui_time_step").data(), &dt, 0.0001f, 0.05f, "%.4f",
                            ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_Logarithmic)) {
         simulation.setDt(dt);
     }
     ImGui::PopItemWidth();
 
     bool bondFormationEnabled = simulation.isBondFormationEnabled();
-    if (ImGui::Checkbox(global_strings->imgui_bond_formation.c_str(), &bondFormationEnabled)) {
+    if (ImGui::Checkbox(i18n::tr("imgui_bond_formation").data(), &bondFormationEnabled)) {
         simulation.setBondFormationEnabled(bondFormationEnabled);
     }
 
     bool ljEnabled = simulation.isLJEnabled();
-    if (ImGui::Checkbox(global_strings->imgui_lj.c_str(), &ljEnabled)) {
+    if (ImGui::Checkbox(i18n::tr("imgui_lj").data(), &ljEnabled)) {
         simulation.setLJEnabled(ljEnabled);
     }
     ImGui::SameLine();
     bool coulombEnabled = simulation.isCoulombEnabled();
-    if (ImGui::Checkbox(global_strings->imgui_coulomb.c_str(), &coulombEnabled)) {
+    if (ImGui::Checkbox(i18n::tr("imgui_coulomb").data(), &coulombEnabled)) {
         simulation.setCoulombEnabled(coulombEnabled);
     }
 
-    ImGui::SeparatorText(global_strings->imgui_render.c_str());
-    ImGui::Checkbox(global_strings->imgui_grid.c_str(), &renderer->drawGrid);
-    ImGui::Checkbox(global_strings->imgui_connections.c_str(), &renderer->drawBonds);
+    ImGui::SeparatorText(i18n::tr("imgui_render").data());
+    ImGui::Checkbox(i18n::tr("imgui_grid").data(), &renderer->drawGrid);
+    ImGui::Checkbox(i18n::tr("imgui_connections").data(), &renderer->drawBonds);
 
-    ImGui::TextUnformatted(global_strings->imgui_color_scheme.c_str());
+    ImGui::TextUnformatted(i18n::tr("imgui_color_scheme").data());
     IRenderer::SpeedColorMode speedMode = renderer->speedColorMode;
-    if (ComboStyle::beginCombo(global_strings->imgui_speed_color_mode.c_str(), speedColorModeName(speedMode), 220.0f * uiScale, uiScale,
+    if (ComboStyle::beginCombo(i18n::tr("imgui_speed_color_mode").data(), speedColorModeName(speedMode).data(), 220.0f * uiScale, uiScale,
                                ImGuiComboFlags_HeightLargest)) {
         const IRenderer::SpeedColorMode modes[] = {
             IRenderer::SpeedColorMode::AtomColor,
@@ -192,7 +195,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
 
         for (IRenderer::SpeedColorMode mode : modes) {
             const bool isSelected = (mode == speedMode);
-            if (ImGui::Selectable(speedColorModeName(mode), isSelected)) {
+            if (ImGui::Selectable(speedColorModeName(mode).data(), isSelected)) {
                 speedMode = mode;
             }
             if (isSelected) {
@@ -204,7 +207,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
 
     renderer->speedColorMode = speedMode;
 
-    ImGui::TextUnformatted(global_strings->imgui_max_gradien_velocity.c_str());
+    ImGui::TextUnformatted(i18n::tr("imgui_max_gradien_velocity").data());
 
     static float manualSpeedGradientMax = 5.0f;
     bool autoSpeedGradient = renderer->speedGradientMax <= 0.0f;
@@ -215,61 +218,61 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
 
     ImGui::PushItemWidth(180.0f * uiScale);
     ImGui::BeginDisabled(autoSpeedGradient || !gradientModeEnabled);
-    if (ImGui::SliderFloat(global_strings->imgui_speed_gradient_max_slider.c_str(), &manualSpeedGradientMax, 0.1f, 10.0f, "%.2f")) {
+    if (ImGui::SliderFloat(i18n::tr("imgui_speed_gradient_max_slider").data(), &manualSpeedGradientMax, 0.1f, 10.0f, "%.2f")) {
         renderer->speedGradientMax = manualSpeedGradientMax;
     }
     ImGui::EndDisabled();
     ImGui::SameLine();
     ImGui::BeginDisabled(!gradientModeEnabled);
-    if (ImGui::Checkbox(global_strings->imgui_auto_speed_gradien.c_str(), &autoSpeedGradient)) {
+    if (ImGui::Checkbox(i18n::tr("imgui_auto_speed_gradien").data(), &autoSpeedGradient)) {
         renderer->speedGradientMax = autoSpeedGradient ? 0.0f : manualSpeedGradientMax;
     }
     ImGui::EndDisabled();
     ImGui::PopItemWidth();
 
-    ImGui::SeparatorText(global_strings->imgui_neighbour_list.c_str());
+    ImGui::SeparatorText(i18n::tr("imgui_neighbour_list").data());
     int cellSize = simulation.box().grid.cellSize;
-    if (ImGui::SliderInt(global_strings->imgui_cell_size.c_str(), &cellSize, 1, 32)) {
+    if (ImGui::SliderInt(i18n::tr("imgui_cell_size").data(), &cellSize, 1, 32)) {
         simulation.setSizeBox(simulation.box().size, cellSize);
     }
 
     float cutoff = simulation.getNeighborListCutoff();
-    if (ImGui::SliderFloat(global_strings->imgui_cutoff_nl.c_str(), &cutoff, 0.5f, 20.0f, "%.2f")) {
+    if (ImGui::SliderFloat(i18n::tr("imgui_cutoff_nl").data(), &cutoff, 0.5f, 20.0f, "%.2f")) {
         simulation.setNeighborListCutoff(cutoff);
     }
 
     float skin = simulation.getNeighborListSkin();
-    if (ImGui::SliderFloat(global_strings->imgui_skin_nl.c_str(), &skin, 0.1f, 10.0f, "%.2f")) {
+    if (ImGui::SliderFloat(i18n::tr("imgui_skin_nl").data(), &skin, 0.1f, 10.0f, "%.2f")) {
         simulation.setNeighborListSkin(skin);
     }
 
     if (captureController.isAvailable()) {
-        ImGui::SeparatorText(global_strings->imgui_write.c_str());
+        ImGui::SeparatorText(i18n::tr("imgui_write").data());
         CaptureSettings captureSettings = captureController.settings();
         const bool recordingActive = captureController.isRecording();
         const std::string captureDir = captureController.outputDirectory().string();
 
-        ImGui::TextUnformatted(global_strings->imgui_video_saving_folder.c_str());
+        ImGui::TextUnformatted(i18n::tr("imgui_video_saving_folder").data());
         std::array<char, 512> captureDirBuffer{};
         std::snprintf(captureDirBuffer.data(), captureDirBuffer.size(), "%s", captureDir.data());
         const float browseButtonWidth = ImGui::GetFrameHeight();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseButtonWidth - ImGui::GetStyle().ItemSpacing.x);
-        ImGui::InputText(global_strings->imgui_capture_dir.c_str(), captureDirBuffer.data(), captureDirBuffer.size(),
+        ImGui::InputText(i18n::tr("imgui_capture_dir").data(), captureDirBuffer.data(), captureDirBuffer.size(),
                          ImGuiInputTextFlags_ReadOnly);
         ImGui::SameLine();
-        if (ImGui::Button(global_strings->imgui_capture_dir_browse.c_str(), ImVec2(browseButtonWidth, 0.0f))) {
+        if (ImGui::Button(i18n::tr("imgui_capture_dir_browse").data(), ImVec2(browseButtonWidth, 0.0f))) {
             fileDialog.openCaptureDirectory(captureDir);
         }
 
         ImGui::BeginDisabled(recordingActive);
 
-        if (ImGui::BeginTable(global_strings->imgui_capture_settings_table.c_str(), 2, ImGuiTableFlags_SizingStretchSame)) {
+        if (ImGui::BeginTable(i18n::tr("imgui_capture_settings_table").data(), 2, ImGuiTableFlags_SizingStretchSame)) {
             ImGui::TableNextRow();
 
             ImGui::TableSetColumnIndex(0);
             ImGui::SetNextItemWidth(-FLT_MIN);
             int captureFps = captureSettings.fps;
-            if (ImGui::SliderInt(global_strings->imgui_fps_capture.c_str(), &captureFps, 10, 60)) {
+            if (ImGui::SliderInt(i18n::tr("imgui_fps_capture").data(), &captureFps, 10, 60)) {
                 captureSettings.fps = captureFps;
                 captureController.setSettings(captureSettings);
             }
@@ -277,7 +280,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
             ImGui::TableSetColumnIndex(1);
             ImGui::SetNextItemWidth(-FLT_MIN);
             int crf = captureSettings.crf;
-            if (ImGui::SliderInt(global_strings->imgui_crf_capture.c_str(), &crf, 12, 30)) {
+            if (ImGui::SliderInt(i18n::tr("imgui_crf_capture").data(), &crf, 12, 30)) {
                 captureSettings.crf = crf;
                 captureController.setSettings(captureSettings);
             }
@@ -286,7 +289,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
 
             ImGui::TableSetColumnIndex(0);
             CaptureSettings::Preset preset = captureSettings.preset;
-            if (ComboStyle::beginCombo(global_strings->imgui_preset_capture.c_str(), capturePresetName(preset), -FLT_MIN, uiScale)) {
+            if (ComboStyle::beginCombo(i18n::tr("imgui_preset_capture").data(), capturePresetName(preset).data(), -FLT_MIN, uiScale)) {
                 const CaptureSettings::Preset presets[] = {
                     CaptureSettings::Preset::Ultrafast, CaptureSettings::Preset::Veryfast, CaptureSettings::Preset::Faster,
                     CaptureSettings::Preset::Fast,      CaptureSettings::Preset::Medium,
@@ -294,7 +297,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
 
                 for (CaptureSettings::Preset candidate : presets) {
                     const bool isSelected = (candidate == preset);
-                    if (ImGui::Selectable(capturePresetName(candidate), isSelected)) {
+                    if (ImGui::Selectable(capturePresetName(candidate).data(), isSelected)) {
                         captureSettings.preset = candidate;
                         captureController.setSettings(captureSettings);
                         preset = candidate;
@@ -308,7 +311,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
 
             ImGui::TableSetColumnIndex(1);
             CaptureSettings::PixelFormat pixelFormat = captureSettings.pixelFormat;
-            if (ComboStyle::beginCombo(global_strings->imgui_color_capture.c_str(), capturePixelFormatName(pixelFormat), -FLT_MIN,
+            if (ComboStyle::beginCombo(i18n::tr("imgui_color_capture").data(), capturePixelFormatName(pixelFormat).data(), -FLT_MIN,
                                        uiScale)) {
                 const CaptureSettings::PixelFormat pixelFormats[] = {
                     CaptureSettings::PixelFormat::Yuv444p,
@@ -317,7 +320,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
 
                 for (CaptureSettings::PixelFormat candidate : pixelFormats) {
                     const bool isSelected = (candidate == pixelFormat);
-                    if (ImGui::Selectable(capturePixelFormatName(candidate), isSelected)) {
+                    if (ImGui::Selectable(capturePixelFormatName(candidate).data(), isSelected)) {
                         captureSettings.pixelFormat = candidate;
                         captureController.setSettings(captureSettings);
                         pixelFormat = candidate;
@@ -335,7 +338,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
         ImGui::EndDisabled();
     }
 
-    if (ImGui::Button(global_strings->imgui_reset_settings.c_str(), ImVec2(ImGui::GetContentRegionAvail().x, 0.0f))) {
+    if (ImGui::Button(i18n::tr("imgui_reset_settings").data(), ImVec2(ImGui::GetContentRegionAvail().x, 0.0f))) {
         const UserSettings defaults;
         captureController.setOutputDirectory(defaults.captureOutputDirectory);
         captureController.setSettings(defaults.captureSettings);
@@ -352,8 +355,9 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
     }
 
     const float exitButtonWidth = ImGui::GetContentRegionAvail().x;
-    const std::string versionText = global_strings->version_text_pre.str() + LATTICELAB_VERSION_STRING + global_strings->version_text_after.str();
-    const float versionWidth = ImGui::CalcTextSize(versionText.c_str()).x;
+    const std::string versionText =
+        std::string(i18n::tr("version_text_pre")) + LATTICELAB_VERSION_STRING + std::string(i18n::tr("version_text_after"));
+    const float versionWidth = ImGui::CalcTextSize(i18n::tr("versionText").data()).x;
     const float footerHeight = ImGui::GetFrameHeightWithSpacing() + ImGui::GetTextLineHeightWithSpacing();
     const float remaining = ImGui::GetContentRegionAvail().y - footerHeight;
     if (remaining > 0.0f) {
@@ -362,10 +366,10 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
 
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.72f, 0.76f, 0.80f, 0.85f));
     ImGui::SetCursorPosX(std::max(0.0f, (ImGui::GetContentRegionAvail().x - versionWidth) * 0.5f));
-    ImGui::TextUnformatted(versionText.c_str());
+    ImGui::TextUnformatted(i18n::tr("versionText").data());
     ImGui::PopStyleColor();
 
-    if (ImGui::Button(global_strings->imgui_exit_button.c_str(), ImVec2(exitButtonWidth, 0.0f))) {
+    if (ImGui::Button(i18n::tr("imgui_exit_button").data(), ImVec2(exitButtonWidth, 0.0f))) {
         AppSignals::UI::ExitApplication.emit();
     }
 

@@ -10,8 +10,6 @@
 #include "App/Scenes.h"
 #include "App/UserSettings.h"
 #include "App/interaction/ToolsManager.h"
-#include "App/language_strings/GlobalStrings.h"
-#include "App/language_strings/LanguageStringParser.h"
 #include "Engine/Simulation.h"
 #include "Engine/metrics/Profiler.h"
 #include "GUI/interface/interface.h"
@@ -94,8 +92,6 @@ int Application::run() {
 
     renderer->camera.resetView();
 
-    // Is there a better place for this?
-    LanguageStringParser::loadGlobalStringByLanguage(Language::en);
     while (!glfwWindowShouldClose(window)) {
         Profiler::instance().beginFrame();
 

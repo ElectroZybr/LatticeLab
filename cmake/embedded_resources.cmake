@@ -36,9 +36,4 @@ foreach(FONT ${FONT_FILES})
     embed_bin_resource(${FONT} "${GENERATED_DIR}/fonts" "font")
 endforeach()
 
-file(GLOB TRANSLATE_FILES "${CMAKE_SOURCE_DIR}/assets/translations/*.lang")
-foreach(TRANSLATE ${TRANSLATE_FILES})
-    embed_bin_resource(${TRANSLATE} "${GENERATED_DIR}/translate" "translate" 1)
-endforeach()
-
 add_custom_target(embedded_resources DEPENDS ${G_RES_HEADERS})
