@@ -95,7 +95,7 @@ int Application::run() {
     renderer->camera.resetView();
 
     // Is there a better place for this?
-    LanguageStringParser::loadGlobalStringByLanguage(Language::ru);
+    LanguageStringParser::loadGlobalStringByLanguage(Language::en);
     while (!glfwWindowShouldClose(window)) {
         Profiler::instance().beginFrame();
 
