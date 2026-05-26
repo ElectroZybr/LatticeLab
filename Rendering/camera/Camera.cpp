@@ -24,6 +24,13 @@ namespace {
         return glm::normalize(glm::vec3(-std::sin(elevation) * std::sin(azimuth), std::cos(elevation),
                                         -std::sin(elevation) * std::cos(azimuth)));
     }
+
+    glm::vec3 rotateAroundAxis(glm::vec3 v, glm::vec3 axis, float angle) {
+        axis = glm::normalize(axis);
+        const float c = std::cos(angle);
+        const float s = std::sin(angle);
+        return v * c + glm::cross(axis, v) * s + axis * glm::dot(axis, v) * (1.0f - c);
+    }
 }
 
 Camera::Camera(World& simBox, float moveSpeed, float zoomSpeed)
@@ -32,6 +39,7 @@ Camera::Camera(World& simBox, float moveSpeed, float zoomSpeed)
 void Camera::resetView() {
     azimuth = 0.f;
     elevation = 0.f;
+    orbitUp = glm::vec3(0.f, 1.f, 0.f);
 
     const float max_side = std::max({world.getWorldSize().x, world.getWorldSize().y, world.getWorldSize().z});
     const float distance = (max_side * 0.5f * 1.1f) / std::tan(glm::radians(Camera::FOV_ORBIT) * 0.5f);
@@ -79,6 +87,7 @@ void Camera::setMode(Mode newMode) {
             setZoom(moveSpeed / distance);
             azimuth = std::atan2(toEye.x, toEye.z);
             elevation = std::asin(std::clamp(toEye.y / distance, -1.0f, 1.0f));
+            orbitUp = orbitUpVector(azimuth, elevation);
         }
     }
 
@@ -101,13 +110,32 @@ void Camera::zoomAt(float factor, Vec2f mousePos) {
 
 void Camera::orbitDrag(Vec2i delta) {
     constexpr float sensitivity = 0.005f;
-    orbitRotate(-delta.x * sensitivity, delta.y * sensitivity);
+    orbitRotate(-delta.x * sensitivity, -delta.y * sensitivity);
 }
 
 void Camera::orbitRotate(float azimuthDelta, float elevationDelta) {
-    azimuth += azimuthDelta;
-    elevation = wrapRadians(elevation + elevationDelta);
-    azimuth = wrapRadians(azimuth);
+    const glm::vec3 center(orbitCenter.x, orbitCenter.y, orbitCenter.z);
+    const glm::vec3 eye = getEyePosition();
+    glm::vec3 offset = eye - center;
+
+    const float distance = glm::length(offset);
+    if (distance <= Consts::Epsilon) {
+        return;
+    }
+
+    const glm::vec3 up = glm::normalize(orbitUp);
+
+    offset = rotateAroundAxis(offset, up, azimuthDelta);
+    const glm::vec3 forwardAfterYaw = glm::normalize(-offset);
+    const glm::vec3 right = glm::normalize(glm::cross(forwardAfterYaw, up));
+
+    offset = rotateAroundAxis(offset, right, elevationDelta);
+    orbitUp = rotateAroundAxis(up, right, elevationDelta);
+    offset = glm::normalize(offset) * distance;
+    orbitUp = glm::normalize(orbitUp - glm::normalize(offset) * glm::dot(orbitUp, glm::normalize(offset)));
+
+    azimuth = wrapRadians(std::atan2(offset.x, offset.z));
+    elevation = wrapRadians(std::asin(std::clamp(offset.y / distance, -1.0f, 1.0f)));
 }
 
 void Camera::freeDrag(Vec2i delta) {
@@ -175,7 +203,7 @@ glm::mat4 Camera::getViewMatrix() const {
     // Orbit camera keeps its target stable until resetView().
     Vec3f center = orbitCenter;
     glm::vec3 eye = getEyePosition();
-    return glm::lookAt(eye, glm::vec3(center.x, center.y, center.z), orbitUpVector(azimuth, elevation));
+    return glm::lookAt(eye, glm::vec3(center.x, center.y, center.z), orbitUp);
 }
 
 glm::mat4 Camera::getProjectionMatrix() const {

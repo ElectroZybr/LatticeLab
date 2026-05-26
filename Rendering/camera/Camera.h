@@ -60,6 +60,7 @@ private:
     Vec2f position;
     Vec3f freePosition{0.f, 0.f, -100.f};
     Vec3f orbitCenter{0.f, 0.f, 0.f};
+    glm::vec3 orbitUp{0.f, 1.f, 0.f};
     float zoom;
     float speed;
     float moveSpeed;
