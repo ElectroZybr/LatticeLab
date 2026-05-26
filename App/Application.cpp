@@ -146,7 +146,7 @@ int Application::run() {
             wgpu::TextureView renderTarget = captureController.acquireRenderTarget(*surfaceTexture, *surfaceView);
 
             renderer->drawShot(renderTarget, *ctx.depthView(), simulation);
-            ToolsManager::pickingSystem->getOverlay().draw();
+            ToolsManager::overlay.draw();
             ImGui::Render();
             auto* wgpuRenderer = static_cast<RendererWGPU*>(renderer.get());
             ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), *wgpuRenderer->getCurrentPass());
