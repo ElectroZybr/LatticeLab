@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdio>
+#include <string>
 
 #include <imgui.h>
 
@@ -158,6 +159,59 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
     }
     ImGui::PopItemWidth();
 
+    ImGui::SeparatorText("Миры");
+    const std::string activeWorldLabel = "Мир " + std::to_string(simulation.activeWorldId());
+    if (ComboStyle::beginCombo("##active_world", activeWorldLabel.c_str(), 180.0f * uiScale, uiScale, ImGuiComboFlags_HeightLargest)) {
+        for (Simulation::WorldId worldId = 0; worldId < simulation.worldCount(); ++worldId) {
+            const std::string worldLabel = "Мир " + std::to_string(worldId);
+            const bool isSelected = worldId == simulation.activeWorldId();
+            if (ImGui::Selectable(worldLabel.c_str(), isSelected)) {
+                simulation.setActiveWorld(worldId);
+            }
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    if (ImGui::Button("Создать мир", ImVec2(150.0f * uiScale, 0.0f))) {
+        constexpr float worldGap = 20.0f;
+        const Vec3f newWorldSize = simulation.world().getWorldSize();
+        Vec3f newWorldOffset = simulation.world().getRenderOffset();
+        float rightEdge = newWorldOffset.x + newWorldSize.x;
+        for (Simulation::WorldId worldId = 0; worldId < simulation.worldCount(); ++worldId) {
+            const World& world = simulation.worldAt(worldId);
+            rightEdge = std::max(rightEdge, static_cast<float>(world.getRenderOffset().x + world.getWorldSize().x));
+        }
+        newWorldOffset.x = rightEdge + worldGap;
+        const Simulation::WorldId newWorldId = simulation.createWorld(newWorldSize, newWorldOffset);
+        simulation.setActiveWorld(newWorldId);
+    }
+    ImGui::SameLine();
+    ImGui::BeginDisabled(simulation.worldCount() <= 1);
+    if (ImGui::Button("Удалить", ImVec2(90.0f * uiScale, 0.0f))) {
+        simulation.removeWorld(simulation.activeWorldId());
+    }
+    ImGui::EndDisabled();
+
+    Vec3f renderOffset = simulation.world().getRenderOffset();
+    ImGui::PushItemWidth(150.0f * uiScale);
+    bool offsetChanged = false;
+    const auto drawOffsetDrag = [&](const char* label, float& value) {
+        const bool changed = ImGui::DragFloat(label, &value, 0.25f, 0.0f, 0.0f, "%.1f");
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+        }
+        return changed;
+    };
+    offsetChanged |= drawOffsetDrag("Offset X##world_offset_x", renderOffset.x);
+    offsetChanged |= drawOffsetDrag("Offset Y##world_offset_y", renderOffset.y);
+    offsetChanged |= drawOffsetDrag("Offset Z##world_offset_z", renderOffset.z);
+    if (offsetChanged) {
+        simulation.world().setRenderOffset(renderOffset);
+    }
+    ImGui::PopItemWidth();
+
     bool bondFormationEnabled = simulation.isBondFormationEnabled();
     if (ImGui::Checkbox("Образовывать связи", &bondFormationEnabled)) {
         simulation.setBondFormationEnabled(bondFormationEnabled);
@@ -176,6 +230,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
     ImGui::SeparatorText("Рендер");
     ImGui::Checkbox("Сетка", &renderer->drawGrid);
     ImGui::Checkbox("Связи", &renderer->drawBonds);
+    ImGui::Checkbox("Границы куба", &renderer->drawBox);
 
     ImGui::TextUnformatted("Цветовая схема");
     IRenderer::SpeedColorMode speedMode = renderer->speedColorMode;
@@ -225,9 +280,9 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
     ImGui::PopItemWidth();
 
     ImGui::SeparatorText("Список соседей");
-    int cellSize = simulation.box().grid.cellSize;
+    int cellSize = simulation.world().getGridCellSize();
     if (ImGui::SliderInt("Cell size", &cellSize, 1, 32)) {
-        simulation.setSizeBox(simulation.box().size, cellSize);
+        simulation.setSizeBox(simulation.world().getWorldSize(), cellSize);
     }
 
     float cutoff = simulation.getNeighborListCutoff();
@@ -337,6 +392,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
 
         renderer->drawGrid = defaults.rendererDrawGrid;
         renderer->drawBonds = defaults.rendererDrawBonds;
+        renderer->drawBox = defaults.rendererDrawBox;
         renderer->speedColorMode = defaults.rendererSpeedColorMode;
         renderer->speedGradientMax = defaults.rendererSpeedGradientMax;
 
