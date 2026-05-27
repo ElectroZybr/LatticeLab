@@ -16,7 +16,7 @@ void Integrator::setMaxParticleSpeed(float maxSpeed) { maxParticleSpeed_ = std::
 void Integrator::setAccelDamping(float accelDamping) { accelDamping_ = std::clamp(accelDamping, 0.0f, 1.0f); }
 
 void Integrator::step(StepData& stepData) {
-    std::visit([&](const auto& scheme) { scheme.pipeline(stepData); }, scheme_impl);
+    std::visit([&](auto& scheme) { scheme.pipeline(stepData); }, scheme_impl);
 
     // Ограничение максимальной скорости атомов
     if (maxParticleSpeed_ > 0.0f) {
@@ -34,6 +34,8 @@ Integrator::SchemeVariant Integrator::makeSchemeImpl(Scheme scheme) {
         return RK4Scheme{};
     case Scheme::Langevin:
         return LangevinScheme{};
+    case Scheme::Andersen:
+        return Andersen{300., 0.1};
     default:
         return VerletScheme{};
     }

@@ -12,6 +12,7 @@ class World;
 #include "Engine/physics/integrators/LangevinScheme.h"
 #include "Engine/physics/integrators/RK4Scheme.h"
 #include "Engine/physics/integrators/VerletScheme.h"
+#include "Engine/physics/integrators/Andersen.h"
 
 struct StepData {
     World& world;
@@ -29,6 +30,7 @@ public:
         KDK,      // Kick-Drift-Kick: симплектическая схема, удобна для поэтапного обновления сил
         RK4,      // Runge-Kutta 4-го порядка: высокая точность на шаг, но дороже по вычислениям
         Langevin, // стохастический интегратор с термостатом (трение + случайный шум)
+        Andersen, // термостат с мк шагами для поддержания постоянной температуры
     };
 
     Integrator();
@@ -43,7 +45,7 @@ public:
     void step(StepData& stepData);
 
 private:
-    using SchemeVariant = std::variant<VerletScheme, KDKScheme, RK4Scheme, LangevinScheme>;
+    using SchemeVariant = std::variant<VerletScheme, KDKScheme, RK4Scheme, LangevinScheme, Andersen>;
 
     static SchemeVariant makeSchemeImpl(Scheme scheme);
 

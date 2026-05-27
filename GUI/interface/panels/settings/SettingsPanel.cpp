@@ -27,8 +27,11 @@ namespace {
             return i18n::tr("integrator_runge_kutta_4");
         case Integrator::Scheme::Langevin:
             return i18n::tr("integrator_langevin");
+        case Integrator::Scheme::Andersen:
+            return i18n::tr("integrator_anderson");;
         default:
             return i18n::tr("integrator_unknown");
+        
         }
     }
 
@@ -129,6 +132,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
             Integrator::Scheme::KDK,
             Integrator::Scheme::RK4,
             Integrator::Scheme::Langevin,
+            Integrator::Scheme::Andersen
         };
 
         for (Integrator::Scheme scheme : schemes) {
