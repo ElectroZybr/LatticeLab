@@ -28,7 +28,7 @@ namespace {
         case Integrator::Scheme::Langevin:
             return i18n::tr("integrator_langevin");
         case Integrator::Scheme::Andersen:
-            return i18n::tr("integrator_anderson");;
+            return i18n::tr("integrator_andersen");;
         default:
             return i18n::tr("integrator_unknown");
         
