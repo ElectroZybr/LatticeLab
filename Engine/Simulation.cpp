@@ -1,31 +1,17 @@
 #include "Simulation.h"
 
 #include <algorithm>
-#include <cmath>
 #include <stdexcept>
 
-#include "Engine/io/SimulationStateIO.h"
 #include "Engine/metrics/Profiler.h"
-#include "Engine/physics/Bond.h"
+#include "Engine/io/SimulationStateIO.h"
 
-Simulation::Simulation() = default;
-
-Simulation::WorldState& Simulation::activeState() {
-    if (worlds_.empty() || activeWorldIndex_ >= worlds_.size()) {
-        throw std::runtime_error("Simulation: no active world");
-    }
-    return *worlds_[activeWorldIndex_];
-}
-
-const Simulation::WorldState& Simulation::activeState() const {
-    if (worlds_.empty() || activeWorldIndex_ >= worlds_.size()) {
-        throw std::runtime_error("Simulation: no active world");
-    }
-    return *worlds_[activeWorldIndex_];
+Simulation::Simulation() {
+    xyzStreamer_.Start(".");
 }
 
 Simulation::WorldId Simulation::createWorld(Vec3f size, Vec3f renderOffset) {
-    worlds_.push_back(std::make_unique<WorldState>(size, renderOffset));
+    worlds_.emplace_back(size, renderOffset);
     const WorldId worldId = worlds_.size() - 1;
     if (worlds_.size() == 1) {
         activeWorldIndex_ = worldId;
@@ -60,101 +46,61 @@ World& Simulation::worldAt(WorldId worldId) {
     if (worldId >= worlds_.size()) {
         throw std::out_of_range("Simulation::worldAt: invalid world id");
     }
-    return worlds_[worldId]->world;
+    return worlds_[worldId];
 }
 
 const World& Simulation::worldAt(WorldId worldId) const {
     if (worldId >= worlds_.size()) {
         throw std::out_of_range("Simulation::worldAt: invalid world id");
     }
-    return worlds_[worldId]->world;
+    return worlds_[worldId];
 }
 
-void Simulation::refreshMetricsCache() const {
-    const WorldState& state = activeState();
-    if (state.metricsCacheValid_) {
-        return;
+World& Simulation::world() {
+    if (worlds_.empty() || activeWorldIndex_ >= worlds_.size()) {
+        throw std::runtime_error("Simulation: no active world");
     }
-
-    state.metricsCache_ = EnergyMetrics::buildSnapshot(state.world.getAtomStorage());
-    state.metricsCacheValid_ = true;
+    return worlds_[activeWorldIndex_];
 }
 
-StepData Simulation::makeStepData() {
-    return makeStepData(activeState());
-}
-
-StepData Simulation::makeStepData(WorldState& state) {
-    return StepData{
-        .world = state.world,
-        .forceField = state.forceField_,
-        .neighborList = state.world.getNeighborList(),
-        .allowBondFormation = state.bondFormationEnabled_,
-        .accelDamping = state.integrator.accelDamping(),
-        .dt = state.Dt,
-    };
+const World& Simulation::world() const {
+    if (worlds_.empty() || activeWorldIndex_ >= worlds_.size()) {
+        throw std::runtime_error("Simulation: no active world");
+    }
+    return worlds_[activeWorldIndex_];
 }
 
 void Simulation::update() {
     PROFILE_SCOPE("Simulation::update");
-    updateState(activeState());
+    world().update();
 }
 
-bool Simulation::updateWorld(WorldId worldId) {
-    if (worldId >= worlds_.size()) {
-        return false;
+void Simulation::updateWorld(WorldId worldId) {
+    if (worldId < worlds_.size()) {
+        worlds_[worldId].update();
     }
-    updateState(*worlds_[worldId]);
-    return true;
 }
 
 void Simulation::updateAll() {
     PROFILE_SCOPE("Simulation::updateAll");
-    for (const auto& state : worlds_) {
-        updateState(*state);
+    xyzStreamer_.WriteFrame(*this);
+    for (auto& w : worlds_) {
+        w.update();
     }
-}
-
-void Simulation::updateState(WorldState& state) {
-    if (state.world.getNeighborList().needsRebuild(state.world.getAtomStorage())) {
-        state.world.getNeighborList().rebuildPipeline(state.world.getAtomStorage(), state.world, state.sim_step);
-    }
-
-    StepData stepData = makeStepData(state);
-    state.integrator.step(stepData);
-    state.metricsCacheValid_ = false;
-    ++state.sim_step;
-    state.sim_time_ns += state.Dt * Units::kTimeUnitToNs;
 }
 
 void Simulation::setSizeBox(Vec3f newSize, int cellSize) {
-    World& activeWorld = world();
-    activeWorld.setWorldSize(newSize);
-    activeWorld.setGridCellSize(cellSize);
-    activeWorld.getGrid().rebuild(activeWorld.getAtomStorage().xDataSpan(), activeWorld.getAtomStorage().yDataSpan(),
-                                  activeWorld.getAtomStorage().zDataSpan());
+    world().resizeBox(newSize, static_cast<float>(cellSize));
 }
 
 void Simulation::createAtom(Vec3f start_coords, Vec3f start_speed, AtomData::Type type, bool fixed) {
     world().addAtom(start_coords, start_speed, type, fixed);
-    invalidateMetricsCache();
 }
 
 void Simulation::removeAtom(size_t atomIndex) {
     world().removeAtom(atomIndex);
-    invalidateMetricsCache();
 }
 
-void Simulation::addBond(size_t aIndex, size_t bIndex) { Bond::CreateBond(world().getBonds(), aIndex, bIndex, world().getAtomStorage()); }
+void Simulation::addBond(size_t aIndex, size_t bIndex) { world().addBond(aIndex, bIndex); }
 
-void Simulation::clear() {
-    WorldState& state = activeState();
-    state.world.clear();
-
-    state.world.worldTitle_.clear();
-    state.world.worldDescription_.clear();
-
-    invalidateMetricsCache();
-    state.sim_step = 0;
-    state.sim_time_ns = 0.0f;
-}
+void Simulation::clear() { world().reset(); }

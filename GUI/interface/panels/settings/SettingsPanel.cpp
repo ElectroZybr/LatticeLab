@@ -97,10 +97,10 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
 
     ImGui::TextUnformatted(i18n::tr("imgui_gravity").data());
     ImGui::SameLine();
-    Vec3f gravity = simulation.getGravity();
+    Vec3f gravity = simulation.world().getGravity();
     if (ImGui::Button(i18n::tr("imgui_reset_gravity").data(), ImVec2(50.f * uiScale, 0.f))) {
-        simulation.setGravity(Vec3f(0, 0, 0));
-        gravity = simulation.getGravity();
+        simulation.world().setGravity(Vec3f(0, 0, 0));
+        gravity = simulation.world().getGravity();
     }
     float gx = gravity.x;
     float gy = gravity.y;
@@ -122,7 +122,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
         simulation.setGravity(Vec3f(gx, gy, gz));
     }
 
-    Integrator::Scheme currentIntegrator = simulation.getIntegrator();
+    Integrator::Scheme currentIntegrator = simulation.world().getIntegrator().getScheme();
     if (ComboStyle::beginCombo(i18n::tr("imgui_integrator").data(), integratorName(currentIntegrator).data(), 0.0f, uiScale)) {
         const Integrator::Scheme schemes[] = {
             Integrator::Scheme::Verlet,
@@ -134,7 +134,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
         for (Integrator::Scheme scheme : schemes) {
             const bool isSelected = (scheme == currentIntegrator);
             if (ImGui::Selectable(integratorName(scheme).data(), isSelected)) {
-                simulation.setIntegrator(scheme);
+                simulation.world().getIntegrator().setScheme(scheme);
                 currentIntegrator = scheme;
             }
             if (isSelected) {
@@ -220,19 +220,19 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
     }
     ImGui::PopItemWidth();
 
-    bool bondFormationEnabled = simulation.isBondFormationEnabled();
+    bool bondFormationEnabled = simulation.world().isBondFormationEnabled();
     if (ImGui::Checkbox(i18n::tr("imgui_bond_formation").data(), &bondFormationEnabled)) {
-        simulation.setBondFormationEnabled(bondFormationEnabled);
+        simulation.world().setBondFormationEnabled(bondFormationEnabled);
     }
 
-    bool ljEnabled = simulation.isLJEnabled();
+    bool ljEnabled = simulation.world().isLJEnabled();
     if (ImGui::Checkbox(i18n::tr("imgui_lj").data(), &ljEnabled)) {
-        simulation.setLJEnabled(ljEnabled);
+        simulation.world().setLJEnabled(ljEnabled);
     }
     ImGui::SameLine();
-    bool coulombEnabled = simulation.isCoulombEnabled();
+    bool coulombEnabled = simulation.world().isCoulombEnabled();
     if (ImGui::Checkbox(i18n::tr("imgui_coulomb").data(), &coulombEnabled)) {
-        simulation.setCoulombEnabled(coulombEnabled);
+        simulation.world().setCoulombEnabled(coulombEnabled);
     }
 
     ImGui::SeparatorText(i18n::tr("imgui_render").data());
@@ -406,7 +406,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
         renderer->getRenderData(0).speedColorMode = defaults.rendererSpeedColorMode;
         renderer->getRenderData(0).speedGradientMax = defaults.rendererSpeedGradientMax;
 
-        simulation.setIntegrator(defaults.simulationIntegrator);
+        simulation.world().getIntegrator().setScheme(defaults.simulationIntegrator);
         simulation.setBondFormationEnabled(defaults.simulationBondFormationEnabled);
         simulation.setLJEnabled(defaults.simulationLJEnabled);
         simulation.setCoulombEnabled(defaults.simulationCoulombEnabled);

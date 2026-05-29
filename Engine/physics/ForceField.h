@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Engine/World.h"
+#include <cstddef>
+class World;
 #include "Engine/physics/ForceFields/BondForceField.h"
 #include "Engine/physics/ForceFields/CoulombForceField.h"
 #include "Engine/physics/ForceFields/LJForceField.h"

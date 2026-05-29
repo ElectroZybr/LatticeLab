@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <string_view>
 
 union Color {
     uint32_t rgba;
@@ -57,4 +58,5 @@ private:
 
 public:
     static const StaticAtomicData& getProps(Type type) { return properties.at(static_cast<int>(type)); }
+    static std::string_view symbol(Type type);
 };

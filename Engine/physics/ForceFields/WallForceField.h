@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Engine/World.h"
 #include "Engine/math/Vec3.h"
+class World;
 
 class WallForceField {
 public:

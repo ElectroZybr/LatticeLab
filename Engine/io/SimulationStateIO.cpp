@@ -66,13 +66,13 @@ namespace {
         file << "[scene]\n";
         file << kBlockIndent << "box " << simulation.world().getWorldSize().x << " " << simulation.world().getWorldSize().y << " "
              << simulation.world().getWorldSize().z << "\n";
-        file << kBlockIndent << "step " << simulation.getSimStep() << "\n";
-        file << kBlockIndent << "time_ns " << simulation.simTimeNs() << "\n";
-        file << kBlockIndent << "dt " << simulation.getDt() << "\n";
-        file << kBlockIndent << "integrator " << static_cast<int>(simulation.getIntegrator()) << "\n";
+        file << kBlockIndent << "step " << simulation.world().getSimStep() << "\n";
+        file << kBlockIndent << "time_ns " << simulation.world().getSimTimeNs() << "\n";
+        file << kBlockIndent << "dt " << simulation.world().getDt() << "\n";
+        file << kBlockIndent << "integrator " << static_cast<int>(simulation.world().getIntegrator().getScheme()) << "\n";
         const Vec3f gravity = simulation.getGravity();
         file << kBlockIndent << "gravity " << gravity.x << " " << gravity.y << " " << gravity.z << "\n";
-        file << kBlockIndent << "bond_formation " << static_cast<int>(simulation.isBondFormationEnabled()) << "\n";
+        file << kBlockIndent << "bond_formation " << static_cast<int>(simulation.world().isBondFormationEnabled()) << "\n";
         file << kBlockIndent << "lj_enabled " << static_cast<int>(simulation.isLJEnabled()) << "\n";
         file << kBlockIndent << "coulomb_enabled " << static_cast<int>(simulation.isCoulombEnabled()) << "\n";
         file << kBlockIndent << "cell_size " << simulation.world().getGridCellSize() << "\n";
@@ -116,12 +116,12 @@ namespace {
         float loadedTimeNs = 0.0f;
         std::string loadedTitle;
         std::string loadedDescription;
-        float loadedDt = simulation.getDt();
-        int loadedIntegrator = static_cast<int>(simulation.getIntegrator());
-        Vec3f loadedGravity = simulation.getGravity();
-        bool loadedBondFormationEnabled = simulation.isBondFormationEnabled();
-        float loadedMaxSpeed = simulation.getMaxParticleSpeed();
-        float loadedAccelDamping = simulation.getAccelDamping();
+        float loadedDt = simulation.world().getDt();
+        int loadedIntegrator = static_cast<int>(simulation.world().getIntegrator().getScheme());
+        Vec3f loadedGravity = simulation.world().getGravity();
+        bool loadedBondFormationEnabled = simulation.world().isBondFormationEnabled();
+        float loadedMaxSpeed = simulation.world().getIntegrator().maxParticleSpeed();
+        float loadedAccelDamping = simulation.world().getIntegrator().accelDamping();
 
         std::string tag;
         while (file >> tag) {
@@ -226,14 +226,14 @@ namespace {
         float loadedTimeNs = 0.0f;
         std::string loadedTitle;
         std::string loadedDescription;
-        float loadedDt = simulation.getDt();
-        int loadedIntegrator = static_cast<int>(simulation.getIntegrator());
-        Vec3f loadedGravity = simulation.getGravity();
-        bool loadedBondFormationEnabled = simulation.isBondFormationEnabled();
-        bool loadedLJEnabled = simulation.isLJEnabled();
-        bool loadedCoulombEnabled = simulation.isCoulombEnabled();
-        float loadedMaxSpeed = simulation.getMaxParticleSpeed();
-        float loadedAccelDamping = simulation.getAccelDamping();
+        float loadedDt = simulation.world().getDt();
+        int loadedIntegrator = static_cast<int>(simulation.world().getIntegrator().getScheme());
+        Vec3f loadedGravity = simulation.world().getGravity();
+        bool loadedBondFormationEnabled = simulation.world().isBondFormationEnabled();
+        bool loadedLJEnabled = simulation.world().isLJEnabled();
+        bool loadedCoulombEnabled = simulation.world().isCoulombEnabled();
+        float loadedMaxSpeed = simulation.world().getIntegrator().maxParticleSpeed();
+        float loadedAccelDamping = simulation.world().getIntegrator().accelDamping();
 
         std::vector<LoadedAtomData> atoms;
         std::vector<std::pair<size_t, size_t>> bonds;

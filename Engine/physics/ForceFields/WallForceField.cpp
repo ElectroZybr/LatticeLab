@@ -1,4 +1,5 @@
 #include "WallForceField.h"
+#include "Engine/World.h"
 
 #include "Engine/math/Vec3.h"
 #include "Engine/physics/AtomStorage.h"

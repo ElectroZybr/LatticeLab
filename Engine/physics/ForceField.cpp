@@ -1,4 +1,5 @@
 #include "ForceField.h"
+#include "Engine/World.h"
 
 #include "Engine/NeighborSearch/NeighborList.h"
 #include "Engine/metrics/Profiler.h"

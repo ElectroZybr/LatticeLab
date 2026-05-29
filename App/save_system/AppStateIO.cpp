@@ -282,12 +282,12 @@ void AppStateIO::saveText(CaptureController& captureController, const PreviewFra
 void AppStateIO::saveBinary(CaptureController& captureController, const PreviewFrameRect& previewRect, const Simulation& simulation,
                             const BaseRenderer& renderer, std::string_view path) {
     SimulationSaveState simState;
-    simState.dt = simulation.getDt();
-    simState.time_ns = simulation.simTimeNs();
-    simState.step = simulation.getSimStep();
-    simState.integrator = simulation.getIntegrator();
+    simState.dt = simulation.world().getDt();
+    simState.time_ns = simulation.world().getSimTimeNs();
+    simState.step = simulation.world().getSimStep();
+    simState.integrator = simulation.world().getIntegrator().getScheme();
     simState.gravity = simulation.getGravity();
-    simState.bondFormationEnabled = simulation.isBondFormationEnabled();
+    simState.bondFormationEnabled = simulation.world().isBondFormationEnabled(),
     simState.LJEnabled = simulation.isLJEnabled();
     simState.coulombEnabled = simulation.isCoulombEnabled();
     simState.boxSize = simulation.world().getWorldSize();
@@ -421,8 +421,8 @@ void AppStateIO::loadBinary(Simulation& simulation, BaseRenderer& renderer, std:
     simulation.clear();
 
     simulation.setSizeBox(simState.boxSize, simState.gridCellSize);
-    simulation.setNeighborListCutoff(simState.neighborListCutoff);
-    simulation.setNeighborListSkin(simState.neighborListSkin);
+    simulation.world().getNeighborList().setCutoff(simState.neighborListCutoff);
+    simulation.world().getNeighborList().setSkin(simState.neighborListSkin);
 
     simulation.setDt(simState.dt);
     simulation.setIntegrator(simState.integrator);

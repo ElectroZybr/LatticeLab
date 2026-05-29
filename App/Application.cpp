@@ -71,10 +71,10 @@ int Application::run() {
     renderer->getRenderData(0).drawBox = userSettings.rendererDrawBox;
     renderer->getRenderData(0).speedColorMode = userSettings.rendererSpeedColorMode;
     renderer->getRenderData(0).speedGradientMax = userSettings.rendererSpeedGradientMax;
-    simulation.setIntegrator(userSettings.simulationIntegrator);
-    simulation.setBondFormationEnabled(userSettings.simulationBondFormationEnabled);
-    simulation.setLJEnabled(userSettings.simulationLJEnabled);
-    simulation.setCoulombEnabled(userSettings.simulationCoulombEnabled);
+    simulation.world().getIntegrator().setScheme(userSettings.simulationIntegrator);
+    simulation.world().setBondFormationEnabled(userSettings.simulationBondFormationEnabled);
+    simulation.world().setLJEnabled(userSettings.simulationLJEnabled);
+    simulation.world().setCoulombEnabled(userSettings.simulationCoulombEnabled);
     appInterface.state().simulationSpeed = 100.0f;
     appInterface.state().pause = true;
 
@@ -134,7 +134,7 @@ int Application::run() {
             PROFILE_SCOPE("Application::RenderFrame");
             renderAccum -= renderInterval;
 
-            uiState.simStep = simulation.getSimStep();
+            uiState.simStep = simulation.world().getSimStep();
             App::Rendering::syncRendererWithSimulation(*renderer, simulation);
             appInterface.update();
             refreshAtomDebugViews(debugViews, simulation);
@@ -184,8 +184,8 @@ int Application::run() {
         .rendererDrawBox = renderer->getRenderData(0).drawBox,
         .rendererSpeedColorMode = renderer->getRenderData(0).speedColorMode,
         .rendererSpeedGradientMax = renderer->getRenderData(0).speedGradientMax,
-        .simulationIntegrator = simulation.getIntegrator(),
-        .simulationBondFormationEnabled = simulation.isBondFormationEnabled(),
+        .simulationIntegrator = simulation.world().getIntegrator().getScheme(),
+        .simulationBondFormationEnabled = simulation.world().isBondFormationEnabled(),
         .simulationLJEnabled = simulation.isLJEnabled(),
         .simulationCoulombEnabled = simulation.isCoulombEnabled(),
     });

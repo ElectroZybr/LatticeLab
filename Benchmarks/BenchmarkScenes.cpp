@@ -13,7 +13,7 @@ namespace Benchmarks {
 
     void BenchmarkScenes::build(Simulation& simulation, const BenchmarkCase& benchmarkCase) {
         simulation.clear();
-        simulation.setIntegrator(benchmarkCase.integrator);
+        simulation.world().getIntegrator().setScheme(benchmarkCase.integrator);
 
         switch (benchmarkCase.scene) {
         case SceneKind::IdealCrystal3D:

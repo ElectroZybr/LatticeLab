@@ -57,7 +57,7 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     const double captureReadbackMs = profiler.lastMs("Capture::readback");
     const double captureEncodeMs = profiler.lastMs("Capture::encodeFrame");
     const double physicsMs = profiler.lastActiveMs("Simulation::update");
-    const int simStep = simulation.getSimStep();
+    const int simStep = simulation.world().getSimStep();
     const auto now = std::chrono::steady_clock::now();
     const float elapsedSeconds = std::chrono::duration<float>(now - stepsRateSample.lastTime).count();
     if (elapsedSeconds >= 0.25f) {
@@ -67,11 +67,11 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     }
     const float stepsPerSecond = stepsRateSample.rate;
 
-    debugViews.sim->add_data("Средняя скорость (км/ч)", simulation.averageSpeedKmPerHour());
-    debugViews.sim->add_data("Полная энергия (pj)", simulation.fullEnegryPJ());
-    debugViews.sim->add_data("Полная средняя энергия (eV)", simulation.fullAverageEnergyEv());
-    debugViews.sim->add_data("Температура (K)", simulation.temperatureK());
-    debugViews.sim->add_data("Температура (°C)", simulation.temperatureC());
+    debugViews.sim->add_data("Средняя скорость (км/ч)", simulation.world().getMetrics().averageSpeedKmPerHour());
+    debugViews.sim->add_data("Полная энергия (pj)", simulation.world().getMetrics().fullAverageEnergyEv() * simulation.atoms().size() * Units::kEvToPJ);
+    debugViews.sim->add_data("Полная средняя энергия (eV)", simulation.world().getMetrics().fullAverageEnergyEv());
+    debugViews.sim->add_data("Температура (K)", simulation.world().getMetrics().temperatureK());
+    debugViews.sim->add_data("Температура (°C)", simulation.world().getMetrics().temperatureC());
     debugViews.sim->add_data("Память (МБ)", MemoryMetrics::getRSS() / 1024.f / 1024.f);
     debugViews.sim->add_data("Рендер (мс)", renderMs);
     debugViews.sim->add_data("Capture readback (ms)", captureReadbackMs);
