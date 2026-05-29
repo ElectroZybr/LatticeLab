@@ -3,6 +3,7 @@
 
 #include <GLFW/glfw3.h>
 
+#include "Engine/math/Vec2.h"
 #include "Rendering/BaseRenderer.h"
 
 class Mouse {

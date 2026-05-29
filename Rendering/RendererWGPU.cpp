@@ -42,12 +42,7 @@ RendererWGPU::RendererWGPU(wgpu::TextureFormat surfaceFormat) : surfaceFormat(su
 }
 
 void RendererWGPU::initAtomColors() {
-    const int typeCount = static_cast<int>(AtomData::Type::COUNT);
-    typeColorsData.resize(typeCount);
-    for (int i = 0; i < typeCount; ++i) {
-        const auto& props = AtomData::getProps(static_cast<AtomData::Type>(i));
-        typeColorsData[i] = glm::vec4(props.color.r / 255.f, props.color.g / 255.f, props.color.b / 255.f, props.color.a / 255.f);
-    }
+    typeColorsData.assign(119, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
 void RendererWGPU::initAtomQuadBuffer() {
@@ -384,6 +379,11 @@ void RendererWGPU::drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView
     for (size_t i = 0; i < typeColorsData.size(); ++i) {
         uniforms.typeColors[i] = typeColorsData[i];
     }
+    const size_t colorCount = std::min(renderData.typeColors.size(), std::size(uniforms.typeColors));
+    for (size_t i = 0; i < colorCount; ++i) {
+        const RenderColor& color = renderData.typeColors[i];
+        uniforms.typeColors[i] = glm::vec4(color.r, color.g, color.b, color.a);
+    }
 
     WGPUContext::instance().queue()->writeBuffer(*uniformBuffer, 0, &uniforms, sizeof(uniforms));
 
@@ -446,7 +446,7 @@ void RendererWGPU::endFrame() {
 
 void RendererWGPU::drawAtomsImpl(const RenderAtomsView& atoms, const RenderData& renderData, bool applySelection) {
     const size_t count = atoms.count;
-    if (count == 0 || !atoms.hasPositions() || !atoms.hasTypes()) {
+    if (count == 0 || !atoms.hasPositions() || !atoms.hasTypes() || !atoms.hasRadii()) {
         return;
     }
 
@@ -461,10 +461,8 @@ void RendererWGPU::drawAtomsImpl(const RenderAtomsView& atoms, const RenderData&
     for (size_t i = 0; i < count; ++i) {
         posData_[i] = {atoms.x[i], atoms.y[i], atoms.z[i]};
         velData_[i] = atoms.hasVelocities() ? AtomVec4{atoms.vx[i], atoms.vy[i], atoms.vz[i]} : AtomVec4{};
-        const auto atomType = atoms.type[i];
-        const auto& props = AtomData::getProps(atomType);
-        radii[i] = props.radius;
-        typeData[i] = static_cast<float>(atomType);
+        radii[i] = atoms.radius[i];
+        typeData[i] = static_cast<float>(atoms.typeId[i]);
     }
     if (applySelection && ToolsManager::pickingSystem != nullptr) {
         for (const size_t idx : ToolsManager::pickingSystem->getSelectedIndices()) {
@@ -503,7 +501,7 @@ void RendererWGPU::drawAtomsImpl(const RenderAtomsView& atoms, const RenderData&
     currentPass->draw(6, count, 0, 0);
 }
 
-void RendererWGPU::drawBoxImpl(const Vec3f& worldSize) {
+void RendererWGPU::drawBoxImpl(const glm::vec3& worldSize) {
     if (worldSize != cachedBoxSize_) {
         cachedBoxSize_ = worldSize;
         const float x1 = cachedBoxSize_.x;

@@ -4,8 +4,14 @@
 #include <cstdint>
 #include <vector>
 
-#include "Engine/math/Vec3.h"
-#include "Engine/physics/AtomData.h"
+#include <glm/glm.hpp>
+
+struct RenderColor {
+    float r = 1.0f;
+    float g = 1.0f;
+    float b = 1.0f;
+    float a = 1.0f;
+};
 
 struct RenderAtomsView {
     size_t count = 0;
@@ -18,12 +24,14 @@ struct RenderAtomsView {
     const float* vy = nullptr;
     const float* vz = nullptr;
 
-    const AtomData::Type* type = nullptr;
+    const uint16_t* typeId = nullptr;
+    const float* radius = nullptr;
 
     [[nodiscard]] bool empty() const noexcept { return count == 0; }
     [[nodiscard]] bool hasPositions() const noexcept { return x != nullptr && y != nullptr && z != nullptr; }
     [[nodiscard]] bool hasVelocities() const noexcept { return vx != nullptr && vy != nullptr && vz != nullptr; }
-    [[nodiscard]] bool hasTypes() const noexcept { return type != nullptr; }
+    [[nodiscard]] bool hasTypes() const noexcept { return typeId != nullptr; }
+    [[nodiscard]] bool hasRadii() const noexcept { return radius != nullptr; }
 };
 
 struct RenderBond {
@@ -32,7 +40,7 @@ struct RenderBond {
 };
 
 struct RenderGridCell {
-    Vec3f origin{};
+    glm::vec3 origin{};
     float cellSize = 1.0f;
     float atomCount = 0.0f;
 };
@@ -46,11 +54,18 @@ public:
     };
 
     RenderAtomsView atoms{};
+
+    // Optional owned buffers. Adapters may use these when source data layout/type
+    // does not match the renderer view directly.
+    std::vector<uint16_t> ownedTypeIds;
+    std::vector<float> ownedRadii;
+
+    std::vector<RenderColor> typeColors;
     std::vector<RenderBond> bonds;
     std::vector<RenderGridCell> gridCells;
 
-    Vec3f worldSize{1.0f, 1.0f, 1.0f};
-    Vec3f renderOffset{0.0f, 0.0f, 0.0f};
+    glm::vec3 worldSize{1.0f, 1.0f, 1.0f};
+    glm::vec3 renderOffset{0.0f, 0.0f, 0.0f};
 
     bool drawGrid = false;
     bool drawBonds = false;

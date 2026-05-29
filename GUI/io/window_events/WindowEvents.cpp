@@ -2,6 +2,7 @@
 
 #include "Engine/math/Vec2.h"
 #include "GUI/interface/interface.h"
+#include "Rendering/RenderMath.h"
 #include "Rendering/BaseRenderer.h"
 #include "Rendering/WGPUContext.h"
 
@@ -34,7 +35,7 @@ void WindowEvents::syncFramebufferSize(int width, int height, bool updateInterfa
         return;
     }
 
-    (*renderer)->camera.setScreenSize(Vec2f(width, height));
+    (*renderer)->camera.setScreenSize(glm::vec2(static_cast<float>(width), static_cast<float>(height)));
     WGPUContext::instance().resize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 
     if (!updateInterface || appInterface == nullptr) {

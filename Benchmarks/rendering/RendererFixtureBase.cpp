@@ -4,7 +4,7 @@
 
 #include "Benchmarks/fixtures/RendererFixture.h"
 #include "Rendering/WGPUContext.h"
-#include "Rendering/WorldRenderDataAdapter.h"
+#include "App/rendering/SimulationRenderDataAdapter.h"
 
 namespace {
     GLFWwindow* benchmarkWindow = nullptr;
@@ -77,7 +77,7 @@ void RendererFixtureBase::createRenderTargets(wgpu::Device device, wgpu::Texture
 }
 
 void RendererFixtureBase::drawFrame() {
-    Rendering::syncRendererWithSimulation(*renderer_, simulation_);
+    App::Rendering::syncRendererWithSimulation(*renderer_, simulation_);
     renderer_->drawShot(*targetTextureView_, *depthTextureView_);
     renderer_->endFrame();
 }

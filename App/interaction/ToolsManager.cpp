@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 
+#include "App/rendering/RenderMathAdapters.h"
 #include "App/interaction/tools/AddAtomTool.h"
 #include "App/interaction/tools/CursorTool.h"
 #include "App/interaction/tools/FrameTool.h"
@@ -14,7 +15,7 @@
 #include "GUI/interface/panels/tools/SideToolsPanel.h"
 
 namespace {
-    bool rayBoxIntersect(const Ray& ray, const Vec3f& min, const Vec3f& max, float& hitT) {
+    bool rayBoxIntersect(const RenderRay& ray, const Vec3f& min, const Vec3f& max, float& hitT) {
         float tMin = 0.0f;
         float tMax = std::numeric_limits<float>::max();
 
@@ -202,9 +203,13 @@ void ToolsManager::onFrame(Vec2i mousePos, float deltaTime) {
     }
 }
 
-Vec3f ToolsManager::screenToWorld(Vec2i mousePos) { return (*renderer)->camera.screenToWorld(mousePos); }
+Vec3f ToolsManager::screenToWorld(Vec2i mousePos) {
+    return App::Rendering::toEngineVec3f((*renderer)->camera.screenToWorld(App::Rendering::toGlmVec2(mousePos)));
+}
 
-Vec2i ToolsManager::worldToScreen(Vec3f pos) { return (*renderer)->camera.worldToScreen(pos); }
+Vec2i ToolsManager::worldToScreen(Vec3f pos) {
+    return App::Rendering::toEngineVec2i((*renderer)->camera.worldToScreen(App::Rendering::toGlmVec3(pos)));
+}
 
 ToolsManager::Mode ToolsManager::currentMode() {
     if (sideToolsPanel == nullptr) {
@@ -278,7 +283,7 @@ void ToolsManager::selectWorldAt(Vec2i mousePos) {
     float bestT = std::numeric_limits<float>::max();
 
     if (rend.camera.getMode() == Camera::Mode::Mode2D) {
-        const Vec3f worldPos = rend.camera.screenToWorld(mousePos);
+        const Vec3f worldPos = App::Rendering::toEngineVec3f(rend.camera.screenToWorld(App::Rendering::toGlmVec2(mousePos)));
         for (Simulation::WorldId worldId = 0; worldId < simulation->worldCount(); ++worldId) {
             const World& world = simulation->worldAt(worldId);
             const Vec3f min = world.getRenderOffset();
@@ -290,7 +295,7 @@ void ToolsManager::selectWorldAt(Vec2i mousePos) {
         }
     }
     else {
-        const Ray ray = rend.camera.screenToRay(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
+        const RenderRay ray = rend.camera.screenToRay(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
         for (Simulation::WorldId worldId = 0; worldId < simulation->worldCount(); ++worldId) {
             const World& world = simulation->worldAt(worldId);
             const Vec3f min = world.getRenderOffset();

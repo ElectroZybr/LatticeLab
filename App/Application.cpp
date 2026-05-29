@@ -18,7 +18,7 @@
 #include "GUI/io/manager/EventManager.h"
 #include "Rendering/3d/Renderer3DWGPU.h"
 #include "Rendering/WGPUContext.h"
-#include "Rendering/WorldRenderDataAdapter.h"
+#include "App/rendering/SimulationRenderDataAdapter.h"
 #include "capture/CaptureActions.h"
 #include "capture/CaptureController.h"
 #include "debug/CreateDebugPanels.h"
@@ -47,11 +47,10 @@ int Application::run() {
     CaptureController captureController;
     std::unique_ptr<BaseRenderer> renderer = std::make_unique<Renderer3DWGPU>(WGPUContext::instance().surfaceFormat());
     renderer->addRenderData();
-    Rendering::syncRendererWithSimulation(*renderer, simulation);
+    App::Rendering::syncRendererWithSimulation(*renderer, simulation);
+
     Interface appInterface(window, simulation, renderer, captureController);
     appInterface.toolsPanel.setRendererType(renderer->camera.getMode() == Camera::Mode::Mode2D ? RendererType::Renderer2D : RendererType::Renderer3D);
-
-    
 
     AppActions::Handler appActions(window, captureController, simulation, renderer, appInterface.state());
     CaptureActions::Handler captureActions(captureController);
@@ -136,7 +135,7 @@ int Application::run() {
             renderAccum -= renderInterval;
 
             uiState.simStep = simulation.getSimStep();
-            Rendering::syncRendererWithSimulation(*renderer, simulation);
+            App::Rendering::syncRendererWithSimulation(*renderer, simulation);
             appInterface.update();
             refreshAtomDebugViews(debugViews, simulation);
 

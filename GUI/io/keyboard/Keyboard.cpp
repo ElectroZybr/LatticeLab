@@ -92,22 +92,22 @@ void Keyboard::onFrame(float deltaTime) {
         const float s = rend->camera.speed * deltaTime * kFreeMoveSpeedScale;
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            rend->camera.move3D(Vec3f(forward.x, forward.y, forward.z) * s);
+            rend->camera.move3D(glm::vec3(forward.x, forward.y, forward.z) * s);
         }
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            rend->camera.move3D(Vec3f(-forward.x, -forward.y, -forward.z) * s);
+            rend->camera.move3D(glm::vec3(-forward.x, -forward.y, -forward.z) * s);
         }
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            rend->camera.move3D(Vec3f(-right.x, -right.y, -right.z) * s);
+            rend->camera.move3D(glm::vec3(-right.x, -right.y, -right.z) * s);
         }
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            rend->camera.move3D(Vec3f(right.x, right.y, right.z) * s);
+            rend->camera.move3D(glm::vec3(right.x, right.y, right.z) * s);
         }
         if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-            rend->camera.move3D(Vec3f(0.f, -s, 0.f));
+            rend->camera.move3D(glm::vec3(0.f, -s, 0.f));
         }
         if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-            rend->camera.move3D(Vec3f(0.f, s, 0.f));
+            rend->camera.move3D(glm::vec3(0.f, s, 0.f));
         }
     }
     else if (rend->camera.mode == Camera::Mode::Mode2D) {

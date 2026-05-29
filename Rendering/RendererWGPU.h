@@ -98,7 +98,7 @@ private:
     void beginPass(wgpu::TextureView targetView, wgpu::TextureView depthView, wgpu::LoadOp targetLoadOp);
     void drawAtomsImpl(const RenderAtomsView& atoms, const RenderData& renderData, bool applySelection);
     void drawBondsImpl(const RenderAtomsView& atoms, const std::vector<RenderBond>& bonds);
-    void drawBoxImpl(const Vec3f& worldSize);
+    void drawBoxImpl(const glm::vec3& worldSize);
     void drawGridImpl(const std::vector<RenderGridCell>& cells);
     void setLineColor(const glm::vec4& color);
 
@@ -122,7 +122,7 @@ private:
     std::vector<float> radii;
     std::vector<float> typeData;
     std::array<float, 24 * 3> boxVertices_{};
-    Vec3f cachedBoxSize_{-1.0, -1.0, -1.0};
+    glm::vec3 cachedBoxSize_{-1.0f, -1.0f, -1.0f};
 
     wgpu::raii::CommandEncoder currentEncoder;
 };

@@ -10,7 +10,7 @@
 #include "Rendering/2d/Renderer2DWGPU.h"
 #include "Rendering/3d/Renderer3DWGPU.h"
 #include "Rendering/WGPUContext.h"
-#include "Rendering/WorldRenderDataAdapter.h"
+#include "App/rendering/SimulationRenderDataAdapter.h"
 
 namespace {
     void shiftAtoms(AtomStorage& atomStorage, Vec3f delta) {
@@ -78,7 +78,7 @@ namespace AppActions {
             if (newRenderer) {
                 ToolsManager::resetInteractionState();
                 newRenderer->addRenderData();
-                Rendering::syncRendererWithSimulation(*newRenderer, simulation);
+                App::Rendering::syncRendererWithSimulation(*newRenderer, simulation);
                 newRenderer->getRenderData(0).drawGrid = renderer->getRenderData(0).drawGrid;
                 newRenderer->getRenderData(0).drawBonds = renderer->getRenderData(0).drawBonds;
                 newRenderer->getRenderData(0).drawBox = renderer->getRenderData(0).drawBox;
