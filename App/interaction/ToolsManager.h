@@ -35,7 +35,7 @@ public:
         RemoveAtom,
     };
 
-    static void init(GLFWwindow* window, Simulation& simulation, std::unique_ptr<IRenderer>& renderer, Interface& appInterface);
+    static void init(GLFWwindow* window, Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer, Interface& appInterface);
 
     static Vec3f screenToWorld(Vec2i mousePos);
     static Vec2i worldToScreen(Vec3f pos);
@@ -64,7 +64,7 @@ private:
     static size_t toIndex(Mode mode) noexcept;
 
     static GLFWwindow* window;
-    static std::unique_ptr<IRenderer>* renderer;
+    static std::unique_ptr<BaseRenderer>* renderer;
     static Simulation* simulation;
     static UiState* uiState;
     static SideToolsPanel* sideToolsPanel;

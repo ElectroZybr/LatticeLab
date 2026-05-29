@@ -4,7 +4,6 @@
 
 #include "Engine/math/Ray.h"
 
-class World;
 class Renderer2D;
 class Renderer3DWGPU;
 class Renderer2DWGPU;
@@ -21,8 +20,12 @@ class Camera {
 public:
     enum class Mode : uint8_t { Mode2D, Orbit, Free };
 
-    Camera(World& simBox, float moveSpeed = 500.f, float zoomSpeed = 0.1f);
+    Camera(float moveSpeed = 500.f, float zoomSpeed = 0.1f);
 
+    void setSceneBounds(Vec3f size, Vec3f offset = Vec3f{0.0f, 0.0f, 0.0f}) {
+        sceneSize = size;
+        sceneOffset = offset;
+    }
     void resetView();
 
     void setScreenSize(Vec2f screenSize) { this->screenSize = screenSize; }
@@ -73,7 +76,8 @@ private:
     Vec2f dragStartCameraPos;
 
     Mode mode = Mode::Mode2D;
-    World& world;
+    Vec3f sceneSize{1.0f, 1.0f, 1.0f};
+    Vec3f sceneOffset{0.0f, 0.0f, 0.0f};
 
     // Orbit / Free
     float azimuth = 0.f;

@@ -9,7 +9,7 @@ class Keyboard {
     friend class EventManager;
 
 public:
-    static void init(GLFWwindow* window, std::unique_ptr<IRenderer>& r, class Interface& appInterface);
+    static void init(GLFWwindow* window, std::unique_ptr<BaseRenderer>& r, class Interface& appInterface);
 
     static bool isPressed(int key);
 
@@ -18,7 +18,7 @@ public:
 
 private:
     static GLFWwindow* window;
-    static std::unique_ptr<IRenderer>* render;
+    static std::unique_ptr<BaseRenderer>* render;
     static class Interface* appInterface;
     static GLFWkeyfun imgui_key_callback;
 };

@@ -6,7 +6,7 @@
 #include "Engine/math/Ray.h"
 #include "Rendering/BaseRenderer.h"
 
-PickingSystem::PickingSystem(AtomStorage& atomStorage, World& box, std::unique_ptr<IRenderer>& renderer)
+PickingSystem::PickingSystem(AtomStorage& atomStorage, World& box, std::unique_ptr<BaseRenderer>& renderer)
     : atomStorage(&atomStorage), box(&box), renderer(&renderer) {}
 
 void PickingSystem::setWorld(AtomStorage& newAtomStorage, World& newBox) {
@@ -45,7 +45,7 @@ void PickingSystem::processRect(Vec2i start, Vec2i end, bool cumulative) {
     if (!cumulative) {
         clearSelection();
     }
-    IRenderer* rend = renderer->get();
+    BaseRenderer* rend = renderer->get();
 
     for (size_t i = 0; i < atomStorage->size(); ++i) {
         const Vec3f worldPos = displayAtomPos(i);
@@ -63,7 +63,7 @@ void PickingSystem::processLasso(std::span<Vec2i> points, bool cumulative) {
     if (!cumulative) {
         clearSelection();
     }
-    IRenderer* rend = renderer->get();
+    BaseRenderer* rend = renderer->get();
 
     for (size_t i = 0; i < atomStorage->size(); ++i) {
         const Vec3f worldPos = displayAtomPos(i);
@@ -87,7 +87,7 @@ void PickingSystem::handleAtomRemoval(size_t index) {
 }
 
 bool PickingSystem::pickAtom(Vec2i screenPos, float tolerance, AtomHit& hit) const {
-    IRenderer* rend = renderer->get();
+    BaseRenderer* rend = renderer->get();
     switch (rend->camera.getMode()) {
     case Camera::Mode::Mode2D:
         return pickAtom2D(screenPos, tolerance, hit);
@@ -99,7 +99,7 @@ bool PickingSystem::pickAtom(Vec2i screenPos, float tolerance, AtomHit& hit) con
 }
 
 bool PickingSystem::pickAtom2D(Vec2i screenPos, float tolerance, AtomHit& hit) const {
-    IRenderer* rend = renderer->get();
+    BaseRenderer* rend = renderer->get();
     float bestDistSqr = std::numeric_limits<float>::max();
     size_t bestIndex = static_cast<size_t>(-1);
 

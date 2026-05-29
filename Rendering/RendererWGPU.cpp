@@ -7,7 +7,6 @@
 #include <webgpu/webgpu.hpp>
 
 #include "App/interaction/ToolsManager.h"
-#include "Engine/Simulation.h"
 #include "Rendering/WGPUContext.h"
 
 #ifdef True
@@ -31,7 +30,7 @@ namespace {
 
 }
 
-RendererWGPU::RendererWGPU(World& world, wgpu::TextureFormat surfaceFormat) : IRenderer(world), surfaceFormat(surfaceFormat) {
+RendererWGPU::RendererWGPU(wgpu::TextureFormat surfaceFormat) : surfaceFormat(surfaceFormat) {
     uniformBuffer = WGPUContext::instance().createBuffer(sizeof(SceneUniforms), wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst,
                                                          "RenderingUniforms");
 
@@ -354,22 +353,22 @@ template <typename T> void RendererWGPU::uploadStorageBuffer(wgpu::Buffer& buf, 
     WGPUContext::instance().queue()->writeBuffer(buf, 0, data, count * sizeof(T));
 }
 
-void RendererWGPU::drawShot(wgpu::TextureView targetView, wgpu::TextureView depthView, const Simulation& simulation) {
-    if (simulation.worldCount() == 0) {
+void RendererWGPU::drawShot(wgpu::TextureView targetView, wgpu::TextureView depthView) {
+    if (getRenderDataCount() == 0) {
         beginPass(targetView, depthView, wgpu::LoadOp::Clear);
         return;
     }
 
-    for (Simulation::WorldId worldId = 0; worldId < simulation.worldCount(); ++worldId) {
-        drawWorldPass(targetView, depthView, simulation.worldAt(worldId), worldId == 0 ? wgpu::LoadOp::Clear : wgpu::LoadOp::Load,
-                      worldId == simulation.activeWorldId());
-        if (worldId + 1 < simulation.worldCount()) {
+    for (size_t renderDataIndex = 0; renderDataIndex < getRenderDataCount(); ++renderDataIndex) {
+        const RenderData& renderData = getRenderData(renderDataIndex);
+        drawWorldPass(targetView, depthView, renderData, renderDataIndex == 0 ? wgpu::LoadOp::Clear : wgpu::LoadOp::Load, renderDataIndex == 0);
+        if (renderDataIndex + 1 < getRenderDataCount()) {
             endFrame();
         }
     }
 }
 
-void RendererWGPU::drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView depthView, const World& world, wgpu::LoadOp targetLoadOp,
+void RendererWGPU::drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView depthView, const RenderData& renderData, wgpu::LoadOp targetLoadOp,
                                  bool applySelection) {
     updateMatrices();
 
@@ -377,10 +376,10 @@ void RendererWGPU::drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView
     uniforms.view = view;
     uniforms.projection = projection;
     uniforms.lightDir = glm::vec4(getLightDir(), 0.f);
-    uniforms.colorMode = glm::vec4(static_cast<float>(speedColorMode), 0, 0, 0);
+    uniforms.colorMode = glm::vec4(static_cast<float>(renderData.speedColorMode), 0, 0, 0);
     uniforms.maxSpeedSqr = glm::vec4(1.f, 0, 0, 0);
     uniforms.maxCount = glm::vec4(1.f, 0, 0, 0);
-    uniforms.renderOffset = glm::vec4(world.getRenderOffset().x, world.getRenderOffset().y, world.getRenderOffset().z, 0.0f);
+    uniforms.renderOffset = glm::vec4(renderData.renderOffset.x, renderData.renderOffset.y, renderData.renderOffset.z, 0.0f);
     uniforms.lineColor = glm::vec4(0.4f, 0.6f, 1.0f, 0.3f);
     for (size_t i = 0; i < typeColorsData.size(); ++i) {
         uniforms.typeColors[i] = typeColorsData[i];
@@ -390,18 +389,18 @@ void RendererWGPU::drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView
 
     beginPass(targetView, depthView, targetLoadOp);
 
-    if (drawBonds) {
+    if (renderData.drawBonds) {
         setLineColor(glm::vec4(0.4f, 0.6f, 1.0f, 0.3f));
-        drawBondsImpl(world.getAtomStorage(), world.getBonds());
+        drawBondsImpl(renderData.atoms, renderData.bonds);
     }
-    if (drawGrid) {
-        drawGridImpl(world.getGrid());
+    if (renderData.drawGrid) {
+        drawGridImpl(renderData.gridCells);
     }
-    if (drawBox) {
+    if (renderData.drawBox) {
         setLineColor(applySelection ? glm::vec4(0.5f, 0.78f, 1.0f, 0.55f) : glm::vec4(0.35f, 0.52f, 0.9f, 0.3f));
-        drawBoxImpl(world.getWorldSize());
+        drawBoxImpl(renderData.worldSize);
     }
-    drawAtomsImpl(world.getAtomStorage(), applySelection);
+    drawAtomsImpl(renderData.atoms, renderData, applySelection);
 }
 
 void RendererWGPU::beginPass(wgpu::TextureView targetView, wgpu::TextureView depthView, wgpu::LoadOp targetLoadOp) {
@@ -445,9 +444,9 @@ void RendererWGPU::endFrame() {
     currentEncoder = wgpu::raii::CommandEncoder{};
 }
 
-void RendererWGPU::drawAtomsImpl(const AtomStorage& atoms, bool applySelection) {
-    const size_t count = atoms.size();
-    if (count == 0) {
+void RendererWGPU::drawAtomsImpl(const RenderAtomsView& atoms, const RenderData& renderData, bool applySelection) {
+    const size_t count = atoms.count;
+    if (count == 0 || !atoms.hasPositions() || !atoms.hasTypes()) {
         return;
     }
 
@@ -460,11 +459,12 @@ void RendererWGPU::drawAtomsImpl(const AtomStorage& atoms, bool applySelection) 
     selectedData.assign(count, 0.0f);
 
     for (size_t i = 0; i < count; ++i) {
-        posData_[i] = {atoms.xData()[i], atoms.yData()[i], atoms.zData()[i]};
-        velData_[i] = {atoms.vxData()[i], atoms.vyData()[i], atoms.vzData()[i]};
-        const auto& props = AtomData::getProps(atoms.type(i));
+        posData_[i] = {atoms.x[i], atoms.y[i], atoms.z[i]};
+        velData_[i] = atoms.hasVelocities() ? AtomVec4{atoms.vx[i], atoms.vy[i], atoms.vz[i]} : AtomVec4{};
+        const auto atomType = atoms.type[i];
+        const auto& props = AtomData::getProps(atomType);
         radii[i] = props.radius;
-        typeData[i] = static_cast<float>(atoms.type(i));
+        typeData[i] = static_cast<float>(atomType);
     }
     if (applySelection && ToolsManager::pickingSystem != nullptr) {
         for (const size_t idx : ToolsManager::pickingSystem->getSelectedIndices()) {
@@ -481,14 +481,18 @@ void RendererWGPU::drawAtomsImpl(const AtomStorage& atoms, bool applySelection) 
     uploadStorageBuffer(*sbSel, selectedData.data(), count);
 
     float maxSpeedSqr = 1.f;
-    if (speedColorMode != SpeedColorMode::AtomColor) {
-        if (speedGradientMax > 0.f) {
-            maxSpeedSqr = speedGradientMax * speedGradientMax;
+    if (renderData.speedColorMode != RenderData::SpeedColorMode::AtomColor) {
+        if (renderData.speedGradientMax > 0.f) {
+            maxSpeedSqr = renderData.speedGradientMax * renderData.speedGradientMax;
         }
         else {
-            const auto it =
-                std::ranges::max_element(std::views::iota(size_t{0}, count), {}, [&](size_t i) { return atoms.vel(i).sqrAbs(); });
-            maxSpeedSqr = std::max(1e-6f, atoms.vel(*it).sqrAbs());
+            if (atoms.hasVelocities()) {
+                const auto it = std::ranges::max_element(std::views::iota(size_t{0}, count), {}, [&](size_t i) {
+                    return atoms.vx[i] * atoms.vx[i] + atoms.vy[i] * atoms.vy[i] + atoms.vz[i] * atoms.vz[i];
+                });
+                const float speedSqr = atoms.vx[*it] * atoms.vx[*it] + atoms.vy[*it] * atoms.vy[*it] + atoms.vz[*it] * atoms.vz[*it];
+                maxSpeedSqr = std::max(1e-6f, speedSqr);
+            }
         }
     }
     WGPUContext::instance().queue()->writeBuffer(*uniformBuffer, offsetof(SceneUniforms, maxSpeedSqr), &maxSpeedSqr, sizeof(float));
@@ -523,21 +527,19 @@ void RendererWGPU::setLineColor(const glm::vec4& color) {
     WGPUContext::instance().queue()->writeBuffer(*uniformBuffer, offsetof(SceneUniforms, lineColor), &color, sizeof(color));
 }
 
-void RendererWGPU::drawBondsImpl(const AtomStorage& atoms, const Bond::List& bonds) {
+void RendererWGPU::drawBondsImpl(const RenderAtomsView& atoms, const std::vector<RenderBond>& bonds) {
     if (bonds.empty()) {
         return;
     }
 
     std::vector<glm::vec3> verts;
     verts.reserve(bonds.size() * 2);
-    for (const Bond& bond : bonds) {
-        if (bond.aIndex >= atoms.size() || bond.bIndex >= atoms.size()) {
+    for (const RenderBond& bond : bonds) {
+        if (bond.aIndex >= atoms.count || bond.bIndex >= atoms.count || !atoms.hasPositions()) {
             continue;
         }
-        const Vec3f a = atoms.pos(bond.aIndex);
-        const Vec3f b = atoms.pos(bond.bIndex);
-        verts.emplace_back(a.x, a.y, a.z);
-        verts.emplace_back(b.x, b.y, b.z);
+        verts.emplace_back(atoms.x[bond.aIndex], atoms.y[bond.aIndex], atoms.z[bond.aIndex]);
+        verts.emplace_back(atoms.x[bond.bIndex], atoms.y[bond.bIndex], atoms.z[bond.bIndex]);
     }
     if (verts.empty()) {
         return;
@@ -556,27 +558,21 @@ void RendererWGPU::drawBondsImpl(const AtomStorage& atoms, const Bond::List& bon
     currentPass->draw(verts.size(), 1, 0, 0);
 }
 
-void RendererWGPU::drawGridImpl(const SpatialGrid& grid) {
+void RendererWGPU::drawGridImpl(const std::vector<RenderGridCell>& cells) {
     gridData.clear();
-    int maxCount = 1;
+    float maxCount = 1.0f;
 
-    for (unsigned int z = 1; z < grid.size.z - 1; ++z) {
-        for (unsigned int y = 1; y < grid.size.y - 1; ++y) {
-            for (unsigned int x = 1; x < grid.size.x - 1; ++x) {
-                const int cnt = grid.countAtomsInCell(x, y, z);
-                if (cnt > 0) {
-                    gridData.emplace_back(glm::vec4((x - 1) * grid.cellSize, (y - 1) * grid.cellSize, (z - 1) * grid.cellSize, 0.f),
-                                          (float)grid.cellSize, (float)cnt);
-                    maxCount = std::max(maxCount, cnt);
-                }
-            }
+    for (const RenderGridCell& cell : cells) {
+        if (cell.atomCount > 0.0f) {
+            gridData.emplace_back(glm::vec4(cell.origin.x, cell.origin.y, cell.origin.z, 0.f), cell.cellSize, cell.atomCount);
+            maxCount = std::max(maxCount, cell.atomCount);
         }
     }
     if (gridData.empty()) {
         return;
     }
 
-    float mc = (float)maxCount;
+    float mc = maxCount;
     WGPUContext::instance().queue()->writeBuffer(*uniformBuffer, offsetof(SceneUniforms, maxCount), &mc, sizeof(float));
 
     const uint64_t instBytes = gridData.size() * sizeof(GridInstance);

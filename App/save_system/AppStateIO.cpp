@@ -30,7 +30,7 @@ namespace {
         bool drawGrid = false;
         bool drawBonds = false;
         bool drawBox = true;
-        int speedColorMode = static_cast<int>(IRenderer::SpeedColorMode::AtomColor);
+        int speedColorMode = static_cast<int>(RenderData::SpeedColorMode::AtomColor);
         float speedGradientMax = 5.0f;
         float alpha = 0.05f;
     };
@@ -175,34 +175,36 @@ namespace {
         });
     }
 
-    void saveRendererState(const IRenderer& renderer, std::string_view path) {
+    void saveRendererState(const BaseRenderer& renderer, std::string_view path) {
         std::ofstream file(path.data(), std::ios::app);
         if (!file.is_open()) {
             return;
         }
 
+        const RenderData& data = renderer.getRenderData(0);
         file << "\n[renderer]\n";
-        file << kBlockIndent << "draw_grid " << static_cast<int>(renderer.drawGrid) << "\n";
-        file << kBlockIndent << "draw_bonds " << static_cast<int>(renderer.drawBonds) << "\n";
-        file << kBlockIndent << "draw_box " << static_cast<int>(renderer.drawBox) << "\n";
-        file << kBlockIndent << "speed_color_mode " << static_cast<int>(renderer.speedColorMode) << "\n";
-        file << kBlockIndent << "speed_gradient_max " << renderer.speedGradientMax << "\n";
-        file << kBlockIndent << "renderer_alpha " << renderer.alpha << "\n";
+        file << kBlockIndent << "draw_grid " << static_cast<int>(data.drawGrid) << "\n";
+        file << kBlockIndent << "draw_bonds " << static_cast<int>(data.drawBonds) << "\n";
+        file << kBlockIndent << "draw_box " << static_cast<int>(data.drawBox) << "\n";
+        file << kBlockIndent << "speed_color_mode " << static_cast<int>(data.speedColorMode) << "\n";
+        file << kBlockIndent << "speed_gradient_max " << data.speedGradientMax << "\n";
+        file << kBlockIndent << "renderer_alpha " << data.alpha << "\n";
     }
 
-    void loadRendererState(IRenderer& renderer, std::string_view path) {
+    void loadRendererState(BaseRenderer& renderer, std::string_view path) {
         std::ifstream file(path.data());
         if (!file.is_open()) {
             return;
         }
 
+        RenderData& data = renderer.getRenderData(0);
         LoadedRendererData loadedRenderer{
-            .drawGrid = renderer.drawGrid,
-            .drawBonds = renderer.drawBonds,
-            .drawBox = renderer.drawBox,
-            .speedColorMode = static_cast<int>(renderer.speedColorMode),
-            .speedGradientMax = renderer.speedGradientMax,
-            .alpha = renderer.alpha,
+            .drawGrid = data.drawGrid,
+            .drawBonds = data.drawBonds,
+            .drawBox = data.drawBox,
+            .speedColorMode = static_cast<int>(data.speedColorMode),
+            .speedGradientMax = data.speedGradientMax,
+            .alpha = data.alpha,
         };
 
         std::string line;
@@ -242,17 +244,17 @@ namespace {
             }
         }
 
-        renderer.drawGrid = loadedRenderer.drawGrid;
-        renderer.drawBonds = loadedRenderer.drawBonds;
-        renderer.drawBox = loadedRenderer.drawBox;
-        renderer.speedColorMode = static_cast<IRenderer::SpeedColorMode>(loadedRenderer.speedColorMode);
-        renderer.speedGradientMax = loadedRenderer.speedGradientMax;
-        renderer.alpha = loadedRenderer.alpha;
+        data.drawGrid = loadedRenderer.drawGrid;
+        data.drawBonds = loadedRenderer.drawBonds;
+        data.drawBox = loadedRenderer.drawBox;
+        data.speedColorMode = static_cast<RenderData::SpeedColorMode>(loadedRenderer.speedColorMode);
+        data.speedGradientMax = loadedRenderer.speedGradientMax;
+        data.alpha = loadedRenderer.alpha;
     }
 }
 
 void AppStateIO::save(CaptureController& captureController, const PreviewFrameRect& previewRect, const Simulation& simulation,
-                      const IRenderer& renderer, std::string_view path) {
+                      const BaseRenderer& renderer, std::string_view path) {
     if (path.ends_with(".lat")) {
         AppStateIO::saveText(captureController, previewRect, simulation, renderer, path);
     }
@@ -261,7 +263,7 @@ void AppStateIO::save(CaptureController& captureController, const PreviewFrameRe
     }
 }
 
-void AppStateIO::load(Simulation& simulation, IRenderer& renderer, std::string_view path) {
+void AppStateIO::load(Simulation& simulation, BaseRenderer& renderer, std::string_view path) {
     if (path.ends_with(".lat")) {
         AppStateIO::loadText(simulation, renderer, path);
     }
@@ -271,14 +273,14 @@ void AppStateIO::load(Simulation& simulation, IRenderer& renderer, std::string_v
 }
 
 void AppStateIO::saveText(CaptureController& captureController, const PreviewFrameRect& previewRect, const Simulation& simulation,
-                          const IRenderer& renderer, std::string_view path) {
+                          const BaseRenderer& renderer, std::string_view path) {
     SimulationStateIO::save(simulation, path);
     saveRendererState(renderer, path);
     saveImageState(captureController, previewRect, path);
 }
 
 void AppStateIO::saveBinary(CaptureController& captureController, const PreviewFrameRect& previewRect, const Simulation& simulation,
-                            const IRenderer& renderer, std::string_view path) {
+                            const BaseRenderer& renderer, std::string_view path) {
     SimulationSaveState simState;
     simState.dt = simulation.getDt();
     simState.time_ns = simulation.simTimeNs();
@@ -308,12 +310,12 @@ void AppStateIO::saveBinary(CaptureController& captureController, const PreviewF
     simState.bonds.assign(view.begin(), view.end());
 
     RendererSaveState rendState;
-    rendState.drawGrid = renderer.drawGrid;
-    rendState.drawBonds = renderer.drawBonds;
-    rendState.drawBox = renderer.drawBox;
-    rendState.speedColorMode = renderer.speedColorMode;
-    rendState.speedGradientMax = renderer.speedGradientMax;
-    rendState.alpha = renderer.alpha;
+    rendState.drawGrid = renderer.getRenderData(0).drawGrid;
+    rendState.drawBonds = renderer.getRenderData(0).drawBonds;
+    rendState.drawBox = renderer.getRenderData(0).drawBox;
+    rendState.speedColorMode = renderer.getRenderData(0).speedColorMode;
+    rendState.speedGradientMax = renderer.getRenderData(0).speedGradientMax;
+    rendState.alpha = renderer.getRenderData(0).alpha;
 
     AppSaveState appState;
     appState.simulation = std::move(simState);
@@ -364,13 +366,13 @@ void AppStateIO::saveBinary(CaptureController& captureController, const PreviewF
     });
 }
 
-void AppStateIO::loadText(Simulation& simulation, IRenderer& renderer, std::string_view path) {
+void AppStateIO::loadText(Simulation& simulation, BaseRenderer& renderer, std::string_view path) {
     SimulationStateIO::load(simulation, path);
     loadRendererState(renderer, path);
     renderer.camera.resetView();
 }
 
-void AppStateIO::loadBinary(Simulation& simulation, IRenderer& renderer, std::string_view path) {
+void AppStateIO::loadBinary(Simulation& simulation, BaseRenderer& renderer, std::string_view path) {
     std::ifstream file(path.data(), std::ios::binary | std::ios::ate);
     if (!file) {
         throw std::runtime_error("Failed to open save file: " + std::string(path));
@@ -447,11 +449,11 @@ void AppStateIO::loadBinary(Simulation& simulation, IRenderer& renderer, std::st
 
     // Рендер
     const auto& rendState = appState.renderer;
-    renderer.drawGrid = rendState.drawGrid;
-    renderer.drawBonds = rendState.drawBonds;
-    renderer.drawBox = rendState.drawBox;
-    renderer.speedColorMode = rendState.speedColorMode;
-    renderer.speedGradientMax = rendState.speedGradientMax;
-    renderer.alpha = rendState.alpha;
+    renderer.getRenderData(0).drawGrid = rendState.drawGrid;
+    renderer.getRenderData(0).drawBonds = rendState.drawBonds;
+    renderer.getRenderData(0).drawBox = rendState.drawBox;
+    renderer.getRenderData(0).speedColorMode = rendState.speedColorMode;
+    renderer.getRenderData(0).speedGradientMax = rendState.speedGradientMax;
+    renderer.getRenderData(0).alpha = rendState.alpha;
     renderer.camera.resetView();
 }

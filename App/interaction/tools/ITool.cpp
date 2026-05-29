@@ -25,7 +25,7 @@ void ITool::onFrame(Vec2i mousePos, float deltaTime) {
 void ITool::reset() {}
 
 Vec3f ITool::screenToWorld(Vec2i mousePos) const {
-    if (IRenderer* renderer = context_.activeRenderer(); renderer != nullptr) {
+    if (BaseRenderer* renderer = context_.activeRenderer(); renderer != nullptr) {
         return renderer->camera.screenToWorld(mousePos);
     }
     return {};
@@ -40,7 +40,7 @@ Vec3f ITool::screenToLocalWorld(Vec2i mousePos) const {
 }
 
 Vec2i ITool::worldToScreen(Vec3f worldPos) const {
-    if (IRenderer* renderer = context_.activeRenderer(); renderer != nullptr) {
+    if (BaseRenderer* renderer = context_.activeRenderer(); renderer != nullptr) {
         return renderer->camera.worldToScreen(worldPos);
     }
     return {};

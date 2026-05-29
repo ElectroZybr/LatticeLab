@@ -13,9 +13,10 @@
 #include "Engine/physics/Bond.h"
 #include "Rendering/BaseRenderer.h"
 #include "Rendering/WGPUContext.h"
+#include "Rendering/WorldRenderDataAdapter.h"
 
 template <typename T>
-concept IsRenderer = std::derived_from<T, IRenderer>;
+concept IsRenderer = std::derived_from<T, BaseRenderer>;
 
 class RendererFixtureBase : public benchmark::Fixture {
 protected:
@@ -24,7 +25,7 @@ protected:
     void drawFrame();
     void setCounters(benchmark::State& state) const;
 
-    std::unique_ptr<IRenderer> renderer_;
+    std::unique_ptr<BaseRenderer> renderer_;
     Simulation simulation_;
 
 private:
@@ -58,8 +59,11 @@ public:
 
         simulation_.createWorld(Vec3f(300, 300, 300));
         simulation_.world().getAtomStorage() = makeGridAtoms(static_cast<int>(state.range(0)));
-        renderer_ = std::make_unique<TRenderer>(simulation_.world(), ctx.surfaceFormat());
+        renderer_ = std::make_unique<TRenderer>(ctx.surfaceFormat());
+        renderer_->addRenderData();
+        Rendering::syncRendererWithSimulation(*renderer_, simulation_);
         renderer_->camera.setScreenSize({800.0f, 600.0f});
+        renderer_->camera.setSceneBounds(simulation_.world().getWorldSize(), simulation_.world().getRenderOffset());
         renderer_->camera.resetView();
         createRenderTargets(*ctx.device(), ctx.surfaceFormat());
 

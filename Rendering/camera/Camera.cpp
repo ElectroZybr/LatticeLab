@@ -6,8 +6,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/constants.hpp>
 
-#include "Engine/World.h"
-
 namespace {
     float wrapRadians(float angle) {
         constexpr float pi = glm::pi<float>();
@@ -33,17 +31,16 @@ namespace {
     }
 }
 
-Camera::Camera(World& simBox, float moveSpeed, float zoomSpeed)
-    : world(simBox), moveSpeed(moveSpeed), zoomSpeed(zoomSpeed), isDragging(false), lastMousePos(0, 0) {}
+Camera::Camera(float moveSpeed, float zoomSpeed) : moveSpeed(moveSpeed), zoomSpeed(zoomSpeed), isDragging(false), lastMousePos(0, 0) {}
 
 void Camera::resetView() {
     azimuth = 0.f;
     elevation = 0.f;
     orbitUp = glm::vec3(0.f, 1.f, 0.f);
 
-    const float max_side = std::max({world.getWorldSize().x, world.getWorldSize().y, world.getWorldSize().z});
+    const float max_side = std::max({sceneSize.x, sceneSize.y, sceneSize.z});
     const float distance = (max_side * 0.5f * 1.1f) / std::tan(glm::radians(Camera::FOV_ORBIT) * 0.5f);
-    orbitCenter = world.getRenderOffset() + world.getWorldSize() * 0.5f;
+    orbitCenter = sceneOffset + sceneSize * 0.5f;
     freePosition = orbitCenter;
     freePosition.z = orbitCenter.z - distance;
     position = orbitCenter.xy();
@@ -51,8 +48,8 @@ void Camera::resetView() {
     if (mode == Camera::Mode::Mode2D) {
         constexpr float margin = 0.85f;
 
-        const float zoomX = (screenSize.x * margin) / world.getWorldSize().x;
-        const float zoomY = (screenSize.y * margin) / world.getWorldSize().y;
+        const float zoomX = (screenSize.x * margin) / sceneSize.x;
+        const float zoomY = (screenSize.y * margin) / sceneSize.y;
 
         setZoom(std::min(zoomX, zoomY));
     }
@@ -79,7 +76,7 @@ void Camera::setMode(Mode newMode) {
     }
     else if (mode == Mode::Free && newMode == Mode::Orbit) {
         const Vec3f eye = freePosition;
-        orbitCenter = world.getRenderOffset() + world.getWorldSize() * 0.5f;
+        orbitCenter = sceneOffset + sceneSize * 0.5f;
 
         const Vec3f toEye = eye - orbitCenter;
         const float distance = toEye.abs();

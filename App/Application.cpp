@@ -18,6 +18,7 @@
 #include "GUI/io/manager/EventManager.h"
 #include "Rendering/3d/Renderer3DWGPU.h"
 #include "Rendering/WGPUContext.h"
+#include "Rendering/WorldRenderDataAdapter.h"
 #include "capture/CaptureActions.h"
 #include "capture/CaptureController.h"
 #include "debug/CreateDebugPanels.h"
@@ -44,9 +45,14 @@ int Application::run() {
     simulation.createWorld({120, 120, 120});
 
     CaptureController captureController;
-    std::unique_ptr<IRenderer> renderer = std::make_unique<Renderer3DWGPU>(simulation.world(), WGPUContext::instance().surfaceFormat());
+    std::unique_ptr<BaseRenderer> renderer = std::make_unique<Renderer3DWGPU>(WGPUContext::instance().surfaceFormat());
+    renderer->addRenderData();
+    Rendering::syncRendererWithSimulation(*renderer, simulation);
     Interface appInterface(window, simulation, renderer, captureController);
     appInterface.toolsPanel.setRendererType(renderer->camera.getMode() == Camera::Mode::Mode2D ? RendererType::Renderer2D : RendererType::Renderer3D);
+
+    
+
     AppActions::Handler appActions(window, captureController, simulation, renderer, appInterface.state());
     CaptureActions::Handler captureActions(captureController);
     if (appInterface.init() != EXIT_SUCCESS) {
@@ -61,11 +67,11 @@ int Application::run() {
     captureController.setSettings(userSettings.captureSettings);
     captureController.setOutputDirectory(userSettings.captureOutputDirectory);
     appInterface.setScenesDirectory(userSettings.scenesDirectory);
-    renderer->drawGrid = userSettings.rendererDrawGrid;
-    renderer->drawBonds = userSettings.rendererDrawBonds;
-    renderer->drawBox = userSettings.rendererDrawBox;
-    renderer->speedColorMode = userSettings.rendererSpeedColorMode;
-    renderer->speedGradientMax = userSettings.rendererSpeedGradientMax;
+    renderer->getRenderData(0).drawGrid = userSettings.rendererDrawGrid;
+    renderer->getRenderData(0).drawBonds = userSettings.rendererDrawBonds;
+    renderer->getRenderData(0).drawBox = userSettings.rendererDrawBox;
+    renderer->getRenderData(0).speedColorMode = userSettings.rendererSpeedColorMode;
+    renderer->getRenderData(0).speedGradientMax = userSettings.rendererSpeedGradientMax;
     simulation.setIntegrator(userSettings.simulationIntegrator);
     simulation.setBondFormationEnabled(userSettings.simulationBondFormationEnabled);
     simulation.setLJEnabled(userSettings.simulationLJEnabled);
@@ -130,6 +136,7 @@ int Application::run() {
             renderAccum -= renderInterval;
 
             uiState.simStep = simulation.getSimStep();
+            Rendering::syncRendererWithSimulation(*renderer, simulation);
             appInterface.update();
             refreshAtomDebugViews(debugViews, simulation);
 
@@ -145,7 +152,7 @@ int Application::run() {
             // - идёт захват -> возвращает view intermediate текстуры
             wgpu::TextureView renderTarget = captureController.acquireRenderTarget(*surfaceTexture, *surfaceView);
 
-            renderer->drawShot(renderTarget, *ctx.depthView(), simulation);
+            renderer->drawShot(renderTarget, *ctx.depthView());
             ToolsManager::overlay.draw();
             ImGui::Render();
             auto* wgpuRenderer = static_cast<RendererWGPU*>(renderer.get());
@@ -173,11 +180,11 @@ int Application::run() {
         .captureOutputDirectory = captureController.outputDirectory(),
         .scenesDirectory = appInterface.scenesDirectory(),
         .captureSettings = captureController.settings(),
-        .rendererDrawGrid = renderer->drawGrid,
-        .rendererDrawBonds = renderer->drawBonds,
-        .rendererDrawBox = renderer->drawBox,
-        .rendererSpeedColorMode = renderer->speedColorMode,
-        .rendererSpeedGradientMax = renderer->speedGradientMax,
+        .rendererDrawGrid = renderer->getRenderData(0).drawGrid,
+        .rendererDrawBonds = renderer->getRenderData(0).drawBonds,
+        .rendererDrawBox = renderer->getRenderData(0).drawBox,
+        .rendererSpeedColorMode = renderer->getRenderData(0).speedColorMode,
+        .rendererSpeedGradientMax = renderer->getRenderData(0).speedGradientMax,
         .simulationIntegrator = simulation.getIntegrator(),
         .simulationBondFormationEnabled = simulation.isBondFormationEnabled(),
         .simulationLJEnabled = simulation.isLJEnabled(),

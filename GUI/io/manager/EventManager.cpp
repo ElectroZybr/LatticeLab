@@ -7,9 +7,9 @@
 #include "GUI/io/window_events/WindowEvents.h"
 
 GLFWwindow* EventManager::window = nullptr;
-std::unique_ptr<IRenderer>* EventManager::renderer = nullptr;
+std::unique_ptr<BaseRenderer>* EventManager::renderer = nullptr;
 
-void EventManager::init(GLFWwindow* w, std::unique_ptr<IRenderer>& r, Interface& appInterface) {
+void EventManager::init(GLFWwindow* w, std::unique_ptr<BaseRenderer>& r, Interface& appInterface) {
     window = w;
     renderer = &r;
 

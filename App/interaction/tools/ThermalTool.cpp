@@ -45,7 +45,7 @@ void ThermalTool::applyAt(Vec2i mousePos, float deltaTime) {
         return;
     }
 
-    IRenderer* renderer = ctx.activeRenderer();
+    BaseRenderer* renderer = ctx.activeRenderer();
     if (renderer == nullptr) {
         return;
     }

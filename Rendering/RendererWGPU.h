@@ -7,12 +7,12 @@
 
 #include "Rendering/BaseRenderer.h"
 
-class RendererWGPU : public IRenderer {
+class RendererWGPU : public BaseRenderer {
 public:
-    RendererWGPU(World& world, wgpu::TextureFormat surfaceFormat);
+    explicit RendererWGPU(wgpu::TextureFormat surfaceFormat);
     ~RendererWGPU() override = default;
 
-    void drawShot(wgpu::TextureView targetView, wgpu::TextureView depthView, const Simulation& simulation) override;
+    void drawShot(wgpu::TextureView targetView, wgpu::TextureView depthView) override;
     void endFrame() override;
 
     wgpu::raii::RenderPassEncoder& getCurrentPass() { return currentPass; }
@@ -93,13 +93,13 @@ private:
     template <typename T> void uploadStorageBuffer(wgpu::Buffer& buf, const T* data, size_t count);
 
     // Draw
-    void drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView depthView, const World& world, wgpu::LoadOp targetLoadOp,
+    void drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView depthView, const RenderData& renderData, wgpu::LoadOp targetLoadOp,
                        bool applySelection);
     void beginPass(wgpu::TextureView targetView, wgpu::TextureView depthView, wgpu::LoadOp targetLoadOp);
-    void drawAtomsImpl(const AtomStorage& atoms, bool applySelection);
-    void drawBondsImpl(const AtomStorage& atoms, const Bond::List& bonds);
+    void drawAtomsImpl(const RenderAtomsView& atoms, const RenderData& renderData, bool applySelection);
+    void drawBondsImpl(const RenderAtomsView& atoms, const std::vector<RenderBond>& bonds);
     void drawBoxImpl(const Vec3f& worldSize);
-    void drawGridImpl(const SpatialGrid& grid);
+    void drawGridImpl(const std::vector<RenderGridCell>& cells);
     void setLineColor(const glm::vec4& color);
 
     // Data

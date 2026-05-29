@@ -6,12 +6,12 @@
 #include "App/AppSignals.h"
 #include "GUI/interface/interface.h"
 
-std::unique_ptr<IRenderer>* Keyboard::render = nullptr;
+std::unique_ptr<BaseRenderer>* Keyboard::render = nullptr;
 Interface* Keyboard::appInterface = nullptr;
 GLFWwindow* Keyboard::window = nullptr;
 GLFWkeyfun Keyboard::imgui_key_callback = nullptr;
 
-void Keyboard::init(GLFWwindow* window, std::unique_ptr<IRenderer>& r, Interface& appInterface) {
+void Keyboard::init(GLFWwindow* window, std::unique_ptr<BaseRenderer>& r, Interface& appInterface) {
     render = &r;
     Keyboard::appInterface = &appInterface;
     Keyboard::window = window;
@@ -68,7 +68,7 @@ void Keyboard::onKey(GLFWwindow* window, int key, int scancode, int action, int 
 }
 
 void Keyboard::onFrame(float deltaTime) {
-    std::unique_ptr<IRenderer>& rend = *render;
+    std::unique_ptr<BaseRenderer>& rend = *render;
     constexpr float kFreeMoveSpeedScale = 0.8f;
 
     if (rend->camera.mode == Camera::Mode::Orbit) {

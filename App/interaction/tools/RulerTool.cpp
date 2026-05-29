@@ -10,7 +10,7 @@
 
 namespace {
     Vec3f mapMouseToRulerWorld(const ToolContext& ctx, Vec2i mousePos) {
-        IRenderer* renderer = ctx.activeRenderer();
+        BaseRenderer* renderer = ctx.activeRenderer();
         if (renderer == nullptr) {
             return Vec3f();
         }
@@ -139,7 +139,7 @@ void RulerTool::syncOverlayFromWorld() {
     }
 
     auto& overlay = ctx.pickingSystem->getOverlay();
-    IRenderer* renderer = ctx.activeRenderer();
+    BaseRenderer* renderer = ctx.activeRenderer();
     if (renderer == nullptr) {
         return;
     }

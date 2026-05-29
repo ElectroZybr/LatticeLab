@@ -61,7 +61,7 @@ namespace {
     }
 }
 
-Interface::Interface(GLFWwindow* w, Simulation& s, std::unique_ptr<IRenderer>& r, CaptureController& c)
+Interface::Interface(GLFWwindow* w, Simulation& s, std::unique_ptr<BaseRenderer>& r, CaptureController& c)
     : window_(w), simulation_(&s), renderer_(&r), captureController_(&c) {}
 
 int Interface::init() {

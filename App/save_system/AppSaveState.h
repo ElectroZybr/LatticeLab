@@ -2,8 +2,9 @@
 #include <zpp_bits.h>
 
 #include "Engine/math/Vec3.h"
+#include "Engine/physics/AtomData.h"
 #include "Engine/physics/Integrator.h"
-#include "Rendering/BaseRenderer.h"
+#include "Rendering/RenderData.h"
 
 template <typename T> constexpr auto serialize(auto& archive, const Vec3<T>& self) { return archive(self.x, self.y, self.z); }
 template <typename T> constexpr auto serialize(auto& archive, Vec3<T>& self) { return archive(self.x, self.y, self.z); }
@@ -71,7 +72,7 @@ struct RendererSaveState {
     bool drawGrid = false;
     bool drawBonds = false;
     bool drawBox = true;
-    IRenderer::SpeedColorMode speedColorMode = IRenderer::SpeedColorMode::AtomColor;
+    RenderData::SpeedColorMode speedColorMode = RenderData::SpeedColorMode::AtomColor;
     float speedGradientMax = 5.0f;
     float alpha = 0.05f;
 

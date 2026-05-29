@@ -63,7 +63,7 @@ namespace {
 }
 
 GLFWwindow* ToolsManager::window = nullptr;
-std::unique_ptr<IRenderer>* ToolsManager::renderer = nullptr;
+std::unique_ptr<BaseRenderer>* ToolsManager::renderer = nullptr;
 PickingSystem* ToolsManager::pickingSystem = nullptr;
 ToolsManager::Overlay ToolsManager::overlay = {};
 Simulation* ToolsManager::simulation = nullptr;
@@ -77,7 +77,7 @@ Vec2i ToolsManager::startMousePos = {};
 Vec2i ToolsManager::lastSceneMousePos = {};
 bool ToolsManager::isInteracting = false;
 
-void ToolsManager::init(GLFWwindow* w, Simulation& sim, std::unique_ptr<IRenderer>& rend, Interface& appInterface) {
+void ToolsManager::init(GLFWwindow* w, Simulation& sim, std::unique_ptr<BaseRenderer>& rend, Interface& appInterface) {
     window = w;
     simulation = &sim;
     renderer = &rend;
@@ -272,7 +272,7 @@ void ToolsManager::selectWorldAt(Vec2i mousePos) {
         return;
     }
 
-    IRenderer& rend = **renderer;
+    BaseRenderer& rend = **renderer;
     Simulation::WorldId bestWorldId = simulation->activeWorldId();
     bool found = false;
     float bestT = std::numeric_limits<float>::max();

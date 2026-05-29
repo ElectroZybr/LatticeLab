@@ -32,13 +32,13 @@ namespace {
         }
     }
 
-    std::string_view speedColorModeName(IRenderer::SpeedColorMode mode) {
+    std::string_view speedColorModeName(RenderData::SpeedColorMode mode) {
         switch (mode) {
-        case IRenderer::SpeedColorMode::AtomColor:
+        case RenderData::SpeedColorMode::AtomColor:
             return i18n::tr("speed_color_normal_coloring");
-        case IRenderer::SpeedColorMode::GradientClassic:
+        case RenderData::SpeedColorMode::GradientClassic:
             return i18n::tr("speed_color_gradient_coloring");
-        case IRenderer::SpeedColorMode::GradientTurbo:
+        case RenderData::SpeedColorMode::GradientTurbo:
             return i18n::tr("speed_color_turbo_coloring");
         default:
             return i18n::tr("speed_color_normal_coloring");
@@ -73,7 +73,7 @@ namespace {
     }
 }
 
-void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
+void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer,
                          CaptureController& captureController, FileDialogManager& fileDialog) {
     float target = visible ? 1.f : 0.f;
     float step = ImGui::GetIO().DeltaTime * 12.f;
@@ -236,21 +236,21 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
     }
 
     ImGui::SeparatorText(i18n::tr("imgui_render").data());
-    ImGui::Checkbox(i18n::tr("imgui_grid").data(), &renderer->drawGrid);
-    ImGui::Checkbox(i18n::tr("imgui_connections").data(), &renderer->drawBonds);
-    ImGui::Checkbox(i18n::tr("imgui_box").data(), &renderer->drawBox);
+    ImGui::Checkbox(i18n::tr("imgui_grid").data(), &renderer->getRenderData(0).drawGrid);
+    ImGui::Checkbox(i18n::tr("imgui_connections").data(), &renderer->getRenderData(0).drawBonds);
+    ImGui::Checkbox(i18n::tr("imgui_box").data(), &renderer->getRenderData(0).drawBox);
 
     ImGui::TextUnformatted(i18n::tr("imgui_color_scheme").data());
-    IRenderer::SpeedColorMode speedMode = renderer->speedColorMode;
+    RenderData::SpeedColorMode speedMode = renderer->getRenderData(0).speedColorMode;
     if (ComboStyle::beginCombo(i18n::tr("imgui_speed_color_mode").data(), speedColorModeName(speedMode).data(), 220.0f * uiScale, uiScale,
                                ImGuiComboFlags_HeightLargest)) {
-        const IRenderer::SpeedColorMode modes[] = {
-            IRenderer::SpeedColorMode::AtomColor,
-            IRenderer::SpeedColorMode::GradientClassic,
-            IRenderer::SpeedColorMode::GradientTurbo,
+        const RenderData::SpeedColorMode modes[] = {
+            RenderData::SpeedColorMode::AtomColor,
+            RenderData::SpeedColorMode::GradientClassic,
+            RenderData::SpeedColorMode::GradientTurbo,
         };
 
-        for (IRenderer::SpeedColorMode mode : modes) {
+        for (RenderData::SpeedColorMode mode : modes) {
             const bool isSelected = (mode == speedMode);
             if (ImGui::Selectable(speedColorModeName(mode).data(), isSelected)) {
                 speedMode = mode;
@@ -262,27 +262,27 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
         ImGui::EndCombo();
     }
 
-    renderer->speedColorMode = speedMode;
+    renderer->getRenderData(0).speedColorMode = speedMode;
 
     ImGui::TextUnformatted(i18n::tr("imgui_max_gradien_velocity").data());
 
     static float manualSpeedGradientMax = 5.0f;
-    bool autoSpeedGradient = renderer->speedGradientMax <= 0.0f;
-    const bool gradientModeEnabled = renderer->speedColorMode != IRenderer::SpeedColorMode::AtomColor;
+    bool autoSpeedGradient = renderer->getRenderData(0).speedGradientMax <= 0.0f;
+    const bool gradientModeEnabled = renderer->getRenderData(0).speedColorMode != RenderData::SpeedColorMode::AtomColor;
     if (!autoSpeedGradient) {
-        manualSpeedGradientMax = renderer->speedGradientMax;
+        manualSpeedGradientMax = renderer->getRenderData(0).speedGradientMax;
     }
 
     ImGui::PushItemWidth(180.0f * uiScale);
     ImGui::BeginDisabled(autoSpeedGradient || !gradientModeEnabled);
     if (ImGui::SliderFloat(i18n::tr("imgui_speed_gradient_max_slider").data(), &manualSpeedGradientMax, 0.1f, 10.0f, "%.2f")) {
-        renderer->speedGradientMax = manualSpeedGradientMax;
+        renderer->getRenderData(0).speedGradientMax = manualSpeedGradientMax;
     }
     ImGui::EndDisabled();
     ImGui::SameLine();
     ImGui::BeginDisabled(!gradientModeEnabled);
     if (ImGui::Checkbox(i18n::tr("imgui_auto_speed_gradien").data(), &autoSpeedGradient)) {
-        renderer->speedGradientMax = autoSpeedGradient ? 0.0f : manualSpeedGradientMax;
+        renderer->getRenderData(0).speedGradientMax = autoSpeedGradient ? 0.0f : manualSpeedGradientMax;
     }
     ImGui::EndDisabled();
     ImGui::PopItemWidth();
@@ -400,11 +400,11 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
         captureController.setOutputDirectory(defaults.captureOutputDirectory);
         captureController.setSettings(defaults.captureSettings);
 
-        renderer->drawGrid = defaults.rendererDrawGrid;
-        renderer->drawBonds = defaults.rendererDrawBonds;
-        renderer->drawBox = defaults.rendererDrawBox;
-        renderer->speedColorMode = defaults.rendererSpeedColorMode;
-        renderer->speedGradientMax = defaults.rendererSpeedGradientMax;
+        renderer->getRenderData(0).drawGrid = defaults.rendererDrawGrid;
+        renderer->getRenderData(0).drawBonds = defaults.rendererDrawBonds;
+        renderer->getRenderData(0).drawBox = defaults.rendererDrawBox;
+        renderer->getRenderData(0).speedColorMode = defaults.rendererSpeedColorMode;
+        renderer->getRenderData(0).speedGradientMax = defaults.rendererSpeedGradientMax;
 
         simulation.setIntegrator(defaults.simulationIntegrator);
         simulation.setBondFormationEnabled(defaults.simulationBondFormationEnabled);

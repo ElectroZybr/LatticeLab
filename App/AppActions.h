@@ -8,19 +8,19 @@
 
 class Simulation;
 class CaptureController;
-class IRenderer;
+class BaseRenderer;
 struct UiState;
 
 namespace AppActions {
     class Handler : public Signals::Trackable {
     public:
-        Handler(GLFWwindow* window, CaptureController& captureController, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
+        Handler(GLFWwindow* window, CaptureController& captureController, Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer,
                 UiState& uiState);
 
     private:
         void trackIOPanel(CaptureController& captureController, UiState& uiState, Simulation& simulation,
-                          std::unique_ptr<IRenderer>& renderer);
-        void trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer);
+                          std::unique_ptr<BaseRenderer>& renderer);
+        void trackToolsPanel(Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer);
         void trackSettingsPanel(GLFWwindow* window);
         void trackKeyboard(Simulation& simulation);
         void trackSimControlPanel(Simulation& simulation);

@@ -6,10 +6,10 @@
 #include "Rendering/WGPUContext.h"
 
 GLFWwindow* WindowEvents::window = nullptr;
-std::unique_ptr<IRenderer>* WindowEvents::renderer = nullptr;
+std::unique_ptr<BaseRenderer>* WindowEvents::renderer = nullptr;
 Interface* WindowEvents::appInterface = nullptr;
 
-void WindowEvents::init(GLFWwindow* w, std::unique_ptr<IRenderer>& r, Interface& appInterface) {
+void WindowEvents::init(GLFWwindow* w, std::unique_ptr<BaseRenderer>& r, Interface& appInterface) {
     window = w;
     renderer = &r;
     WindowEvents::appInterface = &appInterface;

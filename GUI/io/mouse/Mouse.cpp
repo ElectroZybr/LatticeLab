@@ -7,13 +7,13 @@
 #include "GUI/interface/interface.h"
 
 GLFWwindow* Mouse::window = nullptr;
-std::unique_ptr<IRenderer>* Mouse::renderer = nullptr;
+std::unique_ptr<BaseRenderer>* Mouse::renderer = nullptr;
 Interface* Mouse::appInterface = nullptr;
 GLFWmousebuttonfun Mouse::imgui_mouse_callback = nullptr;
 GLFWcursorposfun Mouse::imgui_cursor_pos_callback = nullptr;
 GLFWscrollfun Mouse::imgui_scroll_callback = nullptr;
 
-void Mouse::init(GLFWwindow* w, std::unique_ptr<IRenderer>& r, Interface& appInterface) {
+void Mouse::init(GLFWwindow* w, std::unique_ptr<BaseRenderer>& r, Interface& appInterface) {
     window = w;
     renderer = &r;
     Mouse::appInterface = &appInterface;
@@ -32,7 +32,7 @@ void Mouse::onMouseButton(GLFWwindow*, int button, int action, int mods) {
     }
 
     const Vec2i mouse_pos = Mouse::getMousePos();
-    std::unique_ptr<IRenderer>& rend = *renderer;
+    std::unique_ptr<BaseRenderer>& rend = *renderer;
 
     if (action == GLFW_PRESS) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
@@ -63,7 +63,7 @@ void Mouse::onMouseMove(GLFWwindow*, double xpos, double ypos) {
         imgui_cursor_pos_callback(window, xpos, ypos);
     }
 
-    std::unique_ptr<IRenderer>& rend = *renderer;
+    std::unique_ptr<BaseRenderer>& rend = *renderer;
     if (!rend->camera.isDragging) {
         return;
     }
@@ -90,7 +90,7 @@ void Mouse::onScroll(GLFWwindow*, double xoffset, double yoffset) {
         imgui_scroll_callback(window, xoffset, yoffset);
     }
 
-    std::unique_ptr<IRenderer>& rend = *renderer;
+    std::unique_ptr<BaseRenderer>& rend = *renderer;
     constexpr float kFreeWheelMoveScale = 0.008f;
 
     if (appInterface != nullptr && !appInterface->state().cursorHovered && !ToolsManager::blocksCameraControls()) {

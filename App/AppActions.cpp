@@ -10,6 +10,7 @@
 #include "Rendering/2d/Renderer2DWGPU.h"
 #include "Rendering/3d/Renderer3DWGPU.h"
 #include "Rendering/WGPUContext.h"
+#include "Rendering/WorldRenderDataAdapter.h"
 
 namespace {
     void shiftAtoms(AtomStorage& atomStorage, Vec3f delta) {
@@ -38,7 +39,7 @@ namespace {
 
 namespace AppActions {
     void Handler::trackIOPanel(CaptureController& captureController, UiState& uiState, Simulation& simulation,
-                               std::unique_ptr<IRenderer>& renderer) {
+                               std::unique_ptr<BaseRenderer>& renderer) {
         track(AppSignals::UI::SaveSimulation.connect(
             [&](std::string_view path) { AppStateIO::save(captureController, uiState.scenePreviewRect, simulation, *renderer, path); }));
         track(AppSignals::UI::LoadSimulation.connect([&](std::string_view path) {
@@ -62,25 +63,27 @@ namespace AppActions {
         }));
     }
 
-    void Handler::trackToolsPanel(Simulation& simulation, std::unique_ptr<IRenderer>& renderer) {
+    void Handler::trackToolsPanel(Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer) {
         track(AppSignals::UI::SetRender.connect([&](RendererType type) {
-            std::unique_ptr<IRenderer> newRenderer;
+            std::unique_ptr<BaseRenderer> newRenderer;
             switch (type) {
             case RendererType::Renderer2D:
-                newRenderer = std::make_unique<Renderer2DWGPU>(simulation.world(), WGPUContext::instance().surfaceFormat());
+                newRenderer = std::make_unique<Renderer2DWGPU>(WGPUContext::instance().surfaceFormat());
                 break;
             case RendererType::Renderer3D:
-                newRenderer = std::make_unique<Renderer3DWGPU>(simulation.world(), WGPUContext::instance().surfaceFormat());
+                newRenderer = std::make_unique<Renderer3DWGPU>(WGPUContext::instance().surfaceFormat());
                 break;
             }
 
             if (newRenderer) {
                 ToolsManager::resetInteractionState();
-                newRenderer->drawGrid = renderer->drawGrid;
-                newRenderer->drawBonds = renderer->drawBonds;
-                newRenderer->drawBox = renderer->drawBox;
-                newRenderer->speedColorMode = renderer->speedColorMode;
-                newRenderer->speedGradientMax = renderer->speedGradientMax;
+                newRenderer->addRenderData();
+                Rendering::syncRendererWithSimulation(*newRenderer, simulation);
+                newRenderer->getRenderData(0).drawGrid = renderer->getRenderData(0).drawGrid;
+                newRenderer->getRenderData(0).drawBonds = renderer->getRenderData(0).drawBonds;
+                newRenderer->getRenderData(0).drawBox = renderer->getRenderData(0).drawBox;
+                newRenderer->getRenderData(0).speedColorMode = renderer->getRenderData(0).speedColorMode;
+                newRenderer->getRenderData(0).speedGradientMax = renderer->getRenderData(0).speedGradientMax;
                 newRenderer->camera.setScreenSize(renderer->camera.getScreenSize());
                 newRenderer->camera.resetView();
                 renderer = std::move(newRenderer);
@@ -102,7 +105,7 @@ namespace AppActions {
         track(AppSignals::UI::StepPhysics.connect([&]() { simulation.update(); }));
     }
 
-    Handler::Handler(GLFWwindow* window, CaptureController& captureController, Simulation& simulation, std::unique_ptr<IRenderer>& renderer,
+    Handler::Handler(GLFWwindow* window, CaptureController& captureController, Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer,
                      UiState& uiState) {
         trackIOPanel(captureController, uiState, simulation, renderer);
         trackToolsPanel(simulation, renderer);

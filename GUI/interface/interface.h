@@ -20,7 +20,7 @@
 
 class Interface {
 public:
-    Interface(GLFWwindow* w, Simulation& s, std::unique_ptr<IRenderer>& r, class CaptureController& c);
+    Interface(GLFWwindow* w, Simulation& s, std::unique_ptr<BaseRenderer>& r, class CaptureController& c);
 
     int init();
     void shutdown();
@@ -46,7 +46,7 @@ public:
 private:
     GLFWwindow* window_;
     Simulation* simulation_;
-    std::unique_ptr<IRenderer>* renderer_;
+    std::unique_ptr<BaseRenderer>* renderer_;
     class CaptureController* captureController_;
     std::chrono::high_resolution_clock::time_point lastTime_;
     UiState uiState_;

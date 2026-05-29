@@ -15,7 +15,7 @@ public:
         return Vec2i(x, y);
     }
 
-    static void init(GLFWwindow* w, std::unique_ptr<IRenderer>& renderer, class Interface& appInterface);
+    static void init(GLFWwindow* w, std::unique_ptr<BaseRenderer>& renderer, class Interface& appInterface);
 
     static void onMouseButton(GLFWwindow* window, int button, int action, int mods);
     static void onMouseMove(GLFWwindow* window, double xpos, double ypos);
@@ -26,7 +26,7 @@ public:
 
 private:
     static GLFWwindow* window;
-    static std::unique_ptr<IRenderer>* renderer;
+    static std::unique_ptr<BaseRenderer>* renderer;
     static class Interface* appInterface;
     static GLFWmousebuttonfun imgui_mouse_callback;
     static GLFWcursorposfun imgui_cursor_pos_callback;

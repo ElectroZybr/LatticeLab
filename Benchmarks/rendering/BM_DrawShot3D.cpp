@@ -3,12 +3,15 @@
 #include "Benchmarks/fixtures/RendererFixture.h"
 #include "Rendering/3d/Renderer3DWGPU.h"
 #include "Rendering/WGPUContext.h"
+#include "Rendering/WorldRenderDataAdapter.h"
 
 // @bench_meta {"id":"RendererFixture<Renderer3D>/DrawShot3D","ru":"Отрисовка кадра 3D","group":"Рендер/3D"}
 BENCHMARK_TEMPLATE_DEFINE_F(RendererFixture, DrawShot3D, Renderer3DWGPU)(benchmark::State& state) {
     WGPUContext& ctx = WGPUContext::instance();
     for (auto _ : state) {
-        renderer_->drawShot(*colorTextureView_, *ctx.depthView(), simulation_);
+        Rendering::syncRendererWithSimulation(*renderer_, simulation_);
+        renderer_->drawShot(*colorTextureView_, *ctx.depthView());
+
         renderer_->endFrame();
         // Ждём GPU чтобы измерить реальное время а не только submit
         ctx.device()->poll(true, nullptr);
