@@ -10,7 +10,7 @@
 #include <webgpu.h>
 #include <webgpu/webgpu-raii.hpp>
 
-#include "Engine/metrics/Profiler.h"
+#include "Lattice/metrics/Profiler.h"
 #include "Rendering/WGPUContext.h"
 
 void FrameProducer::startVideoCapture(FFmpegStreamer* streamer, const CaptureSettings& settings) {

@@ -8,9 +8,9 @@
 
 #include "Benchmarks/BenchmarkCase.h"
 #include "Benchmarks/BenchmarkScenes.h"
-#include "Engine/Simulation.h"
-#include "Engine/physics/integrators/StepOps.h"
-#include "Engine/physics/integrators/VerletScheme.h"
+#include "Lattice/Simulation.h"
+#include "Lattice/physics/integrators/StepOps.h"
+#include "Lattice/physics/integrators/VerletScheme.h"
 
 namespace Benchmarks {
     constexpr double kDt = 0.01;

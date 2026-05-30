@@ -4,7 +4,7 @@
 
 #include <imgui.h>
 
-#include "Engine/math/Vec2.h"
+#include "Lattice/math/Vec2.h"
 
 class SideToolsPanel {
 public:

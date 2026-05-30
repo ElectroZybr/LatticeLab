@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Engine/math/Vec3.h"
-#include "Engine/physics/Integrator.h"
+#include "Lattice/math/Vec3.h"
+#include "Lattice/physics/Integrator.h"
 
 namespace Benchmarks {
     enum class SceneKind {

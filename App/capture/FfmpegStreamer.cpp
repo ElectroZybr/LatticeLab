@@ -4,7 +4,7 @@
 #include <csignal>
 #include <sstream>
 
-#include "Engine/metrics/Profiler.h"
+#include "Lattice/metrics/Profiler.h"
 
 FFmpegStreamer::~FFmpegStreamer() {
     if (running_) {

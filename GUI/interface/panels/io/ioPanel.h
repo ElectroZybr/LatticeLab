@@ -7,8 +7,8 @@
 #include <imgui.h>
 
 #include "App/AppPaths.h"
-#include "Engine/math/Vec3.h"
-#include "Engine/physics/AtomData.h"
+#include "Lattice/math/Vec3.h"
+#include "Lattice/physics/AtomData.h"
 #include "GUI/interface/panels/io/ioPanelSceneCatalog.h"
 
 class FileDialogManager;

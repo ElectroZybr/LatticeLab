@@ -9,7 +9,7 @@
 #include <string_view>
 
 #include "App/AppSignals.h"
-#include "Engine/Simulation.h"
+#include "Lattice/Simulation.h"
 #include "GUI/interface/UiState.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/panels/io/ioPanelWidgets.h"

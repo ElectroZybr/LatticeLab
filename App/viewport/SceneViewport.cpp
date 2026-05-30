@@ -2,8 +2,8 @@
 
 #include "App/debug/DebugRuntime.h"
 #include "App/interaction/ToolsManager.h"
-#include "Engine/Simulation.h"
-#include "Engine/metrics/Profiler.h"
+#include "Lattice/Simulation.h"
+#include "Lattice/metrics/Profiler.h"
 #include "GUI/interface/interface.h"
 #include "Rendering/2d/Renderer2DWGPU.h"
 #include "Rendering/3d/Renderer3DWGPU.h"

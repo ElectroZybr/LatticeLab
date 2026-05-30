@@ -7,8 +7,8 @@
 #include "App/interaction/picking/PickingSystem.h"
 #include "App/interaction/selection/NeighborListOverlay.h"
 #include "App/interaction/tools/ITool.h"
-#include "Engine/Simulation.h"
-#include "Engine/math/Vec3.h"
+#include "Lattice/Simulation.h"
+#include "Lattice/math/Vec3.h"
 #include "Rendering/BaseRenderer.h"
 
 class World;

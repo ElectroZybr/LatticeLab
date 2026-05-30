@@ -6,10 +6,10 @@
 
 #include "App/debug/CreateDebugPanels.h"
 #include "App/interaction/ToolsManager.h"
-#include "Engine/Consts.h"
-#include "Engine/Simulation.h"
-#include "Engine/metrics/MemoryMetrics.h"
-#include "Engine/metrics/Profiler.h"
+#include "Lattice/Consts.h"
+#include "Lattice/Simulation.h"
+#include "Lattice/metrics/MemoryMetrics.h"
+#include "Lattice/metrics/Profiler.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
 
 void updateAtomSelectionDebug(const DebugViews& debugViews, const Simulation& simulation) {

@@ -2,7 +2,7 @@
 
 #include <unordered_set>
 
-#include "Engine/Simulation.h"
+#include "Lattice/Simulation.h"
 #include "Rendering/BaseRenderer.h"
 
 namespace App::Viewport {

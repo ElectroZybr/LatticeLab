@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <vector>
 
-#include "Engine/Simulation.h"
-#include "Engine/physics/AtomData.h"
+#include "Lattice/Simulation.h"
+#include "Lattice/physics/AtomData.h"
 
 namespace Scenes {
     enum class CrystalPlane : uint8_t {

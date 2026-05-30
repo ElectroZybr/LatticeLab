@@ -43,7 +43,6 @@ include(dependencies)
 include(CTest)
 
 file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
-    "Engine/*.cpp"
     "GUI/*.cpp"
     "App/*.cpp"
 )
@@ -64,6 +63,7 @@ include(embedded_resources)
 add_dependencies(latticelab_lib embedded_resources)
 
 include(shaders)
+add_subdirectory(Lattice)
 add_subdirectory(Rendering)
 
 include(embedded_translate)
@@ -110,6 +110,7 @@ endif ()
 
 
 target_link_libraries(latticelab_lib PUBLIC
+    Lattice
     LatticeLab::Rendering
     glfw
     imgui ImGuiFileDialog_lib

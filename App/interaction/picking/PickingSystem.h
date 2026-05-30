@@ -6,7 +6,7 @@
 #include <unordered_set>
 
 #include "App/interaction/selection/OverlayState.h"
-#include "Engine/physics/AtomStorage.h"
+#include "Lattice/physics/AtomStorage.h"
 
 class BaseRenderer;
 class World;

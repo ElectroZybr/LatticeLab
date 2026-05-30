@@ -7,7 +7,7 @@
 #include "App/interaction/ToolsManager.h"
 #include "App/viewport/SceneViewport.h"
 #include "App/save_system/AppStateIO.h"
-#include "Engine/Simulation.h"
+#include "Lattice/Simulation.h"
 #include "GUI/interface/UiState.h"
 
 namespace {

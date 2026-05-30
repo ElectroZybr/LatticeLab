@@ -5,8 +5,8 @@
 #include <imgui.h>
 
 #include "App/interaction/picking/PickingSystem.h"
-#include "Engine/NeighborSearch/SpatialGrid.h"
-#include "Engine/Simulation.h"
+#include "Lattice/NeighborSearch/SpatialGrid.h"
+#include "Lattice/Simulation.h"
 #include "Rendering/BaseRenderer.h"
 
 namespace {

@@ -7,7 +7,7 @@
 #include <webgpu/webgpu-raii.hpp>
 #include <webgpu/webgpu.hpp>
 
-#include "Engine/physics/AtomData.h"
+#include "Lattice/physics/AtomData.h"
 #include "Rendering/WGPUContext.h"
 
 #ifdef True

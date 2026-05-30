@@ -2,7 +2,7 @@
 
 #include <limits>
 
-#include "Engine/World.h"
+#include "Lattice/World.h"
 #include "Rendering/BaseRenderer.h"
 
 PickingSystem::PickingSystem(AtomStorage& atomStorage, World& box, std::unique_ptr<BaseRenderer>& renderer)

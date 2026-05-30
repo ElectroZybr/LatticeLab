@@ -4,7 +4,7 @@
 #include <cmath>
 
 #include "App/Scenes.h"
-#include "Engine/Simulation.h"
+#include "Lattice/Simulation.h"
 
 namespace Benchmarks {
     int squareSideFromCount(int atomCount) { return std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<double>(atomCount))))); }

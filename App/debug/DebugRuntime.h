@@ -4,8 +4,8 @@
 
 #include "App/debug/CreateDebugPanels.h"
 #include "App/debug/UpdateDebugData.h"
-#include "Engine/Simulation.h"
-#include "Engine/physics/Integrator.h"
+#include "Lattice/Simulation.h"
+#include "Lattice/physics/Integrator.h"
 
 inline std::string_view integratorSchemeName(Integrator::Scheme scheme) {
     switch (scheme) {

@@ -4,8 +4,8 @@
 
 #include <imgui.h>
 
-#include "Engine/NeighborSearch/NeighborList.h"
-#include "Engine/math/Vec3.h"
+#include "Lattice/NeighborSearch/NeighborList.h"
+#include "Lattice/math/Vec3.h"
 
 class BaseRenderer;
 class PickingSystem;

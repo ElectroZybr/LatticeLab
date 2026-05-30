@@ -16,8 +16,8 @@
 
 #include "App/capture/CaptureController.h"
 #include "App/save_system/AppSaveState.h"
-#include "Engine/Simulation.h"
-#include "Engine/io/SimulationStateIO.h"
+#include "Lattice/Simulation.h"
+#include "Lattice/io/SimulationStateIO.h"
 #include "GUI/interface/UiState.h"
 #include "Rendering/BaseRenderer.h"
 #include "Rendering/WGPUContext.h"

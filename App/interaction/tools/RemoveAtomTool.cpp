@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "App/interaction/picking/PickingSystem.h"
-#include "Engine/Simulation.h"
-#include "Engine/physics/AtomStorage.h"
+#include "Lattice/Simulation.h"
+#include "Lattice/physics/AtomStorage.h"
 #include "GUI/interface/UiState.h"
 
 RemoveAtomTool::RemoveAtomTool(ToolContext& context) noexcept : ITool(context) {}

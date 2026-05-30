@@ -4,7 +4,7 @@
 
 #include <GLFW/glfw3.h>
 
-#include "Engine/math/Vec3.h"
+#include "Lattice/math/Vec3.h"
 
 class AtomStorage;
 class BaseRenderer;

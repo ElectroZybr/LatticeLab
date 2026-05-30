@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <string_view>
 
-#include "Engine/math/Vec3.h"
-#include "Engine/physics/AtomData.h"
+#include "Lattice/math/Vec3.h"
+#include "Lattice/physics/AtomData.h"
 #include "GUI/interface/panels/tools/ToolsPanel.h"
 #include "Rendering/camera/Camera.h"
 #include "Signals/Signals.h"

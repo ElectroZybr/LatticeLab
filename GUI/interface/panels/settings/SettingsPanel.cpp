@@ -10,7 +10,7 @@
 #include "App/UserSettings.h"
 #include "App/capture/CaptureController.h"
 #include "App/localization/i18n.h"
-#include "Engine/Simulation.h"
+#include "Lattice/Simulation.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/style/ComboStyle.h"
 #include "Rendering/BaseRenderer.h"
