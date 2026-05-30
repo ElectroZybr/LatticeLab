@@ -3,12 +3,10 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "Engine/metrics/Profiler.h"
 #include "Engine/io/SimulationStateIO.h"
+#include "Engine/metrics/Profiler.h"
 
-Simulation::Simulation() {
-    xyzStreamer_.Start(".");
-}
+Simulation::Simulation() = default;
 
 Simulation::WorldId Simulation::createWorld(Vec3f size, Vec3f renderOffset) {
     worlds_.emplace_back(size, renderOffset);
@@ -73,20 +71,24 @@ const World& Simulation::world() const {
 void Simulation::update() {
     PROFILE_SCOPE("Simulation::update");
     world().update();
+    xyzRecording_.onSimulationStep(*this);
 }
 
 void Simulation::updateWorld(WorldId worldId) {
     if (worldId < worlds_.size()) {
         worlds_[worldId].update();
+        if (worldId == activeWorldIndex_) {
+            xyzRecording_.onSimulationStep(*this);
+        }
     }
 }
 
 void Simulation::updateAll() {
     PROFILE_SCOPE("Simulation::updateAll");
-    xyzStreamer_.WriteFrame(*this);
     for (auto& w : worlds_) {
         w.update();
     }
+    xyzRecording_.onSimulationStep(*this);
 }
 
 void Simulation::setSizeBox(Vec3f newSize, int cellSize) {
@@ -104,3 +106,13 @@ void Simulation::removeAtom(size_t atomIndex) {
 void Simulation::addBond(size_t aIndex, size_t bIndex) { world().addBond(aIndex, bIndex); }
 
 void Simulation::clear() { world().reset(); }
+
+void Simulation::startXYZRecording(std::string_view outputPath) { xyzRecording_.start(outputPath); }
+
+void Simulation::stopXYZRecording() { xyzRecording_.stop(); }
+
+void Simulation::setXYZRecordingStepInterval(uint32_t stepInterval) {
+    xyzRecording_.setConfig({.stepInterval = stepInterval});
+}
+
+bool Simulation::isXYZRecording() const noexcept { return xyzRecording_.isRecording(); }

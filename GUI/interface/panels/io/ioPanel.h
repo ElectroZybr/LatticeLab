@@ -17,6 +17,11 @@ struct UiState;
 
 class IOPanel {
 public:
+    enum class RecordingFormat : uint8_t {
+        MP4,
+        XYZ,
+    };
+
     static constexpr ImGuiWindowFlags PANEL_FLAGS =
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 
@@ -53,6 +58,7 @@ private:
     Vec3f boxSize_ = Vec3f(100.0f, 100.0f, 6.0f);
     AtomData::Type atomType_ = AtomData::Type::Z;
     AtomData::Type gasAtomType_ = AtomData::Type::Z;
+    RecordingFormat recordingFormat_ = RecordingFormat::MP4;
     std::filesystem::path scenesDirectory_ = AppPaths::kDefaultScenesDirectory;
     std::vector<IOPanelSceneTile> sceneTiles_;
     std::string pendingDeleteScenePath_;

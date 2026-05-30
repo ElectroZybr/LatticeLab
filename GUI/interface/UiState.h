@@ -29,6 +29,10 @@ struct UiState {
     float captureFps = 0.0f;
     double captureBlinkElapsed = 0.0;
 
+    bool xyzRecording = false;
+    uint64_t xyzFrameCount = 0;
+    float xyzFps = 0.0f;
+
     bool scenePreviewMode = false;
     PreviewFrameRect scenePreviewRect;
 };

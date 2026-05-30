@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "Engine/World.h"
-#include "Engine/io/xyzStream.h"
+#include "Engine/io/XYZRecordingSession.h"
 
 class Simulation {
 public:
@@ -97,11 +97,18 @@ public:
 
     void setSizeBox(Vec3f newSize, int cellSize = -1);
     void clear();
+    void startXYZRecording(std::string_view outputPath);
+    void stopXYZRecording();
+    void setXYZRecordingStepInterval(uint32_t stepInterval);
+    [[nodiscard]] bool isXYZRecording() const noexcept;
+    [[nodiscard]] uint32_t xyzRecordingStepInterval() const noexcept { return xyzRecording_.stepInterval(); }
+    [[nodiscard]] uint64_t xyzFrameCount() const noexcept { return xyzRecording_.frameCount(); }
+    [[nodiscard]] float xyzFPS() const noexcept { return xyzRecording_.fps(); }
 
 private:
     friend class SimulationStateIO;
 
     std::vector<World> worlds_;
     WorldId activeWorldIndex_ = 0;
-    xyzStream xyzStreamer_;
+    XYZRecordingSession xyzRecording_;
 };

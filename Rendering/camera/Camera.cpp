@@ -41,8 +41,6 @@ void Camera::resetView() {
     const float max_side = std::max({sceneSize.x, sceneSize.y, sceneSize.z});
     const float distance = (max_side * 0.5f * 1.1f) / std::tan(glm::radians(Camera::FOV_ORBIT) * 0.5f);
     orbitCenter = sceneOffset + sceneSize * 0.5f;
-    freePosition = orbitCenter;
-    freePosition.z = orbitCenter.z - distance;
     position = glm::vec2(orbitCenter);
 
     if (mode == Camera::Mode::Mode2D) {
@@ -54,9 +52,10 @@ void Camera::resetView() {
         setZoom(std::min(zoomX, zoomY));
     }
     else {
-        setZoom(1.15f);
+        const float safeDistance = std::max(distance, 1e-3f);
+        setZoom(moveSpeed / safeDistance);
         const glm::vec3 orbitOffset(std::cos(elevation) * std::sin(azimuth), std::sin(elevation), std::cos(elevation) * std::cos(azimuth));
-        freePosition = orbitCenter + orbitOffset * (moveSpeed / zoom);
+        freePosition = orbitCenter + orbitOffset * safeDistance;
     }
 }
 

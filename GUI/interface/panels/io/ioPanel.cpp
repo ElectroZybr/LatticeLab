@@ -16,6 +16,8 @@
 
 namespace {
     constexpr float kSceneTileRounding = 10.0f;
+    constexpr int kRecordingFormatVideo = static_cast<int>(IOPanel::RecordingFormat::MP4);
+    constexpr int kRecordingFormatXYZ = static_cast<int>(IOPanel::RecordingFormat::XYZ);
 }
 
 void IOPanel::ensureSceneCatalogLoaded() {
@@ -102,12 +104,37 @@ void IOPanel::draw(float scale, Vec2i windowSize, Simulation& simulation, FileDi
         AppSignals::UI::ClearSimulation.emit();
     }
 
-    if (uiState.captureAvailable) {
-        const char* captureLabel = uiState.captureRecording ? "Стоп" : "Запись";
-        if (ImGui::Button(captureLabel, ImVec2(saveButtonWidth * scale, 0.f))) {
+    int recordingFormat = static_cast<int>(recordingFormat_);
+    drawIOPanelRecordingFormatCombo("##recording_format", recordingFormat, saveButtonWidth * scale, scale);
+    recordingFormat_ = static_cast<RecordingFormat>(recordingFormat);
+
+    const bool videoSelected = recordingFormat == kRecordingFormatVideo;
+    const bool xyzSelected = recordingFormat == kRecordingFormatXYZ;
+    const bool videoRecording = uiState.captureRecording;
+    const bool xyzRecording = uiState.xyzRecording;
+    const bool selectedRecording = videoSelected ? videoRecording : xyzRecording;
+    const bool selectedFormatAvailable = videoSelected ? uiState.captureAvailable : true;
+    const char* captureLabel = selectedRecording ? "Стоп" : "Запись";
+
+    ImGui::SameLine();
+    ImGui::BeginDisabled(!selectedFormatAvailable);
+    if (ImGui::Button(captureLabel, ImVec2(saveButtonWidth * scale, 0.f))) {
+        if (videoSelected) {
             AppSignals::Capture::ToggleRecording.emit();
         }
-        drawIOPanelCaptureStatus(uiState);
+        else {
+            AppSignals::Capture::ToggleXYZRecording.emit();
+        }
+    }
+    ImGui::EndDisabled();
+
+    if (videoSelected) {
+        if (uiState.captureAvailable) {
+            drawIOPanelCaptureStatus(uiState);
+        }
+    }
+    else if (xyzSelected) {
+        drawIOPanelRecordingStatusLine(xyzRecording, uiState.xyzFps, uiState.xyzFrameCount);
     }
 
     ImGui::SeparatorText("Размер бокса");

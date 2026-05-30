@@ -1,6 +1,8 @@
 #include "SimulationStateIO.h"
 
+#include <algorithm>
 #include <cctype>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -49,6 +51,210 @@ namespace {
     bool isNewLatFormat(const std::string& firstNonEmptyLine) {
         return firstNonEmptyLine == "format lat" || firstNonEmptyLine == "[meta]" ||
                (!firstNonEmptyLine.empty() && firstNonEmptyLine.front() == '[');
+    }
+
+    std::string lowercaseExtension(std::string_view path) {
+        std::string extension = std::filesystem::path(path).extension().string();
+        std::transform(extension.begin(), extension.end(), extension.begin(),
+                       [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+        return extension;
+    }
+
+    bool isLikelyXYZFormat(std::string_view path, const std::string& firstNonEmptyLine) {
+        if (lowercaseExtension(path) == ".xyz") {
+            return true;
+        }
+
+        if (firstNonEmptyLine.empty()) {
+            return false;
+        }
+
+        std::istringstream stream(firstNonEmptyLine);
+        size_t atomCount = 0;
+        char trailing = '\0';
+        return (stream >> atomCount) && !(stream >> trailing);
+    }
+
+    std::string normalizeAtomSymbol(std::string_view symbol) {
+        std::string normalized;
+        normalized.reserve(symbol.size());
+        for (char ch : symbol) {
+            if (!std::isspace(static_cast<unsigned char>(ch))) {
+                normalized.push_back(ch);
+            }
+        }
+
+        if (normalized.empty()) {
+            return normalized;
+        }
+
+        normalized[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(normalized[0])));
+        for (size_t i = 1; i < normalized.size(); ++i) {
+            normalized[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(normalized[i])));
+        }
+        return normalized;
+    }
+
+    bool tryParseAtomType(std::string_view symbol, AtomData::Type& outType) {
+        const std::string normalized = normalizeAtomSymbol(symbol);
+        if (normalized.empty()) {
+            return false;
+        }
+
+        for (size_t i = 0; i < static_cast<size_t>(AtomData::Type::COUNT); ++i) {
+            const auto type = static_cast<AtomData::Type>(i);
+            if (AtomData::symbol(type) == normalized) {
+                outType = type;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    template <typename T> bool parseNumberAfterLabel(std::string_view text, std::string_view label, T& outValue) {
+        const size_t labelPos = text.find(label);
+        if (labelPos == std::string_view::npos) {
+            return false;
+        }
+
+        size_t valueBegin = labelPos + label.size();
+        while (valueBegin < text.size()) {
+            const char ch = text[valueBegin];
+            if (ch == ':' || ch == '=' || ch == ',' || std::isspace(static_cast<unsigned char>(ch))) {
+                ++valueBegin;
+                continue;
+            }
+            break;
+        }
+
+        size_t valueEnd = valueBegin;
+        while (valueEnd < text.size()) {
+            const char ch = text[valueEnd];
+            if (ch == ',' || std::isspace(static_cast<unsigned char>(ch))) {
+                break;
+            }
+            ++valueEnd;
+        }
+
+        if (valueBegin >= valueEnd) {
+            return false;
+        }
+
+        std::istringstream stream(std::string(text.substr(valueBegin, valueEnd - valueBegin)));
+        return static_cast<bool>(stream >> outValue);
+    }
+
+    void loadXYZFormat(Simulation& simulation, std::string_view path) {
+        std::ifstream file(path.data());
+        if (!file.is_open()) {
+            return;
+        }
+
+        simulation.clear();
+
+        std::vector<LoadedAtomData> lastFrameAtoms;
+        std::string lastFrameComment;
+        int loadedStep = 0;
+        float loadedTimeNs = 0.0f;
+
+        std::string line;
+        while (std::getline(file, line)) {
+            const std::string trimmedCount = trim(line);
+            if (trimmedCount.empty()) {
+                continue;
+            }
+
+            std::istringstream countStream(trimmedCount);
+            size_t atomCount = 0;
+            char trailing = '\0';
+            if (!(countStream >> atomCount) || (countStream >> trailing)) {
+                continue;
+            }
+
+            std::string commentLine;
+            if (!std::getline(file, commentLine)) {
+                break;
+            }
+
+            std::vector<LoadedAtomData> frameAtoms;
+            frameAtoms.reserve(atomCount);
+
+            bool frameComplete = true;
+            for (size_t atomIndex = 0; atomIndex < atomCount; ++atomIndex) {
+                std::string atomLine;
+                if (!std::getline(file, atomLine)) {
+                    frameComplete = false;
+                    break;
+                }
+
+                std::istringstream atomStream(atomLine);
+                std::string symbol;
+                LoadedAtomData atom;
+                if (!(atomStream >> symbol >> atom.coords.x >> atom.coords.y >> atom.coords.z)) {
+                    frameComplete = false;
+                    break;
+                }
+
+                AtomData::Type atomType = AtomData::Type::Z;
+                if (!tryParseAtomType(symbol, atomType)) {
+                    frameComplete = false;
+                    break;
+                }
+
+                atom.type = static_cast<int>(atomType);
+                frameAtoms.emplace_back(atom);
+            }
+
+            if (!frameComplete || frameAtoms.size() != atomCount) {
+                break;
+            }
+
+            lastFrameAtoms = std::move(frameAtoms);
+            lastFrameComment = std::move(commentLine);
+            parseNumberAfterLabel(lastFrameComment, "Step", loadedStep);
+            parseNumberAfterLabel(lastFrameComment, "Time", loadedTimeNs);
+        }
+
+        if (lastFrameAtoms.empty()) {
+            return;
+        }
+
+        Vec3f minCoords = lastFrameAtoms.front().coords;
+        Vec3f maxCoords = lastFrameAtoms.front().coords;
+        for (const LoadedAtomData& atom : lastFrameAtoms) {
+            minCoords.x = std::min(minCoords.x, atom.coords.x);
+            minCoords.y = std::min(minCoords.y, atom.coords.y);
+            minCoords.z = std::min(minCoords.z, atom.coords.z);
+            maxCoords.x = std::max(maxCoords.x, atom.coords.x);
+            maxCoords.y = std::max(maxCoords.y, atom.coords.y);
+            maxCoords.z = std::max(maxCoords.z, atom.coords.z);
+        }
+
+        constexpr float kPadding = 2.0f;
+        const Vec3f worldSize{
+            std::max(10.0f, (maxCoords.x - minCoords.x) + kPadding * 2.0f),
+            std::max(10.0f, (maxCoords.y - minCoords.y) + kPadding * 2.0f),
+            std::max(10.0f, (maxCoords.z - minCoords.z) + kPadding * 2.0f),
+        };
+        const Vec3f translation{
+            kPadding - minCoords.x,
+            kPadding - minCoords.y,
+            kPadding - minCoords.z,
+        };
+
+        simulation.setSizeBox(worldSize);
+        simulation.setWorldTitle(std::filesystem::path(path).stem().string());
+        simulation.setWorldDescription(lastFrameComment);
+        simulation.reserveAtoms(lastFrameAtoms.size());
+        for (const LoadedAtomData& atom : lastFrameAtoms) {
+            simulation.appendAtomFast(atom.coords + translation, atom.speed, static_cast<AtomData::Type>(atom.type), atom.fixed);
+        }
+        simulation.finalizeAtomBatch();
+        for (size_t i = 0; i < lastFrameAtoms.size(); ++i) {
+            simulation.atoms().charge(i) = lastFrameAtoms[i].charge;
+        }
+        simulation.restoreRuntimeState(loadedStep, loadedTimeNs);
     }
 
     void saveNewFormat(const Simulation& simulation, std::string_view path) {
@@ -380,6 +586,11 @@ void SimulationStateIO::load(Simulation& simulation, std::string_view path) {
 
     if (isNewLatFormat(firstLine)) {
         loadNewFormat(simulation, path);
+        return;
+    }
+
+    if (isLikelyXYZFormat(path, firstLine)) {
+        loadXYZFormat(simulation, path);
         return;
     }
 

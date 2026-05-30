@@ -29,6 +29,14 @@ using Clock = std::chrono::high_resolution_clock;
 constexpr int FPS = 60;
 constexpr int LPS = 20;
 
+namespace {
+    uint32_t makeXYZStepInterval(float simulationStepsPerSecond, int captureFps) {
+        const float sanitizedStepsPerSecond = std::max(simulationStepsPerSecond, 1.0f);
+        const int sanitizedCaptureFps = std::max(captureFps, 1);
+        return std::max(1u, static_cast<uint32_t>(std::lround(sanitizedStepsPerSecond / static_cast<float>(sanitizedCaptureFps))));
+    }
+}
+
 int Application::run() {
     GLFWwindow* window = createWindow();
     if (!window) {
@@ -81,6 +89,7 @@ int Application::run() {
     // создание сцены
     Scenes::triangularBipyramidCrystal(simulation, 8, AtomData::Type::Z);
     Scenes::AngularVelocity(simulation, Vec3f(0.0f, 0.25f, 0.0f));
+    App::Rendering::syncRendererWithSimulation(*renderer, simulation);
 
     // std::vector<Scenes::AtomTypeSpec> gasSpecs = {
     //     // {AtomData::Type::O, 0, 80.0f},    // 80% водорода
@@ -117,7 +126,11 @@ int Application::run() {
         EventManager::poll();
         EventManager::frame(deltaTime);
         captureController.update(deltaTime);
+        simulation.setXYZRecordingStepInterval(makeXYZStepInterval(uiState.simulationSpeed, captureController.settings().fps));
         captureController.syncUiState(uiState);
+        uiState.xyzRecording = simulation.isXYZRecording();
+        uiState.xyzFps = simulation.xyzFPS();
+        uiState.xyzFrameCount = simulation.xyzFrameCount();
         captureController.handleToggleShortcut();
 
         // обновление физики

@@ -49,6 +49,13 @@ namespace {
         return std::string(value.substr(begin, end - begin));
     }
 
+    std::string lowercaseExtension(std::string_view path) {
+        std::string extension = std::filesystem::path(path).extension().string();
+        std::transform(extension.begin(), extension.end(), extension.begin(),
+                       [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+        return extension;
+    }
+
     std::string encodeBase64(std::span<const std::byte> data) {
         static constexpr char kAlphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -264,11 +271,17 @@ void AppStateIO::save(CaptureController& captureController, const PreviewFrameRe
 }
 
 void AppStateIO::load(Simulation& simulation, BaseRenderer& renderer, std::string_view path) {
-    if (path.ends_with(".lat")) {
-        AppStateIO::loadText(simulation, renderer, path);
+    try {
+        const std::string extension = lowercaseExtension(path);
+        if (extension == ".lat" || extension == ".sim" || extension == ".xyz") {
+            AppStateIO::loadText(simulation, renderer, path);
+        }
+        else if (extension == ".latbin") {
+            AppStateIO::loadBinary(simulation, renderer, path);
+        }
     }
-    else if (path.ends_with(".latbin")) {
-        AppStateIO::loadBinary(simulation, renderer, path);
+    catch (const std::exception& e) {
+        std::cerr << "Failed to load scene '" << path << "': " << e.what() << "\n";
     }
 }
 
@@ -379,6 +392,9 @@ void AppStateIO::loadBinary(Simulation& simulation, BaseRenderer& renderer, std:
     }
 
     std::streamsize fileSize = file.tellg();
+    if (fileSize < static_cast<std::streamsize>(sizeof(uint32_t))) {
+        throw std::runtime_error("Save file is too small");
+    }
     file.seekg(0, std::ios::beg);
 
     uint32_t originalSize = 0;
@@ -412,8 +428,6 @@ void AppStateIO::loadBinary(Simulation& simulation, BaseRenderer& renderer, std:
 
     // Заголовок
     const auto& header = appState.header;
-    simulation.setWorldTitle(header.title);
-    simulation.setWorldDescription(header.description);
 
     // Симуляция
     const auto& simState = appState.simulation;
@@ -435,9 +449,16 @@ void AppStateIO::loadBinary(Simulation& simulation, BaseRenderer& renderer, std:
 
     const uint64_t atomMobileCount = simState.atomMobileCount;
     const uint64_t atomCount = simState.x.size();
+    if (atomMobileCount > atomCount) {
+        throw std::runtime_error("Invalid atomMobileCount in save file");
+    }
+    if (simState.y.size() != atomCount || simState.z.size() != atomCount || simState.vx.size() != atomCount || simState.vy.size() != atomCount ||
+        simState.vz.size() != atomCount || simState.atomType.size() != atomCount || simState.atomCharge.size() != atomCount) {
+        throw std::runtime_error("Atom arrays size mismatch in save file");
+    }
 
     AtomStorage& atoms = simulation.atoms();
-    simulation.reserveAtoms(atoms.size());
+    simulation.reserveAtoms(atomCount);
     atoms.init(atomCount, atomMobileCount, simState.x, simState.y, simState.z, simState.vx, simState.vy, simState.vz, simState.atomType,
                simState.atomCharge);
     simulation.finalizeAtomBatch();
@@ -446,6 +467,8 @@ void AppStateIO::loadBinary(Simulation& simulation, BaseRenderer& renderer, std:
         simulation.addBond(aIndex, bIndex);
     }
     simulation.restoreRuntimeState(simState.step, simState.time_ns);
+    simulation.setWorldTitle(header.title);
+    simulation.setWorldDescription(header.description);
 
     // Рендер
     const auto& rendState = appState.renderer;

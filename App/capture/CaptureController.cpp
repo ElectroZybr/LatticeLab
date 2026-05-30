@@ -1,12 +1,9 @@
 #include "CaptureController.h"
+#include "CaptureOutputPath.h"
 
-#include <cassert>
 #include <chrono>
 #include <cctype>
-#include <cstdio>
-#include <format>
 #include <iostream>
-#include <optional>
 #include <string>
 
 #include "Engine/metrics/Profiler.h"
@@ -32,32 +29,6 @@ namespace {
                (value.size() >= 2 && std::isalpha(static_cast<unsigned char>(value[0])) && value[1] == ':');
     }
 #endif
-
-    std::optional<uint32_t> parseDailyCaptureIndex(const std::filesystem::path& path, std::string_view datePrefix) {
-        if (path.extension() != ".mp4") {
-            return std::nullopt;
-        }
-
-        const std::string stem = path.stem().string();
-        const std::string prefix = std::string(datePrefix) + "_";
-        if (!stem.starts_with(prefix)) {
-            return std::nullopt;
-        }
-
-        uint32_t index = 0;
-        const std::string_view number(stem.data() + prefix.size(), stem.size() - prefix.size());
-        if (number.empty()) {
-            return std::nullopt;
-        }
-
-        for (char c : number) {
-            if (!std::isdigit(static_cast<unsigned char>(c))) {
-                return std::nullopt;
-            }
-            index = index * 10 + static_cast<uint32_t>(c - '0');
-        }
-        return index;
-    }
 }
 
 void CaptureController::setOutputDirectory(const std::filesystem::path& path) {
@@ -177,21 +148,7 @@ void CaptureController::syncUiState(UiState& uiState) const {
 }
 
 std::filesystem::path CaptureController::makeCaptureOutputPath() const {
-    const auto now = std::chrono::system_clock::now();
-    const std::string datePrefix = std::format("{:%Y-%m-%d}", std::chrono::floor<std::chrono::days>(now));
-
-    uint32_t nextIndex = 1;
-    std::error_code fsError;
-    for (std::filesystem::directory_iterator it(outputDirectory_, fsError), end; !fsError && it != end; it.increment(fsError)) {
-        if (fsError || !it->is_regular_file(fsError)) {
-            continue;
-        }
-        if (const std::optional<uint32_t> index = parseDailyCaptureIndex(it->path(), datePrefix)) {
-            nextIndex = std::max(nextIndex, *index + 1);
-        }
-    }
-
-    return outputDirectory_ / std::format("{}_{}.mp4", datePrefix, nextIndex);
+    return capture_utils::makeDatedCaptureOutputPath(outputDirectory_, ".mp4");
 }
 
 void CaptureController::resetSessionStats() {

@@ -2,6 +2,7 @@
 
 #include "App/AppSignals.h"
 #include "App/Scenes.h"
+#include "App/capture/CaptureOutputPath.h"
 #include "App/capture/CaptureController.h"
 #include "App/interaction/ToolsManager.h"
 #include "App/save_system/AppStateIO.h"
@@ -35,6 +36,22 @@ namespace {
         world.setRenderOffset(world.getRenderOffset() - delta);
         simulation.setSizeBox(newSize);
     }
+
+    void toggleXYZRecording(CaptureController& captureController, Simulation& simulation) {
+        if (simulation.isXYZRecording()) {
+            simulation.stopXYZRecording();
+            return;
+        }
+
+        std::error_code fsError;
+        const std::filesystem::path outputDirectory = captureController.outputDirectory();
+        std::filesystem::create_directories(outputDirectory, fsError);
+        if (fsError) {
+            return;
+        }
+
+        simulation.startXYZRecording(capture_utils::makeDatedCaptureOutputPath(outputDirectory, ".xyz").string());
+    }
 }
 
 namespace AppActions {
@@ -44,6 +61,7 @@ namespace AppActions {
             [&](std::string_view path) { AppStateIO::save(captureController, uiState.scenePreviewRect, simulation, *renderer, path); }));
         track(AppSignals::UI::LoadSimulation.connect([&](std::string_view path) {
             AppStateIO::load(simulation, *renderer, path);
+            App::Rendering::syncRendererWithSimulation(*renderer, simulation);
             ToolsManager::resetInteractionState();
         }));
         track(AppSignals::UI::ResizeBox.connect([&](const Vec3f& newSize) { applyResizeBox(simulation, newSize); }));
@@ -61,6 +79,7 @@ namespace AppActions {
             ToolsManager::resetInteractionState();
             Scenes::crystal(simulation, axisCount, atomType, is3D);
         }));
+        track(AppSignals::Capture::ToggleXYZRecording.connect([&]() { toggleXYZRecording(captureController, simulation); }));
     }
 
     void Handler::trackToolsPanel(Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer) {

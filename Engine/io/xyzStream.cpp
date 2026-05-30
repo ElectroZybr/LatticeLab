@@ -3,19 +3,25 @@
 #include "Engine/Simulation.h"
 
 #include <fstream>
-#include <iostream>
 
-void xyzStream::Start(std::string path) {
-    path_ = path + "/stream.xyz";
+void xyzStream::Start(std::string_view path) {
+    path_ = std::string(path);
     std::ofstream file(path_, std::ios::trunc);
     if (!file.is_open()) {
+        isStreaming = false;
         return;
     }
     isStreaming = true;
+    frameCount_ = 0;
+    sampleFrameCount_ = 0;
+    fps_ = 0.0f;
+    sampleStart_ = Clock::now();
 }
 
 void xyzStream::WriteFrame(const Simulation& simulation) {
-    std::cerr << "Frame written to " << path_ << std::endl;
+    if (!isStreaming || path_.empty()) {
+        return;
+    }
     std::ofstream file(path_.data(), std::ios::app);
     if (!file.is_open()) {
         return;
@@ -28,8 +34,22 @@ void xyzStream::WriteFrame(const Simulation& simulation) {
         const Vec3f pos = simulation.atoms().pos(i);
         file << AtomData::symbol(simulation.atoms().type(i)) << " " << pos.x << " " << pos.y << " " << pos.z << "\n";
     }
+
+    ++frameCount_;
+    ++sampleFrameCount_;
+
+    const auto now = Clock::now();
+    const float elapsed = std::chrono::duration<float>(now - sampleStart_).count();
+    if (elapsed >= 0.25f) {
+        fps_ = elapsed > 0.0f ? static_cast<float>(sampleFrameCount_) / elapsed : 0.0f;
+        sampleFrameCount_ = 0;
+        sampleStart_ = now;
+    }
 }
 
 void xyzStream::Stop() {
     isStreaming = false;
+    path_.clear();
+    sampleFrameCount_ = 0;
+    fps_ = 0.0f;
 }
