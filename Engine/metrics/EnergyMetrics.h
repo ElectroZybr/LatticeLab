@@ -37,16 +37,20 @@ namespace EnergyMetrics {
         float totalKineticEnergy = 0.0f;
         float totalPotentialEnergy = 0.0f;
         float totalSpeed = 0.0f;
-        for (size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
+        const size_t mobileCount = atomStorage.mobileCount();
+        for (size_t atomIndex = 0; atomIndex < mobileCount; ++atomIndex) {
             totalKineticEnergy += kineticEnergy(atomStorage.type(atomIndex), atomStorage.vel(atomIndex));
-            totalPotentialEnergy += atomStorage.energy(atomIndex);
             totalSpeed += atomStorage.vel(atomIndex).abs();
+        }
+        for (size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
+            totalPotentialEnergy += atomStorage.energy(atomIndex);
         }
 
         const float invAtomCount = 1.0f / atomStorage.size();
-        snapshot.averageKineticEnergyEv = totalKineticEnergy * invAtomCount;
+        const float invMobileCount = mobileCount > 0 ? 1.0f / mobileCount : 0.0f;
+        snapshot.averageKineticEnergyEv = totalKineticEnergy * invMobileCount;
         snapshot.averagePotentialEnergyEv = totalPotentialEnergy * invAtomCount;
-        snapshot.averageSpeedSim = totalSpeed * invAtomCount;
+        snapshot.averageSpeedSim = totalSpeed * invMobileCount;
         return snapshot;
     }
 

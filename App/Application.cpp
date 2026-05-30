@@ -74,8 +74,8 @@ int Application::run() {
     appInterface.state().pause = true;
 
     // создание сцены
-    Scenes::triangularBipyramidCrystal(simulation, 8, AtomData::Type::Z);
-    Scenes::AngularVelocity(simulation, Vec3f(0.0f, 0.25f, 0.0f));
+    Scenes::triangularBipyramidCrystal(simulation, 8, AtomData::Type::H);
+    // Scenes::AngularVelocity(simulation, Vec3f(0.0f, 0.25f, 0.0f));
 
     // std::vector<Scenes::AtomTypeSpec> gasSpecs = {
     //     // {AtomData::Type::O, 0, 80.0f},    // 80% водорода

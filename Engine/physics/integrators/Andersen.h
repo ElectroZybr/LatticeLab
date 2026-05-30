@@ -16,6 +16,7 @@ public:
 
     double getTemperature() const { return t; }
     double getParam() const { return nu; }
+    void setTemperature(double temperature) { t = temperature; }
     
     void pipeline(StepData& stepData);
 

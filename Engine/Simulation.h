@@ -45,6 +45,8 @@ public:
     float getMaxParticleSpeed() const { return activeState().integrator.maxParticleSpeed(); }
     void setAccelDamping(float accelDamping) { activeState().integrator.setAccelDamping(accelDamping); }
     float getAccelDamping() const { return activeState().integrator.accelDamping(); }
+    void setAndersenTemperature(float temperature) { activeState().integrator.setAndersenTemperature(temperature); }
+    float getAndersenTemperature() const { return activeState().integrator.andersenTemperature(); }
 
     size_t getSimStep() const { return activeState().sim_step; }
     float simTimeNs() const { return activeState().sim_time_ns; }

@@ -41,16 +41,19 @@ public:
     float maxParticleSpeed() const { return maxParticleSpeed_; }
     void setAccelDamping(float accelDamping);
     float accelDamping() const { return accelDamping_; }
+    void setAndersenTemperature(float temperature);
+    float andersenTemperature() const;
 
     void step(StepData& stepData);
 
 private:
     using SchemeVariant = std::variant<VerletScheme, KDKScheme, RK4Scheme, LangevinScheme, Andersen>;
 
-    static SchemeVariant makeSchemeImpl(Scheme scheme);
+    SchemeVariant makeSchemeImpl(Scheme scheme) const;
 
     Scheme integrator_type = Scheme::Verlet;
     SchemeVariant scheme_impl;
     float maxParticleSpeed_ = 0.0f;
     float accelDamping_ = 0.9f;
+    float andersenTemperature_ = 300.0f;
 };

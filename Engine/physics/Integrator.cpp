@@ -15,6 +15,20 @@ void Integrator::setMaxParticleSpeed(float maxSpeed) { maxParticleSpeed_ = std::
 
 void Integrator::setAccelDamping(float accelDamping) { accelDamping_ = std::clamp(accelDamping, 0.0f, 1.0f); }
 
+void Integrator::setAndersenTemperature(float temperature) {
+    andersenTemperature_ = std::max(0.0f, temperature);
+    if (auto* scheme = std::get_if<Andersen>(&scheme_impl)) {
+        scheme->setTemperature(andersenTemperature_);
+    }
+}
+
+float Integrator::andersenTemperature() const {
+    if (const auto* scheme = std::get_if<Andersen>(&scheme_impl)) {
+        return static_cast<float>(scheme->getTemperature());
+    }
+    return andersenTemperature_;
+}
+
 void Integrator::step(StepData& stepData) {
     std::visit([&](auto& scheme) { scheme.pipeline(stepData); }, scheme_impl);
 
@@ -24,7 +38,7 @@ void Integrator::step(StepData& stepData) {
     }
 }
 
-Integrator::SchemeVariant Integrator::makeSchemeImpl(Scheme scheme) {
+Integrator::SchemeVariant Integrator::makeSchemeImpl(Scheme scheme) const {
     switch (scheme) {
     case Scheme::Verlet:
         return VerletScheme{};
@@ -35,7 +49,7 @@ Integrator::SchemeVariant Integrator::makeSchemeImpl(Scheme scheme) {
     case Scheme::Langevin:
         return LangevinScheme{};
     case Scheme::Andersen:
-        return Andersen{300., 0.1};
+        return Andersen{andersenTemperature_, 0.1};
     default:
         return VerletScheme{};
     }
