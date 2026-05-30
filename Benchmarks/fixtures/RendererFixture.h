@@ -11,7 +11,7 @@
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/physics/Bond.h"
-#include "App/rendering/SimulationSceneSource.h"
+#include "App/viewport/SimulationSceneSource.h"
 #include "Rendering/BaseRenderer.h"
 #include "Rendering/WGPUContext.h"
 
@@ -60,8 +60,8 @@ public:
         simulation_.createWorld(Vec3f(300, 300, 300));
         simulation_.world().getAtomStorage() = makeGridAtoms(static_cast<int>(state.range(0)));
         renderer_ = std::make_unique<TRenderer>(ctx.surfaceFormat());
-        App::Rendering::syncRendererWithSimulation(*renderer_, simulation_);
-        renderer_->camera.setScreenSize({800.0f, 600.0f});
+        App::Viewport::syncRendererWithSimulation(*renderer_, simulation_);
+        renderer_->camera.setScreenSize(Vec2f{800.0f, 600.0f});
         renderer_->camera.resetView();
         createRenderTargets(*ctx.device(), ctx.surfaceFormat());
 

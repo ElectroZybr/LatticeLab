@@ -9,6 +9,8 @@
 #include "Engine/metrics/Profiler.h"
 #include "GUI/interface/UiState.h"
 #include "GUI/io/keyboard/Keyboard.h"
+#include "Rendering/BaseRenderer.h"
+#include "Rendering/WGPUContext.h"
 
 CaptureController::CaptureController() {
 
@@ -111,6 +113,27 @@ void CaptureController::onFrameRendered(wgpu::Texture texture) {
 
     producer_.onFrameRendered(texture, diff.count());
     ++renderFrameCount_;
+}
+
+void CaptureController::renderFrame(BaseRenderer& renderer, const std::function<void()>& afterDraw) {
+    WGPUContext& ctx = WGPUContext::instance();
+
+    wgpu::SurfaceTexture surfaceTex;
+    ctx.surface()->getCurrentTexture(&surfaceTex);
+    wgpu::raii::Texture surfaceTexture(surfaceTex.texture);
+    wgpu::raii::TextureView surfaceView = surfaceTexture->createView();
+
+    const wgpu::TextureView renderTarget = acquireRenderTarget(*surfaceTexture, *surfaceView);
+    renderer.drawShot(renderTarget, *ctx.depthView());
+
+    if (afterDraw) {
+        afterDraw();
+    }
+
+    renderer.endFrame();
+    onFrameRendered(*surfaceTexture);
+    ctx.present();
+    ctx.processEvents();
 }
 
 void CaptureController::update(double deltaTime) {

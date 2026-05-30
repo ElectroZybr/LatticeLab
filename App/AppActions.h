@@ -8,17 +8,17 @@
 
 class Simulation;
 class CaptureController;
-class SimulationRenderer;
+class SceneViewport;
 struct UiState;
 
 namespace AppActions {
     class Handler : public Signals::Trackable {
     public:
-        Handler(GLFWwindow* window, CaptureController& captureController, Simulation& simulation, SimulationRenderer& renderer, UiState& uiState);
+        Handler(GLFWwindow* window, CaptureController& captureController, Simulation& simulation, SceneViewport& renderer, UiState& uiState);
 
     private:
-        void trackIOPanel(CaptureController& captureController, UiState& uiState, Simulation& simulation, SimulationRenderer& renderer);
-        void trackToolsPanel(Simulation& simulation, SimulationRenderer& renderer);
+        void trackIOPanel(CaptureController& captureController, UiState& uiState, Simulation& simulation, SceneViewport& renderer);
+        void trackToolsPanel(Simulation& simulation, SceneViewport& renderer);
         void trackSettingsPanel(GLFWwindow* window);
         void trackKeyboard(Simulation& simulation);
         void trackSimControlPanel(Simulation& simulation);

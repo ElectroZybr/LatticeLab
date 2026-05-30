@@ -76,7 +76,7 @@ void RendererFixtureBase::createRenderTargets(wgpu::Device device, wgpu::Texture
 }
 
 void RendererFixtureBase::drawFrame() {
-    App::Rendering::syncRendererWithSimulation(*renderer_, simulation_);
+    App::Viewport::syncRendererWithSimulation(*renderer_, simulation_);
     renderer_->drawShot(*targetTextureView_, *depthTextureView_);
     renderer_->endFrame();
 }

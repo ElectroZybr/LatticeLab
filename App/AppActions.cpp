@@ -5,7 +5,7 @@
 #include "App/capture/CaptureOutputPath.h"
 #include "App/capture/CaptureController.h"
 #include "App/interaction/ToolsManager.h"
-#include "App/rendering/SimulationRenderer.h"
+#include "App/viewport/SceneViewport.h"
 #include "App/save_system/AppStateIO.h"
 #include "Engine/Simulation.h"
 #include "GUI/interface/UiState.h"
@@ -52,7 +52,7 @@ namespace {
 }
 
 namespace AppActions {
-    void Handler::trackIOPanel(CaptureController& captureController, UiState& uiState, Simulation& simulation, SimulationRenderer& renderer) {
+    void Handler::trackIOPanel(CaptureController& captureController, UiState& uiState, Simulation& simulation, SceneViewport& renderer) {
         track(AppSignals::UI::SaveSimulation.connect(
             [&](std::string_view path) { AppStateIO::save(captureController, uiState.scenePreviewRect, simulation, renderer.renderer(), path); }));
         track(AppSignals::UI::LoadSimulation.connect([&](std::string_view path) {
@@ -78,11 +78,11 @@ namespace AppActions {
         track(AppSignals::Capture::ToggleXYZRecording.connect([&]() { toggleXYZRecording(captureController, simulation); }));
     }
 
-    void Handler::trackToolsPanel(Simulation& simulation, SimulationRenderer& renderer) {
+    void Handler::trackToolsPanel(Simulation& simulation, SceneViewport& renderer) {
         track(AppSignals::UI::SetRender.connect([&](RendererType type) {
-            const Rendering::API::RendererKind rendererKind =
-                (type == RendererType::Renderer2D) ? Rendering::API::RendererKind::Renderer2D : Rendering::API::RendererKind::Renderer3D;
-            if (renderer.setRendererKind(rendererKind, simulation)) {
+            const SceneViewport::RendererType rendererType =
+                (type == RendererType::Renderer2D) ? SceneViewport::RendererType::Renderer2D : SceneViewport::RendererType::Renderer3D;
+            if (renderer.setRendererType(rendererType, simulation)) {
                 ToolsManager::resetInteractionState();
             }
         }));
@@ -102,7 +102,7 @@ namespace AppActions {
         track(AppSignals::UI::StepPhysics.connect([&]() { simulation.update(); }));
     }
 
-    Handler::Handler(GLFWwindow* window, CaptureController& captureController, Simulation& simulation, SimulationRenderer& renderer, UiState& uiState) {
+    Handler::Handler(GLFWwindow* window, CaptureController& captureController, Simulation& simulation, SceneViewport& renderer, UiState& uiState) {
         trackIOPanel(captureController, uiState, simulation, renderer);
         trackToolsPanel(simulation, renderer);
         trackSettingsPanel(window);

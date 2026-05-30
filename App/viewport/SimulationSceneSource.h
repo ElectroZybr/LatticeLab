@@ -5,7 +5,7 @@
 #include "Engine/Simulation.h"
 #include "Rendering/BaseRenderer.h"
 
-namespace App::Rendering {
+namespace App::Viewport {
     inline RenderAtomsView makeRenderAtomsView(const World& world) {
         const AtomStorage& atoms = world.getAtomStorage();
         return RenderAtomsView{

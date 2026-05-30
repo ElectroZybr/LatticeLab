@@ -17,7 +17,7 @@ public:
     virtual wgpu::raii::RenderPassEncoder* currentRenderPass() { return nullptr; }
     virtual const wgpu::raii::RenderPassEncoder* currentRenderPass() const { return nullptr; }
 
-    void resizeRenderData(size_t count);
+    void resizeRenderData(size_t count) { renderData_.resize(count); }
     void clearRenderData() { renderData_.clear(); }
     RenderData& getRenderData(size_t index) { return renderData_[index]; }
     const RenderData& getRenderData(size_t index) const { return renderData_[index]; }

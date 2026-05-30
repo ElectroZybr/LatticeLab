@@ -10,7 +10,7 @@
 #include "App/CreateWindow.h"
 #include "App/Scenes.h"
 #include "App/UserSettings.h"
-#include "App/rendering/SimulationRenderer.h"
+#include "App/viewport/SceneViewport.h"
 #include "App/interaction/ToolsManager.h"
 #include "Engine/Simulation.h"
 #include "Engine/metrics/Profiler.h"
@@ -52,7 +52,7 @@ int Application::run() {
     simulation.createWorld({120, 120, 120});
 
     CaptureController captureController;
-    SimulationRenderer renderer(Rendering::API::RendererKind::Renderer3D, captureController);
+    SceneViewport renderer(SceneViewport::RendererType::Renderer3D, captureController);
     renderer.syncScene(simulation);
 
     Interface appInterface(window, simulation, renderer.rendererHandle(), captureController);

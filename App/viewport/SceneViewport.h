@@ -4,16 +4,20 @@
 
 #include "App/capture/CaptureController.h"
 #include "App/debug/CreateDebugPanels.h"
-#include "App/rendering/SimulationSceneSource.h"
+#include "App/viewport/SimulationSceneSource.h"
 #include "Rendering/BaseRenderer.h"
-#include "Rendering/api/RendererFactory.h"
 
 class Simulation;
 class Interface;
 
-class SimulationRenderer {
+class SceneViewport {
 public:
-    SimulationRenderer(Rendering::API::RendererKind kind, CaptureController& captureController);
+    enum class RendererType : unsigned char {
+        Renderer2D = 0,
+        Renderer3D = 1,
+    };
+
+    SceneViewport(RendererType type, CaptureController& captureController);
 
     [[nodiscard]] BaseRenderer& renderer() noexcept { return *renderer_; }
     [[nodiscard]] const BaseRenderer& renderer() const noexcept { return *renderer_; }
@@ -26,9 +30,10 @@ public:
     void syncScene(const Simulation& simulation);
     void renderFrame(const Simulation& simulation, Interface& appInterface, const DebugViews& debugViews);
 
-    bool setRendererKind(Rendering::API::RendererKind kind, const Simulation& simulation);
+    bool setRendererType(RendererType type, const Simulation& simulation);
 
 private:
+    static std::unique_ptr<BaseRenderer> createRenderer(RendererType type);
     static void copyRenderSettings(BaseRenderer& destination, const BaseRenderer& source);
 
     CaptureController* captureController_ = nullptr;

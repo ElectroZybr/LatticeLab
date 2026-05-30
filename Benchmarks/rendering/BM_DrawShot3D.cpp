@@ -8,7 +8,7 @@
 BENCHMARK_TEMPLATE_DEFINE_F(RendererFixture, DrawShot3D, Renderer3DWGPU)(benchmark::State& state) {
     WGPUContext& ctx = WGPUContext::instance();
     for (auto _ : state) {
-        App::Rendering::syncRendererWithSimulation(*renderer_, simulation_);
+        App::Viewport::syncRendererWithSimulation(*renderer_, simulation_);
         renderer_->drawShot(*colorTextureView_, *ctx.depthView());
 
         renderer_->endFrame();

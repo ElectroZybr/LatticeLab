@@ -31,7 +31,6 @@ set(RENDERING_PUBLIC_HEADERS
     2d/Renderer2DWGPU.h
     3d/Renderer3DWGPU.h
     camera/Camera.h
-    api/RendererFactory.h
 )
 
 if(APPLE)
