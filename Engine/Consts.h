@@ -7,7 +7,9 @@ namespace Consts {
 namespace Units {
     // время
     inline constexpr float kTimeUnitToFs = 10.1805f;    // константа для перевода Dt -> Fs (1 Dt = 10.1805 fs)
-    inline constexpr float kTimeUnitToNs = 10.1805e-6f; // константа для перевода Dt -> Ns (1 Dt = 0.0000101805 ns)
+    inline constexpr float kTimeUnitToNs = kTimeUnitToFs * 1e-6f; // константа для перевода Dt -> Ns (1 Dt = 0.0000101805 ns)
+	inline constexpr float kTimeUnitToS = kTimeUnitToFs * 1e-15f;
+	inline constexpr float kTimeUnitToHour = kTimeUnitToS / 3600.f;
 
     // единицы измерения
     inline constexpr float AngstromToNm = 0.1f;  // константа для перевода ангстрем в нанометры
@@ -22,6 +24,6 @@ namespace Units {
     inline constexpr float kboltzmann = 8.617333262e-5f; // постоянная Больцмана в электрон-вольтах на кельвин
 
     // скорость
-    inline constexpr float SpeedUnitToMps = 9822.7f;     // коэффициент перевода ангстрем/dt в м/с
-    inline constexpr float SpeedUnitToKmph = 35361.7f;   // коэффициент перевода ангстрем/dt в км/ч
+    inline constexpr float SpeedUnitToMps = 1e-10f / kTimeUnitToS;     // коэффициент перевода ангстрем/dt в м/с
+    inline constexpr float SpeedUnitToKmph = 1e-13f / kTimeUnitToHour;   // коэффициент перевода ангстрем/dt в км/ч
 }

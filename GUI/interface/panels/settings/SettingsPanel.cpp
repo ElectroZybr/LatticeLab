@@ -27,8 +27,11 @@ namespace {
             return i18n::tr("integrator_runge_kutta_4");
         case Integrator::Scheme::Langevin:
             return i18n::tr("integrator_langevin");
+        case Integrator::Scheme::Andersen:
+            return i18n::tr("integrator_andersen");;
         default:
             return i18n::tr("integrator_unknown");
+        
         }
     }
 
@@ -135,6 +138,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
             Integrator::Scheme::KDK,
             Integrator::Scheme::RK4,
             Integrator::Scheme::Langevin,
+            Integrator::Scheme::Andersen
         };
 
         for (Integrator::Scheme scheme : schemes) {
@@ -165,10 +169,19 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
     }
     ImGui::PopItemWidth();
 
-    float accelDamping = simulation.getAccelDamping();
     ImGui::PushItemWidth(150.0f * uiScale);
-    if (ImGui::SliderFloat(i18n::tr("imgui_accel_damping").data(), &accelDamping, 0.0f, 1.0f, "%.3f")) {
-        simulation.setAccelDamping(accelDamping);
+    if (currentIntegrator == Integrator::Scheme::Andersen) {
+        float andersenTemperature = simulation.getAndersenTemperature();
+        if (ImGui::SliderFloat("Andersen T (K)", &andersenTemperature, 1.0f, 5000.0f, "%.1f",
+                               ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_Logarithmic)) {
+            simulation.setAndersenTemperature(andersenTemperature);
+        }
+    }
+    else {
+        float accelDamping = simulation.getAccelDamping();
+        if (ImGui::SliderFloat(i18n::tr("imgui_accel_damping").data(), &accelDamping, 0.0f, 1.0f, "%.3f")) {
+            simulation.setAccelDamping(accelDamping);
+        }
     }
     ImGui::PopItemWidth();
 

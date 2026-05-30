@@ -45,6 +45,8 @@ public:
     float getMaxParticleSpeed() const { return world().getIntegrator().maxParticleSpeed(); }
     void setAccelDamping(float accelDamping) { world().getIntegrator().setAccelDamping(accelDamping); }
     float getAccelDamping() const { return world().getIntegrator().accelDamping(); }
+    void setAndersenTemperature(float temperature) { world().getIntegrator().setAndersenTemperature(temperature); }
+    float getAndersenTemperature() const { return world().getIntegrator().andersenTemperature(); }
 
     size_t getSimStep() const { return world().getSimStep(); }
     float simTimeNs() const { return world().getSimTimeNs(); }

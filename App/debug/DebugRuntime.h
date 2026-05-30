@@ -17,6 +17,8 @@ inline std::string_view integratorSchemeName(Integrator::Scheme scheme) {
         return "Runge-Kutta 4";
     case Integrator::Scheme::Langevin:
         return "Langevin";
+    case Integrator::Scheme::Andersen:
+        return "Andersen";
     }
     return "Unknown";
 }
