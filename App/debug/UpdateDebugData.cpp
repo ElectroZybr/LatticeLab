@@ -53,10 +53,12 @@ void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simul
     const World& world = simulation.world();
     const NeighborList& neighborList = simulation.neighborList();
     const Profiler& profiler = Profiler::instance();
-    const double renderMs = profiler.lastMs("Application::RenderFrame");
-    const double captureReadbackMs = profiler.lastMs("Capture::readback");
-    const double captureEncodeMs = profiler.lastMs("Capture::encodeFrame");
-    const double physicsMs = profiler.lastActiveMs("Simulation::update");
+    const double renderMs = profiler.lastActiveMs("Application::RenderFrame");
+    const double captureReadbackMs = profiler.lastActiveMs("Capture::readback");
+    const double captureEncodeMs = profiler.lastActiveMs("Capture::encodeFrame");
+    const double physicsMs =
+        std::max({profiler.lastActiveMs("Simulation::update"), profiler.lastActiveMs("Simulation::updateAll"),
+                  profiler.lastActiveMs("Simulation::updateWorld")});
     const int simStep = simulation.world().getSimStep();
     const auto now = std::chrono::steady_clock::now();
     const float elapsedSeconds = std::chrono::duration<float>(now - stepsRateSample.lastTime).count();

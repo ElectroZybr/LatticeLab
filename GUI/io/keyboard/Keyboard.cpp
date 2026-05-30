@@ -113,16 +113,16 @@ void Keyboard::onFrame(float deltaTime) {
     else if (rend->camera.mode == Camera::Mode::Mode2D) {
         float deltaSpeed = rend->camera.speed * deltaTime;
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-            rend->camera.move({0, deltaSpeed});
+            rend->camera.move(Vec2f(0.0f, deltaSpeed));
         }
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            rend->camera.move({0, -deltaSpeed});
+            rend->camera.move(Vec2f(0.0f, -deltaSpeed));
         }
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            rend->camera.move({-deltaSpeed, 0});
+            rend->camera.move(Vec2f(-deltaSpeed, 0.0f));
         }
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            rend->camera.move({deltaSpeed, 0});
+            rend->camera.move(Vec2f(deltaSpeed, 0.0f));
         }
     }
 }

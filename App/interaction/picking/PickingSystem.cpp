@@ -2,7 +2,6 @@
 
 #include <limits>
 
-#include "App/rendering/RenderMathAdapters.h"
 #include "Engine/World.h"
 #include "Rendering/BaseRenderer.h"
 
@@ -49,7 +48,7 @@ void PickingSystem::processRect(Vec2i start, Vec2i end, bool cumulative) {
 
     for (size_t i = 0; i < atomStorage->size(); ++i) {
         const Vec3f worldPos = displayAtomPos(i);
-        const Vec2i atomScreen = App::Rendering::toEngineVec2i(rend->camera.worldToScreen(App::Rendering::toGlmVec3(worldPos)));
+        const Vec2i atomScreen = rend->camera.worldToScreen(worldPos);
         if (pointInRect(atomScreen, start, end)) {
             selectedIndices.insert(i);
         }
@@ -67,7 +66,7 @@ void PickingSystem::processLasso(std::span<Vec2i> points, bool cumulative) {
 
     for (size_t i = 0; i < atomStorage->size(); ++i) {
         const Vec3f worldPos = displayAtomPos(i);
-        const Vec2i screenPos = App::Rendering::toEngineVec2i(rend->camera.worldToScreen(App::Rendering::toGlmVec3(worldPos)));
+        const Vec2i screenPos = rend->camera.worldToScreen(worldPos);
         if (pointInPolygon(screenPos, points)) {
             selectedIndices.insert(i);
         }
@@ -105,7 +104,7 @@ bool PickingSystem::pickAtom2D(Vec2i screenPos, float tolerance, AtomHit& hit) c
 
     for (size_t i = 0; i < atomStorage->size(); ++i) {
         const Vec3f worldPos = displayAtomPos(i);
-        const Vec2i atomScreen = App::Rendering::toEngineVec2i(rend->camera.worldToScreen(App::Rendering::toGlmVec3(worldPos)));
+        const Vec2i atomScreen = rend->camera.worldToScreen(worldPos);
         const float distSqr = (atomScreen - Vec2i(screenPos)).sqrAbs();
 
         // радиус атома в экранных пикселях
@@ -128,7 +127,7 @@ bool PickingSystem::pickAtom2D(Vec2i screenPos, float tolerance, AtomHit& hit) c
 
 // 3D: ray cast — ищем ближайший атом вдоль луча
 bool PickingSystem::pickAtom3D(Vec2i screenPos, AtomHit& hit) const {
-    const RenderRay ray = (*renderer)->camera.screenToRay(static_cast<float>(screenPos.x), static_cast<float>(screenPos.y));
+    const Ray ray = (*renderer)->camera.screenToRay(screenPos);
 
     float bestT = std::numeric_limits<float>::max();
     size_t bestIndex = static_cast<size_t>(-1);
@@ -137,8 +136,8 @@ bool PickingSystem::pickAtom3D(Vec2i screenPos, AtomHit& hit) const {
         const Vec3f worldPos = displayAtomPos(i);
         const float radius = AtomData::getProps(atomStorage->type(i)).radius;
 
-        RenderRaySphereHit rayHit;
-        if (renderRaySphereIntersect(ray, App::Rendering::toGlmVec3(worldPos), radius, rayHit)) {
+        RaySphereHit rayHit{};
+        if (raySphereIntersect(ray, worldPos, radius, rayHit)) {
             if (rayHit.t < bestT) {
                 bestT = rayHit.t;
                 bestIndex = i;

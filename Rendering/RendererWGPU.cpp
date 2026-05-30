@@ -1,12 +1,13 @@
 #include "RendererWGPU.h"
 
+#include <algorithm>
 #include <cstring>
 #include <ranges>
 
 #include <webgpu/webgpu-raii.hpp>
 #include <webgpu/webgpu.hpp>
 
-#include "App/interaction/ToolsManager.h"
+#include "Engine/physics/AtomData.h"
 #include "Rendering/WGPUContext.h"
 
 #ifdef True
@@ -43,6 +44,10 @@ RendererWGPU::RendererWGPU(wgpu::TextureFormat surfaceFormat) : surfaceFormat(su
 
 void RendererWGPU::initAtomColors() {
     typeColorsData.assign(119, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    for (size_t i = 0; i < static_cast<size_t>(AtomData::Type::COUNT) && i < typeColorsData.size(); ++i) {
+        const auto& props = AtomData::getProps(static_cast<AtomData::Type>(i));
+        typeColorsData[i] = glm::vec4(props.color.r / 255.0f, props.color.g / 255.0f, props.color.b / 255.0f, props.color.a / 255.0f);
+    }
 }
 
 void RendererWGPU::initAtomQuadBuffer() {
@@ -379,22 +384,17 @@ void RendererWGPU::drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView
     for (size_t i = 0; i < typeColorsData.size(); ++i) {
         uniforms.typeColors[i] = typeColorsData[i];
     }
-    const size_t colorCount = std::min(renderData.typeColors.size(), std::size(uniforms.typeColors));
-    for (size_t i = 0; i < colorCount; ++i) {
-        const RenderColor& color = renderData.typeColors[i];
-        uniforms.typeColors[i] = glm::vec4(color.r, color.g, color.b, color.a);
-    }
 
     WGPUContext::instance().queue()->writeBuffer(*uniformBuffer, 0, &uniforms, sizeof(uniforms));
 
     beginPass(targetView, depthView, targetLoadOp);
 
-    if (renderData.drawBonds) {
+    if (renderData.drawBonds && renderData.bonds != nullptr) {
         setLineColor(glm::vec4(0.4f, 0.6f, 1.0f, 0.3f));
-        drawBondsImpl(renderData.atoms, renderData.bonds);
+        drawBondsImpl(renderData.atoms, *renderData.bonds);
     }
-    if (renderData.drawGrid) {
-        drawGridImpl(renderData.gridCells);
+    if (renderData.drawGrid && renderData.grid != nullptr) {
+        drawGridImpl(*renderData.grid);
     }
     if (renderData.drawBox) {
         setLineColor(applySelection ? glm::vec4(0.5f, 0.78f, 1.0f, 0.55f) : glm::vec4(0.35f, 0.52f, 0.9f, 0.3f));
@@ -446,7 +446,7 @@ void RendererWGPU::endFrame() {
 
 void RendererWGPU::drawAtomsImpl(const RenderAtomsView& atoms, const RenderData& renderData, bool applySelection) {
     const size_t count = atoms.count;
-    if (count == 0 || !atoms.hasPositions() || !atoms.hasTypes() || !atoms.hasRadii()) {
+    if (count == 0 || !atoms.hasPositions() || !atoms.hasTypes()) {
         return;
     }
 
@@ -461,11 +461,12 @@ void RendererWGPU::drawAtomsImpl(const RenderAtomsView& atoms, const RenderData&
     for (size_t i = 0; i < count; ++i) {
         posData_[i] = {atoms.x[i], atoms.y[i], atoms.z[i]};
         velData_[i] = atoms.hasVelocities() ? AtomVec4{atoms.vx[i], atoms.vy[i], atoms.vz[i]} : AtomVec4{};
-        radii[i] = atoms.radius[i];
-        typeData[i] = static_cast<float>(atoms.typeId[i]);
+        const AtomData::Type atomType = atoms.type[i];
+        radii[i] = atoms.hasRadii() ? atoms.radius[i] : AtomData::getProps(atomType).radius;
+        typeData[i] = static_cast<float>(atomType);
     }
-    if (applySelection && ToolsManager::pickingSystem != nullptr) {
-        for (const size_t idx : ToolsManager::pickingSystem->getSelectedIndices()) {
+    if (applySelection) {
+        for (const size_t idx : renderData.selectedAtomIndices) {
             if (idx < count) {
                 selectedData[idx] = 1.0f;
             }
@@ -525,14 +526,14 @@ void RendererWGPU::setLineColor(const glm::vec4& color) {
     WGPUContext::instance().queue()->writeBuffer(*uniformBuffer, offsetof(SceneUniforms, lineColor), &color, sizeof(color));
 }
 
-void RendererWGPU::drawBondsImpl(const RenderAtomsView& atoms, const std::vector<RenderBond>& bonds) {
+void RendererWGPU::drawBondsImpl(const RenderAtomsView& atoms, const Bond::List& bonds) {
     if (bonds.empty()) {
         return;
     }
 
     std::vector<glm::vec3> verts;
     verts.reserve(bonds.size() * 2);
-    for (const RenderBond& bond : bonds) {
+    for (const Bond& bond : bonds) {
         if (bond.aIndex >= atoms.count || bond.bIndex >= atoms.count || !atoms.hasPositions()) {
             continue;
         }
@@ -556,14 +557,23 @@ void RendererWGPU::drawBondsImpl(const RenderAtomsView& atoms, const std::vector
     currentPass->draw(verts.size(), 1, 0, 0);
 }
 
-void RendererWGPU::drawGridImpl(const std::vector<RenderGridCell>& cells) {
+void RendererWGPU::drawGridImpl(const SpatialGrid& grid) {
     gridData.clear();
     float maxCount = 1.0f;
 
-    for (const RenderGridCell& cell : cells) {
-        if (cell.atomCount > 0.0f) {
-            gridData.emplace_back(glm::vec4(cell.origin.x, cell.origin.y, cell.origin.z, 0.f), cell.cellSize, cell.atomCount);
-            maxCount = std::max(maxCount, cell.atomCount);
+    for (unsigned int z = 1; z < grid.size.z - 1; ++z) {
+        for (unsigned int y = 1; y < grid.size.y - 1; ++y) {
+            for (unsigned int x = 1; x < grid.size.x - 1; ++x) {
+                const int atomCount = grid.countAtomsInCell(x, y, z);
+                if (atomCount <= 0) {
+                    continue;
+                }
+
+                gridData.emplace_back(glm::vec4(static_cast<float>((x - 1) * grid.cellSize), static_cast<float>((y - 1) * grid.cellSize),
+                                                static_cast<float>((z - 1) * grid.cellSize), 0.f),
+                                      static_cast<float>(grid.cellSize), static_cast<float>(atomCount));
+                maxCount = std::max(maxCount, static_cast<float>(atomCount));
+            }
         }
     }
     if (gridData.empty()) {

@@ -6,24 +6,26 @@
 #include "Engine/NeighborSearch/NeighborList.h"
 #include "Engine/metrics/Profiler.h"
 
-void BondForceField::compute(AtomStorage& atoms, Bond::List& bonds, const NeighborList& neighborList, bool allowBondFormation,
+bool BondForceField::compute(AtomStorage& atoms, Bond::List& bonds, const NeighborList& neighborList, bool allowBondFormation,
                              float dt) const {
     PROFILE_SCOPE("ForceField::Bonded");
     if (bonds.empty() && !allowBondFormation) {
-        return;
+        return false;
     }
 
     // проверка образования и разрыва связей, а также расчет сил
+    bool changed = false;
     std::erase_if(bonds, [&](Bond& bond) {
         if (bond.shouldBreak(atoms)) {
             bond.detach(atoms);
+            changed = true;
             return true;
         }
         return false;
     });
 
     if (allowBondFormation) {
-        formBonds(atoms, bonds, neighborList);
+        changed = formBonds(atoms, bonds, neighborList) || changed;
     }
 
     for (Bond& bond : bonds) {
@@ -31,17 +33,19 @@ void BondForceField::compute(AtomStorage& atoms, Bond::List& bonds, const Neighb
     }
 
     applyAngleForces(atoms, bonds);
+    return changed;
 }
 
-void BondForceField::formBonds(AtomStorage& atoms, Bond::List& bonds, const NeighborList& neighborList) const {
+bool BondForceField::formBonds(AtomStorage& atoms, Bond::List& bonds, const NeighborList& neighborList) const {
     PROFILE_SCOPE("ForceField::FormBonds(NL)");
     const uint32_t atomCount = static_cast<uint32_t>(atoms.size());
     if (atomCount < 2) {
-        return;
+        return false;
     }
 
     const auto& offsets = neighborList.offsets();
     const auto& neighbours = neighborList.neighbors();
+    bool changed = false;
     for (uint32_t atomIndex = 0; atomIndex < atomCount; ++atomIndex) {
         if (atomIndex + 1 >= offsets.size()) {
             break;
@@ -49,21 +53,22 @@ void BondForceField::formBonds(AtomStorage& atoms, Bond::List& bonds, const Neig
         const uint32_t begin = offsets[atomIndex];
         const uint32_t end = offsets[atomIndex + 1];
         for (uint32_t p = begin; p < end; ++p) {
-            tryCreateBond(atoms, bonds, atomIndex, neighbours[p]);
+            changed = tryCreateBond(atoms, bonds, atomIndex, neighbours[p]) || changed;
         }
     }
+    return changed;
 }
 
-void BondForceField::tryCreateBond(AtomStorage& atoms, Bond::List& bonds, uint32_t aIndex, uint32_t bIndex) const {
+bool BondForceField::tryCreateBond(AtomStorage& atoms, Bond::List& bonds, uint32_t aIndex, uint32_t bIndex) const {
     Bond::ensureInitialized();
 
     if (aIndex >= atoms.size() || bIndex >= atoms.size() || aIndex == bIndex) {
-        return;
+        return false;
     }
 
     const BondParams& bondParams = Bond::bond_default_props.get(atoms.type(aIndex), atoms.type(bIndex));
     if (bondParams.r0 <= 0.0f || bondParams.a <= 0.0f || bondParams.De <= 0.0f) {
-        return;
+        return false;
     }
 
     const float dx = atoms.posX(bIndex) - atoms.posX(aIndex);
@@ -73,10 +78,10 @@ void BondForceField::tryCreateBond(AtomStorage& atoms, Bond::List& bonds, uint32
 
     const float formationDistance = std::max(2.5f, bondParams.r0 * 1.35f);
     if (distanceSqr > formationDistance * formationDistance) {
-        return;
+        return false;
     }
 
-    Bond::CreateBond(bonds, aIndex, bIndex, atoms);
+    return Bond::CreateBond(bonds, aIndex, bIndex, atoms) != nullptr;
 }
 
 void BondForceField::applyAngleForces(AtomStorage& atoms, const Bond::List& bonds) {

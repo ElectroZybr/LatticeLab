@@ -5,13 +5,10 @@
 #include "App/capture/CaptureOutputPath.h"
 #include "App/capture/CaptureController.h"
 #include "App/interaction/ToolsManager.h"
+#include "App/rendering/SimulationRenderer.h"
 #include "App/save_system/AppStateIO.h"
 #include "Engine/Simulation.h"
 #include "GUI/interface/UiState.h"
-#include "Rendering/2d/Renderer2DWGPU.h"
-#include "Rendering/3d/Renderer3DWGPU.h"
-#include "Rendering/WGPUContext.h"
-#include "App/rendering/SimulationRenderDataAdapter.h"
 
 namespace {
     void shiftAtoms(AtomStorage& atomStorage, Vec3f delta) {
@@ -55,13 +52,12 @@ namespace {
 }
 
 namespace AppActions {
-    void Handler::trackIOPanel(CaptureController& captureController, UiState& uiState, Simulation& simulation,
-                               std::unique_ptr<BaseRenderer>& renderer) {
+    void Handler::trackIOPanel(CaptureController& captureController, UiState& uiState, Simulation& simulation, SimulationRenderer& renderer) {
         track(AppSignals::UI::SaveSimulation.connect(
-            [&](std::string_view path) { AppStateIO::save(captureController, uiState.scenePreviewRect, simulation, *renderer, path); }));
+            [&](std::string_view path) { AppStateIO::save(captureController, uiState.scenePreviewRect, simulation, renderer.renderer(), path); }));
         track(AppSignals::UI::LoadSimulation.connect([&](std::string_view path) {
-            AppStateIO::load(simulation, *renderer, path);
-            App::Rendering::syncRendererWithSimulation(*renderer, simulation);
+            AppStateIO::load(simulation, renderer.renderer(), path);
+            renderer.syncScene(simulation);
             ToolsManager::resetInteractionState();
         }));
         track(AppSignals::UI::ResizeBox.connect([&](const Vec3f& newSize) { applyResizeBox(simulation, newSize); }));
@@ -82,34 +78,16 @@ namespace AppActions {
         track(AppSignals::Capture::ToggleXYZRecording.connect([&]() { toggleXYZRecording(captureController, simulation); }));
     }
 
-    void Handler::trackToolsPanel(Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer) {
+    void Handler::trackToolsPanel(Simulation& simulation, SimulationRenderer& renderer) {
         track(AppSignals::UI::SetRender.connect([&](RendererType type) {
-            std::unique_ptr<BaseRenderer> newRenderer;
-            switch (type) {
-            case RendererType::Renderer2D:
-                newRenderer = std::make_unique<Renderer2DWGPU>(WGPUContext::instance().surfaceFormat());
-                break;
-            case RendererType::Renderer3D:
-                newRenderer = std::make_unique<Renderer3DWGPU>(WGPUContext::instance().surfaceFormat());
-                break;
-            }
-
-            if (newRenderer) {
+            const Rendering::API::RendererKind rendererKind =
+                (type == RendererType::Renderer2D) ? Rendering::API::RendererKind::Renderer2D : Rendering::API::RendererKind::Renderer3D;
+            if (renderer.setRendererKind(rendererKind, simulation)) {
                 ToolsManager::resetInteractionState();
-                newRenderer->addRenderData();
-                App::Rendering::syncRendererWithSimulation(*newRenderer, simulation);
-                newRenderer->getRenderData(0).drawGrid = renderer->getRenderData(0).drawGrid;
-                newRenderer->getRenderData(0).drawBonds = renderer->getRenderData(0).drawBonds;
-                newRenderer->getRenderData(0).drawBox = renderer->getRenderData(0).drawBox;
-                newRenderer->getRenderData(0).speedColorMode = renderer->getRenderData(0).speedColorMode;
-                newRenderer->getRenderData(0).speedGradientMax = renderer->getRenderData(0).speedGradientMax;
-                newRenderer->camera.setScreenSize(renderer->camera.getScreenSize());
-                newRenderer->camera.resetView();
-                renderer = std::move(newRenderer);
             }
         }));
 
-        track(AppSignals::UI::SetCameraMode.connect([&](Camera::Mode mode) { renderer->camera.setMode(mode); }));
+        track(AppSignals::UI::SetCameraMode.connect([&](Camera::Mode mode) { renderer.renderer().camera.setMode(mode); }));
     }
 
     void Handler::trackSettingsPanel(GLFWwindow* window) {
@@ -124,8 +102,7 @@ namespace AppActions {
         track(AppSignals::UI::StepPhysics.connect([&]() { simulation.update(); }));
     }
 
-    Handler::Handler(GLFWwindow* window, CaptureController& captureController, Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer,
-                     UiState& uiState) {
+    Handler::Handler(GLFWwindow* window, CaptureController& captureController, Simulation& simulation, SimulationRenderer& renderer, UiState& uiState) {
         trackIOPanel(captureController, uiState, simulation, renderer);
         trackToolsPanel(simulation, renderer);
         trackSettingsPanel(window);

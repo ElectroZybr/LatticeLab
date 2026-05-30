@@ -2,7 +2,6 @@
 
 #include "Benchmarks/fixtures/RendererFixture.h"
 #include "Rendering/2d/Renderer2DWGPU.h"
-#include "App/rendering/SimulationRenderDataAdapter.h"
 
 // @bench_meta {"id":"RendererFixture<Renderer2D>/DrawShot2D","ru":"Отрисовка кадра 2D","group":"Рендер/2D"}
 BENCHMARK_TEMPLATE_DEFINE_F(RendererFixture, DrawShot2D, Renderer2DWGPU)(benchmark::State& state) {

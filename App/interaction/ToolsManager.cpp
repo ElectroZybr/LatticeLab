@@ -4,7 +4,6 @@
 #include <cmath>
 #include <limits>
 
-#include "App/rendering/RenderMathAdapters.h"
 #include "App/interaction/tools/AddAtomTool.h"
 #include "App/interaction/tools/CursorTool.h"
 #include "App/interaction/tools/FrameTool.h"
@@ -204,11 +203,11 @@ void ToolsManager::onFrame(Vec2i mousePos, float deltaTime) {
 }
 
 Vec3f ToolsManager::screenToWorld(Vec2i mousePos) {
-    return App::Rendering::toEngineVec3f((*renderer)->camera.screenToWorld(App::Rendering::toGlmVec2(mousePos)));
+    return (*renderer)->camera.screenToWorld(mousePos);
 }
 
 Vec2i ToolsManager::worldToScreen(Vec3f pos) {
-    return App::Rendering::toEngineVec2i((*renderer)->camera.worldToScreen(App::Rendering::toGlmVec3(pos)));
+    return (*renderer)->camera.worldToScreen(pos);
 }
 
 ToolsManager::Mode ToolsManager::currentMode() {
@@ -283,7 +282,7 @@ void ToolsManager::selectWorldAt(Vec2i mousePos) {
     float bestT = std::numeric_limits<float>::max();
 
     if (rend.camera.getMode() == Camera::Mode::Mode2D) {
-        const Vec3f worldPos = App::Rendering::toEngineVec3f(rend.camera.screenToWorld(App::Rendering::toGlmVec2(mousePos)));
+        const Vec3f worldPos = rend.camera.screenToWorld(mousePos);
         for (Simulation::WorldId worldId = 0; worldId < simulation->worldCount(); ++worldId) {
             const World& world = simulation->worldAt(worldId);
             const Vec3f min = world.getRenderOffset();

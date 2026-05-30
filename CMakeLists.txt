@@ -11,6 +11,7 @@ set(APP_VERSION_STRING "${PROJECT_VERSION}")
 option(OPTIMIZE_FOR_NATIVE "Enable native CPU optimizations outside Debug builds" OFF)
 option(BUILD_BENCHMARKS "Build benchmarks" OFF)
 option(ENABLE_IPO "Enable link-time optimization for non-Debug builds when supported" ON)
+option(BUILD_RENDERING_TESTS "Build Rendering module tests" ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -39,11 +40,11 @@ if(CCACHE_PROGRAM)
 endif()
 
 include(dependencies)
+include(CTest)
 
 file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
     "Engine/*.cpp"
     "GUI/*.cpp"
-    "Rendering/*.cpp"
     "App/*.cpp"
 )
 
@@ -63,7 +64,7 @@ include(embedded_resources)
 add_dependencies(latticelab_lib embedded_resources)
 
 include(shaders)
-add_dependencies(latticelab_lib wgsl_shaders)
+add_subdirectory(Rendering)
 
 include(embedded_translate)
 add_dependencies(latticelab_lib embedded_translate)
@@ -109,6 +110,7 @@ endif ()
 
 
 target_link_libraries(latticelab_lib PUBLIC
+    LatticeLab::Rendering
     glfw
     imgui ImGuiFileDialog_lib
     glm::glm

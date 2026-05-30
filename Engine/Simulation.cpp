@@ -75,6 +75,8 @@ void Simulation::update() {
 }
 
 void Simulation::updateWorld(WorldId worldId) {
+    PROFILE_SCOPE("Simulation::updateWorld");
+
     if (worldId < worlds_.size()) {
         worlds_[worldId].update();
         if (worldId == activeWorldIndex_) {

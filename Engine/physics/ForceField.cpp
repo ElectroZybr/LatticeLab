@@ -69,7 +69,7 @@ namespace {
 
 ForceField::ForceField() = default;
 
-void ForceField::compute(World& world, bool allowBondFormation, float dt) const {
+bool ForceField::compute(World& world, bool allowBondFormation, float dt) const {
     PROFILE_SCOPE("ForceField::compute");
 
     AtomStorage& atoms = world.getAtomStorage();
@@ -78,7 +78,7 @@ void ForceField::compute(World& world, bool allowBondFormation, float dt) const 
 
     wallForceField_.compute(world);
     computePairInteractions(world);
-    bondForceField_.compute(atoms, bonds, neighborList, allowBondFormation, dt);
+    return bondForceField_.compute(atoms, bonds, neighborList, allowBondFormation, dt);
 }
 
 void ForceField::computePairInteractions(World& world) const {

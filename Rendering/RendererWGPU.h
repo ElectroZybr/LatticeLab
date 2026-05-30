@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <span>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -14,6 +15,8 @@ public:
 
     void drawShot(wgpu::TextureView targetView, wgpu::TextureView depthView) override;
     void endFrame() override;
+    wgpu::raii::RenderPassEncoder* currentRenderPass() override { return &currentPass; }
+    const wgpu::raii::RenderPassEncoder* currentRenderPass() const override { return &currentPass; }
 
     wgpu::raii::RenderPassEncoder& getCurrentPass() { return currentPass; }
 
@@ -97,9 +100,9 @@ private:
                        bool applySelection);
     void beginPass(wgpu::TextureView targetView, wgpu::TextureView depthView, wgpu::LoadOp targetLoadOp);
     void drawAtomsImpl(const RenderAtomsView& atoms, const RenderData& renderData, bool applySelection);
-    void drawBondsImpl(const RenderAtomsView& atoms, const std::vector<RenderBond>& bonds);
+    void drawBondsImpl(const RenderAtomsView& atoms, const Bond::List& bonds);
     void drawBoxImpl(const glm::vec3& worldSize);
-    void drawGridImpl(const std::vector<RenderGridCell>& cells);
+    void drawGridImpl(const SpatialGrid& grid);
     void setLineColor(const glm::vec4& color);
 
     // Data

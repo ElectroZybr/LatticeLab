@@ -5,7 +5,6 @@
 #include <imgui.h>
 
 #include "App/interaction/picking/PickingSystem.h"
-#include "App/rendering/RenderMathAdapters.h"
 #include "Engine/NeighborSearch/SpatialGrid.h"
 #include "Engine/Simulation.h"
 #include "Rendering/BaseRenderer.h"
@@ -61,7 +60,7 @@ void NeighborListOverlay::drawSelectedNeighbors(const AtomStorage& atoms, const 
 
     const Vec3f selectedPos = atoms.pos(selectedIndex);
     const Vec3f selectedDisplayPos = selectedPos + renderOffset;
-    const ImVec2 selectedScreen = toImVec2(App::Rendering::toEngineVec2i(renderer.camera.worldToScreen(App::Rendering::toGlmVec3(selectedDisplayPos))));
+    const ImVec2 selectedScreen = toImVec2(renderer.camera.worldToScreen(selectedDisplayPos));
     const float listRadiusSqr = neighborList.listRadius() * neighborList.listRadius();
     const int centerCell = grid.linearCellOfAtom(static_cast<uint32_t>(selectedIndex));
     ImDrawList* dl = ImGui::GetForegroundDrawList();
@@ -74,8 +73,7 @@ void NeighborListOverlay::drawSelectedNeighbors(const AtomStorage& atoms, const 
 
             const Vec3f delta = atoms.pos(neighborIndex) - selectedPos;
             if (delta.sqrAbs() <= listRadiusSqr) {
-                const ImVec2 neighborScreen = toImVec2(App::Rendering::toEngineVec2i(
-                    renderer.camera.worldToScreen(App::Rendering::toGlmVec3(atoms.pos(neighborIndex) + renderOffset))));
+                const ImVec2 neighborScreen = toImVec2(renderer.camera.worldToScreen(atoms.pos(neighborIndex) + renderOffset));
                 dl->AddLine(selectedScreen, neighborScreen, kLinkColor, kLinkThickness);
             }
         }
@@ -97,7 +95,7 @@ void NeighborListOverlay::drawWorldCircle(const BaseRenderer& renderer, Vec3f ce
         return;
     }
 
-    const Vec2i screenCenter = App::Rendering::toEngineVec2i(renderer.camera.worldToScreen(App::Rendering::toGlmVec3(center)));
+    const Vec2i screenCenter = renderer.camera.worldToScreen(center);
     const float screenRadius = radius * renderer.camera.getZoom();
     if (screenRadius <= 0.5f || !std::isfinite(screenRadius)) {
         return;

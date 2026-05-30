@@ -14,8 +14,10 @@ public:
 
     virtual void drawShot(wgpu::TextureView targetView, wgpu::TextureView depthView) = 0;
     virtual void endFrame() = 0;
+    virtual wgpu::raii::RenderPassEncoder* currentRenderPass() { return nullptr; }
+    virtual const wgpu::raii::RenderPassEncoder* currentRenderPass() const { return nullptr; }
 
-    RenderData& addRenderData();
+    void resizeRenderData(size_t count);
     void clearRenderData() { renderData_.clear(); }
     RenderData& getRenderData(size_t index) { return renderData_[index]; }
     const RenderData& getRenderData(size_t index) const { return renderData_[index]; }

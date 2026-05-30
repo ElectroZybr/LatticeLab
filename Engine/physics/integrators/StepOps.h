@@ -74,7 +74,7 @@ namespace StepOps {
 
     inline void computeForces(StepData& stepData) {
         PROFILE_SCOPE("StepOps::computeForces");
-        stepData.forceField.compute(stepData.world, stepData.allowBondFormation, stepData.dt);
+        stepData.bondsChanged = stepData.forceField.compute(stepData.world, stepData.allowBondFormation, stepData.dt) || stepData.bondsChanged;
     }
 
     template <typename StepFn>

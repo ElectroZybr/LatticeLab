@@ -4,7 +4,6 @@
 
 #include "Benchmarks/fixtures/RendererFixture.h"
 #include "Rendering/WGPUContext.h"
-#include "App/rendering/SimulationRenderDataAdapter.h"
 
 namespace {
     GLFWwindow* benchmarkWindow = nullptr;

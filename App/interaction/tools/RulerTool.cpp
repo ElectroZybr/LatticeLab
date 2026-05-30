@@ -4,7 +4,6 @@
 #include <string>
 
 #include "App/interaction/picking/PickingSystem.h"
-#include "App/rendering/RenderMathAdapters.h"
 #include "Engine/Consts.h"
 #include "GUI/interface/UiState.h"
 #include "Rendering/BaseRenderer.h"
@@ -16,7 +15,7 @@ namespace {
             return Vec3f();
         }
 
-        return App::Rendering::toEngineVec3f(renderer->camera.screenToWorld(App::Rendering::toGlmVec2(mousePos)));
+        return renderer->camera.screenToWorld(mousePos);
     }
 
     std::string makeRulerTooltip(const Vec3f& start, const Vec3f& end) {
@@ -145,6 +144,6 @@ void RulerTool::syncOverlayFromWorld() {
         return;
     }
 
-    overlay.rulerStart = App::Rendering::toEngineVec2i(renderer->camera.worldToScreen(App::Rendering::toGlmVec3(startWorld_)));
-    overlay.rulerEnd = App::Rendering::toEngineVec2i(renderer->camera.worldToScreen(App::Rendering::toGlmVec3(endWorld_)));
+    overlay.rulerStart = renderer->camera.worldToScreen(startWorld_);
+    overlay.rulerEnd = renderer->camera.worldToScreen(endWorld_);
 }

@@ -100,6 +100,7 @@ void World::update() {
         .forceField = state_.forceField_,
         .neighborList = neighborList_,
         .allowBondFormation = state_.bondFormationEnabled_,
+        .bondsChanged = false,
         .accelDamping = state_.integrator.accelDamping(),
         .dt = state_.Dt,
     };

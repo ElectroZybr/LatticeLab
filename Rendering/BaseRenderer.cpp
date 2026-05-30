@@ -1,5 +1,3 @@
 #include "Rendering/BaseRenderer.h"
 
-RenderData& BaseRenderer::addRenderData() {
-    return renderData_.emplace_back();
-}
+void BaseRenderer::resizeRenderData(size_t count) { renderData_.resize(count); }

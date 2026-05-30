@@ -18,6 +18,7 @@ struct StepData {
     ForceField& forceField;
     NeighborList& neighborList;
     bool allowBondFormation;
+    bool bondsChanged = false;
     float accelDamping;
     float dt;
 };
