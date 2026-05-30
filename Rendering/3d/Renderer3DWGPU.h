@@ -4,7 +4,7 @@
 
 class Renderer3DWGPU : public RendererWGPU {
 public:
-    explicit Renderer3DWGPU(wgpu::TextureFormat surfaceFormat);
+    Renderer3DWGPU();
     ~Renderer3DWGPU() override = default;
 
 protected:

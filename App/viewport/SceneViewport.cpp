@@ -1,7 +1,5 @@
 #include "App/viewport/SceneViewport.h"
 
-#include <imgui_impl_wgpu.h>
-
 #include "App/debug/DebugRuntime.h"
 #include "App/interaction/ToolsManager.h"
 #include "Engine/Simulation.h"
@@ -10,7 +8,6 @@
 #include "Rendering/2d/Renderer2DWGPU.h"
 #include "Rendering/3d/Renderer3DWGPU.h"
 #include "Rendering/BaseRenderer.h"
-#include "Rendering/WGPUContext.h"
 
 SceneViewport::SceneViewport(RendererType type, CaptureController& captureController) : captureController_(&captureController), renderer_(createRenderer(type)) {}
 
@@ -28,6 +25,8 @@ void SceneViewport::renderFrame(const Simulation& simulation, Interface& appInte
     UiState& uiState = appInterface.state();
     uiState.simStep = simulation.world().getSimStep();
 
+    appInterface.update();
+
     if (ToolsManager::pickingSystem != nullptr) {
         App::Viewport::syncRendererWithSimulation(*renderer_, simulation, &ToolsManager::pickingSystem->getSelectedIndices());
     }
@@ -35,15 +34,10 @@ void SceneViewport::renderFrame(const Simulation& simulation, Interface& appInte
         App::Viewport::syncRendererWithSimulation(*renderer_, simulation);
     }
 
-    appInterface.update();
     refreshAtomDebugViews(debugViews, simulation);
     captureController_->renderFrame(*renderer_, [&]() {
         ToolsManager::overlay.draw();
-
-        ImGui::Render();
-        if (wgpu::raii::RenderPassEncoder* currentPass = renderer_->currentRenderPass(); currentPass != nullptr) {
-            ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), **currentPass);
-        }
+        appInterface.draw(*renderer_);
     });
 }
 
@@ -67,9 +61,9 @@ bool SceneViewport::setRendererType(RendererType type, const Simulation& simulat
 std::unique_ptr<BaseRenderer> SceneViewport::createRenderer(RendererType type) {
     switch (type) {
     case RendererType::Renderer2D:
-        return std::make_unique<Renderer2DWGPU>(WGPUContext::instance().surfaceFormat());
+        return std::make_unique<Renderer2DWGPU>();
     case RendererType::Renderer3D:
-        return std::make_unique<Renderer3DWGPU>(WGPUContext::instance().surfaceFormat());
+        return std::make_unique<Renderer3DWGPU>();
     }
 
     return nullptr;

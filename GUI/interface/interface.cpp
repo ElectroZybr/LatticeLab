@@ -4,6 +4,7 @@
 #include <backends/imgui_impl_wgpu.h>
 
 #include "App/capture/CaptureController.h"
+#include "Rendering/BaseRenderer.h"
 #include "Rendering/WGPUContext.h"
 
 #define ICON_MIN_FA 0xf000
@@ -144,6 +145,14 @@ int Interface::update() {
     uiState_.cursorHovered = ImGui::IsAnyItemHovered() || ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) ||
                              ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup);
     return EXIT_SUCCESS;
+}
+
+void Interface::draw(BaseRenderer& renderer) {
+    ImGui::Render();
+
+    if (wgpu::raii::RenderPassEncoder* currentPass = renderer.currentRenderPass(); currentPass != nullptr) {
+        ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), **currentPass);
+    }
 }
 
 UiState& Interface::state() { return uiState_; }

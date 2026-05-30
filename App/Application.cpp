@@ -4,8 +4,6 @@
 #include <cmath>
 #include <cstdlib>
 
-#include <imgui_impl_wgpu.h>
-
 #include "App/AppActions.h"
 #include "App/CreateWindow.h"
 #include "App/Scenes.h"

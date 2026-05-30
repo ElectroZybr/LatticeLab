@@ -83,6 +83,12 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
         return;
     }
 
+    if (!renderer || renderer->getRenderDataCount() <= simulation.activeWorldId()) {
+        return;
+    }
+
+    RenderData& activeRenderData = renderer->getRenderData(simulation.activeWorldId());
+
     const float panelWidth = 300.f * uiScale;
     const float topOffset = 65.f * uiScale;
     const float panelHeight = static_cast<float>(windowSize.y) - topOffset;
@@ -236,12 +242,12 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
     }
 
     ImGui::SeparatorText(i18n::tr("imgui_render").data());
-    ImGui::Checkbox(i18n::tr("imgui_grid").data(), &renderer->getRenderData(0).drawGrid);
-    ImGui::Checkbox(i18n::tr("imgui_connections").data(), &renderer->getRenderData(0).drawBonds);
-    ImGui::Checkbox(i18n::tr("imgui_box").data(), &renderer->getRenderData(0).drawBox);
+    ImGui::Checkbox(i18n::tr("imgui_grid").data(), &activeRenderData.drawGrid);
+    ImGui::Checkbox(i18n::tr("imgui_connections").data(), &activeRenderData.drawBonds);
+    ImGui::Checkbox(i18n::tr("imgui_box").data(), &activeRenderData.drawBox);
 
     ImGui::TextUnformatted(i18n::tr("imgui_color_scheme").data());
-    RenderData::SpeedColorMode speedMode = renderer->getRenderData(0).speedColorMode;
+    RenderData::SpeedColorMode speedMode = activeRenderData.speedColorMode;
     if (ComboStyle::beginCombo(i18n::tr("imgui_speed_color_mode").data(), speedColorModeName(speedMode).data(), 220.0f * uiScale, uiScale,
                                ImGuiComboFlags_HeightLargest)) {
         const RenderData::SpeedColorMode modes[] = {
@@ -262,27 +268,27 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
         ImGui::EndCombo();
     }
 
-    renderer->getRenderData(0).speedColorMode = speedMode;
+    activeRenderData.speedColorMode = speedMode;
 
     ImGui::TextUnformatted(i18n::tr("imgui_max_gradien_velocity").data());
 
     static float manualSpeedGradientMax = 5.0f;
-    bool autoSpeedGradient = renderer->getRenderData(0).speedGradientMax <= 0.0f;
-    const bool gradientModeEnabled = renderer->getRenderData(0).speedColorMode != RenderData::SpeedColorMode::AtomColor;
+    bool autoSpeedGradient = activeRenderData.speedGradientMax <= 0.0f;
+    const bool gradientModeEnabled = activeRenderData.speedColorMode != RenderData::SpeedColorMode::AtomColor;
     if (!autoSpeedGradient) {
-        manualSpeedGradientMax = renderer->getRenderData(0).speedGradientMax;
+        manualSpeedGradientMax = activeRenderData.speedGradientMax;
     }
 
     ImGui::PushItemWidth(180.0f * uiScale);
     ImGui::BeginDisabled(autoSpeedGradient || !gradientModeEnabled);
     if (ImGui::SliderFloat(i18n::tr("imgui_speed_gradient_max_slider").data(), &manualSpeedGradientMax, 0.1f, 10.0f, "%.2f")) {
-        renderer->getRenderData(0).speedGradientMax = manualSpeedGradientMax;
+        activeRenderData.speedGradientMax = manualSpeedGradientMax;
     }
     ImGui::EndDisabled();
     ImGui::SameLine();
     ImGui::BeginDisabled(!gradientModeEnabled);
     if (ImGui::Checkbox(i18n::tr("imgui_auto_speed_gradien").data(), &autoSpeedGradient)) {
-        renderer->getRenderData(0).speedGradientMax = autoSpeedGradient ? 0.0f : manualSpeedGradientMax;
+        activeRenderData.speedGradientMax = autoSpeedGradient ? 0.0f : manualSpeedGradientMax;
     }
     ImGui::EndDisabled();
     ImGui::PopItemWidth();
@@ -400,11 +406,11 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
         captureController.setOutputDirectory(defaults.captureOutputDirectory);
         captureController.setSettings(defaults.captureSettings);
 
-        renderer->getRenderData(0).drawGrid = defaults.rendererDrawGrid;
-        renderer->getRenderData(0).drawBonds = defaults.rendererDrawBonds;
-        renderer->getRenderData(0).drawBox = defaults.rendererDrawBox;
-        renderer->getRenderData(0).speedColorMode = defaults.rendererSpeedColorMode;
-        renderer->getRenderData(0).speedGradientMax = defaults.rendererSpeedGradientMax;
+        activeRenderData.drawGrid = defaults.rendererDrawGrid;
+        activeRenderData.drawBonds = defaults.rendererDrawBonds;
+        activeRenderData.drawBox = defaults.rendererDrawBox;
+        activeRenderData.speedColorMode = defaults.rendererSpeedColorMode;
+        activeRenderData.speedGradientMax = defaults.rendererSpeedGradientMax;
 
         simulation.world().getIntegrator().setScheme(defaults.simulationIntegrator);
         simulation.setBondFormationEnabled(defaults.simulationBondFormationEnabled);

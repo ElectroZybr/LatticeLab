@@ -2,14 +2,9 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <span>
 #include <vector>
 
 #include <glm/glm.hpp>
-
-#include "Engine/NeighborSearch/SpatialGrid.h"
-#include "Engine/physics/AtomData.h"
-#include "Engine/physics/Bond.h"
 
 struct RenderColor {
     float r = 1.0f;
@@ -29,7 +24,7 @@ struct RenderAtomsView {
     const float* vy = nullptr;
     const float* vz = nullptr;
 
-    const AtomData::Type* type = nullptr;
+    const uint8_t* type = nullptr;
     const float* radius = nullptr;
 
     [[nodiscard]] bool empty() const noexcept { return count == 0; }
@@ -50,6 +45,35 @@ struct RenderGridCell {
     float atomCount = 0.0f;
 };
 
+using RenderBondVisitor = void (*)(size_t aIndex, size_t bIndex, void* userData);
+using RenderGridCellVisitor = void (*)(const RenderGridCell& cell, void* userData);
+
+struct RenderBondsView {
+    const void* context = nullptr;
+    size_t count = 0;
+    void (*forEachFn)(const void* context, RenderBondVisitor visitor, void* userData) = nullptr;
+
+    [[nodiscard]] bool empty() const noexcept { return count == 0 || context == nullptr || forEachFn == nullptr; }
+    void forEach(RenderBondVisitor visitor, void* userData) const {
+        if (!empty()) {
+            forEachFn(context, visitor, userData);
+        }
+    }
+};
+
+struct RenderGridView {
+    const void* context = nullptr;
+    size_t count = 0;
+    void (*forEachFn)(const void* context, RenderGridCellVisitor visitor, void* userData) = nullptr;
+
+    [[nodiscard]] bool empty() const noexcept { return count == 0 || context == nullptr || forEachFn == nullptr; }
+    void forEach(RenderGridCellVisitor visitor, void* userData) const {
+        if (!empty()) {
+            forEachFn(context, visitor, userData);
+        }
+    }
+};
+
 class RenderData {
 public:
     enum class SpeedColorMode : uint8_t {
@@ -60,13 +84,15 @@ public:
 
     RenderAtomsView atoms{};
 
-    const Bond::List* bonds = nullptr;
-    const SpatialGrid* grid = nullptr;
+    RenderBondsView bonds{};
+    RenderGridView grid{};
     std::vector<size_t> selectedAtomIndices;
 
-    glm::vec3 worldSize{1.0f, 1.0f, 1.0f};
+    glm::vec3 worldSize{0.0f, 0.0f, 0.0f};
     glm::vec3 renderOffset{0.0f, 0.0f, 0.0f};
 
+    bool isActiveWorld = false;
+    bool hasBox = false;
     bool drawGrid = false;
     bool drawBonds = false;
     bool drawBox = true;

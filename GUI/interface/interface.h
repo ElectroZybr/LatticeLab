@@ -18,6 +18,9 @@
 #include "GUI/interface/panels/tools/ToolsPanel.h"
 #include "GUI/interface/style/StyleManager.h"
 
+class BaseRenderer;
+class Simulation;
+
 class Interface {
 public:
     Interface(GLFWwindow* w, Simulation& s, std::unique_ptr<BaseRenderer>& r, class CaptureController& c);
@@ -25,6 +28,7 @@ public:
     int init();
     void shutdown();
     int update();
+    void draw(BaseRenderer& renderer);
     UiState& state();
     const UiState& state() const;
     void setScenesDirectory(std::filesystem::path scenesDirectory);

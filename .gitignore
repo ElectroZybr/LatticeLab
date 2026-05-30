@@ -15,6 +15,7 @@ Testing/
 /bin2c
 /shaderc
 LatticeLab
+rendering_module_tests
 /benchmarks
 !/Benchmarks/
 !/Benchmarks/**

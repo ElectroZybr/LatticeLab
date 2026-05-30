@@ -59,7 +59,7 @@ public:
 
         simulation_.createWorld(Vec3f(300, 300, 300));
         simulation_.world().getAtomStorage() = makeGridAtoms(static_cast<int>(state.range(0)));
-        renderer_ = std::make_unique<TRenderer>(ctx.surfaceFormat());
+        renderer_ = std::make_unique<TRenderer>();
         App::Viewport::syncRendererWithSimulation(*renderer_, simulation_);
         renderer_->camera.setScreenSize(Vec2f{800.0f, 600.0f});
         renderer_->camera.resetView();

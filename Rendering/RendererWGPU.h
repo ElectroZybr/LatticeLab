@@ -10,15 +10,13 @@
 
 class RendererWGPU : public BaseRenderer {
 public:
-    explicit RendererWGPU(wgpu::TextureFormat surfaceFormat);
+    RendererWGPU();
     ~RendererWGPU() override = default;
 
     void drawShot(wgpu::TextureView targetView, wgpu::TextureView depthView) override;
     void endFrame() override;
     wgpu::raii::RenderPassEncoder* currentRenderPass() override { return &currentPass; }
     const wgpu::raii::RenderPassEncoder* currentRenderPass() const override { return &currentPass; }
-
-    wgpu::raii::RenderPassEncoder& getCurrentPass() { return currentPass; }
 
 protected:
     virtual void updateMatrices() = 0;
@@ -100,9 +98,9 @@ private:
                        bool applySelection);
     void beginPass(wgpu::TextureView targetView, wgpu::TextureView depthView, wgpu::LoadOp targetLoadOp);
     void drawAtomsImpl(const RenderAtomsView& atoms, const RenderData& renderData, bool applySelection);
-    void drawBondsImpl(const RenderAtomsView& atoms, const Bond::List& bonds);
+    void drawBondsImpl(const RenderAtomsView& atoms, const RenderBondsView& bonds);
     void drawBoxImpl(const glm::vec3& worldSize);
-    void drawGridImpl(const SpatialGrid& grid);
+    void drawGridImpl(const RenderGridView& grid);
     void setLineColor(const glm::vec4& color);
 
     // Data
