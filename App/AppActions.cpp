@@ -7,7 +7,7 @@
 #include "App/interaction/ToolsManager.h"
 #include "App/viewport/SceneViewport.h"
 #include "App/save_system/AppStateIO.h"
-#include "Lattice/Simulation.h"
+#include "Lattice/Engine/Simulation.h"
 #include "GUI/interface/UiState.h"
 
 namespace {
@@ -24,7 +24,7 @@ namespace {
         }
     }
 
-    void applyResizeBox(Simulation& simulation, const Vec3f& newSize) {
+    void applyResizeBox(Lattice::Simulation& simulation, const Vec3f& newSize) {
         World& world = simulation.world();
         const Vec3f oldSize = world.getWorldSize();
         const Vec3f delta = (newSize - oldSize) * 0.5f;
@@ -34,7 +34,7 @@ namespace {
         simulation.setSizeBox(newSize);
     }
 
-    void toggleXYZRecording(CaptureController& captureController, Simulation& simulation) {
+    void toggleXYZRecording(CaptureController& captureController, Lattice::Simulation& simulation) {
         if (simulation.isXYZRecording()) {
             simulation.stopXYZRecording();
             return;
@@ -52,7 +52,7 @@ namespace {
 }
 
 namespace AppActions {
-    void Handler::trackIOPanel(CaptureController& captureController, UiState& uiState, Simulation& simulation, SceneViewport& renderer) {
+    void Handler::trackIOPanel(CaptureController& captureController, UiState& uiState, Lattice::Simulation& simulation, SceneViewport& renderer) {
         track(AppSignals::UI::SaveSimulation.connect(
             [&](std::string_view path) { AppStateIO::save(captureController, uiState.scenePreviewRect, simulation, renderer.renderer(), path); }));
         track(AppSignals::UI::LoadSimulation.connect([&](std::string_view path) {
@@ -78,7 +78,7 @@ namespace AppActions {
         track(AppSignals::Capture::ToggleXYZRecording.connect([&]() { toggleXYZRecording(captureController, simulation); }));
     }
 
-    void Handler::trackToolsPanel(Simulation& simulation, SceneViewport& renderer) {
+    void Handler::trackToolsPanel(Lattice::Simulation& simulation, SceneViewport& renderer) {
         track(AppSignals::UI::SetRender.connect([&](RendererType type) {
             const SceneViewport::RendererType rendererType =
                 (type == RendererType::Renderer2D) ? SceneViewport::RendererType::Renderer2D : SceneViewport::RendererType::Renderer3D;
@@ -94,15 +94,15 @@ namespace AppActions {
         track(AppSignals::UI::ExitApplication.connect([window]() { glfwSetWindowShouldClose(window, GLFW_TRUE); }));
     }
 
-    void Handler::trackKeyboard(Simulation& simulation) {
+    void Handler::trackKeyboard(Lattice::Simulation& simulation) {
         track(AppSignals::Keyboard::StepPhysics.connect([&]() { simulation.update(); }));
     }
 
-    void Handler::trackSimControlPanel(Simulation& simulation) {
+    void Handler::trackSimControlPanel(Lattice::Simulation& simulation) {
         track(AppSignals::UI::StepPhysics.connect([&]() { simulation.update(); }));
     }
 
-    Handler::Handler(GLFWwindow* window, CaptureController& captureController, Simulation& simulation, SceneViewport& renderer, UiState& uiState) {
+    Handler::Handler(GLFWwindow* window, CaptureController& captureController, Lattice::Simulation& simulation, SceneViewport& renderer, UiState& uiState) {
         trackIOPanel(captureController, uiState, simulation, renderer);
         trackToolsPanel(simulation, renderer);
         trackSettingsPanel(window);

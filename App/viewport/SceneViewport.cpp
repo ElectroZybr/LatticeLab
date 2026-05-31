@@ -2,8 +2,8 @@
 
 #include "App/debug/DebugRuntime.h"
 #include "App/interaction/ToolsManager.h"
-#include "Lattice/Simulation.h"
-#include "Lattice/metrics/Profiler.h"
+#include "Lattice/Engine/Simulation.h"
+#include "Lattice/Engine/metrics/Profiler.h"
 #include "GUI/interface/interface.h"
 #include "Rendering/2d/Renderer2DWGPU.h"
 #include "Rendering/3d/Renderer3DWGPU.h"
@@ -17,9 +17,9 @@ void SceneViewport::setScreenSize(int width, int height) {
 
 void SceneViewport::resetView() { renderer_->camera.resetView(); }
 
-void SceneViewport::syncScene(const Simulation& simulation) { App::Viewport::syncRendererWithSimulation(*renderer_, simulation); }
+void SceneViewport::syncScene(const Lattice::Simulation& simulation) { App::Viewport::syncRendererWithSimulation(*renderer_, simulation); }
 
-void SceneViewport::renderFrame(const Simulation& simulation, Interface& appInterface, const DebugViews& debugViews) {
+void SceneViewport::renderFrame(const Lattice::Simulation& simulation, Interface& appInterface, const DebugViews& debugViews) {
     PROFILE_SCOPE("SceneViewport::renderFrame");
 
     UiState& uiState = appInterface.state();
@@ -41,7 +41,7 @@ void SceneViewport::renderFrame(const Simulation& simulation, Interface& appInte
     });
 }
 
-bool SceneViewport::setRendererType(RendererType type, const Simulation& simulation) {
+bool SceneViewport::setRendererType(RendererType type, const Lattice::Simulation& simulation) {
     std::unique_ptr<BaseRenderer> newRenderer = createRenderer(type);
     if (!newRenderer) {
         return false;

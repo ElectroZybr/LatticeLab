@@ -56,7 +56,7 @@ namespace Scenes {
             }
         }
 
-        bool hasNeighborInStorage(const Simulation& sim, const Vec3f& coords, float delta) {
+        bool hasNeighborInStorage(const Lattice::Simulation& sim, const Vec3f& coords, float delta) {
             const World& box = sim.world();
             const AtomStorage& atoms = sim.atoms();
             const int cx = box.getGrid().worldToCellX(coords.x);
@@ -94,7 +94,7 @@ namespace Scenes {
         uint32_t resolveSeed(uint32_t seed) { return seed == 0 ? std::random_device{}() : seed; }
     }
 
-    void crystal(Simulation& sim, int n, AtomData::Type type, bool is3d, CrystalPlane plane, double padding, double margin) {
+    void crystal(Lattice::Simulation& sim, int n, AtomData::Type type, bool is3d, CrystalPlane plane, double padding, double margin) {
         const double side = n * padding + padding + 2.0 * margin;
 
         sim.setSizeBox(detail::makeCrystalBoxSize(side, is3d, plane));
@@ -116,7 +116,7 @@ namespace Scenes {
         sim.finalizeAtomBatch();
     }
 
-    void triangularBipyramidCrystal(Simulation& sim, int baseSideAtoms, AtomData::Type type, float verticalScale, double spacing, double margin) {
+    void triangularBipyramidCrystal(Lattice::Simulation& sim, int baseSideAtoms, AtomData::Type type, float verticalScale, double spacing, double margin) {
         baseSideAtoms = std::max(1, baseSideAtoms);
         verticalScale = std::max(0.1f, verticalScale);
         if (spacing <= 0.0) {
@@ -172,7 +172,7 @@ namespace Scenes {
         sim.finalizeAtomBatch();
     }
 
-    void AngularVelocity(Simulation& sim, Vec3f angularVelocity) {
+    void AngularVelocity(Lattice::Simulation& sim, Vec3f angularVelocity) {
         const Vec3f center = sim.world().getWorldSize() * 0.5f;
         AtomStorage& atoms = sim.atoms();
 
@@ -182,7 +182,7 @@ namespace Scenes {
         }
     }
 
-    void hexLattice(Simulation& sim, Vec3f count, AtomData::Type type, float start_force, float margin) {
+    void hexLattice(Lattice::Simulation& sim, Vec3f count, AtomData::Type type, float start_force, float margin) {
         const size_t atomTotal = static_cast<size_t>(count.x) * static_cast<size_t>(count.y) * static_cast<size_t>(count.z);
 
         const float lj_min = AtomData::getProps(type).ljA0 * std::pow(2.0f, 1.0f / 6.0f);
@@ -211,7 +211,7 @@ namespace Scenes {
         sim.finalizeAtomBatch();
     }
 
-    int randomGasInCurrentBox(Simulation& sim, int atomCount, AtomData::Type type, bool is3d, float minDistance, float speedScale,
+    int randomGasInCurrentBox(Lattice::Simulation& sim, int atomCount, AtomData::Type type, bool is3d, float minDistance, float speedScale,
                               int maxAttemptsPerAtom, uint32_t seed) {
         atomCount = std::max(0, atomCount);
         if (atomCount == 0) {
@@ -295,7 +295,7 @@ namespace Scenes {
         return static_cast<int>(acceptedPositions.size());
     }
 
-    void randomGas(Simulation& sim, int atomCount, AtomData::Type type, bool is3d, double spacing, double margin, float density,
+    void randomGas(Lattice::Simulation& sim, int atomCount, AtomData::Type type, bool is3d, double spacing, double margin, float density,
                    float speedScale, uint32_t seed) {
         atomCount = std::max(0, atomCount);
         const float clampedDensity = std::clamp(density, 0.25f, 3.0f);
@@ -311,7 +311,7 @@ namespace Scenes {
         randomGasInCurrentBox(sim, atomCount, type, is3d, 4.0f, speedScale, 20, seed);
     }
 
-    void randomGasMixed(Simulation& sim, int totalAtomCount, const std::vector<AtomTypeSpec>& atomSpecs, bool is3d, double spacing,
+    void randomGasMixed(Lattice::Simulation& sim, int totalAtomCount, const std::vector<AtomTypeSpec>& atomSpecs, bool is3d, double spacing,
                         double margin, float density, float speedScale, uint32_t seed) {
         if (atomSpecs.empty() || totalAtomCount <= 0) {
             return;
@@ -392,7 +392,7 @@ namespace Scenes {
         }
     }
 
-    void randomGasByConcentration(Simulation& sim, int totalAtomCount, const std::vector<AtomTypeSpec>& concentrations, bool is3d,
+    void randomGasByConcentration(Lattice::Simulation& sim, int totalAtomCount, const std::vector<AtomTypeSpec>& concentrations, bool is3d,
                                   double spacing, double margin, float density, float speedScale, uint32_t seed) {
         // Просто передаем в randomGasMixed с концентрациями
         randomGasMixed(sim, totalAtomCount, concentrations, is3d, spacing, margin, density, speedScale, seed);

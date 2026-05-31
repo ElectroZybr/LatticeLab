@@ -1,9 +1,9 @@
 #include <webgpu/webgpu-raii.hpp>
 #include <zpp_bits.h>
 
-#include "Lattice/math/Vec3.h"
-#include "Lattice/physics/AtomData.h"
-#include "Lattice/physics/Integrator.h"
+#include "Lattice/Engine/math/Vec3.h"
+#include "Lattice/Engine/physics/AtomData.h"
+#include "Lattice/Engine/physics/Integrator.h"
 #include "Rendering/RenderData.h"
 
 template <typename T> constexpr auto serialize(auto& archive, const Vec3<T>& self) { return archive(self.x, self.y, self.z); }

@@ -1,7 +1,7 @@
 #include "ITool.h"
 
-#include "Lattice/Simulation.h"
-#include "Lattice/World.h"
+#include "Lattice/Engine/Simulation.h"
+#include "Lattice/Engine/World.h"
 #include "Rendering/BaseRenderer.h"
 
 ITool::ITool(ToolContext& context) noexcept : context_(context) {}

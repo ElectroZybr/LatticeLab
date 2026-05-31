@@ -2,7 +2,7 @@
 
 #include <unordered_set>
 
-#include "Lattice/Simulation.h"
+#include "Lattice/Engine/Simulation.h"
 #include "Rendering/BaseRenderer.h"
 
 namespace App::Viewport {
@@ -71,11 +71,11 @@ namespace App::Viewport {
         }
     }
 
-    inline void syncRendererWithSimulation(BaseRenderer& renderer, const Simulation& simulation,
+    inline void syncRendererWithSimulation(BaseRenderer& renderer, const Lattice::Simulation& simulation,
                                            const std::unordered_set<size_t>* selectedIndices = nullptr) {
         renderer.resizeRenderData(simulation.worldCount());
 
-        for (Simulation::WorldId worldId = 0; worldId < simulation.worldCount(); ++worldId) {
+        for (Lattice::Simulation::WorldId worldId = 0; worldId < simulation.worldCount(); ++worldId) {
             const World& world = simulation.worldAt(worldId);
             RenderData& renderData = renderer.getRenderData(worldId);
 

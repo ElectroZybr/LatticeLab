@@ -19,11 +19,13 @@
 #include "GUI/interface/style/StyleManager.h"
 
 class BaseRenderer;
-class Simulation;
+namespace Lattice {
+    class Simulation;
+}
 
 class Interface {
 public:
-    Interface(GLFWwindow* w, Simulation& s, std::unique_ptr<BaseRenderer>& r, class CaptureController& c);
+    Interface(GLFWwindow* w, Lattice::Simulation& s, std::unique_ptr<BaseRenderer>& r, class CaptureController& c);
 
     int init();
     void shutdown();
@@ -49,7 +51,7 @@ public:
 
 private:
     GLFWwindow* window_;
-    Simulation* simulation_;
+    Lattice::Simulation* simulation_;
     std::unique_ptr<BaseRenderer>* renderer_;
     class CaptureController* captureController_;
     std::chrono::high_resolution_clock::time_point lastTime_;

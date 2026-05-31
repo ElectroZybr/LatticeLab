@@ -6,7 +6,9 @@
 
 #include "Signals/Signals.h"
 
-class Simulation;
+namespace Lattice {
+    class Simulation;
+}
 class CaptureController;
 class SceneViewport;
 struct UiState;
@@ -14,13 +16,13 @@ struct UiState;
 namespace AppActions {
     class Handler : public Signals::Trackable {
     public:
-        Handler(GLFWwindow* window, CaptureController& captureController, Simulation& simulation, SceneViewport& renderer, UiState& uiState);
+        Handler(GLFWwindow* window, CaptureController& captureController, Lattice::Simulation& simulation, SceneViewport& renderer, UiState& uiState);
 
     private:
-        void trackIOPanel(CaptureController& captureController, UiState& uiState, Simulation& simulation, SceneViewport& renderer);
-        void trackToolsPanel(Simulation& simulation, SceneViewport& renderer);
+        void trackIOPanel(CaptureController& captureController, UiState& uiState, Lattice::Simulation& simulation, SceneViewport& renderer);
+        void trackToolsPanel(Lattice::Simulation& simulation, SceneViewport& renderer);
         void trackSettingsPanel(GLFWwindow* window);
-        void trackKeyboard(Simulation& simulation);
-        void trackSimControlPanel(Simulation& simulation);
+        void trackKeyboard(Lattice::Simulation& simulation);
+        void trackSimControlPanel(Lattice::Simulation& simulation);
     };
 }

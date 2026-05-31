@@ -4,7 +4,7 @@
 #include <string>
 
 #include "App/interaction/picking/PickingSystem.h"
-#include "Lattice/Consts.h"
+#include "Lattice/Engine/Consts.h"
 #include "GUI/interface/UiState.h"
 #include "Rendering/BaseRenderer.h"
 

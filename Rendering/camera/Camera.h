@@ -2,9 +2,9 @@
 
 #include <glm/glm.hpp>
 
-#include "Lattice/math/Ray.h"
-#include "Lattice/math/Vec2.h"
-#include "Lattice/math/Vec3.h"
+#include "Lattice/Engine/math/Ray.h"
+#include "Lattice/Engine/math/Vec2.h"
+#include "Lattice/Engine/math/Vec3.h"
 #include "Rendering/RenderMath.h"
 
 class Renderer2D;

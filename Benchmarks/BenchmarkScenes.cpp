@@ -11,7 +11,7 @@ namespace Benchmarks {
 
     int cubeSideFromCount(int atomCount) { return std::max(1, static_cast<int>(std::ceil(std::cbrt(static_cast<double>(atomCount))))); }
 
-    void BenchmarkScenes::build(Simulation& simulation, const BenchmarkCase& benchmarkCase) {
+    void BenchmarkScenes::build(Lattice::Simulation& simulation, const BenchmarkCase& benchmarkCase) {
         simulation.clear();
         simulation.world().getIntegrator().setScheme(benchmarkCase.integrator);
 
@@ -31,22 +31,22 @@ namespace Benchmarks {
         }
     }
 
-    void BenchmarkScenes::buildIdealCrystal3D(Simulation& simulation, const BenchmarkCase& benchmarkCase) {
+    void BenchmarkScenes::buildIdealCrystal3D(Lattice::Simulation& simulation, const BenchmarkCase& benchmarkCase) {
         const int side = cubeSideFromCount(benchmarkCase.atomCount);
         Scenes::hexLattice(simulation, side, AtomData::Type::Z, true);
     }
 
-    void BenchmarkScenes::buildCrystal2D(Simulation& simulation, const BenchmarkCase& benchmarkCase) {
+    void BenchmarkScenes::buildCrystal2D(Lattice::Simulation& simulation, const BenchmarkCase& benchmarkCase) {
         const int side = squareSideFromCount(benchmarkCase.atomCount);
         Scenes::crystal(simulation, side, AtomData::Type::Z, false);
     }
 
-    void BenchmarkScenes::buildCrystal3D(Simulation& simulation, const BenchmarkCase& benchmarkCase) {
+    void BenchmarkScenes::buildCrystal3D(Lattice::Simulation& simulation, const BenchmarkCase& benchmarkCase) {
         const int side = cubeSideFromCount(benchmarkCase.atomCount);
         Scenes::crystal(simulation, side, AtomData::Type::Z, true);
     }
 
-    void BenchmarkScenes::buildRandomGas2D(Simulation& simulation, const BenchmarkCase& benchmarkCase) {
+    void BenchmarkScenes::buildRandomGas2D(Lattice::Simulation& simulation, const BenchmarkCase& benchmarkCase) {
         simulation.setSizeBox(benchmarkCase.boxSize, benchmarkCase.cellSize);
         Scenes::randomGasInCurrentBox(simulation, benchmarkCase.atomCount, AtomData::Type::H, false);
     }

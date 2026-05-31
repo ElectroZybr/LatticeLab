@@ -7,7 +7,9 @@
 #include "App/viewport/SimulationSceneSource.h"
 #include "Rendering/BaseRenderer.h"
 
-class Simulation;
+namespace Lattice {
+    class Simulation;
+}
 class Interface;
 
 class SceneViewport {
@@ -27,10 +29,10 @@ public:
     void setScreenSize(int width, int height);
     void resetView();
 
-    void syncScene(const Simulation& simulation);
-    void renderFrame(const Simulation& simulation, Interface& appInterface, const DebugViews& debugViews);
+    void syncScene(const Lattice::Simulation& simulation);
+    void renderFrame(const Lattice::Simulation& simulation, Interface& appInterface, const DebugViews& debugViews);
 
-    bool setRendererType(RendererType type, const Simulation& simulation);
+    bool setRendererType(RendererType type, const Lattice::Simulation& simulation);
 
 private:
     static std::unique_ptr<BaseRenderer> createRenderer(RendererType type);

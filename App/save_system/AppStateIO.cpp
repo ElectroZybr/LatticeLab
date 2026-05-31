@@ -16,8 +16,8 @@
 
 #include "App/capture/CaptureController.h"
 #include "App/save_system/AppSaveState.h"
-#include "Lattice/Simulation.h"
-#include "Lattice/io/SimulationStateIO.h"
+#include "Lattice/Engine/Simulation.h"
+#include "Lattice/Engine/io/SimulationStateIO.h"
 #include "GUI/interface/UiState.h"
 #include "Rendering/BaseRenderer.h"
 #include "Rendering/WGPUContext.h"
@@ -260,7 +260,7 @@ namespace {
     }
 }
 
-void AppStateIO::save(CaptureController& captureController, const PreviewFrameRect& previewRect, const Simulation& simulation,
+void AppStateIO::save(CaptureController& captureController, const PreviewFrameRect& previewRect, const Lattice::Simulation& simulation,
                       const BaseRenderer& renderer, std::string_view path) {
     if (path.ends_with(".lat")) {
         AppStateIO::saveText(captureController, previewRect, simulation, renderer, path);
@@ -270,7 +270,7 @@ void AppStateIO::save(CaptureController& captureController, const PreviewFrameRe
     }
 }
 
-void AppStateIO::load(Simulation& simulation, BaseRenderer& renderer, std::string_view path) {
+void AppStateIO::load(Lattice::Simulation& simulation, BaseRenderer& renderer, std::string_view path) {
     try {
         const std::string extension = lowercaseExtension(path);
         if (extension == ".lat" || extension == ".sim" || extension == ".xyz") {
@@ -285,14 +285,14 @@ void AppStateIO::load(Simulation& simulation, BaseRenderer& renderer, std::strin
     }
 }
 
-void AppStateIO::saveText(CaptureController& captureController, const PreviewFrameRect& previewRect, const Simulation& simulation,
+void AppStateIO::saveText(CaptureController& captureController, const PreviewFrameRect& previewRect, const Lattice::Simulation& simulation,
                           const BaseRenderer& renderer, std::string_view path) {
     SimulationStateIO::save(simulation, path);
     saveRendererState(renderer, path);
     saveImageState(captureController, previewRect, path);
 }
 
-void AppStateIO::saveBinary(CaptureController& captureController, const PreviewFrameRect& previewRect, const Simulation& simulation,
+void AppStateIO::saveBinary(CaptureController& captureController, const PreviewFrameRect& previewRect, const Lattice::Simulation& simulation,
                             const BaseRenderer& renderer, std::string_view path) {
     SimulationSaveState simState;
     simState.dt = simulation.world().getDt();
@@ -379,13 +379,13 @@ void AppStateIO::saveBinary(CaptureController& captureController, const PreviewF
     });
 }
 
-void AppStateIO::loadText(Simulation& simulation, BaseRenderer& renderer, std::string_view path) {
+void AppStateIO::loadText(Lattice::Simulation& simulation, BaseRenderer& renderer, std::string_view path) {
     SimulationStateIO::load(simulation, path);
     loadRendererState(renderer, path);
     renderer.camera.resetView();
 }
 
-void AppStateIO::loadBinary(Simulation& simulation, BaseRenderer& renderer, std::string_view path) {
+void AppStateIO::loadBinary(Lattice::Simulation& simulation, BaseRenderer& renderer, std::string_view path) {
     std::ifstream file(path.data(), std::ios::binary | std::ios::ate);
     if (!file) {
         throw std::runtime_error("Failed to open save file: " + std::string(path));

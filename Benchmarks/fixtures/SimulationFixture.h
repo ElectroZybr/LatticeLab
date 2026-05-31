@@ -53,7 +53,7 @@ class SimulationFixture : public benchmark::Fixture {
 public:
     void SetUp(benchmark::State& state) override {
         atomCount_ = static_cast<int>(state.range(0));
-        simulation_ = std::make_unique<Simulation>();
+        simulation_ = std::make_unique<Lattice::Simulation>();
         simulation_->createWorld(Vec3f(160, 160, 160));
     }
 
@@ -94,6 +94,6 @@ protected:
         state.SetItemsProcessed(state.iterations() * processedAtoms);
     }
 
-    std::unique_ptr<Simulation> simulation_;
+    std::unique_ptr<Lattice::Simulation> simulation_;
     int atomCount_ = 0;
 };

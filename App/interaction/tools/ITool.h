@@ -4,17 +4,19 @@
 
 #include <GLFW/glfw3.h>
 
-#include "Lattice/math/Vec3.h"
+#include "Lattice/Engine/math/Vec3.h"
 
 class AtomStorage;
 class BaseRenderer;
 class PickingSystem;
-class Simulation;
+namespace Lattice {
+    class Simulation;
+}
 struct UiState;
 
 struct ToolContext {
     GLFWwindow* window = nullptr;
-    Simulation* simulation = nullptr;
+    Lattice::Simulation* simulation = nullptr;
     std::unique_ptr<BaseRenderer>* renderer = nullptr;
     PickingSystem* pickingSystem = nullptr;
     UiState* uiState = nullptr;

@@ -9,7 +9,7 @@
 #include <string_view>
 
 #include "App/AppSignals.h"
-#include "Lattice/Simulation.h"
+#include "Lattice/Engine/Simulation.h"
 #include "GUI/interface/UiState.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/panels/io/ioPanelWidgets.h"
@@ -53,7 +53,7 @@ void IOPanel::removeSceneTileByPath(std::string_view path) {
     }
 }
 
-void IOPanel::draw(float scale, Vec2i windowSize, Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState) {
+void IOPanel::draw(float scale, Vec2i windowSize, Lattice::Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState) {
     const float target = visible_ ? 1.f : 0.f;
     const float step = ImGui::GetIO().DeltaTime * 12.f;
     animProgress_ += (target - animProgress_) * std::min(step, 1.f);

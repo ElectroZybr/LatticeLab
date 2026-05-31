@@ -6,13 +6,13 @@
 
 #include "App/debug/CreateDebugPanels.h"
 #include "App/interaction/ToolsManager.h"
-#include "Lattice/Consts.h"
-#include "Lattice/Simulation.h"
-#include "Lattice/metrics/MemoryMetrics.h"
-#include "Lattice/metrics/Profiler.h"
+#include "Lattice/Engine/Consts.h"
+#include "Lattice/Engine/Simulation.h"
+#include "Lattice/Engine/metrics/MemoryMetrics.h"
+#include "Lattice/Engine/metrics/Profiler.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
 
-void updateAtomSelectionDebug(const DebugViews& debugViews, const Simulation& simulation) {
+void updateAtomSelectionDebug(const DebugViews& debugViews, const Lattice::Simulation& simulation) {
     const AtomStorage& atoms = simulation.atoms();
     if (ToolsManager::pickingSystem->getSelectedIndices().size() == 1) {
         debugViews.atomSingle->visible = true;
@@ -40,7 +40,7 @@ void updateAtomSelectionDebug(const DebugViews& debugViews, const Simulation& si
     }
 }
 
-void updateSimulationDebug(const DebugViews& debugViews, const Simulation& simulation, std::string_view integratorName) {
+void updateSimulationDebug(const DebugViews& debugViews, const Lattice::Simulation& simulation, std::string_view integratorName) {
     struct StepsRateSample {
         int lastStep = 0;
         std::chrono::steady_clock::time_point lastTime = std::chrono::steady_clock::now();

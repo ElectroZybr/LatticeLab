@@ -1,7 +1,7 @@
 #pragma once
 #include <deque>
 
-#include "Lattice/math/Vec2.h"
+#include "Lattice/Engine/math/Vec2.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
 
 class DebugPanel {

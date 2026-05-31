@@ -5,8 +5,8 @@
 #include <imgui.h>
 
 #include "App/interaction/picking/PickingSystem.h"
-#include "Lattice/NeighborSearch/SpatialGrid.h"
-#include "Lattice/Simulation.h"
+#include "Lattice/Engine/NeighborSearch/SpatialGrid.h"
+#include "Lattice/Engine/Simulation.h"
 #include "Rendering/BaseRenderer.h"
 
 namespace {
@@ -22,7 +22,7 @@ namespace {
     }
 }
 
-void NeighborListOverlay::draw(const Simulation& simulation, const PickingSystem& pickingSystem, const BaseRenderer& renderer) {
+void NeighborListOverlay::draw(const Lattice::Simulation& simulation, const PickingSystem& pickingSystem, const BaseRenderer& renderer) {
     if (renderer.camera.getMode() != Camera::Mode::Mode2D) {
         return;
     }

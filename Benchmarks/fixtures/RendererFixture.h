@@ -26,7 +26,7 @@ protected:
     void setCounters(benchmark::State& state) const;
 
     std::unique_ptr<BaseRenderer> renderer_;
-    Simulation simulation_;
+    Lattice::Simulation simulation_;
 
 private:
     static AtomStorage makeGridAtoms(int count);

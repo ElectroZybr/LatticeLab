@@ -10,7 +10,7 @@
 #include "App/UserSettings.h"
 #include "App/capture/CaptureController.h"
 #include "App/localization/i18n.h"
-#include "Lattice/Simulation.h"
+#include "Lattice/Engine/Simulation.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/style/ComboStyle.h"
 #include "Rendering/BaseRenderer.h"
@@ -76,7 +76,7 @@ namespace {
     }
 }
 
-void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer,
+void SettingsPanel::draw(float uiScale, Vec2i windowSize, Lattice::Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer,
                          CaptureController& captureController, FileDialogManager& fileDialog) {
     float target = visible ? 1.f : 0.f;
     float step = ImGui::GetIO().DeltaTime * 12.f;
@@ -196,7 +196,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
     ImGui::SeparatorText(i18n::tr("imgui_worlds").data());
     const std::string activeWorldLabel = std::string(i18n::tr("imgui_world_prefix")) + std::to_string(simulation.activeWorldId());
     if (ComboStyle::beginCombo("##active_world", activeWorldLabel.c_str(), 180.0f * uiScale, uiScale, ImGuiComboFlags_HeightLargest)) {
-        for (Simulation::WorldId worldId = 0; worldId < simulation.worldCount(); ++worldId) {
+        for (Lattice::Simulation::WorldId worldId = 0; worldId < simulation.worldCount(); ++worldId) {
             const std::string worldLabel = std::string(i18n::tr("imgui_world_prefix")) + std::to_string(worldId);
             const bool isSelected = worldId == simulation.activeWorldId();
             if (ImGui::Selectable(worldLabel.c_str(), isSelected)) {
@@ -213,12 +213,12 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Simulation& simulation
         const Vec3f newWorldSize = simulation.world().getWorldSize();
         Vec3f newWorldOffset = simulation.world().getRenderOffset();
         float rightEdge = newWorldOffset.x + newWorldSize.x;
-        for (Simulation::WorldId worldId = 0; worldId < simulation.worldCount(); ++worldId) {
+        for (Lattice::Simulation::WorldId worldId = 0; worldId < simulation.worldCount(); ++worldId) {
             const World& world = simulation.worldAt(worldId);
             rightEdge = std::max(rightEdge, static_cast<float>(world.getRenderOffset().x + world.getWorldSize().x));
         }
         newWorldOffset.x = rightEdge + worldGap;
-        const Simulation::WorldId newWorldId = simulation.createWorld(newWorldSize, newWorldOffset);
+        const Lattice::Simulation::WorldId newWorldId = simulation.createWorld(newWorldSize, newWorldOffset);
         simulation.setActiveWorld(newWorldId);
     }
     ImGui::SameLine();

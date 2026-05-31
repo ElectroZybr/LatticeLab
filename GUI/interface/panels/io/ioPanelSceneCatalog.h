@@ -6,7 +6,7 @@
 
 #include <webgpu/webgpu-raii.hpp>
 
-#include "Lattice/math/Vec2.h"
+#include "Lattice/Engine/math/Vec2.h"
 
 struct IOPanelSceneTile {
     std::string path;

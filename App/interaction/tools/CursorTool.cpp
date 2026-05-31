@@ -1,7 +1,7 @@
 #include "CursorTool.h"
 
 #include "App/interaction/picking/PickingSystem.h"
-#include "Lattice/Simulation.h"
+#include "Lattice/Engine/Simulation.h"
 #include "GUI/interface/UiState.h"
 #include "GUI/io/keyboard/Keyboard.h"
 

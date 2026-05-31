@@ -3,7 +3,7 @@
 
 #include <GLFW/glfw3.h>
 
-#include "Lattice/math/Vec2.h"
+#include "Lattice/Engine/math/Vec2.h"
 #include "Rendering/BaseRenderer.h"
 
 class Mouse {

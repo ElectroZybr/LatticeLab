@@ -11,7 +11,7 @@ namespace {
         std::vector<float> baseVz;
     };
 
-    VelocityPostProcessData prepareVelocityPostProcessData(Simulation& simulation) {
+    VelocityPostProcessData prepareVelocityPostProcessData(Lattice::Simulation& simulation) {
         VelocityPostProcessData data;
         const AtomStorage& atomStorage = simulation.atoms();
         const std::size_t mobileCount = atomStorage.mobileCount();

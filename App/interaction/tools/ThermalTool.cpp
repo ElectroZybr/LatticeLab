@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "Lattice/Simulation.h"
+#include "Lattice/Engine/Simulation.h"
 #include "Rendering/BaseRenderer.h"
 #include "Rendering/camera/Camera.h"
 

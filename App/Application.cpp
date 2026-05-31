@@ -10,8 +10,8 @@
 #include "App/UserSettings.h"
 #include "App/viewport/SceneViewport.h"
 #include "App/interaction/ToolsManager.h"
-#include "Lattice/Simulation.h"
-#include "Lattice/metrics/Profiler.h"
+#include "Lattice/Engine/Simulation.h"
+#include "Lattice/Engine/metrics/Profiler.h"
 #include "GUI/interface/interface.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
@@ -45,7 +45,7 @@ int Application::run() {
     WGPUContext::instance().init(window, width, height);
 
     // инициализация систем
-    Simulation simulation;
+    Lattice::Simulation simulation;
 
     simulation.createWorld({120, 120, 120});
 
@@ -92,9 +92,9 @@ int Application::run() {
     //     {AtomData::Type::Na, 0, 50.0f},   // 10% натрия
     //     {AtomData::Type::Cl, 0, 50.0f}    // 10% хлора
     // };
-    // Scenes::randomGasMixed(simulation, 500, gasSpecs, false, 6.0, 6.0, 1.0f, 5.0f, 0);
-    // simulation.createAtom(Vec3f(24, 25, 3), Vec3f(1, 0, 0), AtomData::Type::Na);
-    // simulation.createAtom(Vec3f(28, 25, 3), Vec3f(-1, 0, 0), AtomData::Type::Na);
+    // Scenes::randomGasMixed(Lattice::simulation, 500, gasSpecs, false, 6.0, 6.0, 1.0f, 5.0f, 0);
+    // Lattice::simulation.createAtom(Vec3f(24, 25, 3), Vec3f(1, 0, 0), AtomData::Type::Na);
+    // Lattice::simulation.createAtom(Vec3f(28, 25, 3), Vec3f(-1, 0, 0), AtomData::Type::Na);
 
     auto startTime = Clock::now();
     double renderAccum = 0.0;

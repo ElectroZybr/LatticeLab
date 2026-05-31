@@ -7,8 +7,8 @@
 
 #include <imgui.h>
 
-#include "Lattice/math/Vec2.h"
-#include "Lattice/math/Vec3.h"
+#include "Lattice/Engine/math/Vec2.h"
+#include "Lattice/Engine/math/Vec3.h"
 
 namespace DebugDrawers {
     inline float toFloat(const std::any& a) {

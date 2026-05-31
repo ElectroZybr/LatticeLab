@@ -6,7 +6,7 @@
 #include <iostream>
 #include <string>
 
-#include "Lattice/metrics/Profiler.h"
+#include "Lattice/Engine/metrics/Profiler.h"
 #include "GUI/interface/UiState.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "Rendering/BaseRenderer.h"

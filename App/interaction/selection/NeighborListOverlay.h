@@ -4,17 +4,19 @@
 
 #include <imgui.h>
 
-#include "Lattice/NeighborSearch/NeighborList.h"
-#include "Lattice/math/Vec3.h"
+#include "Lattice/Engine/NeighborSearch/NeighborList.h"
+#include "Lattice/Engine/math/Vec3.h"
 
 class BaseRenderer;
 class PickingSystem;
 class SpatialGrid;
-class Simulation;
+namespace Lattice {
+    class Simulation;
+}
 
 class NeighborListOverlay {
 public:
-    void draw(const Simulation& simulation, const PickingSystem& pickingSystem, const BaseRenderer& renderer);
+    void draw(const Lattice::Simulation& simulation, const PickingSystem& pickingSystem, const BaseRenderer& renderer);
 
 private:
     size_t skinSelectedIndex_ = static_cast<size_t>(-1);

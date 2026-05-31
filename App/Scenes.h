@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <vector>
 
-#include "Lattice/Simulation.h"
-#include "Lattice/physics/AtomData.h"
+#include "Lattice/Engine/Simulation.h"
+#include "Lattice/Engine/physics/AtomData.h"
 
 namespace Scenes {
     enum class CrystalPlane : uint8_t {
@@ -26,16 +26,16 @@ namespace Scenes {
     /// @param is3d 2D или 3D режим
     /// @param padding Расстояние между атомами в сетке
     /// @param margin Отступ от границ симуляционного ящика
-    void crystal(Simulation& sim, int n, AtomData::Type type, bool is3d, CrystalPlane plane = CrystalPlane::XY,
+    void crystal(Lattice::Simulation& sim, int n, AtomData::Type type, bool is3d, CrystalPlane plane = CrystalPlane::XY,
                  double padding = 3.0, double margin = 15.0);
 
     /// @param baseSideAtoms Количество атомов в одной стороне максимального треугольного слоя
-    void triangularBipyramidCrystal(Simulation& sim, int baseSideAtoms, AtomData::Type type, float verticalScale = 1.0f,
+    void triangularBipyramidCrystal(Lattice::Simulation& sim, int baseSideAtoms, AtomData::Type type, float verticalScale = 1.0f,
                                     double spacing = 0.0, double margin = 12.0);
 
-    void AngularVelocity(Simulation& sim, Vec3f angularVelocity);
+    void AngularVelocity(Lattice::Simulation& sim, Vec3f angularVelocity);
 
-    void hexLattice(Simulation& sim, Vec3f count, AtomData::Type type, float start_force = 1.0f, float margin = 15.0);
+    void hexLattice(Lattice::Simulation& sim, Vec3f count, AtomData::Type type, float start_force = 1.0f, float margin = 15.0);
 
     /// Создает рандомный газ в уже существующем ящике симуляции
     /// @param sim Симуляция
@@ -47,7 +47,7 @@ namespace Scenes {
     /// @param maxAttemptsPerAtom Максимальное количество попыток размещения для каждого атома
     /// @param seed Seed для рандома (0 = случайный)
     /// @return Количество успешно добавленных атомов
-    int randomGasInCurrentBox(Simulation& sim, int atomCount, AtomData::Type type, bool is3d, float minDistance = 4.0f,
+    int randomGasInCurrentBox(Lattice::Simulation& sim, int atomCount, AtomData::Type type, bool is3d, float minDistance = 4.0f,
                               float speedScale = 5.0f, int maxAttemptsPerAtom = 20, uint32_t seed = 0);
 
     /// Создает рандомный газ одного типа атомов с автоматическим подбором размера ящика
@@ -60,7 +60,7 @@ namespace Scenes {
     /// @param density Плотность газа, влияет на эффективное расстояние (0.25-3.0)
     /// @param speedScale Масштаб начальных скоростей
     /// @param seed Seed для рандома (0 = случайный)
-    void randomGas(Simulation& sim, int atomCount, AtomData::Type type, bool is3d, double spacing = 6.0, double margin = 6.0,
+    void randomGas(Lattice::Simulation& sim, int atomCount, AtomData::Type type, bool is3d, double spacing = 6.0, double margin = 6.0,
                    float density = 1.0f, float speedScale = 5.0f, uint32_t seed = 0);
 
     /// Создает смешанный рандомный газ с разными типами атомов
@@ -73,11 +73,11 @@ namespace Scenes {
     /// @param density Плотность газа (0.25-3.0)
     /// @param speedScale Масштаб начальных скоростей
     /// @param seed Seed для рандома (0 = случайный)
-    void randomGasMixed(Simulation& sim, int totalAtomCount, const std::vector<AtomTypeSpec>& atomSpecs, bool is3d,
+    void randomGasMixed(Lattice::Simulation& sim, int totalAtomCount, const std::vector<AtomTypeSpec>& atomSpecs, bool is3d,
                         double spacing = 6.0, double margin = 6.0, float density = 1.0f, float speedScale = 5.0f,
                         uint32_t seed = 0);
 
-    void randomGasByConcentration(Simulation& sim, int totalAtomCount, const std::vector<AtomTypeSpec>& concentrations, bool is3d,
+    void randomGasByConcentration(Lattice::Simulation& sim, int totalAtomCount, const std::vector<AtomTypeSpec>& concentrations, bool is3d,
                                   double spacing = 6.0, double margin = 6.0, float density = 1.0f, float speedScale = 5.0f,
                                   uint32_t seed = 0);
 }

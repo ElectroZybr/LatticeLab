@@ -7,12 +7,14 @@
 #include <imgui.h>
 
 #include "App/AppPaths.h"
-#include "Lattice/math/Vec3.h"
-#include "Lattice/physics/AtomData.h"
+#include "Lattice/Engine/math/Vec3.h"
+#include "Lattice/Engine/physics/AtomData.h"
 #include "GUI/interface/panels/io/ioPanelSceneCatalog.h"
 
 class FileDialogManager;
-class Simulation;
+namespace Lattice {
+    class Simulation;
+}
 struct UiState;
 
 class IOPanel {
@@ -25,7 +27,7 @@ public:
     static constexpr ImGuiWindowFlags PANEL_FLAGS =
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 
-    void draw(float scale, Vec2i windowSize, Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState);
+    void draw(float scale, Vec2i windowSize, Lattice::Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState);
     void setScenesDirectory(std::filesystem::path scenesDirectory);
     [[nodiscard]] const std::filesystem::path& scenesDirectory() const { return scenesDirectory_; }
 
