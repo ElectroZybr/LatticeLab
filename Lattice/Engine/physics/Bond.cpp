@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
-#include "Lattice/Engine/physics/AtomData.h"
-#include "Lattice/Engine/physics/AtomStorage.h"
+#include "Engine/physics/AtomData.h"
+#include "Engine/physics/AtomStorage.h"
 
 namespace {
     constexpr double kBondBreakDistance = 3.0;

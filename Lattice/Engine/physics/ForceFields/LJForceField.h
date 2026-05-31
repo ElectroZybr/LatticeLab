@@ -4,9 +4,9 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "Lattice/Engine/Consts.h"
-#include "Lattice/Engine/physics/AtomData.h"
-#include "Lattice/Engine/physics/AtomStorage.h"
+#include "Engine/Consts.h"
+#include "Engine/physics/AtomData.h"
+#include "Engine/physics/AtomStorage.h"
 
 class NeighborList;
 

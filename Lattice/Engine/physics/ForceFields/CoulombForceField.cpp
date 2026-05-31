@@ -2,8 +2,8 @@
 
 #include <cmath>
 
-#include "Lattice/Engine/Consts.h"
-#include "Lattice/Engine/metrics/Profiler.h"
+#include "Engine/Consts.h"
+#include "Engine/metrics/Profiler.h"
 
 void CoulombForceField::compute(AtomStorage& atoms, NeighborList& neighborList) const {
     // TODO реализовать

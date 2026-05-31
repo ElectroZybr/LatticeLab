@@ -8,8 +8,8 @@
 #include <utility>
 #include <vector>
 
-#include "Lattice/Engine/math/Vec3.h"
-#include "Lattice/Engine/physics/AtomData.h"
+#include "Engine/math/Vec3.h"
+#include "Engine/physics/AtomData.h"
 
 class AtomStorage {
     enum class Field : size_t { X, Y, Z, Vx, Vy, Vz, Fx, Fy, Fz, Pfx, Pfy, Pfz, Pe, InvMass, Charge, Count };

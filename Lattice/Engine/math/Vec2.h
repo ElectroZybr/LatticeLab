@@ -5,7 +5,7 @@
 #include <type_traits>
 #include <stdlib.h>
 
-#include "Lattice/Engine/Consts.h"
+#include "Engine/Consts.h"
 
 template <typename T>
 concept Arithmetic = std::is_arithmetic_v<T>;

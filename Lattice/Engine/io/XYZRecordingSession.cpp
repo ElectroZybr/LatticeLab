@@ -1,6 +1,6 @@
 #include "XYZRecordingSession.h"
 
-#include "Lattice/Engine/Simulation.h"
+#include "Engine/Simulation.h"
 
 namespace Lattice {
 

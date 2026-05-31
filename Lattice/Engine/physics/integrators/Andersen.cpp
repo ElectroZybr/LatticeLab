@@ -1,8 +1,8 @@
 #include "Andersen.h"
 
-#include "Lattice/Engine/metrics/Profiler.h"
-#include "Lattice/Engine/physics/integrators/StepOps.h"
-#include "Lattice/Engine/physics/integrators/VerletScheme.h"
+#include "Engine/metrics/Profiler.h"
+#include "Engine/physics/integrators/StepOps.h"
+#include "Engine/physics/integrators/VerletScheme.h"
 
 void Andersen::pipeline(StepData& stepData)
 {

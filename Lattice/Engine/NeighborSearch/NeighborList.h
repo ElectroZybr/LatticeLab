@@ -3,9 +3,9 @@
 #include <cstdint>
 #include <vector>
 
-#include "Lattice/Engine/NeighborSearch/SpatialGrid.h"
-#include "Lattice/Engine/metrics/NeighborListStats.h"
-#include "Lattice/Engine/physics/AtomStorage.h"
+#include "Engine/NeighborSearch/SpatialGrid.h"
+#include "Engine/metrics/NeighborListStats.h"
+#include "Engine/physics/AtomStorage.h"
 
 class World;
 

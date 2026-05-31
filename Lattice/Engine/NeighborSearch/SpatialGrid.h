@@ -7,8 +7,8 @@
 #include <span>
 #include <vector>
 
-#include "Lattice/Engine/math/Vec3.h"
-#include "Lattice/Engine/metrics/SpatialGridStats.h"
+#include "Engine/math/Vec3.h"
+#include "Engine/metrics/SpatialGridStats.h"
 
 class SpatialGrid {
 public:

@@ -1,6 +1,6 @@
 #include "xyzStream.h"
 
-#include "Lattice/Engine/Simulation.h"
+#include "Engine/Simulation.h"
 
 #include <fstream>
 

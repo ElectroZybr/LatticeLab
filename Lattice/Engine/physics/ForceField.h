@@ -2,10 +2,10 @@
 
 #include <cstddef>
 class World;
-#include "Lattice/Engine/physics/ForceFields/BondForceField.h"
-#include "Lattice/Engine/physics/ForceFields/CoulombForceField.h"
-#include "Lattice/Engine/physics/ForceFields/LJForceField.h"
-#include "Lattice/Engine/physics/ForceFields/WallForceField.h"
+#include "Engine/physics/ForceFields/BondForceField.h"
+#include "Engine/physics/ForceFields/CoulombForceField.h"
+#include "Engine/physics/ForceFields/LJForceField.h"
+#include "Engine/physics/ForceFields/WallForceField.h"
 
 class NeighborList;
 

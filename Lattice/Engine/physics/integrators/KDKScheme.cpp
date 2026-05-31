@@ -1,7 +1,7 @@
 #include "KDKScheme.h"
 
-#include "Lattice/Engine/metrics/Profiler.h"
-#include "Lattice/Engine/physics/integrators/StepOps.h"
+#include "Engine/metrics/Profiler.h"
+#include "Engine/physics/integrators/StepOps.h"
 
 void KDKScheme::pipeline(StepData& stepData) const {
     PROFILE_SCOPE("KDKScheme::pipeline");

@@ -4,8 +4,8 @@
 #include <concepts>
 #include <numbers>
 
-#include "Lattice/Engine/Consts.h"
-#include "Lattice/Engine/math/Vec2.h"
+#include "Engine/Consts.h"
+#include "Engine/math/Vec2.h"
 
 template <Arithmetic T> class Vec3 final {
 public:

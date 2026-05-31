@@ -1,14 +1,31 @@
+cmake_minimum_required(VERSION 3.28)
+project(LatticeEngine LANGUAGES CXX)
+
 file(GLOB_RECURSE LATTICE_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
 )
+list(FILTER LATTICE_SOURCES EXCLUDE REGEX ".*/(CLI|build|_deps)/.*")
 
 file(GLOB_RECURSE LATTICE_HEADERS CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
 )
+list(FILTER LATTICE_HEADERS EXCLUDE REGEX ".*/(CLI|build|_deps)/.*")
 
 add_library(Lattice STATIC
     ${LATTICE_SOURCES}
     ${LATTICE_HEADERS}
+)
+
+add_executable(Lattice-cli CLI/main.cpp)
+target_link_libraries(Lattice-cli PRIVATE Lattice)
+set_target_properties(Lattice-cli PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)
+
+set_target_properties(Lattice-cli Lattice PROPERTIES
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
 )
 
 target_compile_options(Lattice PRIVATE
@@ -22,8 +39,17 @@ target_compile_definitions(Lattice PUBLIC
 
 target_include_directories(Lattice PUBLIC
     ${CMAKE_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(Lattice PUBLIC
-    glm::glm
+include(FetchContent)
+
+FetchContent_Declare(
+    CLI11
+    GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git
+    GIT_TAG v2.5.0
 )
+
+FetchContent_MakeAvailable(CLI11)
+
+target_link_libraries(Lattice-cli PRIVATE CLI11::CLI11)

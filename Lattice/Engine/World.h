@@ -3,15 +3,15 @@
 #include <string>
 #include <string_view>
 
-#include "Lattice/Engine/NeighborSearch/NeighborList.h"
-#include "Lattice/Engine/NeighborSearch/SpatialGrid.h"
-#include "Lattice/Engine/metrics/EnergyMetrics.h"
-#include "Lattice/Engine/math/Vec3.h"
-#include "Lattice/Engine/physics/AtomData.h"
-#include "Lattice/Engine/physics/AtomStorage.h"
-#include "Lattice/Engine/physics/Bond.h"
-#include "Lattice/Engine/physics/ForceField.h"
-#include "Lattice/Engine/physics/Integrator.h"
+#include "Engine/NeighborSearch/NeighborList.h"
+#include "Engine/NeighborSearch/SpatialGrid.h"
+#include "Engine/metrics/EnergyMetrics.h"
+#include "Engine/math/Vec3.h"
+#include "Engine/physics/AtomData.h"
+#include "Engine/physics/AtomStorage.h"
+#include "Engine/physics/Bond.h"
+#include "Engine/physics/ForceField.h"
+#include "Engine/physics/Integrator.h"
 
 class World {
 public:

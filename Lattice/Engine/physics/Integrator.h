@@ -8,11 +8,11 @@ class ForceField;
 class NeighborList;
 class World;
 
-#include "Lattice/Engine/physics/integrators/KDKScheme.h"
-#include "Lattice/Engine/physics/integrators/LangevinScheme.h"
-#include "Lattice/Engine/physics/integrators/RK4Scheme.h"
-#include "Lattice/Engine/physics/integrators/VerletScheme.h"
-#include "Lattice/Engine/physics/integrators/Andersen.h"
+#include "Engine/physics/integrators/KDKScheme.h"
+#include "Engine/physics/integrators/LangevinScheme.h"
+#include "Engine/physics/integrators/RK4Scheme.h"
+#include "Engine/physics/integrators/VerletScheme.h"
+#include "Engine/physics/integrators/Andersen.h"
 
 struct StepData {
     World& world;

@@ -1,7 +1,7 @@
 #include "World.h"
 
-#include "Lattice/Engine/metrics/EnergyMetrics.h"
-#include "Lattice/Engine/physics/Integrator.h"
+#include "Engine/metrics/EnergyMetrics.h"
+#include "Engine/physics/Integrator.h"
 
 World::World(Vec3f size, Vec3f renderOffset) : size(size), renderOffset(renderOffset), grid(size) {
     atomStorage_.reserve(250000);

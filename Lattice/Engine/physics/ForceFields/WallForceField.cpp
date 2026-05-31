@@ -1,8 +1,8 @@
 #include "WallForceField.h"
-#include "Lattice/Engine/World.h"
+#include "Engine/World.h"
 
-#include "Lattice/Engine/math/Vec3.h"
-#include "Lattice/Engine/physics/AtomStorage.h"
+#include "Engine/math/Vec3.h"
+#include "Engine/physics/AtomStorage.h"
 
 void WallForceField::compute(World& world) const {
     AtomStorage& atoms = world.getAtomStorage();

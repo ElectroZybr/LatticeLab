@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "Lattice/Engine/physics/integrators/StepOps.h"
+#include "Engine/physics/integrators/StepOps.h"
 
 Integrator::Integrator() : integrator_type(Scheme::Verlet), scheme_impl(makeSchemeImpl(Scheme::Verlet)) {}
 

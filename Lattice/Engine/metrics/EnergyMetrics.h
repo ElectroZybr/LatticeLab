@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Lattice/Engine/physics/AtomData.h"
-#include "Lattice/Engine/physics/AtomStorage.h"
+#include "Engine/physics/AtomData.h"
+#include "Engine/physics/AtomStorage.h"
 
 namespace EnergyMetrics {
     struct Snapshot {

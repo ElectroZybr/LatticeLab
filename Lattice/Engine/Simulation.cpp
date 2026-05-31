@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "Lattice/Engine/io/SimulationStateIO.h"
-#include "Lattice/Engine/metrics/Profiler.h"
+#include "Engine/io/SimulationStateIO.h"
+#include "Engine/metrics/Profiler.h"
 
 namespace Lattice {
 

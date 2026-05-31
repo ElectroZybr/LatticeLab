@@ -4,8 +4,8 @@
 #include <string_view>
 #include <vector>
 
-#include "Lattice/Engine/World.h"
-#include "Lattice/Engine/io/XYZRecordingSession.h"
+#include "Engine/World.h"
+#include "Engine/io/XYZRecordingSession.h"
 
 namespace Lattice {
 

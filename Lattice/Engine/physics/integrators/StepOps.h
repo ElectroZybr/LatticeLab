@@ -2,12 +2,12 @@
 
 #include <cmath>
 
-#include "Lattice/Engine/World.h"
-#include "Lattice/Engine/metrics/Profiler.h"
-#include "Lattice/Engine/physics/AtomStorage.h"
-#include "Lattice/Engine/physics/ForceField.h"
-#include "Lattice/Engine/physics/Integrator.h"
-#include "Lattice/Engine/restrict.h"
+#include "Engine/World.h"
+#include "Engine/metrics/Profiler.h"
+#include "Engine/physics/AtomStorage.h"
+#include "Engine/physics/ForceField.h"
+#include "Engine/physics/Integrator.h"
+#include "Engine/restrict.h"
 
 class NeighborList;
 

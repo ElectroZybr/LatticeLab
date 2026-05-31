@@ -2,8 +2,8 @@
 
 #include <cmath>
 
-#include "Lattice/Engine/Consts.h"
-#include "Lattice/Engine/physics/AtomStorage.h"
+#include "Engine/Consts.h"
+#include "Engine/physics/AtomStorage.h"
 
 class NeighborList;
 

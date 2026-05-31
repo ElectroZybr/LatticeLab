@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string_view>
 
-#include "Lattice/Engine/io/xyzStream.h"
+#include "Engine/io/xyzStream.h"
  
 namespace Lattice {
     

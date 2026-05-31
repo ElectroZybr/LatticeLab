@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include "Lattice/Engine/Simulation.h"
+#include "Engine/Simulation.h"
 
 using Lattice::Simulation;
 

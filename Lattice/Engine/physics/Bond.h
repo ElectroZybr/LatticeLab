@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <list>
 
-#include "Lattice/Engine/physics/BondTable.h"
+#include "Engine/physics/BondTable.h"
 
 class AtomStorage;
 

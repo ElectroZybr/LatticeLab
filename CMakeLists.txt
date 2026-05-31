@@ -148,6 +148,7 @@ if(ENABLE_IPO)
 endif()
 
 target_link_libraries(${APP_NAME} PRIVATE latticelab_lib)
+add_dependencies(${APP_NAME} Lattice-cli)
 target_copy_webgpu_binaries(${APP_NAME})
 
 include(windows_resources)

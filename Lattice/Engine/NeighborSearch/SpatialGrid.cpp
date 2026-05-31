@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <vector>
 
-#include "Lattice/Engine/metrics/Profiler.h"
+#include "Engine/metrics/Profiler.h"
 
 SpatialGrid::SpatialGrid(const Vec3f& worldSize, float cellSize) : cellSize(cellSize) {
     if (worldSize.x < 0 || worldSize.y < 0 || worldSize.z < 0) {
