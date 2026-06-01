@@ -6,7 +6,7 @@
 
 #include "App/AppActions.h"
 #include "App/CreateWindow.h"
-#include "App/Scenes.h"
+#include "Lattice/Generators/Generators.h"
 #include "App/UserSettings.h"
 #include "App/viewport/SceneViewport.h"
 #include "App/interaction/ToolsManager.h"
@@ -83,8 +83,8 @@ int Application::run() {
     appInterface.state().pause = true;
 
     // создание сцены
-    Scenes::triangularBipyramidCrystal(simulation, 8, AtomData::Type::Z);
-    Scenes::AngularVelocity(simulation, Vec3f(0.0f, 0.25f, 0.0f));
+    Generators::triangularBipyramidCrystal(simulation, 8, AtomData::Type::Z);
+    Generators::AngularVelocity(simulation, Vec3f(0.0f, 0.25f, 0.0f));
     renderer.syncScene(simulation);
 
     // std::vector<Scenes::AtomTypeSpec> gasSpecs = {

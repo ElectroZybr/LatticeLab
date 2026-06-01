@@ -43,7 +43,6 @@ include(dependencies)
 include(CTest)
 
 file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
-    "GUI/*.cpp"
     "App/*.cpp"
 )
 
@@ -80,6 +79,7 @@ target_compile_definitions(latticelab_lib PUBLIC
 
 target_include_directories(latticelab_lib PUBLIC
     ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/App
     ${GENERATED_ROOT}
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
@@ -159,19 +159,3 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/demo/scenes")
     install(DIRECTORY "${CMAKE_SOURCE_DIR}/demo/scenes" DESTINATION demo)
 endif()
 
-if(BUILD_BENCHMARKS)
-    FetchContent_Declare(
-        googlebenchmark
-        GIT_REPOSITORY https://github.com/google/benchmark.git
-        GIT_TAG        v1.9.5
-        GIT_SHALLOW    ON
-    )
-    set(BENCHMARK_ENABLE_TESTING     OFF CACHE BOOL "" FORCE)
-    set(BENCHMARK_INSTALL_DOCS       OFF CACHE BOOL "" FORCE)
-    set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
-    set(BENCHMARK_ENABLE_INSTALL     OFF CACHE BOOL "" FORCE)
- 
-    FetchContent_MakeAvailable(googlebenchmark)
- 
-    add_subdirectory(Benchmarks)
-endif()

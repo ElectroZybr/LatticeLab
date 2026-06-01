@@ -1,6 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include "Benchmarks/fixtures/SimulationFixture.h"
+#include "SimulationFixture.h"
 
 // @bench_meta {"id":"SimulationFixture/FullStepWithNeighborList","ru":"Полный шаг с NeighborList","group":"Симуляция/Шаг симуляции"}
 BENCHMARK_DEFINE_F(SimulationFixture, FullStepWithNeighborList)(benchmark::State& state) {
@@ -32,6 +32,9 @@ BENCHMARK_DEFINE_F(SimulationFixture, FullStepWithNeighborList)(benchmark::State
     setCounters(state);
 }
 
-BENCHMARK_REGISTER_F(SimulationFixture, FullStepWithNeighborList)->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax)
-    ->Args({15625})   // 25^3
-    ->Args({103823}); // 47^3;
+const auto fullStepScene = Benchmarks::sceneFromEnv();
+BENCHMARK_REGISTER_F(SimulationFixture, FullStepWithNeighborList)
+    ->Arg(Benchmarks::atomsForScene(fullStepScene, 5))
+    ->Arg(Benchmarks::atomsForScene(fullStepScene, 10))
+    ->Arg(Benchmarks::atomsForScene(fullStepScene, 25))
+    ->Arg(Benchmarks::atomsForScene(fullStepScene, 47));

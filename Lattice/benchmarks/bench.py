@@ -40,13 +40,15 @@ BENCHMARKS_ROOT = Path(__file__).parent
 
 
 def resolve_benchmark_binary() -> Path:
+    repo_root = Path(__file__).resolve().parents[2]
     candidates = [
-        Path(__file__).parent.parent / "build" / "bench" / BINARY_NAME,
-        Path(__file__).parent.parent / "build" / "release" / BINARY_NAME,
-        Path(__file__).parent.parent / BINARY_NAME,
+        repo_root / "build" / "bench" / BINARY_NAME,
+        repo_root / "build" / "release" / BINARY_NAME,
+        repo_root / BINARY_NAME,
+        Path(__file__).parent / BINARY_NAME,
     ]
     for candidate in candidates:
-        if candidate.exists():
+        if candidate.is_file():
             return candidate
     return candidates[0]
 

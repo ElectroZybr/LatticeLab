@@ -1,7 +1,7 @@
 #include "AppActions.h"
 
 #include "App/AppSignals.h"
-#include "App/Scenes.h"
+#include "Lattice/Generators/Generators.h"
 #include "App/capture/CaptureOutputPath.h"
 #include "App/capture/CaptureController.h"
 #include "App/interaction/ToolsManager.h"
@@ -68,12 +68,12 @@ namespace AppActions {
         track(AppSignals::UI::CreateGas.connect([&](int atomCount, AtomData::Type atomType, bool is3D, float density) {
             simulation.clear();
             ToolsManager::resetInteractionState();
-            Scenes::randomGas(simulation, atomCount, atomType, is3D, 6.0f, 6.0f, density);
+            Generators::randomGas(simulation, atomCount, atomType, is3D, 6.0f, 6.0f, density);
         }));
         track(AppSignals::UI::CreateCrystal.connect([&](int axisCount, AtomData::Type atomType, bool is3D) {
             simulation.clear();
             ToolsManager::resetInteractionState();
-            Scenes::crystal(simulation, axisCount, atomType, is3D);
+            Generators::massive(simulation, axisCount, atomType, is3D);
         }));
         track(AppSignals::Capture::ToggleXYZRecording.connect([&]() { toggleXYZRecording(captureController, simulation); }));
     }

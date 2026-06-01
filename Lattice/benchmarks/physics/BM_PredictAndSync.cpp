@@ -1,6 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include "Benchmarks/fixtures/SimulationFixture.h"
+#include "SimulationFixture.h"
 
 // @bench_meta {"id":"SimulationFixture/PredictAndSync","ru":"Predict + Sync","group":"Симуляция/Интегратор"}
 BENCHMARK_DEFINE_F(SimulationFixture, PredictAndSync)(benchmark::State& state) {
@@ -16,4 +16,7 @@ BENCHMARK_DEFINE_F(SimulationFixture, PredictAndSync)(benchmark::State& state) {
     setCounters(state);
 }
 
-BENCHMARK_REGISTER_F(SimulationFixture, PredictAndSync)->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);
+const auto predictAndSyncScene = Benchmarks::sceneFromEnv();
+BENCHMARK_REGISTER_F(SimulationFixture, PredictAndSync)
+    ->Arg(Benchmarks::atomsForScene(predictAndSyncScene, 5))
+    ->Arg(Benchmarks::atomsForScene(predictAndSyncScene, 10));

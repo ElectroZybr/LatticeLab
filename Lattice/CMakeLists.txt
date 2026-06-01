@@ -4,12 +4,12 @@ project(LatticeEngine LANGUAGES CXX)
 file(GLOB_RECURSE LATTICE_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
 )
-list(FILTER LATTICE_SOURCES EXCLUDE REGEX ".*/(CLI|build|_deps)/.*")
+list(FILTER LATTICE_SOURCES EXCLUDE REGEX ".*/(CLI|benchmarks|build|_deps)/.*")
 
 file(GLOB_RECURSE LATTICE_HEADERS CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
 )
-list(FILTER LATTICE_HEADERS EXCLUDE REGEX ".*/(CLI|build|_deps)/.*")
+list(FILTER LATTICE_HEADERS EXCLUDE REGEX ".*/(CLI|benchmarks|build|_deps)/.*")
 
 add_library(Lattice STATIC
     ${LATTICE_SOURCES}
@@ -53,3 +53,19 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(CLI11)
 
 target_link_libraries(Lattice-cli PRIVATE CLI11::CLI11)
+
+if(BUILD_BENCHMARKS)
+    FetchContent_Declare(
+        googlebenchmark
+        GIT_REPOSITORY https://github.com/google/benchmark.git
+        GIT_TAG        v1.9.5
+        GIT_SHALLOW    ON
+    )
+    set(BENCHMARK_ENABLE_TESTING     OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_INSTALL_DOCS       OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_INSTALL     OFF CACHE BOOL "" FORCE)
+ 
+    FetchContent_MakeAvailable(googlebenchmark)
+    add_subdirectory(benchmarks)
+endif()

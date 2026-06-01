@@ -6,36 +6,12 @@
 #include "Lattice/Engine/Simulation.h"
 #include "Lattice/Engine/physics/AtomData.h"
 
-namespace Scenes {
-    enum class CrystalPlane : uint8_t {
-        XY,
-        XZ,
-        YZ,
-    };
-
+namespace Generators {
     struct AtomTypeSpec {
         AtomData::Type type;
         int absoluteCount = 0;
         float concentrationPercent = 0.0f;
     };
-
-    /// Создает кристаллическую структуру атомов
-    /// @param sim Симуляция
-    /// @param n Количество атомов по каждой оси
-    /// @param type Тип атома
-    /// @param is3d 2D или 3D режим
-    /// @param padding Расстояние между атомами в сетке
-    /// @param margin Отступ от границ симуляционного ящика
-    void crystal(Lattice::Simulation& sim, int n, AtomData::Type type, bool is3d, CrystalPlane plane = CrystalPlane::XY,
-                 double padding = 3.0, double margin = 15.0);
-
-    /// @param baseSideAtoms Количество атомов в одной стороне максимального треугольного слоя
-    void triangularBipyramidCrystal(Lattice::Simulation& sim, int baseSideAtoms, AtomData::Type type, float verticalScale = 1.0f,
-                                    double spacing = 0.0, double margin = 12.0);
-
-    void AngularVelocity(Lattice::Simulation& sim, Vec3f angularVelocity);
-
-    void hexLattice(Lattice::Simulation& sim, Vec3f count, AtomData::Type type, float start_force = 1.0f, float margin = 15.0);
 
     /// Создает рандомный газ в уже существующем ящике симуляции
     /// @param sim Симуляция
@@ -77,6 +53,16 @@ namespace Scenes {
                         double spacing = 6.0, double margin = 6.0, float density = 1.0f, float speedScale = 5.0f,
                         uint32_t seed = 0);
 
+    /// Создает рандомный газ на основе концентраций типов атомов
+    /// @param sim Симуляция
+    /// @param totalAtomCount Общее количество атомов
+    /// @param concentrations Вектор спецификаций с процентами
+    /// @param is3d 2D или 3D режим
+    /// @param spacing Расстояние между атомами
+    /// @param margin Отступ от границ
+    /// @param density Плотность газа (0.25-3.0)
+    /// @param speedScale Масштаб начальных скоростей
+    /// @param seed Seed для рандома (0 = случайный)
     void randomGasByConcentration(Lattice::Simulation& sim, int totalAtomCount, const std::vector<AtomTypeSpec>& concentrations, bool is3d,
                                   double spacing = 6.0, double margin = 6.0, float density = 1.0f, float speedScale = 5.0f,
                                   uint32_t seed = 0);

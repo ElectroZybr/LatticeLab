@@ -2,7 +2,7 @@
 
 #include <benchmark/benchmark.h>
 
-#include "Benchmarks/fixtures/SimulationFixture.h"
+#include "SimulationFixture.h"
 
 namespace {
     struct VelocityPostProcessData {
@@ -47,4 +47,7 @@ BENCHMARK_DEFINE_F(SimulationFixture, PostProcessVelocities)(benchmark::State& s
     setCounters(state);
 }
 
-BENCHMARK_REGISTER_F(SimulationFixture, PostProcessVelocities)->RangeMultiplier(8)->Range(Benchmarks::kAtomMin, Benchmarks::kAtomMax);
+const auto postProcessVelocitiesScene = Benchmarks::sceneFromEnv();
+BENCHMARK_REGISTER_F(SimulationFixture, PostProcessVelocities)
+    ->Arg(Benchmarks::atomsForScene(postProcessVelocitiesScene, 5))
+    ->Arg(Benchmarks::atomsForScene(postProcessVelocitiesScene, 10));

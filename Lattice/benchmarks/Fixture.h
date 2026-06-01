@@ -2,27 +2,24 @@
 
 #include <cstdlib>
 #include <memory>
-#include <string>
+#include <string_view>
 
 #include <benchmark/benchmark.h>
 
-#include "Benchmarks/BenchmarkCase.h"
-#include "Benchmarks/BenchmarkScenes.h"
-#include "Lattice/Simulation.h"
-#include "Lattice/physics/integrators/StepOps.h"
-#include "Lattice/physics/integrators/VerletScheme.h"
+#include "BenchmarkScenes.h"
+#include "Engine/Simulation.h"
+#include "Engine/physics/integrators/StepOps.h"
+#include "Engine/physics/integrators/VerletScheme.h"
 
 namespace Benchmarks {
     constexpr double kDt = 0.01;
-    constexpr int kAtomMin = 125;  // 5^3
-    constexpr int kAtomMax = 1000; // 10^3
 
     inline SceneKind sceneFromEnv() {
         const char* raw = std::getenv("CHEM_BENCH_SCENE");
         if (raw == nullptr) {
             return SceneKind::Crystal3D;
         }
-        const std::string value(raw);
+        const std::string_view value(raw);
         if (value == "ideal_crystal3d") {
             return SceneKind::IdealCrystal3D;
         }
@@ -35,21 +32,21 @@ namespace Benchmarks {
         return SceneKind::Crystal3D;
     }
 
-    inline BenchmarkCase makeCaseForSelectedScene(int atomCount) {
-        BenchmarkCase benchmarkCase{.scene = sceneFromEnv(),
-                                    .integrator = Integrator::Scheme::Verlet,
-                                    .atomCount = atomCount,
-                                    .boxSize = Vec3f(160.0, 160.0, 160.0),
-                                    .cellSize = 5};
-
-        if (benchmarkCase.scene == SceneKind::Crystal2D || benchmarkCase.scene == SceneKind::RandomGas2D) {
-            benchmarkCase.boxSize = Vec3f(160.0, 160.0, 6.0);
+    inline int atomsForScene(SceneKind scene, int sceneExtent) {
+        switch (scene) {
+        case SceneKind::IdealCrystal3D:
+        case SceneKind::Crystal3D:
+            return sceneExtent * sceneExtent * sceneExtent;
+        case SceneKind::Crystal2D:
+        case SceneKind::RandomGas2D:
+            return sceneExtent * sceneExtent;
         }
-        return benchmarkCase;
+
+        return sceneExtent;
     }
 }
 
-class SimulationFixture : public benchmark::Fixture {
+class Fixture : public benchmark::Fixture {
 public:
     void SetUp(benchmark::State& state) override {
         atomCount_ = static_cast<int>(state.range(0));
@@ -71,7 +68,9 @@ protected:
         };
     }
 
-    void rebuildScene() { Benchmarks::BenchmarkScenes::build(*simulation_, Benchmarks::makeCaseForSelectedScene(atomCount_)); }
+    void rebuildScene() {
+        Benchmarks::Scenes::build(*simulation_, Benchmarks::sceneFromEnv(), atomCount_);
+    }
 
     void prepareForPredict() {
         rebuildScene();
@@ -97,3 +96,5 @@ protected:
     std::unique_ptr<Lattice::Simulation> simulation_;
     int atomCount_ = 0;
 };
+
+using SimulationFixture = Fixture;
