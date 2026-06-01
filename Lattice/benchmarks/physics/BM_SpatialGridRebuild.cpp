@@ -1,8 +1,7 @@
 #include <benchmark/benchmark.h>
+#include "Fixture.h"
 
-#include "SimulationFixture.h"
-
-// @bench_meta {"id":"Fixture/SpatialGridRebuild","ru":"Перестройка SpatialGrid","group":"Симуляция/Сетка и соседи"}
+// @bench_meta {"id":"Fixture/SpatialGridRebuild","label":"SpatialGrid Rebuild","group":"Simulation/Grid and Neighbors"}
 BENCHMARK_DEFINE_F(Fixture, SpatialGridRebuild)(benchmark::State& state) {
     rebuildScene();
 
@@ -18,7 +17,6 @@ BENCHMARK_DEFINE_F(Fixture, SpatialGridRebuild)(benchmark::State& state) {
     setCounters(state);
 }
 
-const auto spatialGridRebuildScene = Benchmarks::sceneFromEnv();
 BENCHMARK_REGISTER_F(Fixture, SpatialGridRebuild)
-    ->Arg(Benchmarks::atomsForScene(spatialGridRebuildScene, 5))
-    ->Arg(Benchmarks::atomsForScene(spatialGridRebuildScene, 10));
+    ->Arg(5)
+    ->Arg(10);

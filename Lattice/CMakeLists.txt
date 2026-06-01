@@ -19,7 +19,7 @@ add_library(Lattice STATIC
 add_executable(Lattice-cli CLI/main.cpp)
 target_link_libraries(Lattice-cli PRIVATE Lattice)
 set_target_properties(Lattice-cli PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 set_target_properties(Lattice-cli Lattice PROPERTIES

@@ -1,9 +1,8 @@
 #include <benchmark/benchmark.h>
+#include "Fixture.h"
 
-#include "SimulationFixture.h"
-
-// @bench_meta {"id":"SimulationFixture/FullStepWithNeighborList","ru":"Полный шаг с NeighborList","group":"Симуляция/Шаг симуляции"}
-BENCHMARK_DEFINE_F(SimulationFixture, FullStepWithNeighborList)(benchmark::State& state) {
+// @bench_meta {"id":"Fixture/FullStepWithNeighborList","label":"Full Step with NeighborList","group":"Simulation/Simulation Step"}
+BENCHMARK_DEFINE_F(Fixture, FullStepWithNeighborList)(benchmark::State& state) {
     constexpr int kWarmupSteps = 128;
 
     rebuildScene();
@@ -32,9 +31,8 @@ BENCHMARK_DEFINE_F(SimulationFixture, FullStepWithNeighborList)(benchmark::State
     setCounters(state);
 }
 
-const auto fullStepScene = Benchmarks::sceneFromEnv();
-BENCHMARK_REGISTER_F(SimulationFixture, FullStepWithNeighborList)
-    ->Arg(Benchmarks::atomsForScene(fullStepScene, 5))
-    ->Arg(Benchmarks::atomsForScene(fullStepScene, 10))
-    ->Arg(Benchmarks::atomsForScene(fullStepScene, 25))
-    ->Arg(Benchmarks::atomsForScene(fullStepScene, 47));
+BENCHMARK_REGISTER_F(Fixture, FullStepWithNeighborList)
+    ->Arg(5)
+    ->Arg(10)
+    ->Arg(25)
+    ->Arg(47);

@@ -1,9 +1,8 @@
 #include <benchmark/benchmark.h>
+#include "Fixture.h"
 
-#include "SimulationFixture.h"
-
-// @bench_meta {"id":"SimulationFixture/PredictAndSync","ru":"Predict + Sync","group":"Симуляция/Интегратор"}
-BENCHMARK_DEFINE_F(SimulationFixture, PredictAndSync)(benchmark::State& state) {
+// @bench_meta {"id":"Fixture/PredictAndSync","label":"Predict + Sync","group":"Simulation/Integrator"}
+BENCHMARK_DEFINE_F(Fixture, PredictAndSync)(benchmark::State& state) {
     prepareForPredict();
     StepData stepData = makeStepData();
 
@@ -16,7 +15,6 @@ BENCHMARK_DEFINE_F(SimulationFixture, PredictAndSync)(benchmark::State& state) {
     setCounters(state);
 }
 
-const auto predictAndSyncScene = Benchmarks::sceneFromEnv();
-BENCHMARK_REGISTER_F(SimulationFixture, PredictAndSync)
-    ->Arg(Benchmarks::atomsForScene(predictAndSyncScene, 5))
-    ->Arg(Benchmarks::atomsForScene(predictAndSyncScene, 10));
+BENCHMARK_REGISTER_F(Fixture, PredictAndSync)
+    ->Arg(5)
+    ->Arg(10);

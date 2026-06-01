@@ -120,12 +120,6 @@ target_link_libraries(latticelab_lib PUBLIC
     libzstd_static
 )
 
-if (WIN32)
-    add_executable(${APP_NAME} WIN32 main.cpp)
-else()
-    add_executable(${APP_NAME} main.cpp)
-endif()
-
 include(CheckIPOSupported)
 if(ENABLE_IPO)
     check_ipo_supported(RESULT lto_supported OUTPUT lto_error)
@@ -135,16 +129,25 @@ if(ENABLE_IPO)
             INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE
             INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL TRUE
         )
-        set_target_properties(${APP_NAME} PROPERTIES
-            INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE
-            INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE
-            INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL TRUE
-        )
     elseif(MINGW)
         message(STATUS "IPO is disabled for MinGW")
     else()
         message(STATUS "IPO is not supported: ${lto_error}")
     endif()
+endif()
+
+if (WIN32)
+    add_executable(${APP_NAME} WIN32 main.cpp)
+else()
+    add_executable(${APP_NAME} main.cpp)
+endif()
+
+if(ENABLE_IPO AND lto_supported AND NOT MINGW)
+    set_target_properties(${APP_NAME} PROPERTIES
+        INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE
+        INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE
+        INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL TRUE
+    )
 endif()
 
 target_link_libraries(${APP_NAME} PRIVATE latticelab_lib)
@@ -158,4 +161,3 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets" DESTINATION .)
 if(EXISTS "${CMAKE_SOURCE_DIR}/demo/scenes")
     install(DIRECTORY "${CMAKE_SOURCE_DIR}/demo/scenes" DESTINATION demo)
 endif()
-

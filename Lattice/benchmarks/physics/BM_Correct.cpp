@@ -1,9 +1,8 @@
 #include <benchmark/benchmark.h>
+#include "Fixture.h"
 
-#include "SimulationFixture.h"
-
-// @bench_meta {"id":"SimulationFixture/Correct","ru":"Correct","group":"Симуляция/Интегратор"}
-BENCHMARK_DEFINE_F(SimulationFixture, Correct)(benchmark::State& state) {
+// @bench_meta {"id":"Fixture/Correct","label":"Correct","group":"Simulation/Integrator"}
+BENCHMARK_DEFINE_F(Fixture, Correct)(benchmark::State& state) {
     prepareForCorrect();
 
     for (auto _ : state) {
@@ -14,9 +13,8 @@ BENCHMARK_DEFINE_F(SimulationFixture, Correct)(benchmark::State& state) {
     setCounters(state);
 }
 
-const auto correctScene = Benchmarks::sceneFromEnv();
-BENCHMARK_REGISTER_F(SimulationFixture, Correct)
-    ->Arg(Benchmarks::atomsForScene(correctScene, 5))
-    ->Arg(Benchmarks::atomsForScene(correctScene, 10))
-    ->Arg(Benchmarks::atomsForScene(correctScene, 22))
-    ->Arg(Benchmarks::atomsForScene(correctScene, 47));
+BENCHMARK_REGISTER_F(Fixture, Correct)
+    ->Arg(5)
+    ->Arg(10)
+    ->Arg(22)
+    ->Arg(47);

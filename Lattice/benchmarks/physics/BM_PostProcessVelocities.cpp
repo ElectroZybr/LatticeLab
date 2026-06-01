@@ -1,8 +1,6 @@
-#include <vector>
-
 #include <benchmark/benchmark.h>
-
-#include "SimulationFixture.h"
+#include <vector>
+#include "Fixture.h"
 
 namespace {
     struct VelocityPostProcessData {
@@ -29,8 +27,8 @@ namespace {
     }
 }
 
-// @bench_meta {"id":"SimulationFixture/PostProcessVelocities","ru":"Post-process скоростей: clamp","group":"Симуляция/Интегратор"}
-BENCHMARK_DEFINE_F(SimulationFixture, PostProcessVelocities)(benchmark::State& state) {
+// @bench_meta {"id":"Fixture/PostProcessVelocities","label":"Velocity Post-Process: clamp","group":"Simulation/Integrator"}
+BENCHMARK_DEFINE_F(Fixture, PostProcessVelocities)(benchmark::State& state) {
     rebuildScene();
     VelocityPostProcessData data = prepareVelocityPostProcessData(*simulation_);
 
@@ -47,7 +45,6 @@ BENCHMARK_DEFINE_F(SimulationFixture, PostProcessVelocities)(benchmark::State& s
     setCounters(state);
 }
 
-const auto postProcessVelocitiesScene = Benchmarks::sceneFromEnv();
-BENCHMARK_REGISTER_F(SimulationFixture, PostProcessVelocities)
-    ->Arg(Benchmarks::atomsForScene(postProcessVelocitiesScene, 5))
-    ->Arg(Benchmarks::atomsForScene(postProcessVelocitiesScene, 10));
+BENCHMARK_REGISTER_F(Fixture, PostProcessVelocities)
+    ->Arg(5)
+    ->Arg(10);

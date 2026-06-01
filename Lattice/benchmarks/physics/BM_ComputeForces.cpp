@@ -1,8 +1,7 @@
 #include <benchmark/benchmark.h>
+#include "Fixture.h"
 
-#include "SimulationFixture.h"
-
-// @bench_meta {"id":"Fixture/ComputeForces","ru":"Расчет сил","group":"Симуляция/Силы"}
+// @bench_meta {"id":"Fixture/ComputeForces","label":"Force Computation","group":"Simulation/Forces"}
 BENCHMARK_DEFINE_F(Fixture, ComputeForces)(benchmark::State& state) {
     rebuildScene();
     prepareNeighborList();
@@ -16,15 +15,14 @@ BENCHMARK_DEFINE_F(Fixture, ComputeForces)(benchmark::State& state) {
     setCounters(state);
 }
 
-const auto computeForcesScene = Benchmarks::sceneFromEnv();
 BENCHMARK_REGISTER_F(Fixture, ComputeForces)
-    ->Arg(Benchmarks::atomsForScene(computeForcesScene, 5))
-    ->Arg(Benchmarks::atomsForScene(computeForcesScene, 10))
-    ->Arg(Benchmarks::atomsForScene(computeForcesScene, 25))
-    ->Arg(Benchmarks::atomsForScene(computeForcesScene, 47));
+    ->Arg(5)
+    ->Arg(10)
+    ->Arg(25)
+    ->Arg(47);
 
 
-// @bench_meta {"id":"Fixture/ComputePairInteractions","ru":"Расчет PairInteraction","group":"Симуляция/Силы"}
+// @bench_meta {"id":"Fixture/ComputePairInteractions","label":"PairInteraction Computation","group":"Simulation/Forces"}
 BENCHMARK_DEFINE_F(Fixture, ComputePairInteractions)(benchmark::State& state) {
     rebuildScene();
     prepareNeighborList();
@@ -38,7 +36,7 @@ BENCHMARK_DEFINE_F(Fixture, ComputePairInteractions)(benchmark::State& state) {
 }
 
 BENCHMARK_REGISTER_F(Fixture, ComputePairInteractions)
-    ->Arg(Benchmarks::atomsForScene(computeForcesScene, 5))
-    ->Arg(Benchmarks::atomsForScene(computeForcesScene, 10))
-    ->Arg(Benchmarks::atomsForScene(computeForcesScene, 25))
-    ->Arg(Benchmarks::atomsForScene(computeForcesScene, 47));
+    ->Arg(5)
+    ->Arg(10)
+    ->Arg(25)
+    ->Arg(47);

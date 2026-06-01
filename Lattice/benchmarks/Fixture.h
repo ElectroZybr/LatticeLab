@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdlib>
 #include <memory>
 #include <string_view>
 
@@ -14,12 +13,7 @@
 namespace Benchmarks {
     constexpr double kDt = 0.01;
 
-    inline SceneKind sceneFromEnv() {
-        const char* raw = std::getenv("CHEM_BENCH_SCENE");
-        if (raw == nullptr) {
-            return SceneKind::Crystal3D;
-        }
-        const std::string_view value(raw);
+    inline SceneKind sceneFromString(std::string_view value) {
         if (value == "ideal_crystal3d") {
             return SceneKind::IdealCrystal3D;
         }
@@ -32,7 +26,16 @@ namespace Benchmarks {
         return SceneKind::Crystal3D;
     }
 
-    inline int atomsForScene(SceneKind scene, int sceneExtent) {
+    inline SceneKind& selectedScene() {
+        static SceneKind scene = SceneKind::Crystal3D;
+        return scene;
+    }
+
+    inline void setSelectedScene(SceneKind scene) { selectedScene() = scene; }
+
+    inline SceneKind currentScene() { return selectedScene(); }
+
+    inline int atomCountFromExtent(SceneKind scene, int sceneExtent) {
         switch (scene) {
         case SceneKind::IdealCrystal3D:
         case SceneKind::Crystal3D:
@@ -49,7 +52,8 @@ namespace Benchmarks {
 class Fixture : public benchmark::Fixture {
 public:
     void SetUp(benchmark::State& state) override {
-        atomCount_ = static_cast<int>(state.range(0));
+        sceneExtent_ = static_cast<int>(state.range(0));
+        atomCount_ = Benchmarks::atomCountFromExtent(Benchmarks::currentScene(), sceneExtent_);
         simulation_ = std::make_unique<Lattice::Simulation>();
         simulation_->createWorld(Vec3f(160, 160, 160));
     }
@@ -69,7 +73,7 @@ protected:
     }
 
     void rebuildScene() {
-        Benchmarks::Scenes::build(*simulation_, Benchmarks::sceneFromEnv(), atomCount_);
+        Benchmarks::Scenes::build(*simulation_, Benchmarks::currentScene(), atomCount_);
     }
 
     void prepareForPredict() {
@@ -94,7 +98,6 @@ protected:
     }
 
     std::unique_ptr<Lattice::Simulation> simulation_;
+    int sceneExtent_ = 0;
     int atomCount_ = 0;
 };
-
-using SimulationFixture = Fixture;

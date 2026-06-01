@@ -1,9 +1,8 @@
 #include <benchmark/benchmark.h>
+#include "Fixture.h"
 
-#include "SimulationFixture.h"
-
-// @bench_meta {"id":"SimulationFixture/NeighborListRebuildOnly","ru":"Перестройка NeighborList","group":"Симуляция/Сетка и соседи"}
-BENCHMARK_DEFINE_F(SimulationFixture, NeighborListRebuildOnly)(benchmark::State& state) {
+// @bench_meta {"id":"Fixture/NeighborListRebuildOnly","label":"NeighborList Rebuild","group":"Simulation/Grid and Neighbors"}
+BENCHMARK_DEFINE_F(Fixture, NeighborListRebuildOnly)(benchmark::State& state) {
     rebuildScene();
 
     auto& atoms = simulation_->atoms();
@@ -19,9 +18,8 @@ BENCHMARK_DEFINE_F(SimulationFixture, NeighborListRebuildOnly)(benchmark::State&
     setCounters(state);
 }
 
-const auto neighborListRebuildScene = Benchmarks::sceneFromEnv();
-BENCHMARK_REGISTER_F(SimulationFixture, NeighborListRebuildOnly)
-    ->Arg(Benchmarks::atomsForScene(neighborListRebuildScene, 5))
-    ->Arg(Benchmarks::atomsForScene(neighborListRebuildScene, 10))
-    ->Arg(Benchmarks::atomsForScene(neighborListRebuildScene, 25))
-    ->Arg(Benchmarks::atomsForScene(neighborListRebuildScene, 47));
+BENCHMARK_REGISTER_F(Fixture, NeighborListRebuildOnly)
+    ->Arg(5)
+    ->Arg(10)
+    ->Arg(25)
+    ->Arg(47);
