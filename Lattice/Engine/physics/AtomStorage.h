@@ -4,6 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <numeric>
 #include <span>
 #include <utility>
@@ -14,43 +15,18 @@
 #include "Engine/physics/AtomData.h"
 
 class AtomStorage {
+public:
+    using AtomId = uint32_t;
+    static constexpr AtomId InvalidAtomId = std::numeric_limits<AtomId>::max();
+
+private:
     enum class Field : size_t { X, Y, Z, Vx, Vy, Vz, Fx, Fy, Fz, Pfx, Pfy, Pfz, Pe, InvMass, Charge, Count };
 
     static constexpr size_t kFieldCount = static_cast<size_t>(Field::Count);
-
-    struct TempSoABuffer {
-        size_t count = 0;
-        std::vector<float> floatData;
-        std::array<float*, kFieldCount> fields{};
-        std::vector<AtomData::Type> atomType;
-        std::vector<uint8_t> valence;
-    };
+    static constexpr size_t InvalidIndex = static_cast<size_t>(-1);
 
     std::array<float**, kFieldCount> fieldPtrs() {
         return {&x_, &y_, &z_, &vx_, &vy_, &vz_, &fx_, &fy_, &fz_, &pfx_, &pfy_, &pfz_, &pe_, &invMass_, &charge_};
-    }
-
-    static std::array<float*, kFieldCount> bindFieldPointers(float* base, size_t stride) {
-        std::array<float*, kFieldCount> ptrs{};
-        if (base == nullptr || stride == 0) {
-            ptrs.fill(nullptr);
-            return ptrs;
-        }
-
-        for (size_t i = 0; i < kFieldCount; ++i) {
-            ptrs[i] = base + i * stride;
-        }
-        return ptrs;
-    }
-
-    static TempSoABuffer makeTempSoABuffer(size_t count) {
-        TempSoABuffer buffer;
-        buffer.count = count;
-        buffer.floatData.resize(kFieldCount * count, 0.f);
-        buffer.fields = bindFieldPointers(buffer.floatData.data(), count);
-        buffer.atomType.resize(count);
-        buffer.valence.resize(count);
-        return buffer;
     }
 
     size_t count_ = 0;
@@ -77,6 +53,9 @@ class AtomStorage {
 
     std::vector<AtomData::Type> atomType_;
     std::vector<uint8_t> valence_;
+    std::vector<AtomId> atomIds_;
+    std::vector<size_t> atomIdToIndex_;
+    AtomId nextAtomId_ = 0;
 
     // Обновляет все raw pointer члены по текущему floatData_ и capacity_.
     void rebind() {
@@ -122,6 +101,7 @@ class AtomStorage {
         count_ = count;
         atomType_.resize(count);
         valence_.resize(count);
+        atomIds_.resize(count);
     }
 
 public:
@@ -131,9 +111,11 @@ public:
 
     AtomStorage(AtomStorage&& other) noexcept
         : count_(other.count_), capacity_(other.capacity_), mobileCount_(other.mobileCount_), floatData_(std::move(other.floatData_)),
-          atomType_(std::move(other.atomType_)), valence_(std::move(other.valence_)) {
+          atomType_(std::move(other.atomType_)), valence_(std::move(other.valence_)), atomIds_(std::move(other.atomIds_)),
+          atomIdToIndex_(std::move(other.atomIdToIndex_)), nextAtomId_(other.nextAtomId_) {
         rebind();
         other.count_ = other.capacity_ = other.mobileCount_ = 0;
+        other.nextAtomId_ = 0;
         other.rebind();
     }
 
@@ -147,8 +129,12 @@ public:
         floatData_ = std::move(other.floatData_);
         atomType_ = std::move(other.atomType_);
         valence_ = std::move(other.valence_);
+        atomIds_ = std::move(other.atomIds_);
+        atomIdToIndex_ = std::move(other.atomIdToIndex_);
+        nextAtomId_ = other.nextAtomId_;
         rebind();
         other.count_ = other.capacity_ = other.mobileCount_ = 0;
+        other.nextAtomId_ = 0;
         other.rebind();
         return *this;
     }
@@ -169,6 +155,8 @@ public:
         std::copy_n(vz.data(), count, vz_);
         std::copy_n(charge.data(), count, charge_);
         std::copy_n(atomType.data(), count, atomType_.data());
+        atomIds_.resize(count);
+        atomIdToIndex_.assign(count, InvalidIndex);
 
         std::fill_n(fx_, count, 0.f);
         std::fill_n(fy_, count, 0.f);
@@ -182,17 +170,25 @@ public:
             const auto& props = AtomData::getProps(atomType_[i]);
             invMass_[i] = 1.f / props.mass;
             valence_[i] = props.maxValence;
+            atomIds_[i] = static_cast<AtomId>(i);
+            atomIdToIndex_[i] = i;
         }
+        nextAtomId_ = static_cast<AtomId>(count);
     }
 
     void clear() {
         count_ = mobileCount_ = capacity_ = 0;
+        nextAtomId_ = 0;
         floatData_.clear();
         floatData_.shrink_to_fit();
         atomType_.clear();
         atomType_.shrink_to_fit();
         valence_.clear();
         valence_.shrink_to_fit();
+        atomIds_.clear();
+        atomIds_.shrink_to_fit();
+        atomIdToIndex_.clear();
+        atomIdToIndex_.shrink_to_fit();
         rebind(); // обнуляем указатели, чтобы не держать висячие
     }
 
@@ -200,6 +196,7 @@ public:
         ensureCapacity(count);
         atomType_.reserve(count);
         valence_.reserve(count);
+        atomIds_.reserve(count);
     }
 
     void addAtom(const Vec3f& coords, const Vec3f& speed, AtomData::Type type, bool fixed = false) {
@@ -229,7 +226,13 @@ public:
 
         atomType_.emplace_back(type);
         valence_.emplace_back(props.maxValence);
+        const AtomId newId = nextAtomId_++;
+        atomIds_.emplace_back(newId);
         ++count_;
+        if (atomIdToIndex_.size() <= newId) {
+            atomIdToIndex_.resize(static_cast<size_t>(newId) + 1, InvalidIndex);
+        }
+        atomIdToIndex_[newId] = count_ - 1;
 
         if (!fixed) {
             // Сохраняем инвариант: мобильные атомы идут первыми
@@ -255,8 +258,10 @@ public:
             }
         }
 
+        atomIdToIndex_[atomIds_.back()] = InvalidIndex;
         atomType_.pop_back();
         valence_.pop_back();
+        atomIds_.pop_back();
         --count_;
     }
 
@@ -282,58 +287,9 @@ public:
         std::swap(charge_[a], charge_[b]);
         std::swap(atomType_[a], atomType_[b]);
         std::swap(valence_[a], valence_[b]);
-    }
-
-    void reorderMobileAtoms(std::span<const uint32_t> newToOld) {
-        const size_t n = mobileCount_;
-        if (n <= 1 || newToOld.size() != n) {
-            return;
-        }
-
-        auto temp = makeTempSoABuffer(n);
-
-        for (size_t newIdx = 0; newIdx < n; ++newIdx) {
-            const size_t oldIdx = newToOld[newIdx];
-            if (oldIdx >= n) {
-                return;
-            }
-
-            temp.fields[static_cast<size_t>(Field::X)][newIdx] = x_[oldIdx];
-            temp.fields[static_cast<size_t>(Field::Y)][newIdx] = y_[oldIdx];
-            temp.fields[static_cast<size_t>(Field::Z)][newIdx] = z_[oldIdx];
-            temp.fields[static_cast<size_t>(Field::Vx)][newIdx] = vx_[oldIdx];
-            temp.fields[static_cast<size_t>(Field::Vy)][newIdx] = vy_[oldIdx];
-            temp.fields[static_cast<size_t>(Field::Vz)][newIdx] = vz_[oldIdx];
-            temp.fields[static_cast<size_t>(Field::Fx)][newIdx] = fx_[oldIdx];
-            temp.fields[static_cast<size_t>(Field::Fy)][newIdx] = fy_[oldIdx];
-            temp.fields[static_cast<size_t>(Field::Fz)][newIdx] = fz_[oldIdx];
-            temp.fields[static_cast<size_t>(Field::Pfx)][newIdx] = pfx_[oldIdx];
-            temp.fields[static_cast<size_t>(Field::Pfy)][newIdx] = pfy_[oldIdx];
-            temp.fields[static_cast<size_t>(Field::Pfz)][newIdx] = pfz_[oldIdx];
-            temp.fields[static_cast<size_t>(Field::Pe)][newIdx] = pe_[oldIdx];
-            temp.fields[static_cast<size_t>(Field::InvMass)][newIdx] = invMass_[oldIdx];
-            temp.fields[static_cast<size_t>(Field::Charge)][newIdx] = charge_[oldIdx];
-            temp.atomType[newIdx] = atomType_[oldIdx];
-            temp.valence[newIdx] = valence_[oldIdx];
-        }
-
-        std::copy_n(temp.fields[static_cast<size_t>(Field::X)], n, x_);
-        std::copy_n(temp.fields[static_cast<size_t>(Field::Y)], n, y_);
-        std::copy_n(temp.fields[static_cast<size_t>(Field::Z)], n, z_);
-        std::copy_n(temp.fields[static_cast<size_t>(Field::Vx)], n, vx_);
-        std::copy_n(temp.fields[static_cast<size_t>(Field::Vy)], n, vy_);
-        std::copy_n(temp.fields[static_cast<size_t>(Field::Vz)], n, vz_);
-        std::copy_n(temp.fields[static_cast<size_t>(Field::Fx)], n, fx_);
-        std::copy_n(temp.fields[static_cast<size_t>(Field::Fy)], n, fy_);
-        std::copy_n(temp.fields[static_cast<size_t>(Field::Fz)], n, fz_);
-        std::copy_n(temp.fields[static_cast<size_t>(Field::Pfx)], n, pfx_);
-        std::copy_n(temp.fields[static_cast<size_t>(Field::Pfy)], n, pfy_);
-        std::copy_n(temp.fields[static_cast<size_t>(Field::Pfz)], n, pfz_);
-        std::copy_n(temp.fields[static_cast<size_t>(Field::Pe)], n, pe_);
-        std::copy_n(temp.fields[static_cast<size_t>(Field::InvMass)], n, invMass_);
-        std::copy_n(temp.fields[static_cast<size_t>(Field::Charge)], n, charge_);
-        std::copy_n(temp.atomType.data(), n, atomType_.data());
-        std::copy_n(temp.valence.data(), n, valence_.data());
+        std::swap(atomIds_[a], atomIds_[b]);
+        atomIdToIndex_[atomIds_[a]] = a;
+        atomIdToIndex_[atomIds_[b]] = b;
     }
 
     void swapPrevCurrentForces() {
@@ -459,6 +415,11 @@ public:
 
     std::span<const AtomData::Type> atomTypeDataSpan() const { return {atomType_.data(), atomType_.size()}; }
     std::span<const uint8_t> valenceDataSpan() const { return {valence_.data(), valence_.size()}; }
+    std::span<const AtomId> atomIdDataSpan() const { return {atomIds_.data(), atomIds_.size()}; }
+
+    [[nodiscard]] AtomId atomId(size_t index) const noexcept { return index < atomIds_.size() ? atomIds_[index] : InvalidAtomId; }
+    [[nodiscard]] size_t indexOf(AtomId id) const noexcept { return id < atomIdToIndex_.size() ? atomIdToIndex_[id] : InvalidIndex; }
+    [[nodiscard]] bool containsAtomId(AtomId id) const noexcept { return indexOf(id) != InvalidIndex; }
 
     void setFixed(size_t i, bool fixed) {
         if (fixed) {
@@ -476,6 +437,46 @@ public:
             ++mobileCount_;
         }
     }
+
+    struct AtomView {
+        Vec3f pos;
+        Vec3f vel;
+        Vec3f force;
+        Vec3f prevForce;
+        float energy;
+        float invMass;
+        float charge;
+        AtomData::Type type;
+        uint8_t valenceCount;
+        AtomId id = InvalidAtomId;
+
+        void updateFromStorage(AtomStorage& storage, size_t index) {
+            pos = storage.pos(index);
+            vel = storage.vel(index);
+            force = storage.force(index);
+            prevForce = storage.prevForce(index);
+            energy = storage.energy(index);
+            invMass = storage.invMass(index);
+            charge = storage.charge(index);
+            type = storage.type(index);
+            valenceCount = storage.valenceCount(index);
+            id = storage.atomId(index);
+        }
+
+        void applyToStorage(AtomStorage& storage, size_t index) const {
+            storage.setPos(index, pos);
+            storage.setVel(index, vel);
+            storage.setForce(index, force);
+            storage.setPrevForce(index, prevForce);
+            storage.energy(index) = energy;
+            storage.invMass(index) = invMass;
+            storage.charge(index) = charge;
+            storage.type(index) = type;
+            storage.valenceCount(index) = valenceCount;
+            storage.atomIds_[index] = id;
+            storage.atomIdToIndex_[id] = index;
+        }
+    };
 
     std::vector<uint32_t> sortByCell(const SpatialGrid& grid) {
         /* Сортировка атомов по ячейкам пространственной сетки */
@@ -501,11 +502,38 @@ public:
             return keys[a] < keys[b];
         });
 
-        // Переставляем атомы в соответствии с отсортированными индексами
-        reorderMobileAtoms(indices);
         for (size_t newIdx = 0; newIdx < mobileCount_; ++newIdx) {
             oldToNew[indices[newIdx]] = static_cast<uint32_t>(newIdx);
         }
+
+        // Переставляем атомы in-place по циклам permutation.
+        std::vector<uint8_t> visited(mobileCount_, 0);
+        AtomView cycleStart;
+        AtomView moved;
+
+        for (size_t start = 0; start < mobileCount_; ++start) {
+            if (visited[start] != 0 || indices[start] == start) {
+                visited[start] = 1;
+                continue;
+            }
+
+            cycleStart.updateFromStorage(*this, start);
+            size_t current = start;
+
+            while (true) {
+                visited[current] = 1;
+                const size_t source = indices[current];
+                if (source == start) {
+                    cycleStart.applyToStorage(*this, current);
+                    break;
+                }
+
+                moved.updateFromStorage(*this, source);
+                moved.applyToStorage(*this, current);
+                current = source;
+            }
+        }
+
         return oldToNew;
     }
 };

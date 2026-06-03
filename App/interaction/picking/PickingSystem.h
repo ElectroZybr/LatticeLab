@@ -13,6 +13,7 @@ class World;
 
 struct AtomHit {
     size_t index;
+    AtomStorage::AtomId id = AtomStorage::InvalidAtomId;
     float distance;
 };
 
@@ -29,9 +30,7 @@ public:
     void processRect(Vec2i start, Vec2i end, bool cumulative = false);
     void processLasso(std::span<Vec2i> points, bool cumulative = false);
 
-    void handleAtomRemoval(size_t removedIndex);
-
-    const std::unordered_set<size_t>& getSelectedIndices() const { return selectedIndices; }
+    const std::unordered_set<AtomStorage::AtomId>& getSelectedAtomIds() const;
     const OverlayState& getOverlay() const { return overlay; }
     OverlayState& getOverlay() { return overlay; }
 
@@ -40,13 +39,14 @@ private:
     World* box;
     std::unique_ptr<BaseRenderer>* renderer;
     OverlayState overlay;
-    std::unordered_set<size_t> selectedIndices;
+    mutable std::unordered_set<AtomStorage::AtomId> selectedAtomIds;
 
     // 2D пикинг одного атома — расстояние в экранных координатах
     bool pickAtom2D(Vec2i screenPos, float tolerance, AtomHit& hit) const;
     // 3D пикинг одного атома — ray cast
     bool pickAtom3D(Vec2i screenPos, AtomHit& hit) const;
     Vec3f displayAtomPos(size_t atomIndex) const;
+    void pruneInvalidSelection() const;
 
     // Проверка точки внутри фигуры
     template <typename T> static bool pointInPolygon(Vec2<T> point, std::span<Vec2<T>> polygon);

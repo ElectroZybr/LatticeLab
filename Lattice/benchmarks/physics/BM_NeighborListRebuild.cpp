@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
 #include "Fixture.h"
 
-// @bench_meta {"id":"Fixture/NeighborListRebuildOnly","label":"NeighborList Rebuild","group":"Simulation/Grid and Neighbors"}
+// @bench_meta {"id":"Fixture/NeighborListRebuild","label":"NL Rebuild","group":"Simulation/Grid and Neighbors"}
 BENCHMARK_DEFINE_F(Fixture, NeighborListRebuildOnly)(benchmark::State& state) {
     rebuildScene();
     warmupScene();

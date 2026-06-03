@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
 #include "Fixture.h"
 
-// @bench_meta {"id":"Fixture/FullStepWithNeighborList","label":"Full Step with NeighborList","group":"Simulation/Simulation Step"}
+// @bench_meta {"id":"Fixture/FullStep","label":"Full Step","group":"Simulation/Simulation Step"}
 BENCHMARK_DEFINE_F(Fixture, FullStepWithNeighborList)(benchmark::State& state) {
     rebuildScene();
     warmupScene();

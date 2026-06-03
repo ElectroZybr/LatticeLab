@@ -2,6 +2,7 @@
 
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "Engine/NeighborSearch/NeighborList.h"
 #include "Engine/NeighborSearch/SpatialGrid.h"

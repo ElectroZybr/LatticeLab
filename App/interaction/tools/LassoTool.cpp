@@ -33,7 +33,7 @@ void LassoTool::onLeftReleased(Vec2i mousePos) {
         }
         ctx.pickingSystem->processLasso(overlay.lassoPoints, cumulative);
         if (ctx.uiState != nullptr) {
-            ctx.uiState->selectedAtomCount = static_cast<int>(ctx.pickingSystem->getSelectedIndices().size());
+            ctx.uiState->selectedAtomCount = static_cast<int>(ctx.pickingSystem->getSelectedAtomIds().size());
         }
     }
     overlay.reset();

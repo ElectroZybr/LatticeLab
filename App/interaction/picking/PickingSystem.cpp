@@ -15,7 +15,12 @@ void PickingSystem::setWorld(AtomStorage& newAtomStorage, World& newBox) {
 
 void PickingSystem::clearSelection() {
     overlay.reset();
-    selectedIndices.clear();
+    selectedAtomIds.clear();
+}
+
+const std::unordered_set<AtomStorage::AtomId>& PickingSystem::getSelectedAtomIds() const {
+    pruneInvalidSelection();
+    return selectedAtomIds;
 }
 
 void PickingSystem::processClick(Vec2i screenPos, bool cumulative) {
@@ -24,12 +29,12 @@ void PickingSystem::processClick(Vec2i screenPos, bool cumulative) {
 
     if (found) {
         // Если атом уже был выбран и зажат Ctrl — инвертируем (снимаем выделение)
-        if (cumulative && selectedIndices.contains(hit.index)) {
-            selectedIndices.erase(hit.index);
+        if (cumulative && selectedAtomIds.contains(hit.id)) {
+            selectedAtomIds.erase(hit.id);
         }
         else {
             // Иначе — добавляем в набор
-            selectedIndices.insert(hit.index);
+            selectedAtomIds.insert(hit.id);
         }
     }
     else {
@@ -50,7 +55,7 @@ void PickingSystem::processRect(Vec2i start, Vec2i end, bool cumulative) {
         const Vec3f worldPos = displayAtomPos(i);
         const Vec2i atomScreen = rend->camera.worldToScreen(worldPos);
         if (pointInRect(atomScreen, start, end)) {
-            selectedIndices.insert(i);
+            selectedAtomIds.insert(atomStorage->atomId(i));
         }
     }
 }
@@ -68,19 +73,7 @@ void PickingSystem::processLasso(std::span<Vec2i> points, bool cumulative) {
         const Vec3f worldPos = displayAtomPos(i);
         const Vec2i screenPos = rend->camera.worldToScreen(worldPos);
         if (pointInPolygon(screenPos, points)) {
-            selectedIndices.insert(i);
-        }
-    }
-}
-
-void PickingSystem::handleAtomRemoval(size_t index) {
-    selectedIndices.erase(index);
-
-    size_t movedFrom = atomStorage->size();
-
-    if (index < movedFrom) {
-        if (selectedIndices.erase(movedFrom) > 0) {
-            selectedIndices.insert(index);
+            selectedAtomIds.insert(atomStorage->atomId(i));
         }
     }
 }
@@ -121,7 +114,7 @@ bool PickingSystem::pickAtom2D(Vec2i screenPos, float tolerance, AtomHit& hit) c
         return false;
     }
 
-    hit = {bestIndex, std::sqrt(bestDistSqr)};
+    hit = {bestIndex, atomStorage->atomId(bestIndex), std::sqrt(bestDistSqr)};
     return true;
 }
 
@@ -149,12 +142,27 @@ bool PickingSystem::pickAtom3D(Vec2i screenPos, AtomHit& hit) const {
         return false;
     }
 
-    hit = {bestIndex, bestT};
+    hit = {bestIndex, atomStorage->atomId(bestIndex), bestT};
     return true;
 }
 
 Vec3f PickingSystem::displayAtomPos(size_t atomIndex) const {
     return atomStorage->pos(atomIndex) + box->getRenderOffset();
+}
+
+void PickingSystem::pruneInvalidSelection() const {
+    if (atomStorage == nullptr || selectedAtomIds.empty()) {
+        return;
+    }
+
+    for (auto it = selectedAtomIds.begin(); it != selectedAtomIds.end();) {
+        if (!atomStorage->containsAtomId(*it)) {
+            it = selectedAtomIds.erase(it);
+        }
+        else {
+            ++it;
+        }
+    }
 }
 
 // Ray casting алгоритм для point-in-polygon

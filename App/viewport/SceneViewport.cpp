@@ -28,7 +28,7 @@ void SceneViewport::renderFrame(const Lattice::Simulation& simulation, Interface
     appInterface.update();
 
     if (ToolsManager::pickingSystem != nullptr) {
-        App::Viewport::syncRendererWithSimulation(*renderer_, simulation, &ToolsManager::pickingSystem->getSelectedIndices());
+        App::Viewport::syncRendererWithSimulation(*renderer_, simulation, &ToolsManager::pickingSystem->getSelectedAtomIds());
     }
     else {
         App::Viewport::syncRendererWithSimulation(*renderer_, simulation);

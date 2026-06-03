@@ -20,4 +20,6 @@ BENCHMARK_DEFINE_F(Fixture, SpatialGridRebuild)(benchmark::State& state) {
 
 BENCHMARK_REGISTER_F(Fixture, SpatialGridRebuild)
     ->Arg(5)
-    ->Arg(10);
+    ->Arg(10)
+    ->Arg(25)
+    ->Arg(47);

@@ -83,18 +83,19 @@ int Application::run() {
     appInterface.state().pause = true;
 
     // создание сцены
-    Generators::triangularBipyramidCrystal(simulation, 8, AtomData::Type::H);
+    // Generators::triangularBipyramidCrystal(simulation, 8, AtomData::Type::H);
     // Generators::AngularVelocity(simulation, Vec3f(0.0f, 0.25f, 0.0f));
-    renderer.syncScene(simulation);
-
+    Generators::hexLattice(simulation, {20, 20, 20}, AtomData::Type::Z);
+    
     // std::vector<Scenes::AtomTypeSpec> gasSpecs = {
-    //     // {AtomData::Type::O, 0, 80.0f},    // 80% водорода
-    //     {AtomData::Type::Na, 0, 50.0f},   // 10% натрия
-    //     {AtomData::Type::Cl, 0, 50.0f}    // 10% хлора
-    // };
+        //     // {AtomData::Type::O, 0, 80.0f},    // 80% водорода
+        //     {AtomData::Type::Na, 0, 50.0f},   // 10% натрия
+        //     {AtomData::Type::Cl, 0, 50.0f}    // 10% хлора
+        // };
     // Scenes::randomGasMixed(Lattice::simulation, 500, gasSpecs, false, 6.0, 6.0, 1.0f, 5.0f, 0);
     // Lattice::simulation.createAtom(Vec3f(24, 25, 3), Vec3f(1, 0, 0), AtomData::Type::Na);
     // Lattice::simulation.createAtom(Vec3f(28, 25, 3), Vec3f(-1, 0, 0), AtomData::Type::Na);
+    renderer.syncScene(simulation);
 
     auto startTime = Clock::now();
     double renderAccum = 0.0;

@@ -19,19 +19,19 @@ void CursorTool::onLeftPressed(Vec2i mousePos) {
 
     AtomHit hit;
     if (ctx.pickingSystem->pickAtom(mousePos, 20.0f, hit)) {
-        selectedMoveAtomIndex_ = hit.index;
+        selectedMoveAtomId_ = hit.id;
         atomMoveActive_ = true;
     }
 
     if (ctx.uiState != nullptr) {
-        ctx.uiState->selectedAtomCount = static_cast<int>(ctx.pickingSystem->getSelectedIndices().size());
+        ctx.uiState->selectedAtomCount = static_cast<int>(ctx.pickingSystem->getSelectedAtomIds().size());
     }
 }
 
 void CursorTool::onLeftReleased(Vec2i mousePos) {
     (void)mousePos;
     atomMoveActive_ = false;
-    selectedMoveAtomIndex_ = InvalidIndex;
+    selectedMoveAtomId_ = InvalidAtomId;
 }
 
 void CursorTool::onFrame(Vec2i mousePos, float deltaTime) {
@@ -43,15 +43,16 @@ void CursorTool::onFrame(Vec2i mousePos, float deltaTime) {
         return;
     }
     AtomStorage& atoms = ctx.simulation->atoms();
-    if (selectedMoveAtomIndex_ == InvalidIndex || selectedMoveAtomIndex_ >= atoms.size()) {
+    const size_t selectedMoveAtomIndex = atoms.indexOf(selectedMoveAtomId_);
+    if (selectedMoveAtomId_ == InvalidAtomId || selectedMoveAtomIndex >= atoms.size()) {
         atomMoveActive_ = false;
-        selectedMoveAtomIndex_ = InvalidIndex;
+        selectedMoveAtomId_ = InvalidAtomId;
         return;
     }
 
     const Vec3f worldMouse = screenToLocalWorld(mousePos);
-    const auto& selectedIndices = ctx.pickingSystem->getSelectedIndices();
-    const Vec3f selectedWorldPos = atoms.pos(selectedMoveAtomIndex_);
+    const auto& selectedAtomIds = ctx.pickingSystem->getSelectedAtomIds();
+    const Vec3f selectedWorldPos = atoms.pos(selectedMoveAtomIndex);
     const Vec3f displacement = worldMouse - selectedWorldPos;
 
     constexpr float kReferenceFrameRate = 60.0f;
@@ -65,8 +66,9 @@ void CursorTool::onFrame(Vec2i mousePos, float deltaTime) {
         atoms.forceZ(idx) += dragForce.z;
     };
 
-    if (selectedIndices.contains(selectedMoveAtomIndex_)) {
-        for (size_t idx : selectedIndices) {
+    if (selectedAtomIds.contains(selectedMoveAtomId_)) {
+        for (const AtomStorage::AtomId atomId : selectedAtomIds) {
+            const size_t idx = atoms.indexOf(atomId);
             if (idx < atoms.size()) {
                 applyRawForce(idx, displacement);
             }
@@ -74,10 +76,10 @@ void CursorTool::onFrame(Vec2i mousePos, float deltaTime) {
         return;
     }
 
-    applyRawForce(selectedMoveAtomIndex_, displacement);
+    applyRawForce(selectedMoveAtomIndex, displacement);
 }
 
 void CursorTool::reset() {
     atomMoveActive_ = false;
-    selectedMoveAtomIndex_ = InvalidIndex;
+    selectedMoveAtomId_ = InvalidAtomId;
 }

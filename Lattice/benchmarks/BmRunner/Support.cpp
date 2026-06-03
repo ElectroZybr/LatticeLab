@@ -67,6 +67,30 @@ namespace Benchmarks::BmRunner {
         return std::string(key);
     }
 
+    std::string degradationLabel(std::string_view key) {
+        if (key == "time") {
+            return "Time";
+        }
+        return "Size";
+    }
+
+    int temporalAgeStepsFromArg(int arg) {
+        switch (arg) {
+        case 5:
+            return 0;
+        case 10:
+            return 100;
+        case 22:
+            return 500;
+        case 25:
+            return 1000;
+        case 47:
+            return 5000;
+        default:
+            return std::max(0, arg);
+        }
+    }
+
     fs::path benchmarksRootFromExecutable(const char* argv0) {
         std::vector<fs::path> bases;
         bases.push_back(fs::current_path());
@@ -187,6 +211,10 @@ namespace Benchmarks::BmRunner {
                 config.minTime = requireValue(arg);
             } else if (arg == "--scene") {
                 config.scene = requireValue(arg);
+            } else if (arg == "--degradation") {
+                config.degradation = requireValue(arg);
+            } else if (arg.rfind("--degradation=", 0) == 0) {
+                config.degradation = arg.substr(14);
             } else if (arg == "--warmup-steps") {
                 config.warmupSteps = std::max(0, std::stoi(requireValue(arg)));
             } else if (arg.rfind("--warmup-steps=", 0) == 0) {
@@ -194,7 +222,7 @@ namespace Benchmarks::BmRunner {
             } else if (arg == "--help" || arg == "-h") {
                 std::cout
                     << "Usage:\n"
-                    << "  bench [--filter REGEX] [--save] [--repetitions N] [--min-time TIME] [--scene SCENE] [--warmup-steps N]\n"
+                    << "  bench [--filter REGEX] [--save] [--repetitions N] [--min-time TIME] [--scene SCENE] [--degradation size|time] [--warmup-steps N]\n"
                     << "  bench --list\n";
                 std::exit(0);
             } else {

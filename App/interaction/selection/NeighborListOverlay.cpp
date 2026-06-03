@@ -31,12 +31,12 @@ void NeighborListOverlay::draw(const Lattice::Simulation& simulation, const Pick
     const World& world = simulation.world();
     const NeighborList& neighborList = simulation.neighborList();
 
-    const auto& selectedIndices = pickingSystem.getSelectedIndices();
-    if (selectedIndices.size() != 1) {
+    const auto& selectedAtomIds = pickingSystem.getSelectedAtomIds();
+    if (selectedAtomIds.size() != 1) {
         return;
     }
 
-    const size_t selectedIndex = *selectedIndices.begin();
+    const size_t selectedIndex = atoms.indexOf(*selectedAtomIds.begin());
     if (selectedIndex >= atoms.size()) {
         return;
     }

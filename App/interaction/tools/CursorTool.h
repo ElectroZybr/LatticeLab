@@ -1,6 +1,7 @@
 #pragma once
 
 #include "App/interaction/tools/ITool.h"
+#include "Lattice/Engine/physics/AtomStorage.h"
 
 class CursorTool final : public ITool {
 public:
@@ -12,8 +13,8 @@ public:
     void reset() override;
 
 private:
-    static constexpr size_t InvalidIndex = static_cast<size_t>(-1);
+    static constexpr AtomStorage::AtomId InvalidAtomId = AtomStorage::InvalidAtomId;
 
-    size_t selectedMoveAtomIndex_ = InvalidIndex;
+    AtomStorage::AtomId selectedMoveAtomId_ = InvalidAtomId;
     bool atomMoveActive_ = false;
 };

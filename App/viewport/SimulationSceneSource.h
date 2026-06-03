@@ -59,20 +59,23 @@ namespace App::Viewport {
         };
     }
 
-    inline void copySelection(RenderData& renderData, const std::unordered_set<size_t>* selectedIndices) {
+    inline void copySelection(RenderData& renderData, const AtomStorage& atoms, const std::unordered_set<AtomStorage::AtomId>* selectedAtomIds) {
         renderData.selectedAtomIndices.clear();
-        if (selectedIndices == nullptr) {
+        if (selectedAtomIds == nullptr) {
             return;
         }
 
-        renderData.selectedAtomIndices.reserve(selectedIndices->size());
-        for (const size_t index : *selectedIndices) {
-            renderData.selectedAtomIndices.push_back(index);
+        renderData.selectedAtomIndices.reserve(selectedAtomIds->size());
+        for (const AtomStorage::AtomId atomId : *selectedAtomIds) {
+            const size_t index = atoms.indexOf(atomId);
+            if (index < atoms.size()) {
+                renderData.selectedAtomIndices.push_back(index);
+            }
         }
     }
 
     inline void syncRendererWithSimulation(BaseRenderer& renderer, const Lattice::Simulation& simulation,
-                                           const std::unordered_set<size_t>* selectedIndices = nullptr) {
+                                           const std::unordered_set<AtomStorage::AtomId>* selectedAtomIds = nullptr) {
         renderer.resizeRenderData(simulation.worldCount());
 
         for (Lattice::Simulation::WorldId worldId = 0; worldId < simulation.worldCount(); ++worldId) {
@@ -103,8 +106,8 @@ namespace App::Viewport {
 
         const World& activeWorld = simulation.worldAt(simulation.activeWorldId());
         renderer.camera.setSceneBounds(Vec3f(makeRenderBoxSize(activeWorld)), activeWorld.getRenderOffset());
-        if (selectedIndices != nullptr) {
-            copySelection(renderer.getRenderData(simulation.activeWorldId()), selectedIndices);
+        if (selectedAtomIds != nullptr) {
+            copySelection(renderer.getRenderData(simulation.activeWorldId()), activeWorld.getAtomStorage(), selectedAtomIds);
         }
     }
 }

@@ -30,7 +30,7 @@ void FrameTool::onLeftReleased(Vec2i mousePos) {
     if (overlay.boxVisible) {
         ctx.pickingSystem->processRect(overlay.boxStart, mousePos, cumulative);
         if (ctx.uiState != nullptr) {
-            ctx.uiState->selectedAtomCount = static_cast<int>(ctx.pickingSystem->getSelectedIndices().size());
+            ctx.uiState->selectedAtomCount = static_cast<int>(ctx.pickingSystem->getSelectedAtomIds().size());
         }
     }
     overlay.reset();
