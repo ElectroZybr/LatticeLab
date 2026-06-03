@@ -12,6 +12,7 @@ namespace Benchmarks::BmRunner {
         int repetitions = 3;
         std::string minTime;
         std::string scene = "crystal3d";
+        int warmupSteps = 128;
     };
 
     struct BenchmarkItem {

@@ -749,6 +749,7 @@ namespace Benchmarks::BmRunner {
         const fs::path outputPath = resultsPath / "_tmp_last_run.json";
 
         std::cout << '\n' << paint("Selected scene: " + sceneLabel(config.scene), kColorIndexLightBlue) << '\n';
+        std::cout << paint("Warmup steps: " + std::to_string(config.warmupSteps), kColorIndexLightBlue) << '\n';
         std::cout << paint("Benchmark binary: " + binary.string(), kColorHint) << "\n\n";
         std::cout.flush();
 
@@ -780,6 +781,7 @@ namespace Benchmarks::BmRunner {
             std::string command;
             command += quoteShell(binary.string());
             command += " --scene=" + quoteShell(config.scene);
+            command += " --warmup-steps=" + std::to_string(config.warmupSteps);
             command += " --benchmark_format=console";
             command += " --benchmark_out=" + quoteShell(caseJsonPath.string());
             command += " --benchmark_out_format=json";

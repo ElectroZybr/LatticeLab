@@ -48,9 +48,13 @@ void NeighborList::clear() {
     resetStats();
 }
 
-void NeighborList::rebuildPipeline(const AtomStorage& atoms, World& world, int simStep) {
+void NeighborList::rebuildPipeline(AtomStorage& atoms, World& world, int simStep) {
     // перестройка пространственной сетки
     world.getGrid().rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
+    // сортировка атомов по ячейкам сетки
+    // const std::vector<uint32_t> oldToNew = atoms.sortByCell(world.getGrid());
+    // world.remapAtomIndices(oldToNew);
+    // world.getGrid().rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
     // перестройка списка соседей
     build(atoms, world);
     // обновление метрик

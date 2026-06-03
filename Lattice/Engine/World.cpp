@@ -36,6 +36,21 @@ void World::addAtom(const Vec3f& start_coords, const Vec3f& start_speed, AtomDat
 
 void World::addBond(size_t aIndex, size_t bIndex) { Bond::CreateBond(bonds_, aIndex, bIndex, atomStorage_); }
 
+void World::remapAtomIndices(std::span<const uint32_t> oldToNew) {
+    if (oldToNew.empty()) {
+        return;
+    }
+
+    for (Bond& bond : bonds_) {
+        if (bond.aIndex < oldToNew.size()) {
+            bond.aIndex = oldToNew[bond.aIndex];
+        }
+        if (bond.bIndex < oldToNew.size()) {
+            bond.bIndex = oldToNew[bond.bIndex];
+        }
+    }
+}
+
 void World::removeAtom(size_t atomIndex) {
     if (atomIndex >= atomStorage_.size()) {
         return;

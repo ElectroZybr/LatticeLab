@@ -22,6 +22,11 @@ namespace Benchmarks::BmRunner {
             SceneOption{"crystal2d", "Crystal 2D"},
             SceneOption{"random_gas2d", "Random Gas 2D"},
         };
+
+        bool isBenchmarksDir(const fs::path& dir) {
+            return fs::exists(dir / "CMakeLists.txt") && fs::exists(dir / "bench_main.cpp") && fs::exists(dir / "BmRunner")
+                && fs::exists(dir / "BenchmarkScenes.cpp");
+        }
     }
 
     [[noreturn]] void die(const std::string& message) {
@@ -74,19 +79,19 @@ namespace Benchmarks::BmRunner {
 
         for (const fs::path& base : bases) {
             const fs::path direct = base / "Lattice/benchmarks";
-            if (fs::exists(direct / "bench.py")) {
+            if (isBenchmarksDir(direct)) {
                 return direct;
             }
-            if (fs::exists(base / "bench.py")) {
+            if (isBenchmarksDir(base)) {
                 return base;
             }
 
             for (fs::path current = base; !current.empty(); current = current.parent_path()) {
                 const fs::path nested = current / "Lattice/benchmarks";
-                if (fs::exists(nested / "bench.py")) {
+                if (isBenchmarksDir(nested)) {
                     return nested;
                 }
-                if (fs::exists(current / "bench.py")) {
+                if (isBenchmarksDir(current)) {
                     return current;
                 }
                 if (current == current.root_path()) {
@@ -182,10 +187,14 @@ namespace Benchmarks::BmRunner {
                 config.minTime = requireValue(arg);
             } else if (arg == "--scene") {
                 config.scene = requireValue(arg);
+            } else if (arg == "--warmup-steps") {
+                config.warmupSteps = std::max(0, std::stoi(requireValue(arg)));
+            } else if (arg.rfind("--warmup-steps=", 0) == 0) {
+                config.warmupSteps = std::max(0, std::stoi(arg.substr(15)));
             } else if (arg == "--help" || arg == "-h") {
                 std::cout
                     << "Usage:\n"
-                    << "  bench [--filter REGEX] [--save] [--repetitions N] [--min-time TIME] [--scene SCENE]\n"
+                    << "  bench [--filter REGEX] [--save] [--repetitions N] [--min-time TIME] [--scene SCENE] [--warmup-steps N]\n"
                     << "  bench --list\n";
                 std::exit(0);
             } else {

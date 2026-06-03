@@ -4,6 +4,7 @@
 // @bench_meta {"id":"Fixture/SpatialGridRebuild","label":"SpatialGrid Rebuild","group":"Simulation/Grid and Neighbors"}
 BENCHMARK_DEFINE_F(Fixture, SpatialGridRebuild)(benchmark::State& state) {
     rebuildScene();
+    warmupScene();
 
     auto& atoms = simulation_->atoms();
     auto& grid = simulation_->world().getGrid();

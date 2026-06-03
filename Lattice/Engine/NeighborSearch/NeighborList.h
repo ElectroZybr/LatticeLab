@@ -17,7 +17,7 @@ public:
 
     void clear();
     void build(const AtomStorage& atoms, World& world);
-    void rebuildPipeline(const AtomStorage& atoms, World& world, int simStep);
+    void rebuildPipeline(AtomStorage& atoms, World& world, int simStep);
     bool needsRebuild(const AtomStorage& atoms) const;
 
     [[nodiscard]] uint32_t atomCount() const;

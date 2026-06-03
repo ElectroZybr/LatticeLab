@@ -4,6 +4,7 @@
 // @bench_meta {"id":"Fixture/ComputeForces","label":"Force Computation","group":"Simulation/Forces"}
 BENCHMARK_DEFINE_F(Fixture, ComputeForces)(benchmark::State& state) {
     rebuildScene();
+    warmupScene();
     prepareNeighborList();
     StepData stepData = makeStepData();
 
@@ -25,6 +26,7 @@ BENCHMARK_REGISTER_F(Fixture, ComputeForces)
 // @bench_meta {"id":"Fixture/ComputePairInteractions","label":"PairInteraction Computation","group":"Simulation/Forces"}
 BENCHMARK_DEFINE_F(Fixture, ComputePairInteractions)(benchmark::State& state) {
     rebuildScene();
+    warmupScene();
     prepareNeighborList();
 
     for (auto _ : state) {

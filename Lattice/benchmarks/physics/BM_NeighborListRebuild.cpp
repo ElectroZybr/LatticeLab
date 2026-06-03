@@ -4,6 +4,7 @@
 // @bench_meta {"id":"Fixture/NeighborListRebuildOnly","label":"NeighborList Rebuild","group":"Simulation/Grid and Neighbors"}
 BENCHMARK_DEFINE_F(Fixture, NeighborListRebuildOnly)(benchmark::State& state) {
     rebuildScene();
+    warmupScene();
 
     auto& atoms = simulation_->atoms();
     auto& grid = simulation_->world().getGrid();

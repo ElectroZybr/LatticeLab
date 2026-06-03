@@ -83,8 +83,8 @@ int Application::run() {
     appInterface.state().pause = true;
 
     // создание сцены
-    Generators::triangularBipyramidCrystal(simulation, 8, AtomData::Type::Z);
-    Generators::AngularVelocity(simulation, Vec3f(0.0f, 0.25f, 0.0f));
+    Generators::triangularBipyramidCrystal(simulation, 8, AtomData::Type::H);
+    // Generators::AngularVelocity(simulation, Vec3f(0.0f, 0.25f, 0.0f));
     renderer.syncScene(simulation);
 
     // std::vector<Scenes::AtomTypeSpec> gasSpecs = {

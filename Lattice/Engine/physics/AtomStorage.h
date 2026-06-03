@@ -4,10 +4,12 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <numeric>
 #include <span>
 #include <utility>
 #include <vector>
 
+#include "Engine/NeighborSearch/SpatialGrid.h"
 #include "Engine/math/Vec3.h"
 #include "Engine/physics/AtomData.h"
 
@@ -16,8 +18,39 @@ class AtomStorage {
 
     static constexpr size_t kFieldCount = static_cast<size_t>(Field::Count);
 
+    struct TempSoABuffer {
+        size_t count = 0;
+        std::vector<float> floatData;
+        std::array<float*, kFieldCount> fields{};
+        std::vector<AtomData::Type> atomType;
+        std::vector<uint8_t> valence;
+    };
+
     std::array<float**, kFieldCount> fieldPtrs() {
         return {&x_, &y_, &z_, &vx_, &vy_, &vz_, &fx_, &fy_, &fz_, &pfx_, &pfy_, &pfz_, &pe_, &invMass_, &charge_};
+    }
+
+    static std::array<float*, kFieldCount> bindFieldPointers(float* base, size_t stride) {
+        std::array<float*, kFieldCount> ptrs{};
+        if (base == nullptr || stride == 0) {
+            ptrs.fill(nullptr);
+            return ptrs;
+        }
+
+        for (size_t i = 0; i < kFieldCount; ++i) {
+            ptrs[i] = base + i * stride;
+        }
+        return ptrs;
+    }
+
+    static TempSoABuffer makeTempSoABuffer(size_t count) {
+        TempSoABuffer buffer;
+        buffer.count = count;
+        buffer.floatData.resize(kFieldCount * count, 0.f);
+        buffer.fields = bindFieldPointers(buffer.floatData.data(), count);
+        buffer.atomType.resize(count);
+        buffer.valence.resize(count);
+        return buffer;
     }
 
     size_t count_ = 0;
@@ -251,6 +284,58 @@ public:
         std::swap(valence_[a], valence_[b]);
     }
 
+    void reorderMobileAtoms(std::span<const uint32_t> newToOld) {
+        const size_t n = mobileCount_;
+        if (n <= 1 || newToOld.size() != n) {
+            return;
+        }
+
+        auto temp = makeTempSoABuffer(n);
+
+        for (size_t newIdx = 0; newIdx < n; ++newIdx) {
+            const size_t oldIdx = newToOld[newIdx];
+            if (oldIdx >= n) {
+                return;
+            }
+
+            temp.fields[static_cast<size_t>(Field::X)][newIdx] = x_[oldIdx];
+            temp.fields[static_cast<size_t>(Field::Y)][newIdx] = y_[oldIdx];
+            temp.fields[static_cast<size_t>(Field::Z)][newIdx] = z_[oldIdx];
+            temp.fields[static_cast<size_t>(Field::Vx)][newIdx] = vx_[oldIdx];
+            temp.fields[static_cast<size_t>(Field::Vy)][newIdx] = vy_[oldIdx];
+            temp.fields[static_cast<size_t>(Field::Vz)][newIdx] = vz_[oldIdx];
+            temp.fields[static_cast<size_t>(Field::Fx)][newIdx] = fx_[oldIdx];
+            temp.fields[static_cast<size_t>(Field::Fy)][newIdx] = fy_[oldIdx];
+            temp.fields[static_cast<size_t>(Field::Fz)][newIdx] = fz_[oldIdx];
+            temp.fields[static_cast<size_t>(Field::Pfx)][newIdx] = pfx_[oldIdx];
+            temp.fields[static_cast<size_t>(Field::Pfy)][newIdx] = pfy_[oldIdx];
+            temp.fields[static_cast<size_t>(Field::Pfz)][newIdx] = pfz_[oldIdx];
+            temp.fields[static_cast<size_t>(Field::Pe)][newIdx] = pe_[oldIdx];
+            temp.fields[static_cast<size_t>(Field::InvMass)][newIdx] = invMass_[oldIdx];
+            temp.fields[static_cast<size_t>(Field::Charge)][newIdx] = charge_[oldIdx];
+            temp.atomType[newIdx] = atomType_[oldIdx];
+            temp.valence[newIdx] = valence_[oldIdx];
+        }
+
+        std::copy_n(temp.fields[static_cast<size_t>(Field::X)], n, x_);
+        std::copy_n(temp.fields[static_cast<size_t>(Field::Y)], n, y_);
+        std::copy_n(temp.fields[static_cast<size_t>(Field::Z)], n, z_);
+        std::copy_n(temp.fields[static_cast<size_t>(Field::Vx)], n, vx_);
+        std::copy_n(temp.fields[static_cast<size_t>(Field::Vy)], n, vy_);
+        std::copy_n(temp.fields[static_cast<size_t>(Field::Vz)], n, vz_);
+        std::copy_n(temp.fields[static_cast<size_t>(Field::Fx)], n, fx_);
+        std::copy_n(temp.fields[static_cast<size_t>(Field::Fy)], n, fy_);
+        std::copy_n(temp.fields[static_cast<size_t>(Field::Fz)], n, fz_);
+        std::copy_n(temp.fields[static_cast<size_t>(Field::Pfx)], n, pfx_);
+        std::copy_n(temp.fields[static_cast<size_t>(Field::Pfy)], n, pfy_);
+        std::copy_n(temp.fields[static_cast<size_t>(Field::Pfz)], n, pfz_);
+        std::copy_n(temp.fields[static_cast<size_t>(Field::Pe)], n, pe_);
+        std::copy_n(temp.fields[static_cast<size_t>(Field::InvMass)], n, invMass_);
+        std::copy_n(temp.fields[static_cast<size_t>(Field::Charge)], n, charge_);
+        std::copy_n(temp.atomType.data(), n, atomType_.data());
+        std::copy_n(temp.valence.data(), n, valence_.data());
+    }
+
     void swapPrevCurrentForces() {
         std::swap(pfx_, fx_);
         std::swap(pfy_, fy_);
@@ -390,5 +475,37 @@ public:
             swapAtoms(i, mobileCount_); // первый фиксированный встаёт на место i
             ++mobileCount_;
         }
+    }
+
+    std::vector<uint32_t> sortByCell(const SpatialGrid& grid) {
+        /* Сортировка атомов по ячейкам пространственной сетки */
+        std::vector<uint32_t> oldToNew(count_);
+        std::iota(oldToNew.begin(), oldToNew.end(), 0);
+        if (mobileCount_ <= 1) {
+            return oldToNew;
+        }
+
+        // Вычисляем ключи для сортировки
+        std::vector<uint32_t> keys(mobileCount_);
+        for (size_t i = 0; i < mobileCount_; ++i) {
+            const int cx = grid.worldToCellX(posX(i));
+            const int cy = grid.worldToCellY(posY(i));
+            const int cz = grid.worldToCellZ(posZ(i));
+            keys[i] = static_cast<uint32_t>(grid.index(cx, cy, cz));
+        }
+        
+        // Сортируем индексы по ключам
+        std::vector<uint32_t> indices(mobileCount_);
+        std::iota(indices.begin(), indices.end(), 0);
+        std::sort(indices.begin(), indices.end(), [&](uint32_t a, uint32_t b) {
+            return keys[a] < keys[b];
+        });
+
+        // Переставляем атомы в соответствии с отсортированными индексами
+        reorderMobileAtoms(indices);
+        for (size_t newIdx = 0; newIdx < mobileCount_; ++newIdx) {
+            oldToNew[indices[newIdx]] = static_cast<uint32_t>(newIdx);
+        }
+        return oldToNew;
     }
 };

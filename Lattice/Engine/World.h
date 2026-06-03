@@ -61,6 +61,7 @@ public:
     void addAtom(const Vec3f& start_coords, const Vec3f& start_speed, AtomData::Type type, bool fixed);
     void addBond(size_t aIndex, size_t bIndex);
     void removeAtom(size_t atomIndex);
+    void remapAtomIndices(std::span<const uint32_t> oldToNew);
     void clearAtoms() { atomStorage_.clear(); };
     void clearBonds() { bonds_.clear(); }
     void reserveAtoms(size_t count) { atomStorage_.reserve(count); }

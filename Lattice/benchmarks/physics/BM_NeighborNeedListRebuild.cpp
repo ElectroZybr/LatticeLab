@@ -4,6 +4,7 @@
 // @bench_meta {"id":"Fixture/NeighborListNeedRebuild","label":"Check NLneedsRebuild","group":"Simulation/Grid and Neighbors"}
 BENCHMARK_DEFINE_F(Fixture, NeighborListNeedRebuild)(benchmark::State& state) {
     rebuildScene();
+    warmupScene();
 
     for (auto _ : state) {
         simulation_->neighborList().needsRebuild(simulation_->atoms());

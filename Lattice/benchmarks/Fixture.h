@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <string_view>
 
@@ -34,6 +35,15 @@ namespace Benchmarks {
     inline void setSelectedScene(SceneKind scene) { selectedScene() = scene; }
 
     inline SceneKind currentScene() { return selectedScene(); }
+
+    inline int& selectedWarmupSteps() {
+        static int warmupSteps = 128;
+        return warmupSteps;
+    }
+
+    inline void setSelectedWarmupSteps(int warmupSteps) { selectedWarmupSteps() = std::max(0, warmupSteps); }
+
+    inline int currentWarmupSteps() { return selectedWarmupSteps(); }
 
     inline int atomCountFromExtent(SceneKind scene, int sceneExtent) {
         switch (scene) {
@@ -76,8 +86,21 @@ protected:
         Benchmarks::Scenes::build(*simulation_, Benchmarks::currentScene(), atomCount_);
     }
 
+    void warmupScene() {
+        const int warmupSteps = Benchmarks::currentWarmupSteps();
+        if (warmupSteps <= 0) {
+            return;
+        }
+
+        simulation_->setDt(Benchmarks::kDt);
+        for (int i = 0; i < warmupSteps; ++i) {
+            simulation_->update();
+        }
+    }
+
     void prepareForPredict() {
         rebuildScene();
+        warmupScene();
         prepareNeighborList();
         StepData stepData = makeStepData();
         StepOps::computeForces(stepData);
