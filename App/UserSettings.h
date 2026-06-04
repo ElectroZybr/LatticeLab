@@ -12,9 +12,12 @@ struct UserSettings {
     std::filesystem::path scenesDirectory = AppPaths::kDefaultScenesDirectory;
     CaptureSettings captureSettings{};
 
+    bool rendererUse3D = true;
+    bool rendererDrawAtoms = false;
     bool rendererDrawGrid = false;
     bool rendererDrawBonds = true;
     bool rendererDrawBox = true;
+    bool rendererDrawMemoryOrder = true;
     RenderData::SpeedColorMode rendererSpeedColorMode = RenderData::SpeedColorMode::AtomColor;
     float rendererSpeedGradientMax = 5.0f;
 

@@ -2,9 +2,8 @@
 
 #include "Lattice/Engine/math/Vec2.h"
 #include "GUI/interface/interface.h"
-#include "Rendering/RenderMath.h"
 #include "Rendering/BaseRenderer.h"
-#include "Rendering/WGPUContext.h"
+#include "Rendering/backend/WGPUContext.h"
 
 GLFWwindow* WindowEvents::window = nullptr;
 std::unique_ptr<BaseRenderer>* WindowEvents::renderer = nullptr;

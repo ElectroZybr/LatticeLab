@@ -5,20 +5,17 @@
 #include "Lattice/Engine/math/Ray.h"
 #include "Lattice/Engine/math/Vec2.h"
 #include "Lattice/Engine/math/Vec3.h"
-#include "Rendering/RenderMath.h"
+#include "Rendering/RenderRay.h"
 
 class Renderer2D;
-class Renderer3DWGPU;
-class Renderer2DWGPU;
+class Renderer3D;
 
 class Camera {
     friend class Mouse;
     friend class Keyboard;
 
     friend Renderer2D;
-    friend Renderer3DWGPU;
-
-    friend Renderer2DWGPU;
+    friend Renderer3D;
 
 public:
     enum class Mode : uint8_t { Mode2D, Orbit, Free };

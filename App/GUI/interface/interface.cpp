@@ -5,7 +5,7 @@
 
 #include "App/capture/CaptureController.h"
 #include "Rendering/BaseRenderer.h"
-#include "Rendering/WGPUContext.h"
+#include "Rendering/backend/WGPUContext.h"
 
 #define ICON_MIN_FA 0xf000
 #define ICON_MAX_FA 0xf897

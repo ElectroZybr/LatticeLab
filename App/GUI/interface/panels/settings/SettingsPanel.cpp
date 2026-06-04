@@ -263,8 +263,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Lattice::Simulation& s
 
     ImGui::TextUnformatted(i18n::tr("imgui_color_scheme").data());
     RenderData::SpeedColorMode speedMode = activeRenderData.speedColorMode;
-    if (ComboStyle::beginCombo(i18n::tr("imgui_speed_color_mode").data(), speedColorModeName(speedMode).data(), 220.0f * uiScale, uiScale,
-                               ImGuiComboFlags_HeightLargest)) {
+    if (ComboStyle::beginCombo(i18n::tr("imgui_speed_color_mode").data(), speedColorModeName(speedMode).data(), 220.0f * uiScale, uiScale, ImGuiComboFlags_HeightLargest)) {
         const RenderData::SpeedColorMode modes[] = {
             RenderData::SpeedColorMode::AtomColor,
             RenderData::SpeedColorMode::GradientClassic,
@@ -421,9 +420,11 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Lattice::Simulation& s
         captureController.setOutputDirectory(defaults.captureOutputDirectory);
         captureController.setSettings(defaults.captureSettings);
 
+        activeRenderData.drawAtoms = defaults.rendererDrawAtoms;
         activeRenderData.drawGrid = defaults.rendererDrawGrid;
         activeRenderData.drawBonds = defaults.rendererDrawBonds;
         activeRenderData.drawBox = defaults.rendererDrawBox;
+        activeRenderData.drawMemoryOrder = defaults.rendererDrawMemoryOrder;
         activeRenderData.speedColorMode = defaults.rendererSpeedColorMode;
         activeRenderData.speedGradientMax = defaults.rendererSpeedGradientMax;
 

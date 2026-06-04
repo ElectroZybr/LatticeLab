@@ -15,11 +15,13 @@
 #include "GUI/interface/interface.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
-#include "Rendering/WGPUContext.h"
+#include "Rendering/backend/WGPUContext.h"
 #include "capture/CaptureActions.h"
 #include "capture/CaptureController.h"
 #include "debug/CreateDebugPanels.h"
 #include "debug/DebugRuntime.h"
+
+#include "Lattice/Engine/NeighborSearch/BarnesHut/Octree.h"
 
 using Clock = std::chrono::high_resolution_clock;
 
@@ -46,11 +48,14 @@ int Application::run() {
 
     // инициализация систем
     Lattice::Simulation simulation;
+    const UserSettings userSettings = UserSettingsIO::load();
 
     simulation.createWorld({120, 120, 120});
 
     CaptureController captureController;
-    SceneViewport renderer(SceneViewport::RendererType::Renderer3D, captureController);
+    const SceneViewport::RendererType initialRendererType =
+        userSettings.rendererUse3D ? SceneViewport::RendererType::Renderer3D : SceneViewport::RendererType::Renderer2D;
+    SceneViewport renderer(initialRendererType, captureController);
     renderer.syncScene(simulation);
 
     Interface appInterface(window, simulation, renderer.rendererHandle(), captureController);
@@ -66,13 +71,14 @@ int Application::run() {
     const DebugViews debugViews = createDebugViews(appInterface.debugPanel);
 
     // загрузка пользовательских настроек
-    const UserSettings userSettings = UserSettingsIO::load();
     captureController.setSettings(userSettings.captureSettings);
     captureController.setOutputDirectory(userSettings.captureOutputDirectory);
     appInterface.setScenesDirectory(userSettings.scenesDirectory);
+    renderer.renderer().getRenderData(0).drawAtoms = userSettings.rendererDrawAtoms;
     renderer.renderer().getRenderData(0).drawGrid = userSettings.rendererDrawGrid;
     renderer.renderer().getRenderData(0).drawBonds = userSettings.rendererDrawBonds;
     renderer.renderer().getRenderData(0).drawBox = userSettings.rendererDrawBox;
+    renderer.renderer().getRenderData(0).drawMemoryOrder = userSettings.rendererDrawMemoryOrder;
     renderer.renderer().getRenderData(0).speedColorMode = userSettings.rendererSpeedColorMode;
     renderer.renderer().getRenderData(0).speedGradientMax = userSettings.rendererSpeedGradientMax;
     simulation.world().getIntegrator().setScheme(userSettings.simulationIntegrator);
@@ -82,20 +88,25 @@ int Application::run() {
     appInterface.state().simulationSpeed = 100.0f;
     appInterface.state().pause = true;
 
+    
     // создание сцены
     // Generators::triangularBipyramidCrystal(simulation, 8, AtomData::Type::H);
     // Generators::AngularVelocity(simulation, Vec3f(0.0f, 0.25f, 0.0f));
-    Generators::hexLattice(simulation, {20, 20, 20}, AtomData::Type::Z);
+    // Generators::hexLattice(simulation, {20, 20, 20}, AtomData::Type::Z);
     
-    // std::vector<Scenes::AtomTypeSpec> gasSpecs = {
-        //     // {AtomData::Type::O, 0, 80.0f},    // 80% водорода
-        //     {AtomData::Type::Na, 0, 50.0f},   // 10% натрия
-        //     {AtomData::Type::Cl, 0, 50.0f}    // 10% хлора
-        // };
-    // Scenes::randomGasMixed(Lattice::simulation, 500, gasSpecs, false, 6.0, 6.0, 1.0f, 5.0f, 0);
-    // Lattice::simulation.createAtom(Vec3f(24, 25, 3), Vec3f(1, 0, 0), AtomData::Type::Na);
-    // Lattice::simulation.createAtom(Vec3f(28, 25, 3), Vec3f(-1, 0, 0), AtomData::Type::Na);
+    std::vector<Generators::AtomTypeSpec> gasSpecs = {
+            // {AtomData::Type::O, 0, 80.0f},    // 80% водорода
+            {AtomData::Type::Na, 0, 50.0f},   // 10% натрия
+            {AtomData::Type::Cl, 0, 50.0f}    // 10% хлора
+        };
+    Generators::randomGasMixed(simulation, 500, gasSpecs, false, 6.0, 6.0, 1.0f, 5.0f, 0);
+        // Lattice::simulation.createAtom(Vec3f(24, 25, 3), Vec3f(1, 0, 0), AtomData::Type::Na);
+        // Lattice::simulation.createAtom(Vec3f(28, 25, 3), Vec3f(-1, 0, 0), AtomData::Type::Na);
     renderer.syncScene(simulation);
+
+    Octree octree({60.0f, 60.0f, 60.0f}, 120.0f);
+    octree.build(simulation.world().getAtomStorage());
+    octree.show();
 
     auto startTime = Clock::now();
     double renderAccum = 0.0;
@@ -159,9 +170,12 @@ int Application::run() {
         .captureOutputDirectory = captureController.outputDirectory(),
         .scenesDirectory = appInterface.scenesDirectory(),
         .captureSettings = captureController.settings(),
+        .rendererUse3D = renderer.renderer().camera.getMode() != Camera::Mode::Mode2D,
+        .rendererDrawAtoms = renderer.renderer().getRenderData(0).drawAtoms,
         .rendererDrawGrid = renderer.renderer().getRenderData(0).drawGrid,
         .rendererDrawBonds = renderer.renderer().getRenderData(0).drawBonds,
         .rendererDrawBox = renderer.renderer().getRenderData(0).drawBox,
+        .rendererDrawMemoryOrder = renderer.renderer().getRenderData(0).drawMemoryOrder,
         .rendererSpeedColorMode = renderer.renderer().getRenderData(0).speedColorMode,
         .rendererSpeedGradientMax = renderer.renderer().getRenderData(0).speedGradientMax,
         .simulationIntegrator = simulation.world().getIntegrator().getScheme(),

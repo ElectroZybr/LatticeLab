@@ -14,7 +14,7 @@
 #include <zstd.h>
 
 #include "App/save_system/AppSaveState.h"
-#include "Rendering/WGPUContext.h"
+#include "Rendering/backend/WGPUContext.h"
 
 namespace {
     struct ParsedSceneInfo {
