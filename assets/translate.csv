@@ -43,6 +43,8 @@ imgui_render;Render;Рендер
 imgui_grid;Grid;Сетка
 imgui_connections;Connections;Связи
 imgui_box;Box bounds;Границы куба
+imgui_atoms;Draw atoms;Атомы
+imgui_memory_order;Memory line;Линия памяти
 imgui_color_scheme;Color scheme;Цветовая схема
 imgui_speed_color_mode;##speed_color_mode;##speed_color_mode
 imgui_max_gradien_velocity;Max gradient velocity;Макс. скорость градиента

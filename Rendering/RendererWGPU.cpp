@@ -32,14 +32,15 @@ namespace {
 }
 
 RendererWGPU::RendererWGPU() : surfaceFormat(WGPUContext::instance().surfaceFormat()) {
-    uniformBuffer = WGPUContext::instance().createBuffer(sizeof(SceneUniforms), wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst,
-                                                         "RenderingUniforms");
+    uniformBuffer = WGPUContext::instance().createBuffer(sizeof(SceneUniforms), wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst, "RenderingUniforms");
 
+    // Инициализация буферов
     initAtomColors();
     initAtomQuadBuffer();
     initBoxBuffer();
     initBondBuffer();
     initGridLineBuffer();
+    initMemoryOrderBuffer();
 }
 
 void RendererWGPU::initAtomColors() {
@@ -77,6 +78,11 @@ void RendererWGPU::initGridLineBuffer() {
     WGPUContext& ctx = WGPUContext::instance();
     gridLineVb = ctx.createBuffer(sizeof(lines), wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst, "Grid_Cell_Unit_Lines");
     ctx.queue()->writeBuffer(*gridLineVb, 0, lines, sizeof(lines));
+}
+
+void RendererWGPU::initMemoryOrderBuffer() {
+    memoryOrderVb = WGPUContext::instance().createBuffer(128, wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst, "Memory_Order_Geometry");
+    memoryOrderVbCapacity_ = 128;
 }
 
 void RendererWGPU::initAtomPipeline(std::string_view atomWGSL) {
@@ -208,12 +214,17 @@ void RendererWGPU::initLinePipeline(wgpu::RenderPipeline& outPipeline, std::stri
 
     outPipeline = WGPUContext::instance().device()->createRenderPipeline(pDesc);
 
-    wgpu::BindGroupEntry entry{};
-    entry.binding = 0;
-    entry.buffer = *uniformBuffer;
-    entry.size = sizeof(SceneUniforms);
+    for (size_t i = 0; i < kLineUniformSlotCount; ++i) {
+        lineUniformBuffers[i] =
+            WGPUContext::instance().createBuffer(sizeof(SceneUniforms), wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst, "LineUniforms");
 
-    lineBindGroup = WGPUContext::instance().createBindGroup(*lineBindGroupLayout, {&entry, 1}, "LineBindGroup");
+        wgpu::BindGroupEntry entry{};
+        entry.binding = 0;
+        entry.buffer = *lineUniformBuffers[i];
+        entry.size = sizeof(SceneUniforms);
+
+        lineBindGroups[i] = WGPUContext::instance().createBindGroup(*lineBindGroupLayout, {&entry, 1}, "LineBindGroup");
+    }
 }
 
 void RendererWGPU::initGridPipeline(std::string_view gridWGSL) {
@@ -385,6 +396,8 @@ void RendererWGPU::drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView
     for (size_t i = 0; i < typeColorsData.size(); ++i) {
         uniforms.typeColors[i] = typeColorsData[i];
     }
+    currentSceneUniforms_ = uniforms;
+    lineUniformSlotIndex_ = 0;
 
     WGPUContext::instance().queue()->writeBuffer(*uniformBuffer, 0, &uniforms, sizeof(uniforms));
 
@@ -401,7 +414,13 @@ void RendererWGPU::drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView
         setLineColor(applySelection ? glm::vec4(0.5f, 0.78f, 1.0f, 0.55f) : glm::vec4(0.35f, 0.52f, 0.9f, 0.3f));
         drawBoxImpl(renderData.worldSize);
     }
-    drawAtomsImpl(renderData.atoms, renderData, applySelection);
+    if (renderData.drawMemoryOrder) {
+        setLineColor(glm::vec4(0.35f, 0.52f, 0.9f, 0.3f));
+        drawMemoryOrderImpl(renderData.atoms);
+    }
+    if (renderData.drawAtoms) {
+        drawAtomsImpl(renderData.atoms, renderData, applySelection);
+    }
 }
 
 void RendererWGPU::beginPass(wgpu::TextureView targetView, wgpu::TextureView depthView, wgpu::LoadOp targetLoadOp) {
@@ -518,13 +537,20 @@ void RendererWGPU::drawBoxImpl(const glm::vec3& worldSize) {
     }
 
     currentPass->setPipeline(*boxPipeline);
-    currentPass->setBindGroup(0, *lineBindGroup, 0, nullptr);
+    currentPass->setBindGroup(0, *lineBindGroups[lineUniformSlotIndex_ - 1], 0, nullptr);
     currentPass->setVertexBuffer(0, *boxVb, 0, sizeof(boxVertices_));
     currentPass->draw(24, 1, 0, 0);
 }
 
 void RendererWGPU::setLineColor(const glm::vec4& color) {
-    WGPUContext::instance().queue()->writeBuffer(*uniformBuffer, offsetof(SceneUniforms, lineColor), &color, sizeof(color));
+    if (lineUniformSlotIndex_ >= kLineUniformSlotCount) {
+        lineUniformSlotIndex_ = kLineUniformSlotCount - 1;
+    }
+
+    SceneUniforms lineUniforms = currentSceneUniforms_;
+    lineUniforms.lineColor = color;
+    WGPUContext::instance().queue()->writeBuffer(*lineUniformBuffers[lineUniformSlotIndex_], 0, &lineUniforms, sizeof(lineUniforms));
+    ++lineUniformSlotIndex_;
 }
 
 void RendererWGPU::drawBondsImpl(const RenderAtomsView& atoms, const RenderBondsView& bonds) {
@@ -564,7 +590,7 @@ void RendererWGPU::drawBondsImpl(const RenderAtomsView& atoms, const RenderBonds
     WGPUContext::instance().queue()->writeBuffer(*bondVb, 0, verts.data(), bytes);
 
     currentPass->setPipeline(*bondPipeline);
-    currentPass->setBindGroup(0, *lineBindGroup, 0, nullptr);
+    currentPass->setBindGroup(0, *lineBindGroups[lineUniformSlotIndex_ - 1], 0, nullptr);
     currentPass->setVertexBuffer(0, *bondVb, 0, bytes);
     currentPass->draw(verts.size(), 1, 0, 0);
 }
@@ -609,4 +635,31 @@ void RendererWGPU::drawGridImpl(const RenderGridView& grid) {
     currentPass->setVertexBuffer(0, *gridLineVb, 0, gridLineVb->getSize());
     currentPass->setVertexBuffer(1, *gridInstVb, 0, instBytes);
     currentPass->draw(24, gridData.size(), 0, 0);
+}
+
+void RendererWGPU::drawMemoryOrderImpl(const RenderAtomsView& atoms) {
+    if (atoms.count < 2 || !atoms.hasPositions()) {
+        return;
+    }
+
+    std::vector<glm::vec3> verts;
+    verts.reserve((atoms.count - 1) * 2);
+
+    for (size_t i = 0; i + 1 < atoms.count; ++i) {
+        verts.emplace_back(atoms.x[i], atoms.y[i], atoms.z[i]);
+        verts.emplace_back(atoms.x[i + 1], atoms.y[i + 1], atoms.z[i + 1]);
+    }
+
+    const uint64_t bytes = verts.size() * sizeof(glm::vec3);
+    if (bytes > memoryOrderVbCapacity_) {
+        memoryOrderVb = WGPUContext::instance().createBuffer(bytes * 2, wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst, "Memory_Order_Geometry");
+        memoryOrderVbCapacity_ = bytes * 2;
+    }
+
+    WGPUContext::instance().queue()->writeBuffer(*memoryOrderVb, 0, verts.data(), bytes);
+
+    currentPass->setPipeline(*bondPipeline);
+    currentPass->setBindGroup(0, *lineBindGroups[lineUniformSlotIndex_ - 1], 0, nullptr);
+    currentPass->setVertexBuffer(0, *memoryOrderVb, 0, bytes);
+    currentPass->draw(verts.size(), 1, 0, 0);
 }

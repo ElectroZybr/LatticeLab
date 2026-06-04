@@ -255,9 +255,11 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Lattice::Simulation& s
     }
 
     ImGui::SeparatorText(i18n::tr("imgui_render").data());
+    ImGui::Checkbox(i18n::tr("imgui_atoms").data(), &activeRenderData.drawAtoms);
     ImGui::Checkbox(i18n::tr("imgui_grid").data(), &activeRenderData.drawGrid);
     ImGui::Checkbox(i18n::tr("imgui_connections").data(), &activeRenderData.drawBonds);
     ImGui::Checkbox(i18n::tr("imgui_box").data(), &activeRenderData.drawBox);
+    ImGui::Checkbox(i18n::tr("imgui_memory_order").data(), &activeRenderData.drawMemoryOrder);
 
     ImGui::TextUnformatted(i18n::tr("imgui_color_scheme").data());
     RenderData::SpeedColorMode speedMode = activeRenderData.speedColorMode;

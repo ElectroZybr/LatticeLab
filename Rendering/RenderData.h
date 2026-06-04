@@ -93,9 +93,11 @@ public:
 
     bool isActiveWorld = false;
     bool hasBox = false;
+    bool drawAtoms = false;
     bool drawGrid = false;
     bool drawBonds = false;
     bool drawBox = true;
+    bool drawMemoryOrder = true;
     SpeedColorMode speedColorMode = SpeedColorMode::AtomColor;
     float speedGradientMax = 5.0f;
     float alpha = 0.05f;
