@@ -34,9 +34,9 @@ public:
         return std::span<const uint32_t>(atomsInCells.data() + begin, offsets[linearIndex + 1] - begin);
     }
 
-    int worldToCellX(float x) const { return toCell(x, size.x); }
-    int worldToCellY(float y) const { return toCell(y, size.y); }
-    int worldToCellZ(float z) const { return toCell(z, size.z); }
+    uint worldToCellX(float x) const { return toCell(x, size.x); }
+    uint worldToCellY(float y) const { return toCell(y, size.y); }
+    uint worldToCellZ(float z) const { return toCell(z, size.z); }
 
     [[nodiscard]] int countAtomsInCell(int cx, int cy, int cz) const {
         const size_t idx = static_cast<size_t>(index(cx, cy, cz));

@@ -13,6 +13,7 @@
 #include "Engine/NeighborSearch/SpatialGrid.h"
 #include "Engine/math/Vec3.h"
 #include "Engine/physics/AtomData.h"
+#include "Engine/physics/Morton3D.h"
 
 class AtomStorage {
 public:
@@ -478,35 +479,8 @@ public:
         }
     };
 
-    std::vector<uint32_t> sortByCell(const SpatialGrid& grid) {
-        /* Сортировка атомов по ячейкам пространственной сетки */
-        std::vector<uint32_t> oldToNew(count_);
-        std::iota(oldToNew.begin(), oldToNew.end(), 0);
-        if (mobileCount_ <= 1) {
-            return oldToNew;
-        }
-
-        // Вычисляем ключи для сортировки
-        std::vector<uint32_t> keys(mobileCount_);
-        for (size_t i = 0; i < mobileCount_; ++i) {
-            const int cx = grid.worldToCellX(posX(i));
-            const int cy = grid.worldToCellY(posY(i));
-            const int cz = grid.worldToCellZ(posZ(i));
-            keys[i] = static_cast<uint32_t>(grid.index(cx, cy, cz));
-        }
-        
-        // Сортируем индексы по ключам
-        std::vector<uint32_t> indices(mobileCount_);
-        std::iota(indices.begin(), indices.end(), 0);
-        std::sort(indices.begin(), indices.end(), [&](uint32_t a, uint32_t b) {
-            return keys[a] < keys[b];
-        });
-
-        for (size_t newIdx = 0; newIdx < mobileCount_; ++newIdx) {
-            oldToNew[indices[newIdx]] = static_cast<uint32_t>(newIdx);
-        }
-
-        // Переставляем атомы in-place по циклам permutation.
+    /// функция переставляет мобильные атомы согласно заданному порядку
+    void reorder(const std::vector<uint32_t>& indices) {
         std::vector<uint8_t> visited(mobileCount_, 0);
         AtomView cycleStart;
         AtomView moved;
@@ -533,7 +507,73 @@ public:
                 current = source;
             }
         }
+    }
 
+    /// классический метод представления 3D массива в виде 1D массива с помощью row-major order
+    /// @return функция возвращает таблицу перестановок
+    std::vector<uint32_t> rowMajorOrder(const SpatialGrid& grid) {
+        std::vector<uint32_t> oldToNew(count_);
+        std::iota(oldToNew.begin(), oldToNew.end(), 0);
+        if (mobileCount_ <= 1) {
+            return oldToNew;
+        }
+
+        // Вычисляем ключи для сортировки
+        std::vector<uint32_t> keys(mobileCount_);
+        for (size_t i = 0; i < mobileCount_; ++i) {
+            const int cx = grid.worldToCellX(posX(i));
+            const int cy = grid.worldToCellY(posY(i));
+            const int cz = grid.worldToCellZ(posZ(i));
+            keys[i] = static_cast<uint32_t>(grid.index(cx, cy, cz));
+        }
+        
+        // Сортируем индексы по ключам
+        std::vector<uint32_t> indices(mobileCount_);
+        std::iota(indices.begin(), indices.end(), 0);
+        std::sort(indices.begin(), indices.end(), [&](uint32_t a, uint32_t b) {
+            return keys[a] < keys[b];
+        });
+
+        // Переставляем атомы
+        reorder(indices);
+
+        // возвращаем таблицу перестановок
+        for (size_t newIdx = 0; newIdx < mobileCount_; ++newIdx) {
+            oldToNew[indices[newIdx]] = static_cast<uint32_t>(newIdx);
+        }
+        return oldToNew;
+    }
+
+    std::vector<uint32_t> mortonOrder(const SpatialGrid& grid) {
+        std::vector<uint32_t> oldToNew(count_);
+        std::iota(oldToNew.begin(), oldToNew.end(), 0);
+        if (mobileCount_ <= 1) {
+            return oldToNew;
+        }
+
+        // Вычисляем ключи для сортировки
+        std::vector<uint64_t> keys(mobileCount_);
+        for (size_t i = 0; i < mobileCount_; ++i) {
+            uint32_t cx = std::clamp(static_cast<int>(grid.worldToCellX(posX(i))), 0, static_cast<int>(grid.size.x - 1));
+            uint32_t cy = std::clamp(static_cast<int>(grid.worldToCellY(posY(i))), 0, static_cast<int>(grid.size.y - 1));
+            uint32_t cz = std::clamp(static_cast<int>(grid.worldToCellZ(posZ(i))), 0, static_cast<int>(grid.size.z - 1));
+            keys[i] = Morton3D::encode(cx, cy, cz);
+        }
+
+        // Сортируем индексы по ключам
+        std::vector<uint32_t> indices(mobileCount_);
+        std::iota(indices.begin(), indices.end(), 0);
+        std::sort(indices.begin(), indices.end(), [&](uint64_t a, uint64_t b) {
+            return keys[a] < keys[b];
+        });
+
+        // Переставляем атомы
+        reorder(indices);
+
+        // возвращаем таблицу перестановок
+        for (size_t newIdx = 0; newIdx < mobileCount_; ++newIdx) {
+            oldToNew[indices[newIdx]] = static_cast<uint32_t>(newIdx);
+        }
         return oldToNew;
     }
 };

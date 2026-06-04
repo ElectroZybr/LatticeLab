@@ -119,4 +119,11 @@ set(ZSTD_BUILD_CONTRIB_TESTS OFF CACHE BOOL "Build zstd contrib tests")
 set(ZSTD_BUILD_CONTRIB_EXAMPLES OFF CACHE BOOL "Build zstd contrib examples")
 set(ZSTD_BUILD_CONTRIB_LIBS OFF CACHE BOOL "Build zstd contrib libs")
 set(ZSTD_INSTALL OFF CACHE BOOL "Build zstd install")
+
+# zstd is linked as a static dependency in this project, so keep its local
+# BUILD_SHARED_LIBS consistent to avoid upstream configuration warnings.
+set(_saved_build_shared_libs "${BUILD_SHARED_LIBS}")
+set(BUILD_SHARED_LIBS OFF)
 FetchContent_MakeAvailable(zstd)
+set(BUILD_SHARED_LIBS "${_saved_build_shared_libs}")
+unset(_saved_build_shared_libs)
