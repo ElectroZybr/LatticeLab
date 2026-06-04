@@ -480,14 +480,20 @@ public:
     };
 
     /// функция переставляет мобильные атомы согласно заданному порядку
-    void reorder(const std::vector<uint32_t>& indices) {
-        std::vector<uint8_t> visited(mobileCount_, 0);
+    void reorder(std::span<uint32_t> indices) {
         AtomView cycleStart;
         AtomView moved;
 
+        constexpr uint32_t DONE_FLAG = 0x80000000u;
+
         for (size_t start = 0; start < mobileCount_; ++start) {
-            if (visited[start] != 0 || indices[start] == start) {
-                visited[start] = 1;
+            if (indices[start] & DONE_FLAG) {
+                continue;
+            }
+
+            const size_t realStart = indices[start];
+            if (realStart == start) {
+                indices[start] |= DONE_FLAG;
                 continue;
             }
 
@@ -495,8 +501,9 @@ public:
             size_t current = start;
 
             while (true) {
-                visited[current] = 1;
-                const size_t source = indices[current];
+                const size_t source = indices[current] & ~DONE_FLAG;
+                indices[current] |= DONE_FLAG;
+
                 if (source == start) {
                     cycleStart.applyToStorage(*this, current);
                     break;
@@ -509,71 +516,66 @@ public:
         }
     }
 
-    /// классический метод представления 3D массива в виде 1D массива с помощью row-major order
-    /// @return функция возвращает таблицу перестановок
-    std::vector<uint32_t> rowMajorOrder(const SpatialGrid& grid) {
-        std::vector<uint32_t> oldToNew(count_);
-        std::iota(oldToNew.begin(), oldToNew.end(), 0);
+    const std::vector<uint32_t>& mortonOrder(const SpatialGrid& grid) {
+        mortonOldToNew_.resize(count_);
+        std::iota(mortonOldToNew_.begin(), mortonOldToNew_.end(), 0);
         if (mobileCount_ <= 1) {
-            return oldToNew;
+            return mortonOldToNew_;
         }
+
+        mortonKeyed_.resize(mobileCount_);
+        mortonBuf_.resize(mobileCount_);
+        mortonIndices_.resize(mobileCount_);
 
         // Вычисляем ключи для сортировки
-        std::vector<uint32_t> keys(mobileCount_);
-        for (size_t i = 0; i < mobileCount_; ++i) {
-            const int cx = grid.worldToCellX(posX(i));
-            const int cy = grid.worldToCellY(posY(i));
-            const int cz = grid.worldToCellZ(posZ(i));
-            keys[i] = static_cast<uint32_t>(grid.index(cx, cy, cz));
-        }
-        
-        // Сортируем индексы по ключам
-        std::vector<uint32_t> indices(mobileCount_);
-        std::iota(indices.begin(), indices.end(), 0);
-        std::sort(indices.begin(), indices.end(), [&](uint32_t a, uint32_t b) {
-            return keys[a] < keys[b];
-        });
-
-        // Переставляем атомы
-        reorder(indices);
-
-        // возвращаем таблицу перестановок
-        for (size_t newIdx = 0; newIdx < mobileCount_; ++newIdx) {
-            oldToNew[indices[newIdx]] = static_cast<uint32_t>(newIdx);
-        }
-        return oldToNew;
-    }
-
-    std::vector<uint32_t> mortonOrder(const SpatialGrid& grid) {
-        std::vector<uint32_t> oldToNew(count_);
-        std::iota(oldToNew.begin(), oldToNew.end(), 0);
-        if (mobileCount_ <= 1) {
-            return oldToNew;
-        }
-
-        // Вычисляем ключи для сортировки
-        std::vector<uint64_t> keys(mobileCount_);
         for (size_t i = 0; i < mobileCount_; ++i) {
             uint32_t cx = std::clamp(static_cast<int>(grid.worldToCellX(posX(i))), 0, static_cast<int>(grid.size.x - 1));
             uint32_t cy = std::clamp(static_cast<int>(grid.worldToCellY(posY(i))), 0, static_cast<int>(grid.size.y - 1));
             uint32_t cz = std::clamp(static_cast<int>(grid.worldToCellZ(posZ(i))), 0, static_cast<int>(grid.size.z - 1));
-            keys[i] = Morton3D::encode(cx, cy, cz);
+            mortonKeyed_[i] = {Morton3D::encode(cx, cy, cz), static_cast<uint32_t>(i)};
         }
 
-        // Сортируем индексы по ключам
-        std::vector<uint32_t> indices(mobileCount_);
-        std::iota(indices.begin(), indices.end(), 0);
-        std::sort(indices.begin(), indices.end(), [&](uint64_t a, uint64_t b) {
-            return keys[a] < keys[b];
-        });
+        radixSort(mortonKeyed_, mortonBuf_);
+
+        for (size_t i = 0; i < mobileCount_; ++i) {
+            mortonIndices_[i] = mortonKeyed_[i].second;
+        }
+
+        for (size_t newIdx = 0; newIdx < mobileCount_; ++newIdx) {
+            mortonOldToNew_[mortonIndices_[newIdx]] = static_cast<uint32_t>(newIdx);
+        }
 
         // Переставляем атомы
-        reorder(indices);
+        reorder(mortonIndices_);
 
         // возвращаем таблицу перестановок
-        for (size_t newIdx = 0; newIdx < mobileCount_; ++newIdx) {
-            oldToNew[indices[newIdx]] = static_cast<uint32_t>(newIdx);
+        return mortonOldToNew_;
+    }
+
+    // для избежания лишних аллокаций
+    std::vector<uint32_t> mortonOldToNew_;
+    std::vector<std::pair<uint64_t, uint32_t>> mortonKeyed_;
+    std::vector<std::pair<uint64_t, uint32_t>> mortonBuf_;
+    std::vector<uint32_t> mortonIndices_;
+
+    static void radixSort(std::vector<std::pair<uint64_t, uint32_t>>& data, std::vector<std::pair<uint64_t, uint32_t>>& buf) {
+        for (int shift = 0; shift < 64; shift += 8) {
+            size_t cnt[256] = {};
+            for (auto& [k, _] : data) {
+                ++cnt[(k >> shift) & 0xFF];
+            }
+
+            size_t pos[256];
+            pos[0] = 0;
+            for (int i = 1; i < 256; ++i) {
+                pos[i] = pos[i - 1] + cnt[i - 1];
+            }
+
+            for (auto& p : data) {
+                buf[pos[(p.first >> shift) & 0xFF]++] = p;
+            }
+
+            std::swap(data, buf);
         }
-        return oldToNew;
     }
 };
