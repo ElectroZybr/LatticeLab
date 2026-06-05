@@ -12,7 +12,7 @@ namespace Benchmarks::BmRunner {
         int repetitions = 3;
         std::string minTime;
         std::string scene = "crystal3d";
-        int warmupSteps = 128;
+        int warmupSteps = 0;
         std::string degradation = "size";
     };
 

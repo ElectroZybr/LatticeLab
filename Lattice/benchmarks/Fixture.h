@@ -43,7 +43,7 @@ namespace Benchmarks {
     inline SceneKind currentScene() { return selectedScene(); }
 
     inline int& selectedWarmupSteps() {
-        static int warmupSteps = 128;
+        static int warmupSteps = 0;
         return warmupSteps;
     }
 
