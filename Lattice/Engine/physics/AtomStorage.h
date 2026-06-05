@@ -12,7 +12,7 @@
 
 #include "Engine/NeighborSearch/SpatialGrid.h"
 #include "Engine/physics/AtomData.h"
-#include "Engine/physics/Morton3D.h"
+#include "Engine/physics/AtomSort.h"
 
 class AtomStorage {
 public:
@@ -21,6 +21,8 @@ public:
 
 private:
     enum class Field : size_t { X, Y, Z, Vx, Vy, Vz, Fx, Fy, Fz, Pfx, Pfy, Pfz, Pe, InvMass, Charge, Count };
+
+    AtomSort sort_;
 
     static constexpr size_t kFieldCount = static_cast<size_t>(Field::Count);
     static constexpr size_t InvalidIndex = static_cast<size_t>(-1);
@@ -417,6 +419,17 @@ public:
     std::span<const uint8_t> valenceDataSpan() const { return {valence_.data(), valence_.size()}; }
     std::span<const AtomId> atomIdDataSpan() const { return {atomIds_.data(), atomIds_.size()}; }
 
+    void setAtomId(size_t index, AtomId id) noexcept {
+        if (index >= atomIds_.size()) {
+            return;
+        }
+        atomIds_[index] = id;
+        if (static_cast<size_t>(id) >= atomIdToIndex_.size()) {
+            atomIdToIndex_.resize(static_cast<size_t>(id) + 1, InvalidIndex);
+        }
+        atomIdToIndex_[id] = index;
+    }
+
     [[nodiscard]] AtomId atomId(size_t index) const noexcept { return index < atomIds_.size() ? atomIds_[index] : InvalidAtomId; }
     [[nodiscard]] size_t indexOf(AtomId id) const noexcept { return id < atomIdToIndex_.size() ? atomIdToIndex_[id] : InvalidIndex; }
     [[nodiscard]] bool containsAtomId(AtomId id) const noexcept { return indexOf(id) != InvalidIndex; }
@@ -438,141 +451,5 @@ public:
         }
     }
 
-    struct AtomView {
-        glm::vec3 pos;
-        glm::vec3 vel;
-        glm::vec3 force;
-        glm::vec3 prevForce;
-        float energy;
-        float invMass;
-        float charge;
-        AtomData::Type type;
-        uint8_t valenceCount;
-        AtomId id = InvalidAtomId;
-
-        void updateFromStorage(AtomStorage& storage, size_t index) {
-            pos = storage.pos(index);
-            vel = storage.vel(index);
-            force = storage.force(index);
-            prevForce = storage.prevForce(index);
-            energy = storage.energy(index);
-            invMass = storage.invMass(index);
-            charge = storage.charge(index);
-            type = storage.type(index);
-            valenceCount = storage.valenceCount(index);
-            id = storage.atomId(index);
-        }
-
-        void applyToStorage(AtomStorage& storage, size_t index) const {
-            storage.setPos(index, pos);
-            storage.setVel(index, vel);
-            storage.setForce(index, force);
-            storage.setPrevForce(index, prevForce);
-            storage.energy(index) = energy;
-            storage.invMass(index) = invMass;
-            storage.charge(index) = charge;
-            storage.type(index) = type;
-            storage.valenceCount(index) = valenceCount;
-            storage.atomIds_[index] = id;
-            storage.atomIdToIndex_[id] = index;
-        }
-    };
-
-    /// функция переставляет мобильные атомы согласно заданному порядку
-    void reorder(const std::vector<uint32_t>& indices) {
-        std::vector<uint8_t> visited(mobileCount_, 0);
-        AtomView cycleStart;
-        AtomView moved;
-
-        for (size_t start = 0; start < mobileCount_; ++start) {
-            if (visited[start] != 0 || indices[start] == start) {
-                visited[start] = 1;
-                continue;
-            }
-
-            cycleStart.updateFromStorage(*this, start);
-            size_t current = start;
-
-            while (true) {
-                visited[current] = 1;
-                const size_t source = indices[current];
-                if (source == start) {
-                    cycleStart.applyToStorage(*this, current);
-                    break;
-                }
-
-                moved.updateFromStorage(*this, source);
-                moved.applyToStorage(*this, current);
-                current = source;
-            }
-        }
-    }
-
-    /// классический метод представления 3D массива в виде 1D массива с помощью row-major order
-    /// @return функция возвращает таблицу перестановок
-    std::vector<uint32_t> rowMajorOrder(const SpatialGrid& grid) {
-        std::vector<uint32_t> oldToNew(count_);
-        std::iota(oldToNew.begin(), oldToNew.end(), 0);
-        if (mobileCount_ <= 1) {
-            return oldToNew;
-        }
-
-        // Вычисляем ключи для сортировки
-        std::vector<uint32_t> keys(mobileCount_);
-        for (size_t i = 0; i < mobileCount_; ++i) {
-            const int cx = grid.worldToCellX(posX(i));
-            const int cy = grid.worldToCellY(posY(i));
-            const int cz = grid.worldToCellZ(posZ(i));
-            keys[i] = static_cast<uint32_t>(grid.index(cx, cy, cz));
-        }
-        
-        // Сортируем индексы по ключам
-        std::vector<uint32_t> indices(mobileCount_);
-        std::iota(indices.begin(), indices.end(), 0);
-        std::sort(indices.begin(), indices.end(), [&](uint32_t a, uint32_t b) {
-            return keys[a] < keys[b];
-        });
-
-        // Переставляем атомы
-        reorder(indices);
-
-        // возвращаем таблицу перестановок
-        for (size_t newIdx = 0; newIdx < mobileCount_; ++newIdx) {
-            oldToNew[indices[newIdx]] = static_cast<uint32_t>(newIdx);
-        }
-        return oldToNew;
-    }
-
-    std::vector<uint32_t> mortonOrder(const SpatialGrid& grid) {
-        std::vector<uint32_t> oldToNew(count_);
-        std::iota(oldToNew.begin(), oldToNew.end(), 0);
-        if (mobileCount_ <= 1) {
-            return oldToNew;
-        }
-
-        // Вычисляем ключи для сортировки
-        std::vector<uint64_t> keys(mobileCount_);
-        for (size_t i = 0; i < mobileCount_; ++i) {
-            uint32_t cx = std::clamp(static_cast<int>(grid.worldToCellX(posX(i))), 0, static_cast<int>(grid.size.x - 1));
-            uint32_t cy = std::clamp(static_cast<int>(grid.worldToCellY(posY(i))), 0, static_cast<int>(grid.size.y - 1));
-            uint32_t cz = std::clamp(static_cast<int>(grid.worldToCellZ(posZ(i))), 0, static_cast<int>(grid.size.z - 1));
-            keys[i] = Morton3D::encode(cx, cy, cz);
-        }
-
-        // Сортируем индексы по ключам
-        std::vector<uint32_t> indices(mobileCount_);
-        std::iota(indices.begin(), indices.end(), 0);
-        std::sort(indices.begin(), indices.end(), [&](uint64_t a, uint64_t b) {
-            return keys[a] < keys[b];
-        });
-
-        // Переставляем атомы
-        reorder(indices);
-
-        // возвращаем таблицу перестановок
-        for (size_t newIdx = 0; newIdx < mobileCount_; ++newIdx) {
-            oldToNew[indices[newIdx]] = static_cast<uint32_t>(newIdx);
-        }
-        return oldToNew;
-    }
+    void sort(SpatialGrid& grid) { sort_.mortonOrder(*this, grid); }
 };

@@ -9,7 +9,7 @@ BENCHMARK_DEFINE_F(Fixture, AtomsSort)(benchmark::State& state) {
     StepData stepData = makeStepData();
 
     for (auto _ : state) {
-        simulation_->atoms().rowMajorOrder(simulation_->world().getGrid());
+        simulation_->atoms().sort(simulation_->world().getGrid());
         benchmark::DoNotOptimize(simulation_->atoms().size());
         benchmark::ClobberMemory();
     }

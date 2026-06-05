@@ -16,21 +16,23 @@
 #include "Rendering/BaseRenderer.h"
 #include "generated/AppVersion.h"
 
+using i18n::operator""_tr;
+
 namespace {
     std::string_view integratorName(Integrator::Scheme scheme) {
         switch (scheme) {
         case Integrator::Scheme::Verlet:
-            return i18n::tr("integrator_velocity_verlet");
+            return "integrator_velocity_verlet"_tr;
         case Integrator::Scheme::KDK:
-            return i18n::tr("integrator_kdk");
+            return "integrator_kdk"_tr;
         case Integrator::Scheme::RK4:
-            return i18n::tr("integrator_runge_kutta_4");
+            return "integrator_runge_kutta_4"_tr;
         case Integrator::Scheme::Langevin:
-            return i18n::tr("integrator_langevin");
+            return "integrator_langevin"_tr;
         case Integrator::Scheme::Andersen:
-            return i18n::tr("integrator_andersen");;
+            return "integrator_andersen"_tr;;
         default:
-            return i18n::tr("integrator_unknown");
+            return "integrator_unknown"_tr;
         
         }
     }
@@ -38,41 +40,41 @@ namespace {
     std::string_view speedColorModeName(RenderData::SpeedColorMode mode) {
         switch (mode) {
         case RenderData::SpeedColorMode::AtomColor:
-            return i18n::tr("speed_color_normal_coloring");
+            return "speed_color_normal_coloring"_tr;
         case RenderData::SpeedColorMode::GradientClassic:
-            return i18n::tr("speed_color_gradient_coloring");
+            return "speed_color_gradient_coloring"_tr;
         case RenderData::SpeedColorMode::GradientTurbo:
-            return i18n::tr("speed_color_turbo_coloring");
+            return "speed_color_turbo_coloring"_tr;
         default:
-            return i18n::tr("speed_color_normal_coloring");
+            return "speed_color_normal_coloring"_tr;
         }
     }
 
     std::string_view capturePresetName(CaptureSettings::Preset preset) {
         switch (preset) {
         case CaptureSettings::Preset::Ultrafast:
-            return i18n::tr("capture_preset_ultrafast");
+            return "capture_preset_ultrafast"_tr;
         case CaptureSettings::Preset::Veryfast:
-            return i18n::tr("capture_preset_veryfast");
+            return "capture_preset_veryfast"_tr;
         case CaptureSettings::Preset::Faster:
-            return i18n::tr("capture_preset_faster");
+            return "capture_preset_faster"_tr;
         case CaptureSettings::Preset::Fast:
-            return i18n::tr("capture_preset_fast");
+            return "capture_preset_fast"_tr;
         case CaptureSettings::Preset::Medium:
-            return i18n::tr("capture_preset_medium");
+            return "capture_preset_medium"_tr;
         default:
-            return i18n::tr("capture_preset_veryfast");
+            return "capture_preset_veryfast"_tr;
         }
     }
 
     std::string_view capturePixelFormatName(CaptureSettings::PixelFormat pixelFormat) {
         switch (pixelFormat) {
         case CaptureSettings::PixelFormat::Yuv420p:
-            return i18n::tr("capture_pixel_format_Yuv420p");
+            return "capture_pixel_format_Yuv420p"_tr;
         case CaptureSettings::PixelFormat::Yuv444p:
-            return i18n::tr("capture_pixel_format_Yuv444p");
+            return "capture_pixel_format_Yuv444p"_tr;
         }
-        return i18n::tr("capture_pixel_format_Yuv444p");
+        return "capture_pixel_format_Yuv444p"_tr;
     }
 }
 
@@ -102,12 +104,12 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
     ImGui::Begin("##SettingsPanel", nullptr, PANEL_FLAGS);
 
-    ImGui::SeparatorText(i18n::tr("imgui_simulation").data());
+    ImGui::SeparatorText("imgui_simulation"_tr.data());
 
-    ImGui::TextUnformatted(i18n::tr("imgui_gravity").data());
+    ImGui::TextUnformatted("imgui_gravity"_tr.data());
     ImGui::SameLine();
     glm::vec3 gravity = simulation.world().getGravity();
-    if (ImGui::Button(i18n::tr("imgui_reset_gravity").data(), ImVec2(50.f * uiScale, 0.f))) {
+    if (ImGui::Button("imgui_reset_gravity"_tr.data(), ImVec2(50.f * uiScale, 0.f))) {
         simulation.world().setGravity(glm::vec3(0.0f));
         gravity = simulation.world().getGravity();
     }
@@ -123,16 +125,16 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         }
         return changed;
     };
-    gravityChanged |= drawDragFloat(i18n::tr("imgui_gravity_x").data(), gx, 0.05f, "%.2f");
-    gravityChanged |= drawDragFloat(i18n::tr("imgui_gravity_y").data(), gy, 0.05f, "%.2f");
-    gravityChanged |= drawDragFloat(i18n::tr("imgui_gravity_z").data(), gz, 0.05f, "%.2f");
+    gravityChanged |= drawDragFloat("imgui_gravity_x"_tr.data(), gx, 0.05f, "%.2f");
+    gravityChanged |= drawDragFloat("imgui_gravity_y"_tr.data(), gy, 0.05f, "%.2f");
+    gravityChanged |= drawDragFloat("imgui_gravity_z"_tr.data(), gz, 0.05f, "%.2f");
     ImGui::PopItemWidth();
     if (gravityChanged) {
         simulation.setGravity(glm::vec3(gx, gy, gz));
     }
 
     Integrator::Scheme currentIntegrator = simulation.world().getIntegrator().getScheme();
-    if (ComboStyle::beginCombo(i18n::tr("imgui_integrator").data(), integratorName(currentIntegrator).data(), 0.0f, uiScale)) {
+    if (ComboStyle::beginCombo("imgui_integrator"_tr.data(), integratorName(currentIntegrator).data(), 0.0f, uiScale)) {
         const Integrator::Scheme schemes[] = {
             Integrator::Scheme::Verlet,
             Integrator::Scheme::KDK,
@@ -156,15 +158,15 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
 
     if (currentIntegrator == Integrator::Scheme::RK4 || currentIntegrator == Integrator::Scheme::Langevin) {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.00f, 0.75f, 0.25f, 1.00f));
-        ImGui::TextWrapped(i18n::tr("imgui_warning_not_implemented_used_as_velocity_verlet").data(),
+        ImGui::TextWrapped("imgui_warning_not_implemented_used_as_velocity_verlet"_tr.data(),
                            integratorName(currentIntegrator).data());
         ImGui::PopStyleColor();
     }
 
     float maxParticleSpeed = simulation.getMaxParticleSpeed();
     ImGui::PushItemWidth(150.0f * uiScale);
-    if (ImGui::SliderFloat(i18n::tr("imgui_speed_of_light").data(), &maxParticleSpeed, 0.0f, 100.0f,
-                           maxParticleSpeed <= 0.0f ? i18n::tr("imgui_speed_of_light_unlimited").data() : "%.2f")) {
+    if (ImGui::SliderFloat("imgui_speed_of_light"_tr.data(), &maxParticleSpeed, 0.0f, 100.0f,
+                           maxParticleSpeed <= 0.0f ? "imgui_speed_of_light_unlimited"_tr.data() : "%.2f")) {
         simulation.setMaxParticleSpeed(maxParticleSpeed);
     }
     ImGui::PopItemWidth();
@@ -179,7 +181,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     }
     else {
         float accelDamping = simulation.getAccelDamping();
-        if (ImGui::SliderFloat(i18n::tr("imgui_accel_damping").data(), &accelDamping, 0.0f, 1.0f, "%.3f")) {
+        if (ImGui::SliderFloat("imgui_accel_damping"_tr.data(), &accelDamping, 0.0f, 1.0f, "%.3f")) {
             simulation.setAccelDamping(accelDamping);
         }
     }
@@ -187,17 +189,17 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
 
     float dt = simulation.getDt();
     ImGui::PushItemWidth(150.0f * uiScale);
-    if (ImGui::SliderFloat(i18n::tr("imgui_time_step").data(), &dt, 0.0001f, 0.05f, "%.4f",
+    if (ImGui::SliderFloat("imgui_time_step"_tr.data(), &dt, 0.0001f, 0.05f, "%.4f",
                            ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_Logarithmic)) {
         simulation.setDt(dt);
     }
     ImGui::PopItemWidth();
 
-    ImGui::SeparatorText(i18n::tr("imgui_worlds").data());
-    const std::string activeWorldLabel = std::string(i18n::tr("imgui_world_prefix")) + std::to_string(simulation.activeWorldId());
+    ImGui::SeparatorText("imgui_worlds"_tr.data());
+    const std::string activeWorldLabel = std::string("imgui_world_prefix"_tr) + std::to_string(simulation.activeWorldId());
     if (ComboStyle::beginCombo("##active_world", activeWorldLabel.c_str(), 180.0f * uiScale, uiScale, ImGuiComboFlags_HeightLargest)) {
         for (Lattice::Simulation::WorldId worldId = 0; worldId < simulation.worldCount(); ++worldId) {
-            const std::string worldLabel = std::string(i18n::tr("imgui_world_prefix")) + std::to_string(worldId);
+            const std::string worldLabel = std::string("imgui_world_prefix"_tr) + std::to_string(worldId);
             const bool isSelected = worldId == simulation.activeWorldId();
             if (ImGui::Selectable(worldLabel.c_str(), isSelected)) {
                 simulation.setActiveWorld(worldId);
@@ -208,7 +210,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         }
         ImGui::EndCombo();
     }
-    if (ImGui::Button(i18n::tr("imgui_create_world").data(), ImVec2(150.0f * uiScale, 0.0f))) {
+    if (ImGui::Button("imgui_create_world"_tr.data(), ImVec2(150.0f * uiScale, 0.0f))) {
         constexpr float worldGap = 20.0f;
         const glm::vec3 newWorldSize = simulation.world().getWorldSize();
         glm::vec3 newWorldOffset = simulation.world().getRenderOffset();
@@ -223,7 +225,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     }
     ImGui::SameLine();
     ImGui::BeginDisabled(simulation.worldCount() <= 1);
-    if (ImGui::Button(i18n::tr("imgui_delete_world").data(), ImVec2(90.0f * uiScale, 0.0f))) {
+    if (ImGui::Button("imgui_delete_world"_tr.data(), ImVec2(90.0f * uiScale, 0.0f))) {
         simulation.removeWorld(simulation.activeWorldId());
     }
     ImGui::EndDisabled();
@@ -231,39 +233,39 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     glm::vec3 renderOffset = simulation.world().getRenderOffset();
     ImGui::PushItemWidth(150.0f * uiScale);
     bool offsetChanged = false;
-    offsetChanged |= drawDragFloat(i18n::tr("imgui_offset_x").data(), renderOffset.x, 0.25f, "%.1f");
-    offsetChanged |= drawDragFloat(i18n::tr("imgui_offset_y").data(), renderOffset.y, 0.25f, "%.1f");
-    offsetChanged |= drawDragFloat(i18n::tr("imgui_offset_z").data(), renderOffset.z, 0.25f, "%.1f");
+    offsetChanged |= drawDragFloat("imgui_offset_x"_tr.data(), renderOffset.x, 0.25f, "%.1f");
+    offsetChanged |= drawDragFloat("imgui_offset_y"_tr.data(), renderOffset.y, 0.25f, "%.1f");
+    offsetChanged |= drawDragFloat("imgui_offset_z"_tr.data(), renderOffset.z, 0.25f, "%.1f");
     if (offsetChanged) {
         simulation.world().setRenderOffset(renderOffset);
     }
     ImGui::PopItemWidth();
 
     bool bondFormationEnabled = simulation.world().isBondFormationEnabled();
-    if (ImGui::Checkbox(i18n::tr("imgui_bond_formation").data(), &bondFormationEnabled)) {
+    if (ImGui::Checkbox("imgui_bond_formation"_tr.data(), &bondFormationEnabled)) {
         simulation.world().setBondFormationEnabled(bondFormationEnabled);
     }
 
     bool ljEnabled = simulation.world().isLJEnabled();
-    if (ImGui::Checkbox(i18n::tr("imgui_lj").data(), &ljEnabled)) {
+    if (ImGui::Checkbox("imgui_lj"_tr.data(), &ljEnabled)) {
         simulation.world().setLJEnabled(ljEnabled);
     }
     ImGui::SameLine();
     bool coulombEnabled = simulation.world().isCoulombEnabled();
-    if (ImGui::Checkbox(i18n::tr("imgui_coulomb").data(), &coulombEnabled)) {
+    if (ImGui::Checkbox("imgui_coulomb"_tr.data(), &coulombEnabled)) {
         simulation.world().setCoulombEnabled(coulombEnabled);
     }
 
-    ImGui::SeparatorText(i18n::tr("imgui_render").data());
-    ImGui::Checkbox(i18n::tr("imgui_atoms").data(), &activeRenderData.drawAtoms);
-    ImGui::Checkbox(i18n::tr("imgui_grid").data(), &activeRenderData.drawGrid);
-    ImGui::Checkbox(i18n::tr("imgui_connections").data(), &activeRenderData.drawBonds);
-    ImGui::Checkbox(i18n::tr("imgui_box").data(), &activeRenderData.drawBox);
-    ImGui::Checkbox(i18n::tr("imgui_memory_order").data(), &activeRenderData.drawMemoryOrder);
+    ImGui::SeparatorText("imgui_render"_tr.data());
+    ImGui::Checkbox("imgui_atoms"_tr.data(), &activeRenderData.drawAtoms);
+    ImGui::Checkbox("imgui_grid"_tr.data(), &activeRenderData.drawGrid);
+    ImGui::Checkbox("imgui_connections"_tr.data(), &activeRenderData.drawBonds);
+    ImGui::Checkbox("imgui_box"_tr.data(), &activeRenderData.drawBox);
+    ImGui::Checkbox("imgui_memory_order"_tr.data(), &activeRenderData.drawMemoryOrder);
 
-    ImGui::TextUnformatted(i18n::tr("imgui_color_scheme").data());
+    ImGui::TextUnformatted("imgui_color_scheme"_tr.data());
     RenderData::SpeedColorMode speedMode = activeRenderData.speedColorMode;
-    if (ComboStyle::beginCombo(i18n::tr("imgui_speed_color_mode").data(), speedColorModeName(speedMode).data(), 220.0f * uiScale, uiScale, ImGuiComboFlags_HeightLargest)) {
+    if (ComboStyle::beginCombo("imgui_speed_color_mode"_tr.data(), speedColorModeName(speedMode).data(), 220.0f * uiScale, uiScale, ImGuiComboFlags_HeightLargest)) {
         const RenderData::SpeedColorMode modes[] = {
             RenderData::SpeedColorMode::AtomColor,
             RenderData::SpeedColorMode::GradientClassic,
@@ -284,7 +286,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
 
     activeRenderData.speedColorMode = speedMode;
 
-    ImGui::TextUnformatted(i18n::tr("imgui_max_gradien_velocity").data());
+    ImGui::TextUnformatted("imgui_max_gradien_velocity"_tr.data());
 
     static float manualSpeedGradientMax = 5.0f;
     bool autoSpeedGradient = activeRenderData.speedGradientMax <= 0.0f;
@@ -295,61 +297,61 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
 
     ImGui::PushItemWidth(180.0f * uiScale);
     ImGui::BeginDisabled(autoSpeedGradient || !gradientModeEnabled);
-    if (ImGui::SliderFloat(i18n::tr("imgui_speed_gradient_max_slider").data(), &manualSpeedGradientMax, 0.1f, 10.0f, "%.2f")) {
+    if (ImGui::SliderFloat("imgui_speed_gradient_max_slider"_tr.data(), &manualSpeedGradientMax, 0.1f, 10.0f, "%.2f")) {
         activeRenderData.speedGradientMax = manualSpeedGradientMax;
     }
     ImGui::EndDisabled();
     ImGui::SameLine();
     ImGui::BeginDisabled(!gradientModeEnabled);
-    if (ImGui::Checkbox(i18n::tr("imgui_auto_speed_gradien").data(), &autoSpeedGradient)) {
+    if (ImGui::Checkbox("imgui_auto_speed_gradien"_tr.data(), &autoSpeedGradient)) {
         activeRenderData.speedGradientMax = autoSpeedGradient ? 0.0f : manualSpeedGradientMax;
     }
     ImGui::EndDisabled();
     ImGui::PopItemWidth();
 
-    ImGui::SeparatorText(i18n::tr("imgui_neighbour_list").data());
+    ImGui::SeparatorText("imgui_neighbour_list"_tr.data());
     int cellSize = simulation.world().getGridCellSize();
-    if (ImGui::SliderInt(i18n::tr("imgui_cell_size").data(), &cellSize, 1, 32)) {
+    if (ImGui::SliderInt("imgui_cell_size"_tr.data(), &cellSize, 1, 32)) {
         simulation.setSizeBox(simulation.world().getWorldSize(), cellSize);
     }
 
     float cutoff = simulation.getNeighborListCutoff();
-    if (ImGui::SliderFloat(i18n::tr("imgui_cutoff_nl").data(), &cutoff, 0.5f, 20.0f, "%.2f")) {
+    if (ImGui::SliderFloat("imgui_cutoff_nl"_tr.data(), &cutoff, 0.5f, 20.0f, "%.2f")) {
         simulation.setNeighborListCutoff(cutoff);
     }
 
     float skin = simulation.getNeighborListSkin();
-    if (ImGui::SliderFloat(i18n::tr("imgui_skin_nl").data(), &skin, 0.1f, 10.0f, "%.2f")) {
+    if (ImGui::SliderFloat("imgui_skin_nl"_tr.data(), &skin, 0.1f, 10.0f, "%.2f")) {
         simulation.setNeighborListSkin(skin);
     }
 
     if (captureController.isAvailable()) {
-        ImGui::SeparatorText(i18n::tr("imgui_write").data());
+        ImGui::SeparatorText("imgui_write"_tr.data());
         CaptureSettings captureSettings = captureController.settings();
         const bool recordingActive = captureController.isRecording();
         const std::string captureDir = captureController.outputDirectory().string();
 
-        ImGui::TextUnformatted(i18n::tr("imgui_video_saving_folder").data());
+        ImGui::TextUnformatted("imgui_video_saving_folder"_tr.data());
         std::array<char, 512> captureDirBuffer{};
         std::snprintf(captureDirBuffer.data(), captureDirBuffer.size(), "%s", captureDir.data());
         const float browseButtonWidth = ImGui::GetFrameHeight();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseButtonWidth - ImGui::GetStyle().ItemSpacing.x);
-        ImGui::InputText(i18n::tr("imgui_capture_dir").data(), captureDirBuffer.data(), captureDirBuffer.size(),
+        ImGui::InputText("imgui_capture_dir"_tr.data(), captureDirBuffer.data(), captureDirBuffer.size(),
                          ImGuiInputTextFlags_ReadOnly);
         ImGui::SameLine();
-        if (ImGui::Button(i18n::tr("imgui_capture_dir_browse").data(), ImVec2(browseButtonWidth, 0.0f))) {
+        if (ImGui::Button("imgui_capture_dir_browse"_tr.data(), ImVec2(browseButtonWidth, 0.0f))) {
             fileDialog.openCaptureDirectory(captureDir);
         }
 
         ImGui::BeginDisabled(recordingActive);
 
-        if (ImGui::BeginTable(i18n::tr("imgui_capture_settings_table").data(), 2, ImGuiTableFlags_SizingStretchSame)) {
+        if (ImGui::BeginTable("imgui_capture_settings_table"_tr.data(), 2, ImGuiTableFlags_SizingStretchSame)) {
             ImGui::TableNextRow();
 
             ImGui::TableSetColumnIndex(0);
             ImGui::SetNextItemWidth(-FLT_MIN);
             int captureFps = captureSettings.fps;
-            if (ImGui::SliderInt(i18n::tr("imgui_fps_capture").data(), &captureFps, 10, 60)) {
+            if (ImGui::SliderInt("imgui_fps_capture"_tr.data(), &captureFps, 10, 60)) {
                 captureSettings.fps = captureFps;
                 captureController.setSettings(captureSettings);
             }
@@ -357,7 +359,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
             ImGui::TableSetColumnIndex(1);
             ImGui::SetNextItemWidth(-FLT_MIN);
             int crf = captureSettings.crf;
-            if (ImGui::SliderInt(i18n::tr("imgui_crf_capture").data(), &crf, 12, 30)) {
+            if (ImGui::SliderInt("imgui_crf_capture"_tr.data(), &crf, 12, 30)) {
                 captureSettings.crf = crf;
                 captureController.setSettings(captureSettings);
             }
@@ -366,7 +368,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
 
             ImGui::TableSetColumnIndex(0);
             CaptureSettings::Preset preset = captureSettings.preset;
-            if (ComboStyle::beginCombo(i18n::tr("imgui_preset_capture").data(), capturePresetName(preset).data(), -FLT_MIN, uiScale)) {
+            if (ComboStyle::beginCombo("imgui_preset_capture"_tr.data(), capturePresetName(preset).data(), -FLT_MIN, uiScale)) {
                 const CaptureSettings::Preset presets[] = {
                     CaptureSettings::Preset::Ultrafast, CaptureSettings::Preset::Veryfast, CaptureSettings::Preset::Faster,
                     CaptureSettings::Preset::Fast,      CaptureSettings::Preset::Medium,
@@ -388,7 +390,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
 
             ImGui::TableSetColumnIndex(1);
             CaptureSettings::PixelFormat pixelFormat = captureSettings.pixelFormat;
-            if (ComboStyle::beginCombo(i18n::tr("imgui_color_capture").data(), capturePixelFormatName(pixelFormat).data(), -FLT_MIN,
+            if (ComboStyle::beginCombo("imgui_color_capture"_tr.data(), capturePixelFormatName(pixelFormat).data(), -FLT_MIN,
                                        uiScale)) {
                 const CaptureSettings::PixelFormat pixelFormats[] = {
                     CaptureSettings::PixelFormat::Yuv444p,
@@ -415,7 +417,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         ImGui::EndDisabled();
     }
 
-    if (ImGui::Button(i18n::tr("imgui_reset_settings").data(), ImVec2(ImGui::GetContentRegionAvail().x, 0.0f))) {
+    if (ImGui::Button("imgui_reset_settings"_tr.data(), ImVec2(ImGui::GetContentRegionAvail().x, 0.0f))) {
         const UserSettings defaults;
         captureController.setOutputDirectory(defaults.captureOutputDirectory);
         captureController.setSettings(defaults.captureSettings);
@@ -434,15 +436,15 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         simulation.setCoulombEnabled(defaults.simulationCoulombEnabled);
     }
 
-    ImGui::SeparatorText(i18n::tr("imgui_localization").data());
+    ImGui::SeparatorText("imgui_localization"_tr.data());
     const float languageButtonWidth = 86.0f * uiScale;
-    if (ImGui::Button(i18n::tr("imgui_language_toggle").data(), ImVec2(languageButtonWidth, 0.0f))) {
+    if (ImGui::Button("imgui_language_toggle"_tr.data(), ImVec2(languageButtonWidth, 0.0f))) {
         i18n::toggle();
     }
 
     const float exitButtonWidth = ImGui::GetContentRegionAvail().x;
     const std::string versionText =
-        std::string(i18n::tr("version_text_pre")) + LATTICELAB_VERSION_STRING + std::string(i18n::tr("version_text_after"));
+        std::string("version_text_pre"_tr) + LATTICELAB_VERSION_STRING + std::string("version_text_after"_tr);
     const float versionWidth = ImGui::CalcTextSize(versionText.c_str()).x;
     const float footerHeight = ImGui::GetFrameHeightWithSpacing() + ImGui::GetTextLineHeightWithSpacing();
     const float remaining = ImGui::GetContentRegionAvail().y - footerHeight;
@@ -455,7 +457,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     ImGui::TextUnformatted(versionText.c_str());
     ImGui::PopStyleColor();
 
-    if (ImGui::Button(i18n::tr("imgui_exit_button").data(), ImVec2(exitButtonWidth, 0.0f))) {
+    if (ImGui::Button("imgui_exit_button"_tr.data(), ImVec2(exitButtonWidth, 0.0f))) {
         AppSignals::UI::ExitApplication.emit();
     }
 
