@@ -47,6 +47,8 @@ public:
     void setLJEnabled(bool v) { ljEnabled = v; }
     bool isCoulombEnabled() const { return coulombEnabled; }
     void setCoulombEnabled(bool v) { coulombEnabled = v; }
+    bool isCoulombLongRangeEnabled() const { return longRangeForcesEnabled; }
+    void setCoulombLongRangeEnabled(bool v) { longRangeForcesEnabled = v; }
 
     AtomStorage& getAtomStorage() noexcept { return atomStorage_; }
     const AtomStorage& getAtomStorage() const noexcept { return atomStorage_; }
@@ -135,6 +137,7 @@ private:
 
     bool ljEnabled = true;
     bool coulombEnabled = true;
+    bool longRangeForcesEnabled = true;
 
     AtomStorage atomStorage_;
     SpatialGrid grid;

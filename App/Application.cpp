@@ -92,20 +92,20 @@ int Application::run() {
     // создание сцены
     // Generators::triangularBipyramidCrystal(simulation, 8, AtomData::Type::H);
     // Generators::AngularVelocity(simulation, Vec3f(0.0f, 0.25f, 0.0f));
-    Generators::hexLattice(simulation, {20, 20, 1}, AtomData::Type::Z);
+    // Generators::hexLattice(simulation, {5, 5, 1}, AtomData::Type::Z);
     
-    // std::vector<Generators::AtomTypeSpec> gasSpecs = {
-    //         // {AtomData::Type::O, 0, 80.0f},    // 80% водорода
-    //         {AtomData::Type::Na, 0, 50.0f},   // 10% натрия
-    //         {AtomData::Type::Cl, 0, 50.0f}    // 10% хлора
-    //     };
-    // Generators::randomGasMixed(simulation, 500, gasSpecs, false, 6.0, 6.0, 1.0f, 5.0f, 0);
+    std::vector<Generators::AtomTypeSpec> gasSpecs = {
+            // {AtomData::Type::O, 0, 80.0f},    // 80% водорода
+            {AtomData::Type::Na, 0, 50.0f},   // 10% натрия
+            {AtomData::Type::Cl, 0, 50.0f}    // 10% хлора
+        };
+    Generators::randomGasMixed(simulation, 500, gasSpecs, false, 6.0, 6.0, 1.0f, 5.0f, 0);
         // Lattice::simulation.createAtom(Vec3f(24, 25, 3), Vec3f(1, 0, 0), AtomData::Type::Na);
         // Lattice::simulation.createAtom(Vec3f(28, 25, 3), Vec3f(-1, 0, 0), AtomData::Type::Na);
     renderer.syncScene(simulation);
 
-    Octree octree({60.0f, 60.0f, 60.0f}, 120.0f);
-    octree.build(simulation.world().getAtomStorage());
+    OctreeNode octree;
+    octree.build(simulation.world().getAtomStorage(), simulation.world().getGrid());
     octree.show();
 
     auto startTime = Clock::now();
