@@ -167,6 +167,69 @@ void RendererWGPU::initLinePipeline(wgpu::RenderPipeline& outPipeline, std::stri
     }
 }
 
+void RendererWGPU::initMemoryOrderPipeline(std::string_view memoryOrderWGSL) {
+    wgpu::ShaderModule shader = createShaderModule(memoryOrderWGSL);
+
+    wgpu::BindGroupLayoutEntry uboEntry{};
+    uboEntry.binding = 0;
+    uboEntry.visibility = wgpu::ShaderStage::Vertex;
+    uboEntry.buffer.type = wgpu::BufferBindingType::Uniform;
+
+    if (!lineBindGroupLayout) {
+        lineBindGroupLayout = WGPUContext::instance().createBindGroupLayout({&uboEntry, 1}, "LineBindGroupLayout");
+    }
+
+    wgpu::PipelineLayoutDescriptor plDesc{};
+    plDesc.label = wgpu::StringView("MemoryOrderPipelineLayout");
+    plDesc.bindGroupLayoutCount = 1;
+    plDesc.bindGroupLayouts = (WGPUBindGroupLayout*)&lineBindGroupLayout;
+
+    std::array<wgpu::VertexAttribute, 2> attrs{};
+    attrs[0].format = wgpu::VertexFormat::Float32x3;
+    attrs[0].offset = offsetof(MemoryOrderVertex, pos);
+    attrs[0].shaderLocation = 0;
+    attrs[1].format = wgpu::VertexFormat::Float32;
+    attrs[1].offset = offsetof(MemoryOrderVertex, t);
+    attrs[1].shaderLocation = 1;
+
+    wgpu::VertexBufferLayout vbl{};
+    vbl.arrayStride = sizeof(MemoryOrderVertex);
+    vbl.stepMode = wgpu::VertexStepMode::Vertex;
+    vbl.attributeCount = attrs.size();
+    vbl.attributes = attrs.data();
+
+    wgpu::ColorTargetState colorTarget{};
+    colorTarget.format = surfaceFormat;
+    colorTarget.writeMask = wgpu::ColorWriteMask::All;
+
+    wgpu::FragmentState fragState{};
+    fragState.module = shader;
+    fragState.entryPoint = wgpu::StringView("fs_main");
+    fragState.targetCount = 1;
+    fragState.targets = &colorTarget;
+
+    wgpu::RenderPipelineDescriptor pDesc{};
+    pDesc.label = wgpu::StringView("MemoryOrderRenderPipeline");
+    pDesc.layout = WGPUContext::instance().device()->createPipelineLayout(plDesc);
+    pDesc.vertex.module = shader;
+    pDesc.vertex.entryPoint = wgpu::StringView("vs_main");
+    pDesc.vertex.bufferCount = 1;
+    pDesc.vertex.buffers = &vbl;
+    pDesc.fragment = &fragState;
+    pDesc.primitive.topology = wgpu::PrimitiveTopology::LineList;
+    pDesc.multisample.count = 1;
+    pDesc.multisample.mask = 0xFFFFFFFF;
+    pDesc.multisample.alphaToCoverageEnabled = false;
+
+    wgpu::DepthStencilState depthState{};
+    depthState.format = wgpu::TextureFormat::Depth24Plus;
+    depthState.depthWriteEnabled = wgpu::OptionalBool::False;
+    depthState.depthCompare = wgpu::CompareFunction::Less;
+    pDesc.depthStencil = &depthState;
+
+    memoryOrderPipeline = WGPUContext::instance().device()->createRenderPipeline(pDesc);
+}
+
 void RendererWGPU::initGridPipeline(std::string_view gridWGSL) {
     wgpu::ShaderModule shader = createShaderModule(gridWGSL);
 

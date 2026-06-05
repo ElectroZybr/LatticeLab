@@ -30,6 +30,7 @@ protected:
     void initGridPipeline(std::string_view gridWGSL);
     void initBoxPipeline(std::string_view boxWGSL);
     void initBondPipeline(std::string_view bondWGSL);
+    void initMemoryOrderPipeline(std::string_view memoryOrderWGSL);
 
 private:
     static constexpr size_t kLineUniformSlotCount = 4;
@@ -52,6 +53,7 @@ private:
     wgpu::raii::RenderPipeline bondPipeline;
     wgpu::raii::RenderPipeline boxPipeline;
     wgpu::raii::RenderPipeline gridPipeline;
+    wgpu::raii::RenderPipeline memoryOrderPipeline;
 
     // Bind group layouts
     wgpu::raii::BindGroupLayout atomBindGroupLayout;
@@ -120,6 +122,10 @@ private:
 
     struct AtomVec4 {
         float x, y, z, pad = 0.f;
+    };
+    struct MemoryOrderVertex {
+        glm::vec3 pos;
+        float t = 0.0f;
     };
     std::vector<AtomVec4> posData_;
     std::vector<AtomVec4> velData_;

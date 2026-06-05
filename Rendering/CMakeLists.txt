@@ -20,6 +20,7 @@ endif()
 add_library(latticelab_rendering STATIC
     ${RENDERING_SOURCES}
     ${RENDERING_PUBLIC_HEADERS}
+    ${WGSL_HEADERS}
 )
 
 add_library(LatticeLab::Rendering ALIAS latticelab_rendering)

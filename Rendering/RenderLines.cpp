@@ -125,15 +125,22 @@ void RendererWGPU::drawMemoryOrderImpl(const RenderAtomsView& atoms) {
         return;
     }
 
-    std::vector<glm::vec3> verts;
+    std::vector<MemoryOrderVertex> verts;
     verts.reserve((atoms.count - 1) * 2);
 
+    const float invLastIndex = atoms.count > 1 ? 1.0f / static_cast<float>(atoms.count - 1) : 0.0f;
     for (size_t i = 0; i + 1 < atoms.count; ++i) {
-        verts.emplace_back(atoms.x[i], atoms.y[i], atoms.z[i]);
-        verts.emplace_back(atoms.x[i + 1], atoms.y[i + 1], atoms.z[i + 1]);
+        verts.push_back(MemoryOrderVertex{
+            .pos = glm::vec3(atoms.x[i], atoms.y[i], atoms.z[i]),
+            .t = static_cast<float>(i) * invLastIndex,
+        });
+        verts.push_back(MemoryOrderVertex{
+            .pos = glm::vec3(atoms.x[i + 1], atoms.y[i + 1], atoms.z[i + 1]),
+            .t = static_cast<float>(i + 1) * invLastIndex,
+        });
     }
 
-    const uint64_t bytes = verts.size() * sizeof(glm::vec3);
+    const uint64_t bytes = verts.size() * sizeof(MemoryOrderVertex);
     if (bytes > memoryOrderVbCapacity_) {
         memoryOrderVb =
             WGPUContext::instance().createBuffer(bytes * 2, wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst, "Memory_Order_Geometry");
@@ -142,7 +149,7 @@ void RendererWGPU::drawMemoryOrderImpl(const RenderAtomsView& atoms) {
 
     WGPUContext::instance().queue()->writeBuffer(*memoryOrderVb, 0, verts.data(), bytes);
 
-    currentPass->setPipeline(*bondPipeline);
+    currentPass->setPipeline(*memoryOrderPipeline);
     currentPass->setBindGroup(0, *lineBindGroups[lineUniformSlotIndex_ - 1], 0, nullptr);
     currentPass->setVertexBuffer(0, *memoryOrderVb, 0, bytes);
     currentPass->draw(verts.size(), 1, 0, 0);
