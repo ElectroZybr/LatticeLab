@@ -33,7 +33,7 @@ namespace Benchmarks {
 
     void Scenes::buildIdealCrystal3D(Lattice::Simulation& simulation, int atomCount) {
         const int side = cubeSideFromCount(atomCount);
-        Generators::hexLattice(simulation, side, AtomData::Type::Z, true);
+        Generators::hexLattice(simulation, glm::ivec3(side), AtomData::Type::Z);
     }
 
     void Scenes::buildCrystal2D(Lattice::Simulation& simulation, int atomCount) {

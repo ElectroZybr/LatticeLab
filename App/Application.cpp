@@ -50,7 +50,7 @@ int Application::run() {
     Lattice::Simulation simulation;
     const UserSettings userSettings = UserSettingsIO::load();
 
-    simulation.createWorld({120, 120, 120});
+    simulation.createWorld(glm::vec3(120.0f, 120.0f, 120.0f));
 
     CaptureController captureController;
     const SceneViewport::RendererType initialRendererType =

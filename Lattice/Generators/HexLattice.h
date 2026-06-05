@@ -10,5 +10,5 @@ namespace Generators {
     /// @param type Тип атома
     /// @param start_force Начальная величина случайной скорости
     /// @param margin Отступ от границ симуляционного ящика
-    void hexLattice(Lattice::Simulation& sim, Vec3f count, AtomData::Type type, float start_force = 1.0f, float margin = 15.0);
+    void hexLattice(Lattice::Simulation& sim, glm::ivec3 count, AtomData::Type type, float start_force = 1.0f, float margin = 15.0);
 }

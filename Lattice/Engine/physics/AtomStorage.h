@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "Engine/NeighborSearch/SpatialGrid.h"
-#include "Engine/math/Vec3.h"
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/Morton3D.h"
 
@@ -200,7 +199,7 @@ public:
         atomIds_.reserve(count);
     }
 
-    void addAtom(const Vec3f& coords, const Vec3f& speed, AtomData::Type type, bool fixed = false) {
+    void addAtom(const glm::vec3& coords, const glm::vec3& speed, AtomData::Type type, bool fixed = false) {
         ensureCapacity(count_ + 1);
 
         x_[count_] = static_cast<float>(coords.x);
@@ -352,30 +351,30 @@ public:
     uint8_t& valenceCount(size_t i) { return valence_[i]; }
     const uint8_t& valenceCount(size_t i) const { return valence_[i]; }
 
-    Vec3f pos(size_t i) const { return {x_[i], y_[i], z_[i]}; }
-    Vec3f vel(size_t i) const { return {vx_[i], vy_[i], vz_[i]}; }
-    Vec3f force(size_t i) const { return {fx_[i], fy_[i], fz_[i]}; }
-    Vec3f prevForce(size_t i) const { return {pfx_[i], pfy_[i], pfz_[i]}; }
+    glm::vec3 pos(size_t i) const { return {x_[i], y_[i], z_[i]}; }
+    glm::vec3 vel(size_t i) const { return {vx_[i], vy_[i], vz_[i]}; }
+    glm::vec3 force(size_t i) const { return {fx_[i], fy_[i], fz_[i]}; }
+    glm::vec3 prevForce(size_t i) const { return {pfx_[i], pfy_[i], pfz_[i]}; }
 
-    void setPos(size_t i, const Vec3f& v) {
-        x_[i] = static_cast<float>(v.x);
-        y_[i] = static_cast<float>(v.y);
-        z_[i] = static_cast<float>(v.z);
+    void setPos(size_t i, const glm::vec3& v) {
+        x_[i] = v.x;
+        y_[i] = v.y;
+        z_[i] = v.z;
     }
-    void setVel(size_t i, const Vec3f& v) {
-        vx_[i] = static_cast<float>(v.x);
-        vy_[i] = static_cast<float>(v.y);
-        vz_[i] = static_cast<float>(v.z);
+    void setVel(size_t i, const glm::vec3& v) {
+        vx_[i] = v.x;
+        vy_[i] = v.y;
+        vz_[i] = v.z;
     }
-    void setForce(size_t i, const Vec3f& v) {
-        fx_[i] = static_cast<float>(v.x);
-        fy_[i] = static_cast<float>(v.y);
-        fz_[i] = static_cast<float>(v.z);
+    void setForce(size_t i, const glm::vec3& v) {
+        fx_[i] = v.x;
+        fy_[i] = v.y;
+        fz_[i] = v.z;
     }
-    void setPrevForce(size_t i, const Vec3f& v) {
-        pfx_[i] = static_cast<float>(v.x);
-        pfy_[i] = static_cast<float>(v.y);
-        pfz_[i] = static_cast<float>(v.z);
+    void setPrevForce(size_t i, const glm::vec3& v) {
+        pfx_[i] = v.x;
+        pfy_[i] = v.y;
+        pfz_[i] = v.z;
     }
 
     float* xData() { return x_; }
@@ -440,10 +439,10 @@ public:
     }
 
     struct AtomView {
-        Vec3f pos;
-        Vec3f vel;
-        Vec3f force;
-        Vec3f prevForce;
+        glm::vec3 pos;
+        glm::vec3 vel;
+        glm::vec3 force;
+        glm::vec3 prevForce;
         float energy;
         float invMass;
         float charge;

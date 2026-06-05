@@ -21,7 +21,7 @@ void updateAtomSelectionDebug(const DebugViews& debugViews, const Lattice::Simul
         const size_t selectedIndex = atoms.indexOf(*selectedAtomIds.begin());
         if (selectedIndex < atoms.size()) {
             debugViews.atomSingle->add_data("Позиция", atoms.pos(selectedIndex));
-            const float speed = atoms.vel(selectedIndex).abs();
+            const float speed = glm::length(atoms.vel(selectedIndex));
             debugViews.atomSingle->add_data("Скорость (A/dt)", speed);
             debugViews.atomSingle->add_data("Скорость (м/с)", speed * Units::SpeedUnitToMps);
             debugViews.atomSingle->add_data("Скорость (км/ч)", speed * Units::SpeedUnitToKmph);

@@ -7,11 +7,11 @@
 
 namespace App::Viewport {
     inline glm::vec3 makeRenderBoxSize(const World& world) {
-        const Vec3f size = world.getWorldSize();
+        const glm::vec3 size = world.getWorldSize();
         return glm::vec3(
-            std::max(0.0f, static_cast<float>(size.x - 1.0f)),
-            std::max(0.0f, static_cast<float>(size.y - 1.0f)),
-            std::max(0.0f, static_cast<float>(size.z - 1.0f))
+            std::max(0.0f, size.x - 1.0f),
+            std::max(0.0f, size.y - 1.0f),
+            std::max(0.0f, size.z - 1.0f)
         );
     }
 
@@ -85,7 +85,7 @@ namespace App::Viewport {
             renderData.atoms = makeRenderAtomsView(world);
             renderData.hasBox = true;
             renderData.worldSize = makeRenderBoxSize(world);
-            renderData.renderOffset = {world.getRenderOffset().x, world.getRenderOffset().y, world.getRenderOffset().z};
+            renderData.renderOffset = world.getRenderOffset();
             renderData.isActiveWorld = (worldId == simulation.activeWorldId());
             renderData.bonds = RenderBondsView{
                 .context = &world.getBonds(),
@@ -105,7 +105,7 @@ namespace App::Viewport {
         }
 
         const World& activeWorld = simulation.worldAt(simulation.activeWorldId());
-        renderer.camera.setSceneBounds(Vec3f(makeRenderBoxSize(activeWorld)), activeWorld.getRenderOffset());
+        renderer.camera.setSceneBounds(makeRenderBoxSize(activeWorld), activeWorld.getRenderOffset());
         if (selectedAtomIds != nullptr) {
             copySelection(renderer.getRenderData(simulation.activeWorldId()), activeWorld.getAtomStorage(), selectedAtomIds);
         }

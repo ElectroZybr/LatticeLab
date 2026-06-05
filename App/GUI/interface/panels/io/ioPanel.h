@@ -5,9 +5,10 @@
 #include <vector>
 
 #include <imgui.h>
-
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
 #include "App/AppPaths.h"
-#include "Lattice/Engine/math/Vec3.h"
+
 #include "Lattice/Engine/physics/AtomData.h"
 #include "GUI/interface/panels/io/ioPanelSceneCatalog.h"
 
@@ -27,7 +28,7 @@ public:
     static constexpr ImGuiWindowFlags PANEL_FLAGS =
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 
-    void draw(float scale, Vec2i windowSize, Lattice::Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState);
+    void draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState);
     void setScenesDirectory(std::filesystem::path scenesDirectory);
     [[nodiscard]] const std::filesystem::path& scenesDirectory() const { return scenesDirectory_; }
 
@@ -41,7 +42,7 @@ public:
     [[nodiscard]] AtomData::Type atomType() const { return atomType_; }
     [[nodiscard]] AtomData::Type gasAtomType() const { return gasAtomType_; }
     [[nodiscard]] float gasDensity() const { return gasDensity_; }
-    [[nodiscard]] Vec3f boxSize() const { return boxSize_; }
+    [[nodiscard]] glm::vec3 boxSize() const { return boxSize_; }
 
 private:
     void ensureSceneCatalogLoaded();
@@ -57,7 +58,7 @@ private:
     int gasAtomCount_ = 1000;
     bool gasIs3D_ = false;
     float gasDensity_ = 1.0f;
-    Vec3f boxSize_ = Vec3f(100.0f, 100.0f, 6.0f);
+    glm::vec3 boxSize_ = glm::vec3(100.0f, 100.0f, 6.0f);
     AtomData::Type atomType_ = AtomData::Type::Z;
     AtomData::Type gasAtomType_ = AtomData::Type::Z;
     RecordingFormat recordingFormat_ = RecordingFormat::MP4;

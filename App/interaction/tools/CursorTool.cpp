@@ -7,7 +7,7 @@
 
 CursorTool::CursorTool(ToolContext& context) noexcept : ITool(context) {}
 
-void CursorTool::onLeftPressed(Vec2i mousePos) {
+void CursorTool::onLeftPressed(glm::ivec2 mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr || ctx.simulation == nullptr) {
         return;
@@ -28,13 +28,13 @@ void CursorTool::onLeftPressed(Vec2i mousePos) {
     }
 }
 
-void CursorTool::onLeftReleased(Vec2i mousePos) {
+void CursorTool::onLeftReleased(glm::ivec2 mousePos) {
     (void)mousePos;
     atomMoveActive_ = false;
     selectedMoveAtomId_ = InvalidAtomId;
 }
 
-void CursorTool::onFrame(Vec2i mousePos, float deltaTime) {
+void CursorTool::onFrame(glm::ivec2 mousePos, float deltaTime) {
     ToolContext& ctx = context();
     if (!atomMoveActive_ || ctx.simulation == nullptr || ctx.pickingSystem == nullptr) {
         return;
@@ -50,17 +50,17 @@ void CursorTool::onFrame(Vec2i mousePos, float deltaTime) {
         return;
     }
 
-    const Vec3f worldMouse = screenToLocalWorld(mousePos);
+    const glm::vec3 worldMouse = screenToLocalWorld(mousePos);
     const auto& selectedAtomIds = ctx.pickingSystem->getSelectedAtomIds();
-    const Vec3f selectedWorldPos = atoms.pos(selectedMoveAtomIndex);
-    const Vec3f displacement = worldMouse - selectedWorldPos;
+    const glm::vec3 selectedWorldPos = atoms.pos(selectedMoveAtomIndex);
+    const glm::vec3 displacement = worldMouse - selectedWorldPos;
 
     constexpr float kReferenceFrameRate = 60.0f;
     constexpr float kDragStrength = 5.f;
     const float frameScale = deltaTime * kReferenceFrameRate;
 
-    auto applyRawForce = [&](size_t idx, const Vec3f& baseDisplacement) {
-        const Vec3f dragForce = baseDisplacement * (kDragStrength * frameScale);
+    auto applyRawForce = [&](size_t idx, const glm::vec3& baseDisplacement) {
+        const glm::vec3 dragForce = baseDisplacement * (kDragStrength * frameScale);
         atoms.forceX(idx) += dragForce.x;
         atoms.forceY(idx) += dragForce.y;
         atoms.forceZ(idx) += dragForce.z;

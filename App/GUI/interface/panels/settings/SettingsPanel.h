@@ -2,8 +2,7 @@
 #include <memory>
 
 #include <imgui.h>
-
-#include "Lattice/Engine/math/Vec2.h"
+#include <glm/vec2.hpp>
 
 namespace Lattice {
     class Simulation;
@@ -17,7 +16,7 @@ public:
     static constexpr ImGuiWindowFlags PANEL_FLAGS =
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 
-    void draw(float uiScale, Vec2i windowSize, Lattice::Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer,
+    void draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer,
               CaptureController& captureController, FileDialogManager& fileDialog);
     void toggle() { visible = !visible; }
     void close() { visible = false; }

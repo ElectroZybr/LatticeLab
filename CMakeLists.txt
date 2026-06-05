@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.17)
 cmake_policy(SET CMP0069 NEW)
+
 project(LatticeLab VERSION 0.1.2 LANGUAGES CXX)
 
 set(APP_NAME "${PROJECT_NAME}")
@@ -13,7 +14,7 @@ option(BUILD_BENCHMARKS "Build benchmarks" OFF)
 option(ENABLE_IPO "Enable link-time optimization for non-Debug builds when supported" ON)
 option(BUILD_RENDERING_TESTS "Build Rendering module tests" ON)
 
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -26,7 +27,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
     set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 endif()
 
-if (WIN32)
+if(WIN32)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build static libraries on Windows" FORCE)
 else()
     set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries on Unix" FORCE)
@@ -34,39 +35,48 @@ endif()
 
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
-    set(CMAKE_C_COMPILER_LAUNCHER   ${CCACHE_PROGRAM})
-    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
     message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
 endif()
 
-include(dependencies)
-include(CTest)
+function(enable_non_debug_ipo target_name)
+    set_target_properties(${target_name} PROPERTIES
+        INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE
+        INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE
+        INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL TRUE
+    )
+endfunction()
 
-file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
-    "App/*.cpp"
-)
+include(CTest)
+include(dependencies)
 
 set(GENERATED_ROOT "${CMAKE_BINARY_DIR}/gen_includes")
 set(GENERATED_DIR "${GENERATED_ROOT}/generated")
 file(MAKE_DIRECTORY "${GENERATED_DIR}")
+
 configure_file(
     "${CMAKE_SOURCE_DIR}/App/AppVersion.h.in"
     "${GENERATED_DIR}/AppVersion.h"
     @ONLY
 )
 
-add_library(latticelab_lib STATIC ${CORE_SOURCES})
-
-set(G_RES_HEADERS "")
-include(embedded_resources)
-add_dependencies(latticelab_lib embedded_resources)
+file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
+    "App/*.cpp"
+)
 
 include(shaders)
+include(embedded_resources)
+include(embedded_translate)
+
 add_subdirectory(Lattice)
 add_subdirectory(Rendering)
 
-include(embedded_translate)
-add_dependencies(latticelab_lib embedded_translate)
+add_library(latticelab_lib STATIC ${CORE_SOURCES})
+add_dependencies(latticelab_lib
+    embedded_resources
+    embedded_translate
+)
 
 target_compile_options(latticelab_lib PRIVATE
     $<$<AND:$<BOOL:${OPTIMIZE_FOR_NATIVE}>,$<NOT:$<CONFIG:Debug>>,$<CXX_COMPILER_ID:GNU,Clang,AppleClang>>:-march=native>
@@ -87,15 +97,13 @@ target_include_directories(latticelab_lib PUBLIC
     ${webgpu_cpp_SOURCE_DIR}/wgpu-native
 )
 
-
-
 if(APPLE)
     find_library(COCOA_FRAMEWORK Cocoa)
     find_library(METAL_FRAMEWORK Metal)
     find_library(QUARTZCORE_FRAMEWORK QuartzCore)
 
     target_sources(latticelab_lib PRIVATE
-            Rendering/MetalBackend.mm
+        Rendering/MetalBackend.mm
     )
 
     target_link_libraries(latticelab_lib PUBLIC
@@ -106,14 +114,14 @@ if(APPLE)
         ${METAL_FRAMEWORK}
         ${QUARTZCORE_FRAMEWORK}
     )
-endif ()
-
+endif()
 
 target_link_libraries(latticelab_lib PUBLIC
-    Lattice
+    LatticeLab::Lattice
     LatticeLab::Rendering
     glfw
-    imgui ImGuiFileDialog_lib
+    imgui
+    ImGuiFileDialog_lib
     glm::glm
     webgpu
     zpp_bits
@@ -124,11 +132,7 @@ include(CheckIPOSupported)
 if(ENABLE_IPO)
     check_ipo_supported(RESULT lto_supported OUTPUT lto_error)
     if(lto_supported AND NOT MINGW)
-        set_target_properties(latticelab_lib PROPERTIES
-            INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE
-            INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE
-            INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL TRUE
-        )
+        enable_non_debug_ipo(latticelab_lib)
     elseif(MINGW)
         message(STATUS "IPO is disabled for MinGW")
     else()
@@ -136,18 +140,13 @@ if(ENABLE_IPO)
     endif()
 endif()
 
-if (WIN32)
-    add_executable(${APP_NAME} WIN32 main.cpp)
-else()
-    add_executable(${APP_NAME} main.cpp)
-endif()
+add_executable(${APP_NAME} main.cpp)
+set_target_properties(${APP_NAME} PROPERTIES
+    WIN32_EXECUTABLE $<BOOL:${WIN32}>
+)
 
 if(ENABLE_IPO AND lto_supported AND NOT MINGW)
-    set_target_properties(${APP_NAME} PROPERTIES
-        INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE
-        INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE
-        INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL TRUE
-    )
+    enable_non_debug_ipo(${APP_NAME})
 endif()
 
 target_link_libraries(${APP_NAME} PRIVATE latticelab_lib)
@@ -158,6 +157,7 @@ include(windows_resources)
 
 install(TARGETS ${APP_NAME} RUNTIME DESTINATION .)
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets" DESTINATION .)
+
 if(EXISTS "${CMAKE_SOURCE_DIR}/demo/scenes")
     install(DIRECTORY "${CMAKE_SOURCE_DIR}/demo/scenes" DESTINATION demo)
 endif()

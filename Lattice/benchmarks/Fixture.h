@@ -110,7 +110,7 @@ public:
         }
         atomCount_ = Benchmarks::atomCountFromExtent(Benchmarks::currentScene(), sceneExtent_);
         simulation_ = std::make_unique<Lattice::Simulation>();
-        simulation_->createWorld(Vec3f(160, 160, 160));
+        simulation_->createWorld(glm::vec3(160.0f));
     }
 
     void TearDown(benchmark::State&) override { simulation_.reset(); }

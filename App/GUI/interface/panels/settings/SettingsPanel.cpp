@@ -76,7 +76,7 @@ namespace {
     }
 }
 
-void SettingsPanel::draw(float uiScale, Vec2i windowSize, Lattice::Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer,
+void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer,
                          CaptureController& captureController, FileDialogManager& fileDialog) {
     float target = visible ? 1.f : 0.f;
     float step = ImGui::GetIO().DeltaTime * 12.f;
@@ -106,9 +106,9 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Lattice::Simulation& s
 
     ImGui::TextUnformatted(i18n::tr("imgui_gravity").data());
     ImGui::SameLine();
-    Vec3f gravity = simulation.world().getGravity();
+    glm::vec3 gravity = simulation.world().getGravity();
     if (ImGui::Button(i18n::tr("imgui_reset_gravity").data(), ImVec2(50.f * uiScale, 0.f))) {
-        simulation.world().setGravity(Vec3f(0, 0, 0));
+        simulation.world().setGravity(glm::vec3(0.0f));
         gravity = simulation.world().getGravity();
     }
     float gx = gravity.x;
@@ -128,7 +128,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Lattice::Simulation& s
     gravityChanged |= drawDragFloat(i18n::tr("imgui_gravity_z").data(), gz, 0.05f, "%.2f");
     ImGui::PopItemWidth();
     if (gravityChanged) {
-        simulation.setGravity(Vec3f(gx, gy, gz));
+        simulation.setGravity(glm::vec3(gx, gy, gz));
     }
 
     Integrator::Scheme currentIntegrator = simulation.world().getIntegrator().getScheme();
@@ -210,12 +210,12 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Lattice::Simulation& s
     }
     if (ImGui::Button(i18n::tr("imgui_create_world").data(), ImVec2(150.0f * uiScale, 0.0f))) {
         constexpr float worldGap = 20.0f;
-        const Vec3f newWorldSize = simulation.world().getWorldSize();
-        Vec3f newWorldOffset = simulation.world().getRenderOffset();
+        const glm::vec3 newWorldSize = simulation.world().getWorldSize();
+        glm::vec3 newWorldOffset = simulation.world().getRenderOffset();
         float rightEdge = newWorldOffset.x + newWorldSize.x;
         for (Lattice::Simulation::WorldId worldId = 0; worldId < simulation.worldCount(); ++worldId) {
             const World& world = simulation.worldAt(worldId);
-            rightEdge = std::max(rightEdge, static_cast<float>(world.getRenderOffset().x + world.getWorldSize().x));
+            rightEdge = std::max(rightEdge, world.getRenderOffset().x + world.getWorldSize().x);
         }
         newWorldOffset.x = rightEdge + worldGap;
         const Lattice::Simulation::WorldId newWorldId = simulation.createWorld(newWorldSize, newWorldOffset);
@@ -228,7 +228,7 @@ void SettingsPanel::draw(float uiScale, Vec2i windowSize, Lattice::Simulation& s
     }
     ImGui::EndDisabled();
 
-    Vec3f renderOffset = simulation.world().getRenderOffset();
+    glm::vec3 renderOffset = simulation.world().getRenderOffset();
     ImGui::PushItemWidth(150.0f * uiScale);
     bool offsetChanged = false;
     offsetChanged |= drawDragFloat(i18n::tr("imgui_offset_x").data(), renderOffset.x, 0.25f, "%.1f");

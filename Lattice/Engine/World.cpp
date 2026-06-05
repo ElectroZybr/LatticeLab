@@ -3,7 +3,7 @@
 #include "Engine/metrics/EnergyMetrics.h"
 #include "Engine/physics/Integrator.h"
 
-World::World(Vec3f size, Vec3f renderOffset) : size(size), renderOffset(renderOffset), grid(size) {
+World::World(glm::vec3 size, glm::vec3 renderOffset) : size(size), renderOffset(renderOffset), grid(size) {
     atomStorage_.reserve(250000);
     neighborList_.setParams(5.f, 1.f);
 }
@@ -22,13 +22,13 @@ void World::reset() {
     resetRuntimeState();
 }
 
-void World::resizeBox(const Vec3f& newSize, float cellSize) {
+void World::resizeBox(const glm::vec3& newSize, float cellSize) {
     setWorldSize(newSize);
     setGridCellSize(cellSize);
     finalizeAtomBatch();
 }
 
-void World::addAtom(const Vec3f& start_coords, const Vec3f& start_speed, AtomData::Type type, bool fixed) {
+void World::addAtom(const glm::vec3& start_coords, const glm::vec3& start_speed, AtomData::Type type, bool fixed) {
     atomStorage_.addAtom(start_coords, start_speed, type, fixed);
     grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
     invalidateMetrics();

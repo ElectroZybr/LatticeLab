@@ -107,11 +107,11 @@ int Interface::update() {
 
     ImGui::PushFont(fontManager.main);
     toolsPanel.draw(styleManager.getScale(), debugPanel, settingsPanel, ioPanel);
-    periodicPanel.draw(styleManager.getScale(), Vec2i(width, height), uiState_.selectedAtom);
-    simControlPanel.draw(styleManager.getScale(), Vec2i(width, height), uiState_.pause, uiState_.simulationSpeed, uiState_.simStep,
+    periodicPanel.draw(styleManager.getScale(), glm::ivec2(width, height), uiState_.selectedAtom);
+    simControlPanel.draw(styleManager.getScale(), glm::ivec2(width, height), uiState_.pause, uiState_.simulationSpeed, uiState_.simStep,
                          deltaTime);
-    sideToolsPanel.draw(styleManager.getScale(), Vec2i(width, height), fontManager.icons, fontManager.dialog);
-    statsPanel.draw(styleManager.getScale(), Vec2i(width, height));
+    sideToolsPanel.draw(styleManager.getScale(), glm::ivec2(width, height), fontManager.icons, fontManager.dialog);
+    statsPanel.draw(styleManager.getScale(), glm::ivec2(width, height));
     if (uiState_.drawToolTrip) {
         const ImVec2 mouse = ImGui::GetMousePos();
         ImGui::SetNextWindowPos(ImVec2(mouse.x + 3 * styleManager.getScale(), mouse.y + 3 * styleManager.getScale()));
@@ -129,9 +129,9 @@ int Interface::update() {
 
     ImGui::PushFont(fontManager.dialog);
     fileDialog.draw(styleManager.getScale());
-    debugPanel.draw(styleManager.getScale(), Vec2i(width, height));
-    settingsPanel.draw(styleManager.getScale(), Vec2i(width, height), *simulation_, *renderer_, *captureController_, fileDialog);
-    ioPanel.draw(styleManager.getScale(), Vec2i(width, height), *simulation_, fileDialog, uiState_);
+    debugPanel.draw(styleManager.getScale(), glm::ivec2(width, height));
+    settingsPanel.draw(styleManager.getScale(), glm::ivec2(width, height), *simulation_, *renderer_, *captureController_, fileDialog);
+    ioPanel.draw(styleManager.getScale(), glm::ivec2(width, height), *simulation_, fileDialog, uiState_);
     ImGui::PopFont();
 
     uiState_.scenePreviewMode = fileDialog.isSaveDialogOpen();

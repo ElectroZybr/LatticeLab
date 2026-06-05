@@ -1,32 +1,21 @@
-cmake_minimum_required(VERSION 3.28)
-project(LatticeEngine LANGUAGES CXX)
-
 file(GLOB_RECURSE LATTICE_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
 )
-list(FILTER LATTICE_SOURCES EXCLUDE REGEX ".*/(CLI|benchmarks|build|_deps)/.*")
 
-file(GLOB_RECURSE LATTICE_HEADERS CONFIGURE_DEPENDS
+file(GLOB_RECURSE LATTICE_PUBLIC_HEADERS CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
 )
-list(FILTER LATTICE_HEADERS EXCLUDE REGEX ".*/(CLI|benchmarks|build|_deps)/.*")
+
+foreach(lattice_file_list IN ITEMS LATTICE_SOURCES LATTICE_PUBLIC_HEADERS)
+    list(FILTER ${lattice_file_list} EXCLUDE REGEX ".*/(CLI|benchmarks|build|_deps)/.*")
+endforeach()
 
 add_library(Lattice STATIC
     ${LATTICE_SOURCES}
-    ${LATTICE_HEADERS}
+    ${LATTICE_PUBLIC_HEADERS}
 )
 
-add_executable(Lattice-cli CLI/main.cpp)
-target_link_libraries(Lattice-cli PRIVATE Lattice)
-set_target_properties(Lattice-cli PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-)
-
-set_target_properties(Lattice-cli Lattice PROPERTIES
-    CXX_STANDARD 20
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-)
+add_library(LatticeLab::Lattice ALIAS Lattice)
 
 target_compile_options(Lattice PRIVATE
     $<$<AND:$<BOOL:${OPTIMIZE_FOR_NATIVE}>,$<NOT:$<CONFIG:Debug>>,$<CXX_COMPILER_ID:GNU,Clang,AppleClang>>:-march=native>
@@ -42,6 +31,8 @@ target_include_directories(Lattice PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+target_link_libraries(Lattice PUBLIC glm::glm)
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -52,20 +43,30 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(CLI11)
 
-target_link_libraries(Lattice-cli PRIVATE CLI11::CLI11)
+add_executable(Lattice-cli CLI/main.cpp)
+
+set_target_properties(Lattice-cli PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
+target_link_libraries(Lattice-cli PRIVATE
+    Lattice
+    CLI11::CLI11
+)
 
 if(BUILD_BENCHMARKS)
     FetchContent_Declare(
         googlebenchmark
         GIT_REPOSITORY https://github.com/google/benchmark.git
-        GIT_TAG        v1.9.5
-        GIT_SHALLOW    ON
+        GIT_TAG v1.9.5
+        GIT_SHALLOW ON
     )
-    set(BENCHMARK_ENABLE_TESTING     OFF CACHE BOOL "" FORCE)
-    set(BENCHMARK_INSTALL_DOCS       OFF CACHE BOOL "" FORCE)
+
+    set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_INSTALL_DOCS OFF CACHE BOOL "" FORCE)
     set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
-    set(BENCHMARK_ENABLE_INSTALL     OFF CACHE BOOL "" FORCE)
- 
+    set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+
     FetchContent_MakeAvailable(googlebenchmark)
     add_subdirectory(benchmarks)
 endif()

@@ -60,7 +60,6 @@ if(APPLE)
 endif()
 
 target_link_libraries(latticelab_rendering PUBLIC
-    Lattice
     glfw
     glm::glm
     webgpu

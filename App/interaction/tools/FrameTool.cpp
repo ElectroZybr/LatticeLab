@@ -6,7 +6,7 @@
 
 FrameTool::FrameTool(ToolContext& context) noexcept : ITool(context) {}
 
-void FrameTool::onLeftPressed(Vec2i mousePos) {
+void FrameTool::onLeftPressed(glm::ivec2 mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -18,7 +18,7 @@ void FrameTool::onLeftPressed(Vec2i mousePos) {
     overlay.boxEnd = mousePos;
 }
 
-void FrameTool::onLeftReleased(Vec2i mousePos) {
+void FrameTool::onLeftReleased(glm::ivec2 mousePos) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -36,7 +36,7 @@ void FrameTool::onLeftReleased(Vec2i mousePos) {
     overlay.reset();
 }
 
-void FrameTool::onFrame(Vec2i mousePos, float) {
+void FrameTool::onFrame(glm::ivec2 mousePos, float) {
     ToolContext& ctx = context();
     if (ctx.pickingSystem == nullptr) {
         return;
@@ -44,7 +44,7 @@ void FrameTool::onFrame(Vec2i mousePos, float) {
 
     auto& overlay = ctx.pickingSystem->getOverlay();
     if (overlay.boxVisible) {
-        overlay.boxEnd = Vec2i(mousePos);
+        overlay.boxEnd = mousePos;
     }
 }
 

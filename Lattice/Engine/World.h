@@ -4,10 +4,11 @@
 #include <string_view>
 #include <vector>
 
+#include <glm/glm.hpp>
+
 #include "Engine/NeighborSearch/NeighborList.h"
 #include "Engine/NeighborSearch/SpatialGrid.h"
 #include "Engine/metrics/EnergyMetrics.h"
-#include "Engine/math/Vec3.h"
 #include "Engine/physics/AtomData.h"
 #include "Engine/physics/AtomStorage.h"
 #include "Engine/physics/Bond.h"
@@ -16,23 +17,23 @@
 
 class World {
 public:
-    explicit World(Vec3f size, Vec3f renderOffset = Vec3f{0.0f, 0.0f, 0.0f});
+    explicit World(glm::vec3 size, glm::vec3 renderOffset = glm::vec3{0.0f, 0.0f, 0.0f});
 
     void clear();
     void reset();
-    void resizeBox(const Vec3f& newSize, float cellSize = -1.0f);
+    void resizeBox(const glm::vec3& newSize, float cellSize = -1.0f);
 
-    void setWorldSize(const Vec3f& newSize) {
+    void setWorldSize(const glm::vec3& newSize) {
         size = newSize;
         grid.resize(size);
     }
-    const Vec3f& getWorldSize() const noexcept { return size; }
+    const glm::vec3& getWorldSize() const noexcept { return size; }
 
-    void setRenderOffset(const Vec3f& offset) noexcept { renderOffset = offset; }
-    const Vec3f& getRenderOffset() const noexcept { return renderOffset; }
+    void setRenderOffset(const glm::vec3& offset) noexcept { renderOffset = offset; }
+    const glm::vec3& getRenderOffset() const noexcept { return renderOffset; }
 
-    void setGravity(const Vec3f& g) { gravity = g; }
-    const Vec3f& getGravity() const noexcept { return gravity; }
+    void setGravity(const glm::vec3& g) { gravity = g; }
+    const glm::vec3& getGravity() const noexcept { return gravity; }
 
     void setGridCellSize(float newSize) { grid.resize(size, newSize); }
     float getGridCellSize() const noexcept { return grid.cellSize; }
@@ -59,14 +60,14 @@ public:
     NeighborList& getNeighborList() noexcept { return neighborList_; }
     const NeighborList& getNeighborList() const noexcept { return neighborList_; }
 
-    void addAtom(const Vec3f& start_coords, const Vec3f& start_speed, AtomData::Type type, bool fixed);
+    void addAtom(const glm::vec3& start_coords, const glm::vec3& start_speed, AtomData::Type type, bool fixed);
     void addBond(size_t aIndex, size_t bIndex);
     void removeAtom(size_t atomIndex);
     void remapAtomIndices(std::span<const uint32_t> oldToNew);
     void clearAtoms() { atomStorage_.clear(); };
     void clearBonds() { bonds_.clear(); }
     void reserveAtoms(size_t count) { atomStorage_.reserve(count); }
-    void appendAtomFast(const Vec3f& startCoords, const Vec3f& startSpeed, AtomData::Type type, bool fixed = false) {
+    void appendAtomFast(const glm::vec3& startCoords, const glm::vec3& startSpeed, AtomData::Type type, bool fixed = false) {
         atomStorage_.addAtom(startCoords, startSpeed, type, fixed);
         invalidateMetrics();
     }
@@ -128,9 +129,9 @@ public:
     void resetRuntimeState() noexcept { restoreRuntimeState(0, 0.0f); }
 
 private:
-    Vec3f size;
-    Vec3f renderOffset;
-    Vec3f gravity;
+    glm::vec3 size;
+    glm::vec3 renderOffset;
+    glm::vec3 gravity;
 
     bool ljEnabled = true;
     bool coulombEnabled = true;

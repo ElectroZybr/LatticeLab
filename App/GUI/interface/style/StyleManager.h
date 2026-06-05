@@ -1,12 +1,11 @@
 #pragma once
 #include <imgui.h>
-
-#include "Lattice/Engine/math/Vec2.h"
+#include <glm/vec2.hpp>
 
 class StyleManager {
 public:
     void applyCustomStyle();
-    void onResize(Vec2i newSize);
+    void onResize(glm::ivec2 newSize);
     float getScale() const { return scale; }
 
 private:

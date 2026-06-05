@@ -3,12 +3,14 @@
 #include <vector>
 #include <iostream>
 #include <memory>
-#include "Engine/math/Vec3.h"
+#include <glm/vec3.hpp>
+
+class AtomStorage;
 
 
 class Octree {
 public:
-    Octree(const Vec3f& center, float size) : center(center), size(size) {}
+    Octree(const glm::vec3& center, float size) : center(center), size(size) {}
 
     void build(const AtomStorage& atoms) { buildNode(atoms, 0); }
     void show() const { showNode(0); }
@@ -20,15 +22,15 @@ private:
     int depth;          // глубина узла в дереве
     float size;         // длина ребра куба
     float charge;       // суммарный заряд в узле
-    Vec3f center;       // центр куба
-    Vec3f dipoleMoment; // дипольный момент узла
+    glm::vec3 center;       // центр куба
+    glm::vec3 dipoleMoment; // дипольный момент узла
     std::unique_ptr<Octree> children[8]; // указатели на дочерние узлы
 
     void buildNode(const AtomStorage& atoms, int depth) {
         if (depth < maxDepth) {
             for (int i = 0; i < 8; ++i) {
                 // проход вперед (создание дочерних узлов)
-                Vec3f offset(
+                glm::vec3 offset(
                     (i & 1 ? size / 4 : -size / 4),
                     (i & 2 ? size / 4 : -size / 4),
                     (i & 4 ? size / 4 : -size / 4));
@@ -41,7 +43,7 @@ private:
         } else {
             // Листовой узел, считаем заряд и дипольный момент
             for (size_t i = 0; i < atoms.size(); ++i) {
-                Vec3f pos(atoms.posX(i), atoms.posY(i), atoms.posZ(i));
+                glm::vec3 pos(atoms.posX(i), atoms.posY(i), atoms.posZ(i));
                 float q = atoms.charge(i);
                 charge += q;
                 dipoleMoment += pos * q;

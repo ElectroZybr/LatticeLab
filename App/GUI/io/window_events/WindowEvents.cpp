@@ -1,6 +1,6 @@
 #include "WindowEvents.h"
 
-#include "Lattice/Engine/math/Vec2.h"
+#include <glm/vec2.hpp>
 #include "GUI/interface/interface.h"
 #include "Rendering/BaseRenderer.h"
 #include "Rendering/backend/WGPUContext.h"
@@ -41,5 +41,5 @@ void WindowEvents::syncFramebufferSize(int width, int height, bool updateInterfa
         return;
     }
 
-    appInterface->styleManager.onResize(Vec2i(width, height));
+    appInterface->styleManager.onResize(glm::ivec2(width, height));
 }
