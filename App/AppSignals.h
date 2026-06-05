@@ -4,7 +4,7 @@
 #include <string_view>
 
 #include <glm/vec3.hpp>
-#include "Lattice/Engine/physics/AtomData.h"
+#include "Lattice/Engine/physics/Atom/AtomData.h"
 #include "GUI/interface/panels/tools/ToolsPanel.h"
 #include "Rendering/camera/Camera.h"
 #include "App/Signals.h"

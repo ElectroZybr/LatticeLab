@@ -5,7 +5,7 @@
 
 #include "App/interaction/picking/PickingSystem.h"
 #include "Lattice/Engine/Simulation.h"
-#include "Lattice/Engine/physics/AtomStorage.h"
+#include "Lattice/Engine/physics/Atom/AtomStorage.h"
 #include "GUI/interface/UiState.h"
 
 RemoveAtomTool::RemoveAtomTool(ToolContext& context) noexcept : ITool(context) {}

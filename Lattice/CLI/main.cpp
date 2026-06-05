@@ -7,7 +7,7 @@
 #include <CLI/CLI.hpp>
 
 #include "Engine/Simulation.h"
-#include "Engine/physics/AtomData.h"
+#include "Engine/physics/Atom/AtomData.h"
 
 using namespace Lattice;
 

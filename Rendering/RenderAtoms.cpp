@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <ranges>
 
-#include "Lattice/Engine/physics/AtomData.h"
+#include "Lattice/Engine/physics/Atom/AtomData.h"
 #include "Rendering/backend/WGPUContext.h"
 
 void RendererWGPU::ensureStorageBuffers(size_t count) {

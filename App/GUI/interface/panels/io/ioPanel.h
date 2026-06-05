@@ -9,7 +9,7 @@
 #include <glm/vec3.hpp>
 #include "App/AppPaths.h"
 
-#include "Lattice/Engine/physics/AtomData.h"
+#include "Lattice/Engine/physics/Atom/AtomData.h"
 #include "GUI/interface/panels/io/ioPanelSceneCatalog.h"
 
 class FileDialogManager;

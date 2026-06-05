@@ -1,7 +1,7 @@
 #pragma once
 
 #include "App/interaction/tools/ITool.h"
-#include "Lattice/Engine/physics/AtomStorage.h"
+#include "Lattice/Engine/physics/Atom/AtomStorage.h"
 
 class CursorTool final : public ITool {
 public:

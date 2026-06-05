@@ -8,16 +8,15 @@
 #include <vector>
 
 #include "Engine/NeighborSearch/SpatialGrid.h"
-#include "Engine/math/Vec3.h"
-#include "Engine/physics/AtomStorage.h"
-#include "Engine/physics/Morton3D.h"
+#include "Engine/physics/Atom/AtomStorage.h"
+#include "Engine/math/Morton3D.h"
 
 struct AtomSort::AtomView {
     // Локальный снимок atom-record, чтобы безопасно крутить циклическую перестановку.
-    Vec3f pos;
-    Vec3f vel;
-    Vec3f force;
-    Vec3f prevForce;
+    glm::vec3 pos;
+    glm::vec3 vel;
+    glm::vec3 force;
+    glm::vec3 prevForce;
     float energy;
     float invMass;
     float charge;

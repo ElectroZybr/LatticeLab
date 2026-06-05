@@ -1,6 +1,6 @@
 #include "Render.h"
 
-#include "Lattice/Engine/physics/AtomData.h"
+#include "Lattice/Engine/physics/Atom/AtomData.h"
 #include "Rendering/backend/WGPUContext.h"
 
 RendererWGPU::RendererWGPU() : surfaceFormat(WGPUContext::instance().surfaceFormat()) {

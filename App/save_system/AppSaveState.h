@@ -2,7 +2,7 @@
 #include <zpp_bits.h>
 
 #include <glm/vec3.hpp>
-#include "Lattice/Engine/physics/AtomData.h"
+#include "Lattice/Engine/physics/Atom/AtomData.h"
 #include "Lattice/Engine/physics/Integrator.h"
 #include "Rendering/RenderData.h"
 

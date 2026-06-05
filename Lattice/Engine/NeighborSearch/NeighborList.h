@@ -5,7 +5,7 @@
 
 #include "Engine/NeighborSearch/SpatialGrid.h"
 #include "Engine/metrics/NeighborListStats.h"
-#include "Engine/physics/AtomStorage.h"
+#include "Engine/physics/Atom/AtomStorage.h"
 
 class World;
 

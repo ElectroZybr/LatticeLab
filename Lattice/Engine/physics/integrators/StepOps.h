@@ -4,7 +4,7 @@
 
 #include "Engine/World.h"
 #include "Engine/metrics/Profiler.h"
-#include "Engine/physics/AtomStorage.h"
+#include "Engine/physics/Atom/AtomStorage.h"
 #include "Engine/physics/ForceField.h"
 #include "Engine/physics/Integrator.h"
 #include "Engine/restrict.h"

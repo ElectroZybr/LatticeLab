@@ -11,8 +11,8 @@
 #include <vector>
 
 #include "Engine/NeighborSearch/SpatialGrid.h"
-#include "Engine/physics/AtomData.h"
-#include "Engine/physics/AtomSort.h"
+#include "Engine/physics/Atom/AtomData.h"
+#include "Engine/physics/Atom/AtomSort.h"
 
 class AtomStorage {
 public:

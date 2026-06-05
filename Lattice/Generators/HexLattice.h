@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Lattice/Engine/Simulation.h"
-#include "Lattice/Engine/physics/AtomData.h"
+#include "Lattice/Engine/physics/Atom/AtomData.h"
 
 namespace Generators {
     /// Создает шестиугольную кристаллическую решетку (FCC или близко к ней)

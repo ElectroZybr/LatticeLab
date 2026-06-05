@@ -8,7 +8,7 @@
 #include "Engine/NeighborSearch/SpatialGrid.h"
 #include "Engine/World.h"
 #include "Engine/metrics/Profiler.h"
-#include "Engine/physics/AtomStorage.h"
+#include "Engine/physics/Atom/AtomStorage.h"
 #include "Engine/restrict.h"
 
 void NeighborList::setCutoff(float cutoff) {

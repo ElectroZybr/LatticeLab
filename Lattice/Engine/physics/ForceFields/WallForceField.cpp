@@ -1,7 +1,7 @@
 #include "WallForceField.h"
 
 #include "Engine/World.h"
-#include "Engine/physics/AtomStorage.h"
+#include "Engine/physics/Atom/AtomStorage.h"
 
 using glm::vec3;
 
