@@ -516,26 +516,35 @@ public:
         }
     }
 
+    /// классический метод представления 3D массива в виде 1D массива с помощью morton order
+    /// @return функция возвращает таблицу перестановок
     const std::vector<uint32_t>& mortonOrder(const SpatialGrid& grid) {
         mortonOldToNew_.resize(count_);
-        std::iota(mortonOldToNew_.begin(), mortonOldToNew_.end(), 0);
         if (mobileCount_ <= 1) {
+            std::iota(mortonOldToNew_.begin(), mortonOldToNew_.end(), 0);
             return mortonOldToNew_;
         }
+
+        // Фиксированные атомы не переставляются, поэтому для хвоста нужна identity-map.
+        std::iota(mortonOldToNew_.begin() + mobileCount_, mortonOldToNew_.end(), static_cast<uint32_t>(mobileCount_));
 
         mortonKeyed_.resize(mobileCount_);
         mortonBuf_.resize(mobileCount_);
         mortonIndices_.resize(mobileCount_);
 
         // Вычисляем ключи для сортировки
+        uint64_t maxMortonKey = 0;
         for (size_t i = 0; i < mobileCount_; ++i) {
             uint32_t cx = std::clamp(static_cast<int>(grid.worldToCellX(posX(i))), 0, static_cast<int>(grid.size.x - 1));
             uint32_t cy = std::clamp(static_cast<int>(grid.worldToCellY(posY(i))), 0, static_cast<int>(grid.size.y - 1));
             uint32_t cz = std::clamp(static_cast<int>(grid.worldToCellZ(posZ(i))), 0, static_cast<int>(grid.size.z - 1));
-            mortonKeyed_[i] = {Morton3D::encode(cx, cy, cz), static_cast<uint32_t>(i)};
+            const uint64_t mortonKey = Morton3D::encode(cx, cy, cz);
+            mortonKeyed_[i] = {mortonKey, static_cast<uint32_t>(i)};
+            maxMortonKey = std::max(maxMortonKey, mortonKey);
         }
 
-        radixSort(mortonKeyed_, mortonBuf_);
+        // Сортируем атомы по ключу
+        radixSort(mortonKeyed_, mortonBuf_, maxMortonKey);
 
         for (size_t i = 0; i < mobileCount_; ++i) {
             mortonIndices_[i] = mortonKeyed_[i].second;
@@ -558,8 +567,14 @@ public:
     std::vector<std::pair<uint64_t, uint32_t>> mortonBuf_;
     std::vector<uint32_t> mortonIndices_;
 
-    static void radixSort(std::vector<std::pair<uint64_t, uint32_t>>& data, std::vector<std::pair<uint64_t, uint32_t>>& buf) {
-        for (int shift = 0; shift < 64; shift += 8) {
+    static void radixSort(std::vector<std::pair<uint64_t, uint32_t>>& data, std::vector<std::pair<uint64_t, uint32_t>>& buf, uint64_t maxKey) {
+        int passCount = 1;
+        while ((maxKey >> (passCount * 8)) != 0) {
+            ++passCount;
+        }
+
+        for (int pass = 0; pass < passCount; ++pass) {
+            const int shift = pass * 8;
             size_t cnt[256] = {};
             for (auto& [k, _] : data) {
                 ++cnt[(k >> shift) & 0xFF];
