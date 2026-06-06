@@ -186,6 +186,9 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
         else if (tag == "renderer_draw_memory_order") {
             file >> settings.rendererDrawMemoryOrder;
         }
+        else if (tag == "interface_scale") {
+            file >> settings.interfaceScale;
+        }
         else if (tag == "renderer_speed_color_mode") {
             std::string value;
             file >> value;
@@ -227,6 +230,7 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
     if (settings.scenesDirectory.empty()) {
         settings.scenesDirectory = AppPaths::kDefaultScenesDirectory;
     }
+    settings.interfaceScale = std::clamp(settings.interfaceScale, StyleManager::kMinUiScale, StyleManager::kMaxUiScale);
     settings.rendererSpeedGradientMax = std::max(0.0f, settings.rendererSpeedGradientMax);
     settings.windowState.monitorIndex = std::max(0, settings.windowState.monitorIndex);
     settings.windowState.width = std::max(320, settings.windowState.width);
@@ -260,6 +264,7 @@ void UserSettingsIO::save(const UserSettings& settings, const std::filesystem::p
     file << "renderer_draw_bonds " << static_cast<int>(settings.rendererDrawBonds) << "\n";
     file << "renderer_draw_box " << static_cast<int>(settings.rendererDrawBox) << "\n";
     file << "renderer_draw_memory_order " << static_cast<int>(settings.rendererDrawMemoryOrder) << "\n";
+    file << "interface_scale " << settings.interfaceScale << "\n";
     file << "renderer_speed_color_mode " << speedColorModeToString(settings.rendererSpeedColorMode) << "\n";
     file << "renderer_speed_gradient_max " << settings.rendererSpeedGradientMax << "\n";
     file << "simulation_integrator " << integratorToString(settings.simulationIntegrator) << "\n";

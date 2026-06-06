@@ -38,9 +38,10 @@ void PeriodicPanel::draw(float scale, glm::ivec2 windowSize, int& selectedAtom) 
     ImVec2 mouse = ImGui::GetMousePos();
     const float hiddenY = -panelH;
     const float currentY = hiddenY + animProgress * panelH;
+    const float expandedY = 0.0f;
 
     const bool overTab = mouse.x >= tabX && mouse.x <= tabX + tabW && mouse.y >= 0.0f && mouse.y <= tabH;
-    const bool overPanel = mouse.x >= panelX && mouse.x <= panelX + panelW && mouse.y >= currentY && mouse.y <= currentY + panelH;
+    const bool overPanel = mouse.x >= panelX && mouse.x <= panelX + panelW && mouse.y >= expandedY && mouse.y <= expandedY + panelH;
 
     const float target = (overTab || overPanel) ? 1.0f : 0.0f;
     const float step = std::min(ImGui::GetIO().DeltaTime * 12.0f, 1.f);

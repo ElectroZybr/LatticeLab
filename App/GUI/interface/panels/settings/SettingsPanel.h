@@ -10,6 +10,7 @@ namespace Lattice {
 class BaseRenderer;
 class CaptureController;
 class FileDialogManager;
+class Interface;
 
 class SettingsPanel {
 public:
@@ -17,7 +18,7 @@ public:
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 
     void draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer,
-              CaptureController& captureController, FileDialogManager& fileDialog);
+              CaptureController& captureController, FileDialogManager& fileDialog, Interface& appInterface);
     void toggle() { visible = !visible; }
     void close() { visible = false; }
     bool isVisible() const { return visible; }

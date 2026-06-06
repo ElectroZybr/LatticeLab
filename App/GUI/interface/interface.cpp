@@ -1,5 +1,7 @@
 #include "interface.h"
 
+#include <cmath>
+
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_wgpu.h>
 
@@ -69,6 +71,7 @@ int Interface::init() {
     ImGui::CreateContext();
 
     styleManager.applyCustomStyle();
+    syncWindowMetrics();
 
     if (!fontManager.load(styleManager.getScale())) {
         return EXIT_FAILURE;
@@ -81,8 +84,53 @@ int Interface::init() {
     wgpuInfo.RenderTargetFormat = (WGPUTextureFormat)ctx.surfaceFormat();
     wgpuInfo.DepthStencilFormat = WGPUTextureFormat_Depth24Plus;
     ImGui_ImplWGPU_Init(&wgpuInfo);
+    imguiBackendReady_ = true;
 
     return EXIT_SUCCESS;
+}
+
+void Interface::reloadUiFonts() {
+    if (!fontManager.load(styleManager.getScale())) {
+        return;
+    }
+
+    if (!imguiBackendReady_) {
+        return;
+    }
+
+    ImGui_ImplWGPU_InvalidateDeviceObjects();
+    ImGui_ImplWGPU_CreateDeviceObjects();
+}
+
+void Interface::applyPendingUiScaleRefresh() {
+    if (!pendingUiScaleRefresh_) {
+        return;
+    }
+
+    pendingUiScaleRefresh_ = false;
+    reloadUiFonts();
+}
+
+void Interface::syncWindowMetrics() {
+    int width = 0;
+    int height = 0;
+    glfwGetWindowSize(window_, &width, &height);
+
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+
+    if (width == lastWindowWidth_ && height == lastWindowHeight_) {
+        return;
+    }
+
+    lastWindowWidth_ = width;
+    lastWindowHeight_ = height;
+    const float previousScale = styleManager.getScale();
+    styleManager.onResize(glm::ivec2(width, height));
+    if (std::abs(previousScale - styleManager.getScale()) > 0.001f) {
+        pendingUiScaleRefresh_ = true;
+    }
 }
 
 void Interface::shutdown() {
@@ -92,6 +140,9 @@ void Interface::shutdown() {
 }
 
 int Interface::update() {
+    syncWindowMetrics();
+    applyPendingUiScaleRefresh();
+
     ImGui_ImplWGPU_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -103,7 +154,7 @@ int Interface::update() {
     lastTime_ = currentTime;
 
     int width, height;
-    glfwGetFramebufferSize(window_, &width, &height);
+    glfwGetWindowSize(window_, &width, &height);
 
     ImGui::PushFont(fontManager.main);
     toolsPanel.draw(styleManager.getScale(), debugPanel, settingsPanel, ioPanel);
@@ -130,7 +181,7 @@ int Interface::update() {
     ImGui::PushFont(fontManager.dialog);
     fileDialog.draw(styleManager.getScale());
     debugPanel.draw(styleManager.getScale(), glm::ivec2(width, height));
-    settingsPanel.draw(styleManager.getScale(), glm::ivec2(width, height), *simulation_, *renderer_, *captureController_, fileDialog);
+    settingsPanel.draw(styleManager.getScale(), glm::ivec2(width, height), *simulation_, *renderer_, *captureController_, fileDialog, *this);
     ioPanel.draw(styleManager.getScale(), glm::ivec2(width, height), *simulation_, fileDialog, uiState_);
     ImGui::PopFont();
 
@@ -154,6 +205,16 @@ void Interface::draw(BaseRenderer& renderer) {
         ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), **currentPass);
     }
 }
+
+void Interface::setUiScaleMultiplier(float multiplier) {
+    const float previousScale = styleManager.getScale();
+    styleManager.setUserScaleMultiplier(multiplier);
+    if (std::abs(previousScale - styleManager.getScale()) > 0.001f) {
+        pendingUiScaleRefresh_ = true;
+    }
+}
+
+float Interface::uiScaleMultiplier() const { return styleManager.getUserScaleMultiplier(); }
 
 UiState& Interface::state() { return uiState_; }
 

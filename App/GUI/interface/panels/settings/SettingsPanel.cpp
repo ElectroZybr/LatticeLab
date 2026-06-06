@@ -8,10 +8,12 @@
 
 #include "App/AppSignals.h"
 #include "App/UserSettings.h"
+#include "App/WindowController.h"
 #include "App/capture/CaptureController.h"
 #include "App/localization/i18n.h"
 #include "Lattice/Engine/Simulation.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
+#include "GUI/interface/interface.h"
 #include "GUI/interface/style/ComboStyle.h"
 #include "Rendering/BaseRenderer.h"
 #include "generated/AppVersion.h"
@@ -79,7 +81,7 @@ namespace {
 }
 
 void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer,
-                         CaptureController& captureController, FileDialogManager& fileDialog) {
+                         CaptureController& captureController, FileDialogManager& fileDialog, Interface& appInterface) {
     float target = visible ? 1.f : 0.f;
     float step = ImGui::GetIO().DeltaTime * 12.f;
     animProgress += (target - animProgress) * std::min(step, 1.f);
@@ -255,7 +257,6 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     if (ImGui::Checkbox("imgui_coulomb"_tr.data(), &coulombEnabled)) {
         simulation.world().setCoulombEnabled(coulombEnabled);
     }
-    ImGui::SameLine();
     bool coulombLongRangeEnabled = simulation.world().isCoulombLongRangeEnabled();
     if (ImGui::Checkbox("imgui_coulomb_long_range"_tr.data(), &coulombLongRangeEnabled)) {
         simulation.world().setCoulombLongRangeEnabled(coulombLongRangeEnabled);
@@ -312,6 +313,15 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         activeRenderData.speedGradientMax = autoSpeedGradient ? 0.0f : manualSpeedGradientMax;
     }
     ImGui::EndDisabled();
+    ImGui::PopItemWidth();
+
+    ImGui::SeparatorText("Interface");
+    float interfaceScale = appInterface.uiScaleMultiplier();
+    ImGui::PushItemWidth(180.0f * uiScale);
+    if (ImGui::SliderFloat("Interface scale", &interfaceScale, StyleManager::kMinUiScale, StyleManager::kMaxUiScale, "%.2f", ImGuiSliderFlags_AlwaysClamp)) {
+        interfaceScale = std::round(interfaceScale / 0.1f) * 0.1f;
+        appInterface.setUiScaleMultiplier(interfaceScale);
+    }
     ImGui::PopItemWidth();
 
     ImGui::SeparatorText("imgui_neighbour_list"_tr.data());
@@ -422,6 +432,18 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         ImGui::EndDisabled();
     }
 
+    ImGui::SeparatorText("imgui_misc"_tr.data());
+    const bool isFullscreen = WindowController::snapshot().fullscreen;
+    const char* fullscreenButtonLabel = isFullscreen ? "imgui_windowed"_tr.data() : "imgui_fullscreen"_tr.data();
+    if (ImGui::Button(fullscreenButtonLabel, ImVec2(190.0f * uiScale, 0.0f))) {
+        WindowController::toggleFullscreen();
+    }
+    ImGui::SameLine();
+    const float languageButtonWidth = 86.0f * uiScale;
+    if (ImGui::Button("imgui_language_toggle"_tr.data(), ImVec2(languageButtonWidth, 0.0f))) {
+        i18n::toggle();
+    }
+
     if (ImGui::Button("imgui_reset_settings"_tr.data(), ImVec2(ImGui::GetContentRegionAvail().x, 0.0f))) {
         const UserSettings defaults;
         captureController.setOutputDirectory(defaults.captureOutputDirectory);
@@ -432,6 +454,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         activeRenderData.drawBonds = defaults.rendererDrawBonds;
         activeRenderData.drawBox = defaults.rendererDrawBox;
         activeRenderData.drawMemoryOrder = defaults.rendererDrawMemoryOrder;
+        appInterface.setUiScaleMultiplier(defaults.interfaceScale);
         activeRenderData.speedColorMode = defaults.rendererSpeedColorMode;
         activeRenderData.speedGradientMax = defaults.rendererSpeedGradientMax;
 
@@ -440,12 +463,6 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         simulation.setLJEnabled(defaults.simulationLJEnabled);
         simulation.setCoulombEnabled(defaults.simulationCoulombEnabled);
         simulation.world().setCoulombLongRangeEnabled(defaults.simulationCoulombLongRangeEnabled);
-    }
-
-    ImGui::SeparatorText("imgui_localization"_tr.data());
-    const float languageButtonWidth = 86.0f * uiScale;
-    if (ImGui::Button("imgui_language_toggle"_tr.data(), ImVec2(languageButtonWidth, 0.0f))) {
-        i18n::toggle();
     }
 
     const float exitButtonWidth = ImGui::GetContentRegionAvail().x;

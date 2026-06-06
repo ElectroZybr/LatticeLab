@@ -73,6 +73,7 @@ int Application::run() {
     if (appInterface.init() != EXIT_SUCCESS) {
         return EXIT_FAILURE;
     }
+    appInterface.setUiScaleMultiplier(userSettings.interfaceScale);
     EventManager::init(window, renderer.rendererHandle(), appInterface);
     ToolsManager::init(window, simulation, renderer.rendererHandle(), appInterface);
     const DebugViews debugViews = createDebugViews(appInterface.debugPanel);
@@ -184,6 +185,7 @@ int Application::run() {
         .rendererDrawBonds = renderer.renderer().getRenderData(0).drawBonds,
         .rendererDrawBox = renderer.renderer().getRenderData(0).drawBox,
         .rendererDrawMemoryOrder = renderer.renderer().getRenderData(0).drawMemoryOrder,
+        .interfaceScale = appInterface.uiScaleMultiplier(),
         .rendererSpeedColorMode = renderer.renderer().getRenderData(0).speedColorMode,
         .rendererSpeedGradientMax = renderer.renderer().getRenderData(0).speedGradientMax,
         .simulationIntegrator = simulation.world().getIntegrator().getScheme(),

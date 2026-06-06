@@ -16,6 +16,7 @@ capture_preset_medium;medium;medium
 capture_pixel_format_Yuv420p;I420;I420
 capture_pixel_format_Yuv444p;I444;I444
 imgui_language_toggle;EN##language_toggle;RU##language_toggle
+imgui_misc;Other;Прочее
 imgui_localization;Localization;Локализация
 imgui_simulation;Simulation;Симуляция
 imgui_gravity;Gravity;Гравитация
@@ -65,6 +66,8 @@ imgui_crf_capture;CRF##capture_crf;CRF##capture_crf
 imgui_preset_capture;Preset##capture_preset;Preset##capture_preset
 imgui_color_capture;Color##capture_color;Цвет##capture_color
 imgui_reset_settings;Reset settings;Reset settings
+imgui_fullscreen;Fullscreen;Полноэкранный
+imgui_windowed;Windowed;Оконный режим
 imgui_exit_button;Exit;Exit
 version_text_pre;LatticeLab v;LatticeLab v
 version_text_after; demo; demo
