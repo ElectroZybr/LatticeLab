@@ -8,9 +8,20 @@
 #include "Rendering/RenderData.h"
 
 struct UserSettings {
+    struct WindowState {
+        bool fullscreen = false;
+        bool maximized = false;
+        int monitorIndex = 0;
+        int x = 160;
+        int y = 120;
+        int width = 1280;
+        int height = 720;
+    };
+
     std::filesystem::path captureOutputDirectory = "captures";
     std::filesystem::path scenesDirectory = AppPaths::kDefaultScenesDirectory;
     CaptureSettings captureSettings{};
+    WindowState windowState{};
 
     bool rendererUse3D = true;
     bool rendererDrawAtoms = false;

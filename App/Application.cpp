@@ -6,6 +6,7 @@
 
 #include "App/AppActions.h"
 #include "App/CreateWindow.h"
+#include "App/WindowController.h"
 #include "Lattice/Generators/Generators.h"
 #include "App/UserSettings.h"
 #include "App/viewport/SceneViewport.h"
@@ -32,13 +33,22 @@ namespace {
         const int sanitizedCaptureFps = std::max(captureFps, 1);
         return std::max(1u, static_cast<uint32_t>(std::lround(sanitizedStepsPerSecond / static_cast<float>(sanitizedCaptureFps))));
     }
+
+    void presentInitializedWindow(GLFWwindow* window, SceneViewport& renderer, const Lattice::Simulation& simulation, Interface& appInterface,
+                                  const DebugViews& debugViews) {
+        renderer.renderFrame(simulation, appInterface, debugViews);
+        glfwShowWindow(window);
+        glfwFocusWindow(window);
+    }
 }
 
 int Application::run() {
-    GLFWwindow* window = createWindow();
+    const UserSettings userSettings = UserSettingsIO::load();
+    GLFWwindow* window = createWindow(userSettings.windowState);
     if (!window) {
         return EXIT_FAILURE;
     }
+    WindowController::init(window, userSettings.windowState);
 
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
@@ -46,7 +56,6 @@ int Application::run() {
 
     // инициализация систем
     Lattice::Simulation simulation;
-    const UserSettings userSettings = UserSettingsIO::load();
 
     simulation.createWorld(glm::vec3(120.0f, 120.0f, 120.0f));
 
@@ -115,6 +124,8 @@ int Application::run() {
     renderer.resetView();
     UiState& uiState = appInterface.state();
 
+    presentInitializedWindow(window, renderer, simulation, appInterface, debugViews);
+
     while (!glfwWindowShouldClose(window)) {
         Profiler::instance().beginFrame();
 
@@ -161,10 +172,12 @@ int Application::run() {
     }
 
     captureController.stop();
+    const UserSettings::WindowState windowState = WindowController::snapshot();
     UserSettingsIO::save(UserSettings{
         .captureOutputDirectory = captureController.outputDirectory(),
         .scenesDirectory = appInterface.scenesDirectory(),
         .captureSettings = captureController.settings(),
+        .windowState = windowState,
         .rendererUse3D = renderer.renderer().camera.getMode() != Camera::Mode::Mode2D,
         .rendererDrawAtoms = renderer.renderer().getRenderData(0).drawAtoms,
         .rendererDrawGrid = renderer.renderer().getRenderData(0).drawGrid,

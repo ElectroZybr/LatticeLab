@@ -4,12 +4,14 @@
 #include <imgui.h>
 
 #include "App/AppSignals.h"
+#include "App/WindowController.h"
 #include "GUI/interface/interface.h"
 
 std::unique_ptr<BaseRenderer>* Keyboard::render = nullptr;
 Interface* Keyboard::appInterface = nullptr;
 GLFWwindow* Keyboard::window = nullptr;
 GLFWkeyfun Keyboard::imgui_key_callback = nullptr;
+bool Keyboard::fullscreenToggleHeld = false;
 
 void Keyboard::init(GLFWwindow* window, std::unique_ptr<BaseRenderer>& r, Interface& appInterface) {
     render = &r;
@@ -68,6 +70,12 @@ void Keyboard::onKey(GLFWwindow* window, int key, int scancode, int action, int 
 }
 
 void Keyboard::onFrame(float deltaTime) {
+    const bool f11Pressed = window && glfwGetKey(window, GLFW_KEY_F11) == GLFW_PRESS;
+    if (f11Pressed && !fullscreenToggleHeld) {
+        WindowController::toggleFullscreen();
+    }
+    fullscreenToggleHeld = f11Pressed;
+
     std::unique_ptr<BaseRenderer>& rend = *render;
     constexpr float kFreeMoveSpeedScale = 0.8f;
 

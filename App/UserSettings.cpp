@@ -147,6 +147,27 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
             file >> value;
             settings.captureSettings.pixelFormat = pixelFormatFromString(value);
         }
+        else if (tag == "window_fullscreen") {
+            file >> settings.windowState.fullscreen;
+        }
+        else if (tag == "window_maximized") {
+            file >> settings.windowState.maximized;
+        }
+        else if (tag == "window_monitor_index") {
+            file >> settings.windowState.monitorIndex;
+        }
+        else if (tag == "window_x") {
+            file >> settings.windowState.x;
+        }
+        else if (tag == "window_y") {
+            file >> settings.windowState.y;
+        }
+        else if (tag == "window_width") {
+            file >> settings.windowState.width;
+        }
+        else if (tag == "window_height") {
+            file >> settings.windowState.height;
+        }
         else if (tag == "renderer_use_3d") {
             file >> settings.rendererUse3D;
         }
@@ -207,6 +228,9 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
         settings.scenesDirectory = AppPaths::kDefaultScenesDirectory;
     }
     settings.rendererSpeedGradientMax = std::max(0.0f, settings.rendererSpeedGradientMax);
+    settings.windowState.monitorIndex = std::max(0, settings.windowState.monitorIndex);
+    settings.windowState.width = std::max(320, settings.windowState.width);
+    settings.windowState.height = std::max(240, settings.windowState.height);
 
     return settings;
 }
@@ -223,6 +247,13 @@ void UserSettingsIO::save(const UserSettings& settings, const std::filesystem::p
     file << "capture_crf " << settings.captureSettings.crf << "\n";
     file << "capture_preset " << presetToString(settings.captureSettings.preset) << "\n";
     file << "capture_pixel_format " << pixelFormatToString(settings.captureSettings.pixelFormat) << "\n";
+    file << "window_fullscreen " << static_cast<int>(settings.windowState.fullscreen) << "\n";
+    file << "window_maximized " << static_cast<int>(settings.windowState.maximized) << "\n";
+    file << "window_monitor_index " << settings.windowState.monitorIndex << "\n";
+    file << "window_x " << settings.windowState.x << "\n";
+    file << "window_y " << settings.windowState.y << "\n";
+    file << "window_width " << settings.windowState.width << "\n";
+    file << "window_height " << settings.windowState.height << "\n";
     file << "renderer_use_3d " << static_cast<int>(settings.rendererUse3D) << "\n";
     file << "renderer_draw_atoms " << static_cast<int>(settings.rendererDrawAtoms) << "\n";
     file << "renderer_draw_grid " << static_cast<int>(settings.rendererDrawGrid) << "\n";
