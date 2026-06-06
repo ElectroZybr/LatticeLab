@@ -21,8 +21,6 @@
 #include "debug/CreateDebugPanels.h"
 #include "debug/DebugRuntime.h"
 
-#include "Lattice/Engine/NeighborSearch/BarnesHut/Octree.h"
-
 using Clock = std::chrono::high_resolution_clock;
 
 constexpr int FPS = 60;
@@ -85,6 +83,7 @@ int Application::run() {
     simulation.world().setBondFormationEnabled(userSettings.simulationBondFormationEnabled);
     simulation.world().setLJEnabled(userSettings.simulationLJEnabled);
     simulation.world().setCoulombEnabled(userSettings.simulationCoulombEnabled);
+    simulation.world().setCoulombLongRangeEnabled(userSettings.simulationCoulombLongRangeEnabled);
     appInterface.state().simulationSpeed = 100.0f;
     appInterface.state().pause = true;
 
@@ -94,19 +93,15 @@ int Application::run() {
     // Generators::AngularVelocity(simulation, Vec3f(0.0f, 0.25f, 0.0f));
     // Generators::hexLattice(simulation, {5, 5, 1}, AtomData::Type::Z);
     
-    std::vector<Generators::AtomTypeSpec> gasSpecs = {
-            // {AtomData::Type::O, 0, 80.0f},    // 80% водорода
-            {AtomData::Type::Na, 0, 50.0f},   // 10% натрия
-            {AtomData::Type::Cl, 0, 50.0f}    // 10% хлора
-        };
-    Generators::randomGasMixed(simulation, 500, gasSpecs, false, 6.0, 6.0, 1.0f, 5.0f, 0);
-        // Lattice::simulation.createAtom(Vec3f(24, 25, 3), Vec3f(1, 0, 0), AtomData::Type::Na);
-        // Lattice::simulation.createAtom(Vec3f(28, 25, 3), Vec3f(-1, 0, 0), AtomData::Type::Na);
+    // std::vector<Generators::AtomTypeSpec> gasSpecs = {
+    //         // {AtomData::Type::O, 0, 80.0f},    // 80% водорода
+    //         {AtomData::Type::Na, 0, 50.0f},   // 10% натрия
+    //         {AtomData::Type::Cl, 0, 50.0f}    // 10% хлора
+    //     };
+    // Generators::randomGasMixed(simulation, 500, gasSpecs, false, 6.0, 6.0, 1.0f, 5.0f, 0);
+    simulation.createAtom(glm::vec3(20, 25, 3), glm::vec3(0, 0, 0), AtomData::Type::Na);
+    simulation.createAtom(glm::vec3(30, 25, 3), glm::vec3(0, 0, 0), AtomData::Type::Cl);
     renderer.syncScene(simulation);
-
-    OctreeNode octree;
-    octree.build(simulation.world().getAtomStorage(), simulation.world().getGrid());
-    octree.show();
 
     auto startTime = Clock::now();
     double renderAccum = 0.0;
@@ -182,6 +177,7 @@ int Application::run() {
         .simulationBondFormationEnabled = simulation.world().isBondFormationEnabled(),
         .simulationLJEnabled = simulation.isLJEnabled(),
         .simulationCoulombEnabled = simulation.isCoulombEnabled(),
+        .simulationCoulombLongRangeEnabled = simulation.world().isCoulombLongRangeEnabled(),
     });
     appInterface.shutdown();
     return 0;

@@ -7,7 +7,7 @@ file(GLOB_RECURSE LATTICE_PUBLIC_HEADERS CONFIGURE_DEPENDS
 )
 
 foreach(lattice_file_list IN ITEMS LATTICE_SOURCES LATTICE_PUBLIC_HEADERS)
-    list(FILTER ${lattice_file_list} EXCLUDE REGEX ".*/(CLI|benchmarks|build|_deps)/.*")
+    list(FILTER ${lattice_file_list} EXCLUDE REGEX ".*/(CLI|benchmarks|build|tests|_deps)/.*")
 endforeach()
 
 add_library(Lattice STATIC
@@ -53,6 +53,8 @@ target_link_libraries(Lattice-cli PRIVATE
     Lattice
     CLI11::CLI11
 )
+
+add_subdirectory(tests)
 
 if(BUILD_BENCHMARKS)
     FetchContent_Declare(

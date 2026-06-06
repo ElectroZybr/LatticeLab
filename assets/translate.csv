@@ -39,6 +39,7 @@ imgui_offset_z;Offset Z##world_offset_z;Offset Z##world_offset_z
 imgui_bond_formation;Bond formation;Образовывать связи
 imgui_lj;LJ;LJ
 imgui_coulomb;Coulomb;Coulomb
+imgui_coulomb_long_range;Long-range Coulomb;Дальний кулон
 imgui_render;Render;Рендер
 imgui_grid;Grid;Сетка
 imgui_connections;Connections;Связи

@@ -255,6 +255,11 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     if (ImGui::Checkbox("imgui_coulomb"_tr.data(), &coulombEnabled)) {
         simulation.world().setCoulombEnabled(coulombEnabled);
     }
+    ImGui::SameLine();
+    bool coulombLongRangeEnabled = simulation.world().isCoulombLongRangeEnabled();
+    if (ImGui::Checkbox("imgui_coulomb_long_range"_tr.data(), &coulombLongRangeEnabled)) {
+        simulation.world().setCoulombLongRangeEnabled(coulombLongRangeEnabled);
+    }
 
     ImGui::SeparatorText("imgui_render"_tr.data());
     ImGui::Checkbox("imgui_atoms"_tr.data(), &activeRenderData.drawAtoms);
@@ -434,6 +439,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         simulation.setBondFormationEnabled(defaults.simulationBondFormationEnabled);
         simulation.setLJEnabled(defaults.simulationLJEnabled);
         simulation.setCoulombEnabled(defaults.simulationCoulombEnabled);
+        simulation.world().setCoulombLongRangeEnabled(defaults.simulationCoulombLongRangeEnabled);
     }
 
     ImGui::SeparatorText("imgui_localization"_tr.data());

@@ -25,6 +25,7 @@ struct UserSettings {
     bool simulationBondFormationEnabled = false;
     bool simulationLJEnabled = true;
     bool simulationCoulombEnabled = true;
+    bool simulationCoulombLongRangeEnabled = true;
 };
 
 class UserSettingsIO {

@@ -6,8 +6,7 @@
 
 namespace {
     template <bool UseLJ, bool UseCoulomb>
-    void computePairInteractionsImpl(AtomStorage& atoms, const NeighborList& neighborList, const LJForceField& ljForceField,
-                                     const CoulombForceField& coulombForceField) {
+    void computePairInteractionsImpl(AtomStorage& atoms, const NeighborList& neighborList, const LJForceField& ljForceField, const CoulombForceField& coulombForceField) {
         const auto& offsets = neighborList.offsets();
         const auto& neighbours = neighborList.neighbors();
 
@@ -66,25 +65,27 @@ namespace {
     }
 }
 
-ForceField::ForceField() = default;
-
 bool ForceField::compute(World& world, bool allowBondFormation, float dt) const {
     PROFILE_SCOPE("ForceField::compute");
 
     AtomStorage& atoms = world.getAtomStorage();
     Bond::List& bonds = world.getBonds();
-    NeighborList& neighborList = world.getNeighborList();
 
+    // расчет сил стен и гравитации
     wallForceField_.compute(world);
     computePairInteractions(world);
-    return bondForceField_.compute(atoms, bonds, neighborList, allowBondFormation, dt);
+
+    // расчет дальнодействующих кулоновских сил
+    if (world.isCoulombLongRangeEnabled()) {
+        coulombForceField_.computeLongRange(atoms, world.getGrid());
+    }
+
+    return bondForceField_.compute(atoms, bonds, world.getNeighborList(), allowBondFormation, dt);
 }
 
 void ForceField::computePairInteractions(World& world) const {
-    PROFILE_SCOPE("ForceField::pairInteractions");
-
     AtomStorage& atoms = world.getAtomStorage();
-    const NeighborList& neighborList = world.getNeighborList();
+    NeighborList& neighborList = world.getNeighborList();
 
     if (world.isLJEnabled() && world.isCoulombEnabled()) {
         computePairInteractionsImpl<true, true>(atoms, neighborList, ljForceField_, coulombForceField_);
@@ -92,7 +93,7 @@ void ForceField::computePairInteractions(World& world) const {
     else if (world.isLJEnabled()) {
         computePairInteractionsImpl<true, false>(atoms, neighborList, ljForceField_, coulombForceField_);
     }
-    else if (world.isCoulombEnabled()) {
+    else {
         computePairInteractionsImpl<false, true>(atoms, neighborList, ljForceField_, coulombForceField_);
     }
 }

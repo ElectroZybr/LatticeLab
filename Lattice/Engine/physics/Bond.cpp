@@ -113,7 +113,7 @@ void Bond::angleForce(AtomStorage& atomStorage, size_t aIndex, size_t bIndex, si
     }
 
     double angle_theta = std::acos(cos_theta);
-    constexpr double theta_0 = 60.0 / 180.0 * std::numbers::pi;
+    constexpr double theta_0 = 104.5 / 180.0 * std::numbers::pi;
     double angle_loss = angle_theta - theta_0;
 
     double sin_theta = std::sqrt(sin_theta_sqr);

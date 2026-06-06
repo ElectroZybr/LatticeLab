@@ -51,7 +51,10 @@ void OctreeNode::buildNode(const AtomStorage& atoms, int levels) {
             children[i]->size = size / 2;
             children[i]->firstAtom = octantFirst[i];
             children[i]->atomCount = octantCounts[i];
+
+            // Рекурсивно строим дочерний узел
             children[i]->buildNode(atoms, levels - 1);
+            
             // проход назад (заплнение зарядов)
             charge += children[i]->charge;
             dipoleMoment += children[i]->dipoleMoment;
@@ -89,78 +92,6 @@ void OctreeNode::showNode(int depth) const {
             std::string indent(depth * 2, ' ');
             std::cout << indent << i << ", " << charge <<std::endl;
             children[i]->showNode(depth + 1);
-        }
-    }
-}
-
-void OctreeNode::accumulateForceOnAtom(const AtomStorage& atoms, size_t atomIndex, float theta, float& forceX, float& forceY, float& forceZ,
-                                       float& potentialEnergy) const {
-    if (atomCount == 0 || charge == 0.0f) {
-        return;
-    }
-
-    const float chargeA = atoms.charge(atomIndex);
-    if (chargeA == 0.0f) {
-        return;
-    }
-
-    const bool isLeaf = std::all_of(std::begin(children), std::end(children), [](const auto& child) { return child == nullptr; });
-    const bool containsTarget = atomIndex >= firstAtom && atomIndex < firstAtom + atomCount;
-
-    if (isLeaf) {
-        const float posX = atoms.posX(atomIndex);
-        const float posY = atoms.posY(atomIndex);
-        const float posZ = atoms.posZ(atomIndex);
-
-        for (size_t other = firstAtom; other < firstAtom + atomCount; ++other) {
-            if (other == atomIndex) {
-                continue;
-            }
-
-            const float dx = atoms.posX(other) - posX;
-            const float dy = atoms.posY(other) - posY;
-            const float dz = atoms.posZ(other) - posZ;
-            const float d2 = dx * dx + dy * dy + dz * dz;
-            if (d2 <= Consts::Epsilon) {
-                continue;
-            }
-
-            const float qqScale = CoulombForceField::kCoulombEvAngstrom * chargeA * atoms.charge(other);
-            const float invR = 1.0f / std::sqrt(d2);
-            const float forceScale = qqScale * invR / d2;
-
-            forceX -= dx * forceScale;
-            forceY -= dy * forceScale;
-            forceZ -= dz * forceScale;
-            potentialEnergy += 0.5f * qqScale * invR;
-        }
-        return;
-    }
-
-    const glm::vec3 sourcePos = dipoleMoment / charge;
-    const float dx = sourcePos.x - atoms.posX(atomIndex);
-    const float dy = sourcePos.y - atoms.posY(atomIndex);
-    const float dz = sourcePos.z - atoms.posZ(atomIndex);
-    const float d2 = dx * dx + dy * dy + dz * dz;
-
-    if (!containsTarget && d2 > Consts::Epsilon) {
-        const float theta2 = theta * theta;
-        if ((size * size) <= theta2 * d2) {
-            const float qqScale = CoulombForceField::kCoulombEvAngstrom * chargeA * charge;
-            const float invR = 1.0f / std::sqrt(d2);
-            const float forceScale = qqScale * invR / d2;
-
-            forceX -= dx * forceScale;
-            forceY -= dy * forceScale;
-            forceZ -= dz * forceScale;
-            potentialEnergy += 0.5f * qqScale * invR;
-            return;
-        }
-    }
-
-    for (const auto& child : children) {
-        if (child) {
-            child->accumulateForceOnAtom(atoms, atomIndex, theta, forceX, forceY, forceZ, potentialEnergy);
         }
     }
 }

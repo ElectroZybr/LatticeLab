@@ -51,6 +51,7 @@ void NeighborList::clear() {
 void NeighborList::rebuildPipeline(AtomStorage& atoms, World& world, int simStep) {
     // сортировка атомов по ячейкам сетки
     atoms.sort(world.getGrid());
+    world.remapAtomIndices(atoms.lastSortOldToNew());
     // перестройка пространственной сетки уже под новый порядок атомов
     world.getGrid().rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
     // перестройка списка соседей

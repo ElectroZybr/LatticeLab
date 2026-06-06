@@ -187,6 +187,9 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
         else if (tag == "simulation_coulomb_enabled") {
             file >> settings.simulationCoulombEnabled;
         }
+        else if (tag == "simulation_coulomb_long_range_enabled") {
+            file >> settings.simulationCoulombLongRangeEnabled;
+        }
         else {
             std::string ignoredLine;
             std::getline(file, ignoredLine);
@@ -232,4 +235,5 @@ void UserSettingsIO::save(const UserSettings& settings, const std::filesystem::p
     file << "simulation_bond_formation " << static_cast<int>(settings.simulationBondFormationEnabled) << "\n";
     file << "simulation_lj_enabled " << static_cast<int>(settings.simulationLJEnabled) << "\n";
     file << "simulation_coulomb_enabled " << static_cast<int>(settings.simulationCoulombEnabled) << "\n";
+    file << "simulation_coulomb_long_range_enabled " << static_cast<int>(settings.simulationCoulombLongRangeEnabled) << "\n";
 }

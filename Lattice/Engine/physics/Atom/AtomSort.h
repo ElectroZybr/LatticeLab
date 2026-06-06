@@ -12,7 +12,7 @@ class SpatialGrid;
 class AtomSort {
 public:
     void mortonOrder(AtomStorage& atoms, const SpatialGrid& grid);
-    std::vector<uint32_t> oldToNew() const noexcept { return oldToNew_; }
+    [[nodiscard]] const std::vector<uint32_t>& oldToNew() const noexcept { return oldToNew_; }
 
 private:
     struct AtomView;

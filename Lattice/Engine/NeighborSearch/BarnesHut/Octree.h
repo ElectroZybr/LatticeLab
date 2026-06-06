@@ -17,11 +17,12 @@ public:
     explicit OctreeNode(const glm::vec3& center_) : size(0.0f), charge(0.0f), center(center_), dipoleMoment(0.0f), parent(nullptr) {}
 
     void build(const AtomStorage& atoms, const SpatialGrid& grid);
-    void accumulateForceOnAtom(const AtomStorage& atoms, size_t atomIndex, float theta, float& forceX, float& forceY, float& forceZ,
-                               float& potentialEnergy) const;
     void show() const { showNode(0); }
 
 private:
+    friend class CoulombForceField;
+    friend struct OctreeTestSupport;
+
     static constexpr int maxDepth = 2;
     static constexpr int maxParticlesPerLeaf = 8;
 

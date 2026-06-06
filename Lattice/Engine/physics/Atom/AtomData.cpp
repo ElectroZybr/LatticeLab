@@ -29,7 +29,7 @@ constexpr std::array<std::string_view, static_cast<size_t>(AtomData::Type::COUNT
 const std::array<StaticAtomicData, static_cast<size_t>(AtomData::Type::COUNT)> AtomData::properties = {{
     {1.0000f, 0.5f, 1, 0.0f, atomColor(0, 230, 170, 255), 2.00f, 15.0f}, // Ze - Zerium
 
-    {1.0080f, 0.5f, 1, 0.0f, atomColor(255, 255, 255, 255), 2.40f, 0.03f}, // H  - Hydrogen
+    {1.0080f, 0.5f, 1, 0.42f, atomColor(255, 255, 255, 255), 2.40f, 0.03f}, // H  - Hydrogen
     {4.0026f, 0.5f, 0, 0.0f, atomColor(217, 255, 255, 255), 2.60f, 0.02f}, // He - Helium
 
     {6.9400f, 0.5f, 1, 0.0f, atomColor(204, 128, 255, 255), 3.60f, 0.09f}, // Li - Lithium
@@ -37,17 +37,17 @@ const std::array<StaticAtomicData, static_cast<size_t>(AtomData::Type::COUNT)> A
     {10.810f, 0.5f, 3, 0.0f, atomColor(255, 181, 181, 255), 3.00f, 0.10f}, // B  - Boron
     {12.011f, 0.5f, 4, 0.0f, atomColor(144, 144, 144, 255), 3.40f, 0.12f}, // C  - Carbon
     {14.007f, 0.5f, 5, 0.0f, atomColor(48, 80, 248, 255), 3.20f, 0.11f},   // N  - Nitrogen
-    {15.999f, 0.5f, 2, 0.0f, atomColor(255, 13, 13, 255), 3.00f, 0.10f},   // O  - Oxygen
+    {15.999f, 0.5f, 2, -0.84f, atomColor(255, 13, 13, 255), 3.00f, 0.10f}, // O  - Oxygen
     {18.998f, 0.5f, 1, 0.0f, atomColor(144, 224, 80, 255), 3.00f, 0.08f},  // F  - Fluorine
     {20.180f, 0.5f, 0, 0.0f, atomColor(179, 227, 245, 255), 2.80f, 0.03f}, // Ne - Neon
 
-    {22.990f, 0.5f, 1, 0.0f, atomColor(171, 92, 242, 255), 4.00f, 0.12f},  // Na - Sodium
+    {22.990f, 0.5f, 1, 1.0f, atomColor(171, 92, 242, 255), 4.00f, 0.12f},  // Na - Sodium
     {24.305f, 0.5f, 2, 0.0f, atomColor(138, 255, 0, 255), 3.60f, 0.13f},   // Mg - Magnesium
     {26.982f, 0.5f, 3, 0.0f, atomColor(191, 166, 166, 255), 3.40f, 0.14f}, // Al - Aluminum
     {28.085f, 0.5f, 4, 0.0f, atomColor(240, 200, 160, 255), 3.30f, 0.15f}, // Si - Silicon
     {30.974f, 0.5f, 5, 0.0f, atomColor(255, 128, 0, 255), 3.20f, 0.16f},   // P  - Phosphorus
     {32.060f, 0.5f, 6, 0.0f, atomColor(255, 255, 48, 255), 3.20f, 0.18f},  // S  - Sulfur
-    {35.450f, 0.5f, 7, 0.0f, atomColor(31, 240, 31, 255), 3.10f, 0.15f},   // Cl - Chlorine
+    {35.450f, 0.5f, 7, -1.0f, atomColor(31, 240, 31, 255), 3.10f, 0.15f},  // Cl - Chlorine
     {39.948f, 0.5f, 0, 0.0f, atomColor(128, 209, 227, 255), 3.00f, 0.07f}, // Ar - Argon
 
     {39.098f, 0.5f, 1, 0.0f, atomColor(143, 64, 212, 255), 4.80f, 0.18f},  // K  - Potassium

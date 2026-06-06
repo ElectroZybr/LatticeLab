@@ -218,13 +218,7 @@ public:
 
         const auto& props = AtomData::getProps(type);
         invMass_[count_] = 1.f / props.mass;
-        charge_[count_] = 0.f;
-        if (type == AtomData::Type::Cl) {
-            charge_[count_] = -1.f;
-        }
-        else if (type == AtomData::Type::Na) {
-            charge_[count_] = 1.f;
-        }
+        charge_[count_] = props.defaultCharge;
 
         atomType_.emplace_back(type);
         valence_.emplace_back(props.maxValence);
@@ -452,4 +446,5 @@ public:
     }
 
     void sort(SpatialGrid& grid) { sort_.mortonOrder(*this, grid); }
+    [[nodiscard]] const std::vector<uint32_t>& lastSortOldToNew() const noexcept { return sort_.oldToNew(); }
 };
