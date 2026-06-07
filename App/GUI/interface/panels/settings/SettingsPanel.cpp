@@ -1,6 +1,7 @@
 #include "SettingsPanel.h"
 
 #include <array>
+#include <cmath>
 #include <cstdio>
 #include <string>
 
@@ -316,13 +317,26 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     ImGui::PopItemWidth();
 
     ImGui::SeparatorText("Interface");
-    float interfaceScale = appInterface.uiScaleMultiplier();
+    const float currentInterfaceScale = std::round(appInterface.uiScaleMultiplier() * 10.0f) / 10.0f;
+    if (!interfaceScaleEditing_) {
+        pendingInterfaceScale_ = currentInterfaceScale;
+    }
+
     ImGui::PushItemWidth(180.0f * uiScale);
-    if (ImGui::SliderFloat("Interface scale", &interfaceScale, StyleManager::kMinUiScale, StyleManager::kMaxUiScale, "%.2f", ImGuiSliderFlags_AlwaysClamp)) {
-        interfaceScale = std::round(interfaceScale / 0.1f) * 0.1f;
-        appInterface.setUiScaleMultiplier(interfaceScale);
+    if (ImGui::SliderFloat("Interface scale", &pendingInterfaceScale_, StyleManager::kMinUiScale, StyleManager::kMaxUiScale, "%.1f",
+                           ImGuiSliderFlags_AlwaysClamp)) {
+        pendingInterfaceScale_ = std::round(pendingInterfaceScale_ * 10.0f) / 10.0f;
+        interfaceScaleEditing_ = true;
     }
     ImGui::PopItemWidth();
+    if (interfaceScaleEditing_ && ImGui::IsItemDeactivatedAfterEdit()) {
+        appInterface.setUiScaleMultiplier(pendingInterfaceScale_);
+        interfaceScaleEditing_ = false;
+    }
+    else if (interfaceScaleEditing_ && !ImGui::IsItemActive()) {
+        pendingInterfaceScale_ = currentInterfaceScale;
+        interfaceScaleEditing_ = false;
+    }
 
     ImGui::SeparatorText("imgui_neighbour_list"_tr.data());
     int cellSize = simulation.world().getGridCellSize();

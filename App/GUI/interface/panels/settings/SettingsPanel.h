@@ -26,4 +26,6 @@ public:
 private:
     bool visible = false;
     float animProgress = 0.f;
+    bool interfaceScaleEditing_ = false;
+    float pendingInterfaceScale_ = 1.0f;
 };
