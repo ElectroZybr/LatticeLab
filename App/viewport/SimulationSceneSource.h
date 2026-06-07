@@ -7,12 +7,7 @@
 
 namespace App::Viewport {
     inline glm::vec3 makeRenderBoxSize(const World& world) {
-        const glm::vec3 size = world.getWorldSize();
-        return glm::vec3(
-            std::max(0.0f, size.x - 1.0f),
-            std::max(0.0f, size.y - 1.0f),
-            std::max(0.0f, size.z - 1.0f)
-        );
+        return world.getWorldSize();
     }
 
     inline void forEachWorldBond(const void* context, RenderBondVisitor visitor, void* userData) {

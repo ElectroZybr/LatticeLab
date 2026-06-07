@@ -42,7 +42,6 @@ public:
     [[nodiscard]] AtomData::Type atomType() const { return atomType_; }
     [[nodiscard]] AtomData::Type gasAtomType() const { return gasAtomType_; }
     [[nodiscard]] float gasDensity() const { return gasDensity_; }
-    [[nodiscard]] glm::vec3 boxSize() const { return boxSize_; }
 
 private:
     void ensureSceneCatalogLoaded();
@@ -58,7 +57,6 @@ private:
     int gasAtomCount_ = 1000;
     bool gasIs3D_ = false;
     float gasDensity_ = 1.0f;
-    glm::vec3 boxSize_ = glm::vec3(100.0f, 100.0f, 6.0f);
     AtomData::Type atomType_ = AtomData::Type::Z;
     AtomData::Type gasAtomType_ = AtomData::Type::Z;
     RecordingFormat recordingFormat_ = RecordingFormat::MP4;

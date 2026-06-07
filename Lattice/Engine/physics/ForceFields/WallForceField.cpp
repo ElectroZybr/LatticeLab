@@ -8,7 +8,7 @@ using glm::vec3;
 void WallForceField::compute(World& world) const {
     AtomStorage& atoms = world.getAtomStorage();
     const vec3 gravity = world.getGravity();
-    const vec3 wallMax = world.getWorldSize() - vec3(1.0f);
+    const vec3 wallMax = world.getWorldSize();
 
     for (size_t atomIndex = 0; atomIndex < atoms.mobileCount(); ++atomIndex) {
         float forceX = atoms.forceX(atomIndex);

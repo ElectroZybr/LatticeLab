@@ -103,12 +103,12 @@ int Application::run() {
     // Generators::AngularVelocity(simulation, Vec3f(0.0f, 0.25f, 0.0f));
     // Generators::hexLattice(simulation, {5, 5, 1}, AtomData::Type::Z);
     
-    std::vector<Generators::AtomTypeSpec> gasSpecs = {
-            // {AtomData::Type::O, 0, 80.0f},    // 80% водорода
-            {AtomData::Type::Na, 0, 50.0f},   // 10% натрия
-            {AtomData::Type::Cl, 0, 50.0f}    // 10% хлора
-        };
-    Generators::randomGasMixed(simulation, 500, gasSpecs, false, 6.0, 6.0, 1.0f, 5.0f, 0);
+    // std::vector<Generators::AtomTypeSpec> gasSpecs = {
+    //         // {AtomData::Type::O, 0, 80.0f},    // 80% водорода
+    //         {AtomData::Type::Na, 0, 50.0f},   // 10% натрия
+    //         {AtomData::Type::Cl, 0, 50.0f}    // 10% хлора
+    //     };
+    // Generators::randomGasMixed(simulation, 500, gasSpecs, false, 6.0, 6.0, 1.0f, 5.0f, 0);
     // simulation.createAtom(glm::vec3(20, 25, 3), glm::vec3(0, 0, 0), AtomData::Type::Na);
     // simulation.createAtom(glm::vec3(30, 25, 3), glm::vec3(0, 0, 0), AtomData::Type::Cl);
     renderer.syncScene(simulation);

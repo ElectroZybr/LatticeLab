@@ -19,7 +19,7 @@ namespace StepOps {
 
     inline void confineToBox(World& world) {
         constexpr float restitution = 0.8f;
-        const glm::vec3 max = world.getWorldSize() - glm::vec3(1.0f);
+        const glm::vec3 max = world.getWorldSize();
 
         AtomStorage& atomStorage = world.getAtomStorage();
 
