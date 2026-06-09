@@ -1,6 +1,7 @@
 #include "Render.h"
 
 #include <algorithm>
+#include <cmath>
 #include <vector>
 
 #include "Rendering/backend/WGPUContext.h"
@@ -109,6 +110,53 @@ void RendererWGPU::drawGridImpl(const RenderGridView& grid) {
     if (!gridInstVb || instBytes > gridInstVbCapacity_) {
         gridInstVb =
             WGPUContext::instance().createBuffer(instBytes * 2, wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst, "Grid_Instances");
+        gridInstVbCapacity_ = instBytes * 2;
+    }
+    WGPUContext::instance().queue()->writeBuffer(*gridInstVb, 0, gridData.data(), instBytes);
+
+    currentPass->setPipeline(*gridPipeline);
+    currentPass->setBindGroup(0, *gridBindGroup, 0, nullptr);
+    currentPass->setVertexBuffer(0, *gridLineVb, 0, gridLineVb->getSize());
+    currentPass->setVertexBuffer(1, *gridInstVb, 0, instBytes);
+    currentPass->draw(24, gridData.size(), 0, 0);
+}
+
+void RendererWGPU::drawVectorFieldImpl(const RenderVectorFieldView& field) {
+    struct VectorFieldBuildContext {
+        RendererWGPU* renderer = nullptr;
+        float maxValue = 1.0f;
+
+        static void append(const RenderGridCell& cell, void* userData) {
+            auto& ctx = *static_cast<VectorFieldBuildContext*>(userData);
+            const float value = std::abs(cell.atomCount);
+            if (value <= 0.0f) {
+                return;
+            }
+
+            ctx.renderer->gridData.push_back(GridInstance{
+                .origin = glm::vec4(cell.origin, 0.0f),
+                .cellSize = cell.cellSize,
+                .atomCount = value,
+            });
+            ctx.maxValue = std::max(ctx.maxValue, value);
+        }
+    };
+
+    gridData.clear();
+    gridData.reserve(field.count);
+    VectorFieldBuildContext buildContext{.renderer = this};
+    field.forEach(VectorFieldBuildContext::append, &buildContext);
+    if (gridData.empty()) {
+        return;
+    }
+
+    float maxValue = buildContext.maxValue;
+    WGPUContext::instance().queue()->writeBuffer(*uniformBuffer, offsetof(SceneUniforms, maxCount), &maxValue, sizeof(float));
+
+    const uint64_t instBytes = gridData.size() * sizeof(GridInstance);
+    if (!gridInstVb || instBytes > gridInstVbCapacity_) {
+        gridInstVb =
+            WGPUContext::instance().createBuffer(instBytes * 2, wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst, "Vector_Field_Grid_Instances");
         gridInstVbCapacity_ = instBytes * 2;
     }
     WGPUContext::instance().queue()->writeBuffer(*gridInstVb, 0, gridData.data(), instBytes);

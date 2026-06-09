@@ -160,6 +160,7 @@ int Application::run() {
         // отрисовка кадра
         if (renderAccum >= renderInterval) {
             renderAccum -= renderInterval;
+            simulation.world().updateVectorField();
             renderer.renderFrame(simulation, appInterface, debugViews);
         }
 

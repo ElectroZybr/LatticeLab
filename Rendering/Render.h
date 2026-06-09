@@ -109,6 +109,7 @@ private:
     void drawBondsImpl(const RenderAtomsView& atoms, const RenderBondsView& bonds);
     void drawBoxImpl(const glm::vec3& worldSize);
     void drawGridImpl(const RenderGridView& grid);
+    void drawVectorFieldImpl(const RenderVectorFieldView& field);
     void drawMemoryOrderImpl(const RenderAtomsView& atoms);
     void setLineColor(const glm::vec4& color);
 

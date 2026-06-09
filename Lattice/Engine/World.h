@@ -14,6 +14,7 @@
 #include "Engine/physics/Bond.h"
 #include "Engine/physics/ForceField.h"
 #include "Engine/physics/Integrator.h"
+#include "Engine/physics/VectorField.h"
 
 class World {
 public:
@@ -22,10 +23,12 @@ public:
     void clear();
     void reset();
     void resizeBox(const glm::vec3& newSize, float cellSize = -1.0f);
+    glm::vec3 getSizeBox() const noexcept { return size; }
 
     void setWorldSize(const glm::vec3& newSize) {
         size = newSize;
         grid.resize(size);
+        vectorField_.resize(glm::ivec3(size), 0);
     }
     const glm::vec3& getWorldSize() const noexcept { return size; }
 
@@ -110,6 +113,11 @@ public:
     
     ForceField& getForceField() noexcept { return state_.forceField_; }
     const ForceField& getForceField() const noexcept { return state_.forceField_; }
+
+    VectorField& getVectorField() noexcept { return vectorField_; }
+    const VectorField& getVectorField() const noexcept { return vectorField_; }
+    void setVectorFieldSlice(int zSlice) { vectorField_.setSliceZ(zSlice); }
+    void updateVectorField() { vectorField_.compute(state_.forceField_, atomStorage_, grid); }
     
     // Параметры связей между атомами
     void setBondFormationEnabled(bool enabled) noexcept { state_.bondFormationEnabled_ = enabled; }
@@ -142,6 +150,7 @@ private:
     AtomStorage atomStorage_;
     SpatialGrid grid;
     NeighborList neighborList_;
+    VectorField vectorField_;
     Bond::List bonds_;
     std::string title_;
     std::string description_;

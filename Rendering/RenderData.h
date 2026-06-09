@@ -74,6 +74,21 @@ struct RenderGridView {
     }
 };
 
+using RenderVectorFieldCellVisitor = void (*)(const RenderGridCell& cell, void* userData);
+
+struct RenderVectorFieldView {
+    const void* context = nullptr;
+    size_t count = 0;
+    void (*forEachFn)(const void* context, RenderVectorFieldCellVisitor visitor, void* userData) = nullptr;
+
+    [[nodiscard]] bool empty() const noexcept { return count == 0 || context == nullptr || forEachFn == nullptr; }
+    void forEach(RenderVectorFieldCellVisitor visitor, void* userData) const {
+        if (!empty()) {
+            forEachFn(context, visitor, userData);
+        }
+    }
+};
+
 class RenderData {
 public:
     enum class SpeedColorMode : uint8_t {
@@ -86,6 +101,7 @@ public:
 
     RenderBondsView bonds{};
     RenderGridView grid{};
+    RenderVectorFieldView vectorField{};
     std::vector<size_t> selectedAtomIndices;
 
     glm::vec3 worldSize{0.0f, 0.0f, 0.0f};
@@ -95,6 +111,7 @@ public:
     bool hasBox = false;
     bool drawAtoms = true;
     bool drawGrid = false;
+    bool drawVectorField = false;
     bool drawBonds = false;
     bool drawBox = true;
     bool drawMemoryOrder = false;

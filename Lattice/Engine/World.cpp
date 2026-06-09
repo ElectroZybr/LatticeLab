@@ -3,7 +3,7 @@
 #include "Engine/metrics/EnergyMetrics.h"
 #include "Engine/physics/Integrator.h"
 
-World::World(glm::vec3 size, glm::vec3 renderOffset) : size(size), renderOffset(renderOffset), grid(size) {
+World::World(glm::vec3 size, glm::vec3 renderOffset) : size(size), renderOffset(renderOffset), grid(size), vectorField_(glm::ivec3(size), 0) {
     atomStorage_.reserve(250000);
     neighborList_.setParams(5.f, 1.f);
 }

@@ -12,8 +12,8 @@ class OctreeNode;
 class CoulombForceField {
 public:
     void computeLongRange(AtomStorage& atoms, const SpatialGrid& grid) const;
-    void computeForce(const AtomStorage& atoms, size_t atomIndex, const OctreeNode& node, float theta, float& forceX, float& forceY, float& forceZ,
-                      float& potentialEnergy) const;
+    void computeForce(const AtomStorage& atoms, size_t atomIndex, const OctreeNode& node, float theta, float& forceX, float& forceY, float& forceZ, float& potentialEnergy) const;
+    float PeAtPoint(const AtomStorage& atoms, const SpatialGrid& grid, float x, float y, float z) const;
 
     static constexpr float kCoulombEvAngstrom = 140.399645f; // eV*A/e^2
 

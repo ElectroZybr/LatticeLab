@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "Engine/NeighborSearch/BarnesHut/Octree.h"
+#include "Engine/NeighborSearch/SpatialGrid.h"
 #include "Engine/Consts.h"
 #include "Engine/metrics/Profiler.h"
 
@@ -101,4 +102,29 @@ void CoulombForceField::computeForce(const AtomStorage& atoms, size_t atomIndex,
             computeForce(atoms, atomIndex, *child, theta, forceX, forceY, forceZ, potentialEnergy);
         }
     }
+}
+
+float CoulombForceField::PeAtPoint(const AtomStorage& atoms, const SpatialGrid& grid, float x, float y, float z) const {
+    float potentialEnergy = 0.0f;
+    grid.forEachNeighborCell(grid.worldToCellX(x), grid.worldToCellY(y), grid.worldToCellZ(z), [&](int cx, int cy, int cz) {
+        for (uint32_t atomIndex : grid.atomsInCell(cx, cy, cz)) {
+            if (atoms.charge(atomIndex) == 0.0f) {
+                continue;
+            }
+
+            const float dx = atoms.posX(atomIndex) - x;
+            const float dy = atoms.posY(atomIndex) - y;
+            const float dz = atoms.posZ(atomIndex) - z;
+            const float d2 = dx * dx + dy * dy + dz * dz;
+            if (d2 <= Consts::Epsilon) {
+                continue;
+            }
+
+            const float qqScale = kCoulombEvAngstrom * atoms.charge(atomIndex);
+            const float invR = 1.0f / std::sqrt(d2);
+
+            potentialEnergy += 0.5f * qqScale * invR;
+        }
+    });
+    return potentialEnergy;
 }

@@ -34,9 +34,9 @@ public:
         return std::span<const uint32_t>(atomsInCells.data() + begin, offsets[linearIndex + 1] - begin);
     }
 
-    uint worldToCellX(float x) const { return toCell(x, size.x); }
-    uint worldToCellY(float y) const { return toCell(y, size.y); }
-    uint worldToCellZ(float z) const { return toCell(z, size.z); }
+    uint32_t worldToCellX(float x) const { return static_cast<uint32_t>(toCell(x, static_cast<int>(size.x))); }
+    uint32_t worldToCellY(float y) const { return static_cast<uint32_t>(toCell(y, static_cast<int>(size.y))); }
+    uint32_t worldToCellZ(float z) const { return static_cast<uint32_t>(toCell(z, static_cast<int>(size.z))); }
 
     [[nodiscard]] int countAtomsInCell(int cx, int cy, int cz) const {
         const size_t idx = static_cast<size_t>(index(cx, cy, cz));
@@ -47,6 +47,23 @@ public:
     [[nodiscard]] const std::array<int, 27>& neighborOffsets27() const noexcept { return neighborOffsets27_; }
 
     [[nodiscard]] int index(int x, int y, int z) const noexcept { return (z * size.y + y) * size.x + x; }
+
+    template <typename Func>
+    void forEachNeighborCell(int cx, int cy, int cz, Func&& func) const {
+        const auto& offsets27 = neighborOffsets27();
+        const int center = index(cx, cy, cz);
+        const int sizeX = static_cast<int>(size.x);
+        const int sizeY = static_cast<int>(size.y);
+        const int sizeZ = static_cast<int>(size.z);
+
+        for (int k = 0; k < 27; ++k) {
+            const int neighborCellIndex = center + offsets27[k];
+            const int nx = (neighborCellIndex % sizeX + sizeX) % sizeX;
+            const int ny = ((neighborCellIndex / sizeX) % sizeY + sizeY) % sizeY;
+            const int nz = (neighborCellIndex / (sizeX * sizeY) + sizeZ) % sizeZ;
+            func(nx, ny, nz);
+        }
+    }
 
 private:
     static constexpr uint32_t kGhostLayers = 1;

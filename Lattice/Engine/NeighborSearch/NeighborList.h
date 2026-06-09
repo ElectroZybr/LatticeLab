@@ -40,7 +40,6 @@ public:
 
         for (int k = 0; k < 27; ++k) {
             for (uint32_t neighborIndex : grid.atomsInCell(center + offsets27[k])) {
-                // grid.atomsInCellByLinearIndex возвращает соседей в порядке возрастания индексов
                 if (neighborIndex >= atomIndex) {
                     break;
                 }

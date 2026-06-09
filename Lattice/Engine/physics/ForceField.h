@@ -13,9 +13,9 @@ class ForceField {
 public:
     bool compute(World& world, bool allowBondFormation, float dt) const;
     void computePairInteractions(World& world) const;
-private:
     WallForceField wallForceField_;
     LJForceField ljForceField_;
     BondForceField bondForceField_;
     CoulombForceField coulombForceField_;
+private:
 };

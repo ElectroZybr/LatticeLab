@@ -48,6 +48,9 @@ void RendererWGPU::drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView
     if (renderData.drawGrid && !renderData.grid.empty()) {
         drawGridImpl(renderData.grid);
     }
+    if (renderData.drawVectorField && !renderData.vectorField.empty()) {
+        drawVectorFieldImpl(renderData.vectorField);
+    }
     if (renderData.drawBox && renderData.hasBox) {
         setLineColor(applySelection ? glm::vec4(0.5f, 0.78f, 1.0f, 0.55f) : glm::vec4(0.35f, 0.52f, 0.9f, 0.3f));
         drawBoxImpl(renderData.worldSize);

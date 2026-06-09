@@ -3,6 +3,7 @@
 #include <unordered_set>
 
 #include "Lattice/Engine/Simulation.h"
+#include "Lattice/Engine/physics/VectorField.h"
 #include "Rendering/BaseRenderer.h"
 
 namespace App::Viewport {
@@ -35,6 +36,29 @@ namespace App::Viewport {
                     };
                     visitor(cell, userData);
                 }
+            }
+        }
+    }
+
+    inline void forEachVectorFieldCell(const void* context, RenderVectorFieldCellVisitor visitor, void* userData) {
+        const auto& field = *static_cast<const VectorField*>(context);
+        const glm::ivec3 size = field.gridSize();
+        const float cellScale = field.cellScale();
+        const float z = static_cast<float>(field.zSlice()) * cellScale;
+
+        for (int y = 0; y < size.y; ++y) {
+            for (int x = 0; x < size.x; ++x) {
+                const float potential = field.potentialAt(x, y);
+                if (potential == 0.0f) {
+                    continue;
+                }
+
+                const RenderGridCell cell{
+                    .origin = glm::vec3(static_cast<float>(x) * cellScale, static_cast<float>(y) * cellScale, z),
+                    .cellSize = cellScale,
+                    .atomCount = potential,
+                };
+                visitor(cell, userData);
             }
         }
     }
@@ -92,6 +116,18 @@ namespace App::Viewport {
                 .count = world.getGrid().countCells,
                 .forEachFn = forEachWorldGridCell,
             };
+            renderData.vectorField = {};
+            renderData.drawVectorField = false;
+            if (worldId == simulation.activeWorldId()) {
+                const VectorField& vectorField = world.getVectorField();
+                const glm::ivec3 fieldSize = vectorField.gridSize();
+                renderData.vectorField = RenderVectorFieldView{
+                    .context = &vectorField,
+                    .count = static_cast<size_t>(fieldSize.x) * static_cast<size_t>(fieldSize.y),
+                    .forEachFn = forEachVectorFieldCell,
+                };
+                renderData.drawVectorField = true;
+            }
             renderData.selectedAtomIndices.clear();
         }
 
