@@ -34,6 +34,12 @@ namespace {
         simulation.setSizeBox(newSize);
     }
 
+    void applyLerpResizeBox(Lattice::Simulation& simulation, const glm::vec3& newSize, float speed) {
+        World& world = simulation.world();
+        const glm::vec3 nextSize = glm::mix(world.getWorldSize(), newSize, speed);
+        applyResizeBox(simulation, nextSize);
+    }
+
     void toggleXYZRecording(CaptureController& captureController, Lattice::Simulation& simulation) {
         if (simulation.isXYZRecording()) {
             simulation.stopXYZRecording();
@@ -61,6 +67,7 @@ namespace AppActions {
             ToolsManager::resetInteractionState();
         }));
         track(AppSignals::UI::ResizeBox.connect([&](const glm::vec3& newSize) { applyResizeBox(simulation, newSize); }));
+        track(AppSignals::UI::LerpResizeBox.connect([&](const glm::vec3& newSize, float speed) { applyLerpResizeBox(simulation, newSize, speed); }));
         track(AppSignals::UI::ClearSimulation.connect([&]() {
             simulation.clear();
             ToolsManager::resetInteractionState();
