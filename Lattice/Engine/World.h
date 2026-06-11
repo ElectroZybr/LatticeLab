@@ -117,6 +117,7 @@ public:
     VectorField& getVectorField() noexcept { return vectorField_; }
     const VectorField& getVectorField() const noexcept { return vectorField_; }
     void setVectorFieldSlice(int zSlice) { vectorField_.setSliceZ(zSlice); }
+    void setVectorFieldCellSize(float cellSize) { vectorField_.setCellScale(cellSize); }
     void updateVectorField() { vectorField_.compute(state_.forceField_, atomStorage_, grid); }
     
     // Параметры связей между атомами

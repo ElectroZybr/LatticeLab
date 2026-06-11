@@ -8,6 +8,7 @@
 #include "generated/shaders/grid.wgsl.h"
 #include "generated/shaders/line.wgsl.h"
 #include "generated/shaders/memory_order.wgsl.h"
+#include "generated/shaders/field.wgsl.h"
 
 Renderer2D::Renderer2D() {
     initAtomPipeline(atom2dWGSL);
@@ -15,6 +16,7 @@ Renderer2D::Renderer2D() {
     initBondPipeline(lineWGSL);
     initMemoryOrderPipeline(memory_orderWGSL);
     initGridPipeline(gridWGSL);
+    initPotentialFieldPipeline(fieldWGSL);
 
     camera.setMode(Camera::Mode::Mode2D);
     camera.resetView();

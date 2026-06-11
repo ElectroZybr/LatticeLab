@@ -288,6 +288,26 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     ImGui::SeparatorText("imgui_render"_tr.data());
     ImGui::Checkbox("imgui_atoms"_tr.data(), &activeRenderData.drawAtoms);
     ImGui::Checkbox("imgui_grid"_tr.data(), &activeRenderData.drawGrid);
+    ImGui::Checkbox("Potential gradient", &activeRenderData.drawVectorField);
+    ImGui::BeginDisabled(!activeRenderData.drawVectorField || activeRenderData.fieldAutoScale);
+    ImGui::PushItemWidth(180.0f * uiScale);
+    ImGui::SliderFloat("Field scale", &activeRenderData.fieldPotentialScale, 0.1f, 500.0f, "%.1f", ImGuiSliderFlags_Logarithmic);
+    ImGui::PopItemWidth();
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    ImGui::BeginDisabled(!activeRenderData.drawVectorField);
+    ImGui::Checkbox("Auto field", &activeRenderData.fieldAutoScale);
+    ImGui::EndDisabled();
+    ImGui::BeginDisabled(!activeRenderData.drawVectorField);
+    ImGui::PushItemWidth(180.0f * uiScale);
+    if (ImGui::SliderFloat("Field cell", &activeRenderData.fieldCellSize, 0.25f, 8.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp)) {
+        simulation.world().setVectorFieldCellSize(activeRenderData.fieldCellSize);
+    }
+    activeRenderData.fieldCellSize = std::max(activeRenderData.fieldCellSize, 0.25f);
+    ImGui::SliderFloat("Field smooth", &activeRenderData.fieldSmoothing, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    activeRenderData.fieldSmoothing = std::clamp(activeRenderData.fieldSmoothing, 0.0f, 1.0f);
+    ImGui::PopItemWidth();
+    ImGui::EndDisabled();
     ImGui::Checkbox("imgui_connections"_tr.data(), &activeRenderData.drawBonds);
     ImGui::Checkbox("imgui_box"_tr.data(), &activeRenderData.drawBox);
     ImGui::Checkbox("imgui_memory_order"_tr.data(), &activeRenderData.drawMemoryOrder);

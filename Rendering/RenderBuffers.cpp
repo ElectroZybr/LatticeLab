@@ -11,6 +11,7 @@ RendererWGPU::RendererWGPU() : surfaceFormat(WGPUContext::instance().surfaceForm
     initBoxBuffer();
     initBondBuffer();
     initGridLineBuffer();
+    initPotentialFieldQuadBuffer();
     initMemoryOrderBuffer();
 }
 
@@ -48,6 +49,16 @@ void RendererWGPU::initGridLineBuffer() {
     WGPUContext& ctx = WGPUContext::instance();
     gridLineVb = ctx.createBuffer(sizeof(lines), wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst, "Grid_Cell_Unit_Lines");
     ctx.queue()->writeBuffer(*gridLineVb, 0, lines, sizeof(lines));
+}
+
+void RendererWGPU::initPotentialFieldQuadBuffer() {
+    static constexpr float quad[] = {
+        0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+        0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+    };
+    WGPUContext& ctx = WGPUContext::instance();
+    potentialFieldQuadVb = ctx.createBuffer(sizeof(quad), wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst, "Potential_Field_Quad");
+    ctx.queue()->writeBuffer(*potentialFieldQuadVb, 0, quad, sizeof(quad));
 }
 
 void RendererWGPU::initMemoryOrderBuffer() {
