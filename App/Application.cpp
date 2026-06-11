@@ -161,6 +161,7 @@ int Application::run() {
         const double physicsInterval = 1.0 / uiState.simulationSpeed;
         if (physicsAccum >= physicsInterval) {
             if (!uiState.pause) {
+                appActions.updateSimulationStep(simulation);
                 simulation.updateAll();
             }
             physicsAccum = 0.0;

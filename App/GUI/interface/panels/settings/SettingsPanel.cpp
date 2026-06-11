@@ -22,6 +22,12 @@
 using i18n::operator""_tr;
 
 namespace {
+    bool isBoxResizeTargetReached(const glm::vec3& currentSize, const glm::vec3& targetSize) {
+        constexpr float epsilon = 0.001f;
+        return std::abs(currentSize.x - targetSize.x) <= epsilon && std::abs(currentSize.y - targetSize.y) <= epsilon &&
+               std::abs(currentSize.z - targetSize.z) <= epsilon;
+    }
+
     std::string_view integratorName(Integrator::Scheme scheme) {
         switch (scheme) {
         case Integrator::Scheme::Verlet:
@@ -244,7 +250,12 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     }
     ImGui::PopItemWidth();
 
-    glm::vec3 boxSize = simulation.world().getWorldSize();
+    const glm::vec3 currentWorldSize = simulation.world().getWorldSize();
+    if (!boxSizeTargetInitialized_ ||
+        (!boxSizeEditing_ && (!smoothBoxResizeEnabled_ || isBoxResizeTargetReached(currentWorldSize, pendingBoxSize_)))) {
+        pendingBoxSize_ = currentWorldSize;
+        boxSizeTargetInitialized_ = true;
+    }
     ImGui::PushItemWidth(150.0f * uiScale);
     bool boxSizeChanged = false;
     const auto drawBoxSizeDrag = [&](const char* label, const char* id, float& value) {
@@ -258,12 +269,41 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         ImGui::TextUnformatted(label);
         return changed;
     };
-    boxSizeChanged |= drawBoxSizeDrag("Size X", "##settings_box_size_x", boxSize.x);
-    boxSizeChanged |= drawBoxSizeDrag("Size Y", "##settings_box_size_y", boxSize.y);
-    boxSizeChanged |= drawBoxSizeDrag("Size Z", "##settings_box_size_z", boxSize.z);
+    boxSizeChanged |= drawBoxSizeDrag("Size X", "##settings_box_size_x", pendingBoxSize_.x);
+    boxSizeChanged |= drawBoxSizeDrag("Size Y", "##settings_box_size_y", pendingBoxSize_.y);
+    boxSizeChanged |= drawBoxSizeDrag("Size Z", "##settings_box_size_z", pendingBoxSize_.z);
+    ImGui::PopItemWidth();
+
+    bool hardWallsEnabled = !smoothBoxResizeEnabled_;
+    if (ImGui::Checkbox("Жесткие стены", &hardWallsEnabled)) {
+        smoothBoxResizeEnabled_ = !hardWallsEnabled;
+        boxSizeEditing_ = false;
+        if (hardWallsEnabled && !isBoxResizeTargetReached(currentWorldSize, pendingBoxSize_)) {
+            AppSignals::UI::ResizeBox.emit(pendingBoxSize_);
+        }
+    }
+
+    ImGui::PushItemWidth(150.0f * uiScale);
+    ImGui::BeginDisabled(hardWallsEnabled);
+    const bool wallSpeedChanged = ImGui::SliderFloat("Wall speed", &boxResizeMaxSpeed_, 1.0f, 500.0f, "%.1f A/dt",
+                                                     ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_AlwaysClamp);
+    ImGui::EndDisabled();
     ImGui::PopItemWidth();
     if (boxSizeChanged) {
-        AppSignals::UI::ResizeBox.emit(boxSize);
+        if (hardWallsEnabled) {
+            boxSizeEditing_ = false;
+            AppSignals::UI::ResizeBox.emit(pendingBoxSize_);
+        }
+        else {
+            boxSizeEditing_ = true;
+            AppSignals::UI::SmoothResizeBox.emit(pendingBoxSize_, boxResizeMaxSpeed_);
+        }
+    }
+    else if (!hardWallsEnabled && wallSpeedChanged && !isBoxResizeTargetReached(currentWorldSize, pendingBoxSize_)) {
+        AppSignals::UI::SmoothResizeBox.emit(pendingBoxSize_, boxResizeMaxSpeed_);
+    }
+    if (boxSizeEditing_ && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        boxSizeEditing_ = false;
     }
 
     bool bondFormationEnabled = simulation.world().isBondFormationEnabled();
