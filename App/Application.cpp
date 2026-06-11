@@ -85,6 +85,7 @@ int Application::run() {
     renderer.renderer().getRenderData(0).drawAtoms = userSettings.rendererDrawAtoms;
     renderer.renderer().getRenderData(0).drawGrid = userSettings.rendererDrawGrid;
     renderer.renderer().getRenderData(0).drawVectorField = userSettings.rendererDrawVectorField;
+    renderer.renderer().getRenderData(0).drawFieldArrows = userSettings.rendererDrawFieldArrows;
     renderer.renderer().getRenderData(0).fieldAutoScale = userSettings.rendererFieldAutoScale;
     renderer.renderer().getRenderData(0).fieldPotentialScale = userSettings.rendererFieldPotentialScale;
     renderer.renderer().getRenderData(0).fieldCellSize = userSettings.rendererFieldCellSize;
@@ -191,6 +192,7 @@ int Application::run() {
         .rendererDrawAtoms = renderer.renderer().getRenderData(0).drawAtoms,
         .rendererDrawGrid = renderer.renderer().getRenderData(0).drawGrid,
         .rendererDrawVectorField = renderer.renderer().getRenderData(0).drawVectorField,
+        .rendererDrawFieldArrows = renderer.renderer().getRenderData(0).drawFieldArrows,
         .rendererFieldAutoScale = renderer.renderer().getRenderData(0).fieldAutoScale,
         .rendererDrawBonds = renderer.renderer().getRenderData(0).drawBonds,
         .rendererDrawBox = renderer.renderer().getRenderData(0).drawBox,

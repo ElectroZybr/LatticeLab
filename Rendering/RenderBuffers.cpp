@@ -10,6 +10,7 @@ RendererWGPU::RendererWGPU() : surfaceFormat(WGPUContext::instance().surfaceForm
     initAtomQuadBuffer();
     initBoxBuffer();
     initBondBuffer();
+    initFieldArrowBuffer();
     initGridLineBuffer();
     initPotentialFieldQuadBuffer();
     initMemoryOrderBuffer();
@@ -39,6 +40,11 @@ void RendererWGPU::initBoxBuffer() {
 void RendererWGPU::initBondBuffer() {
     bondVb = WGPUContext::instance().createBuffer(128, wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst, "Bond_Geometry");
     bondVbCapacity_ = 128;
+}
+
+void RendererWGPU::initFieldArrowBuffer() {
+    fieldArrowVb = WGPUContext::instance().createBuffer(128, wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst, "Field_Arrow_Vectors");
+    fieldArrowVbCapacity_ = 128;
 }
 
 void RendererWGPU::initGridLineBuffer() {

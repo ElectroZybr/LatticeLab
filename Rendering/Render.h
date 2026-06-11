@@ -29,12 +29,13 @@ protected:
     void initAtomPipeline(std::string_view atomWGSL);
     void initGridPipeline(std::string_view gridWGSL);
     void initPotentialFieldPipeline(std::string_view potentialFieldWGSL);
+    void initFieldArrowPipeline(std::string_view fieldArrowWGSL);
     void initBoxPipeline(std::string_view boxWGSL);
     void initBondPipeline(std::string_view bondWGSL);
     void initMemoryOrderPipeline(std::string_view memoryOrderWGSL);
 
 private:
-    static constexpr size_t kLineUniformSlotCount = 4;
+    static constexpr size_t kLineUniformSlotCount = 6;
     static constexpr size_t kGridUniformSlotCount = 2;
 
     struct SceneUniforms {
@@ -56,6 +57,7 @@ private:
     wgpu::raii::RenderPipeline boxPipeline;
     wgpu::raii::RenderPipeline gridPipeline;
     wgpu::raii::RenderPipeline potentialFieldPipeline;
+    wgpu::raii::RenderPipeline fieldArrowPipeline;
     wgpu::raii::RenderPipeline memoryOrderPipeline;
 
     // Bind group layouts
@@ -70,6 +72,7 @@ private:
     // Vertex buffers
     wgpu::raii::Buffer atomQuadVb;
     wgpu::raii::Buffer bondVb;
+    wgpu::raii::Buffer fieldArrowVb;
     wgpu::raii::Buffer boxVb;
     wgpu::raii::Buffer gridLineVb;
     wgpu::raii::Buffer potentialFieldQuadVb;
@@ -86,6 +89,7 @@ private:
 
     size_t sbCapacity_ = 0;
     size_t bondVbCapacity_ = 0;
+    size_t fieldArrowVbCapacity_ = 0;
     size_t gridInstVbCapacity_ = 0;
     size_t potentialFieldInstVbCapacity_ = 0;
     size_t memoryOrderVbCapacity_ = 0;
@@ -100,6 +104,7 @@ private:
     void initAtomQuadBuffer();
     void initBoxBuffer();
     void initBondBuffer();
+    void initFieldArrowBuffer();
     void initGridLineBuffer();
     void initPotentialFieldQuadBuffer();
     void initMemoryOrderBuffer();
@@ -118,6 +123,7 @@ private:
     void drawBoxImpl(const glm::vec3& worldSize);
     void drawGridImpl(const RenderGridView& grid);
     void drawVectorFieldImpl(const RenderData& renderData);
+    void drawFieldArrowsImpl(const RenderData& renderData);
     void drawMemoryOrderImpl(const RenderAtomsView& atoms);
     void setLineColor(const glm::vec4& color);
 

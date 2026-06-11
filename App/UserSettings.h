@@ -28,6 +28,7 @@ struct UserSettings {
     bool rendererDrawAtoms = true;
     bool rendererDrawGrid = false;
     bool rendererDrawVectorField = false;
+    bool rendererDrawFieldArrows = false;
     bool rendererFieldAutoScale = true;
     bool rendererDrawBonds = false;
     bool rendererDrawBox = true;

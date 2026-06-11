@@ -105,12 +105,13 @@ void CoulombForceField::computeForce(const AtomStorage& atoms, size_t atomIndex,
     }
 }
 
-float CoulombForceField::PeAtPoint(const AtomStorage& atoms, const SpatialGrid& grid, float x, float y, float z) const {
+CoulombForceField::FieldSample CoulombForceField::fieldAtPoint(const AtomStorage& atoms, const SpatialGrid& grid, float x, float y, float z) const {
     (void)grid;
 
-    float potentialEnergy = 0.0f;
+    FieldSample sample{};
     for (size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
-        if (atoms.charge(atomIndex) == 0.0f) {
+        const float charge = atoms.charge(atomIndex);
+        if (charge == 0.0f) {
             continue;
         }
 
@@ -120,10 +121,14 @@ float CoulombForceField::PeAtPoint(const AtomStorage& atoms, const SpatialGrid& 
         constexpr float kPotentialSofteningSqr = 0.25f;
         const float d2 = std::max(dx * dx + dy * dy + dz * dz, kPotentialSofteningSqr);
 
-        const float qqScale = kCoulombEvAngstrom * atoms.charge(atomIndex);
+        const float qqScale = kCoulombEvAngstrom * charge;
         const float invR = 1.0f / std::sqrt(d2);
+        const float fieldScale = qqScale * invR / d2;
 
-        potentialEnergy += qqScale * invR;
+        sample.potential += qqScale * invR;
+        sample.field.x -= dx * fieldScale;
+        sample.field.y -= dy * fieldScale;
+        sample.field.z -= dz * fieldScale;
     }
-    return potentialEnergy;
+    return sample;
 }

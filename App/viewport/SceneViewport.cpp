@@ -26,8 +26,11 @@ void SceneViewport::renderFrame(Lattice::Simulation& simulation, Interface& appI
     uiState.simStep = simulation.world().getSimStep();
 
     appInterface.update();
-    if (renderer_->getRenderDataCount() > simulation.activeWorldId() && renderer_->getRenderData(simulation.activeWorldId()).drawVectorField) {
-        simulation.world().updateVectorField();
+    if (renderer_->getRenderDataCount() > simulation.activeWorldId()) {
+        const RenderData& activeRenderData = renderer_->getRenderData(simulation.activeWorldId());
+        if (activeRenderData.drawVectorField || activeRenderData.drawFieldArrows) {
+            simulation.world().updateVectorField();
+        }
     }
 
     if (ToolsManager::pickingSystem != nullptr) {
@@ -82,6 +85,7 @@ void SceneViewport::copyRenderSettings(BaseRenderer& destination, const BaseRend
     target.drawAtoms = current.drawAtoms;
     target.drawGrid = current.drawGrid;
     target.drawVectorField = current.drawVectorField;
+    target.drawFieldArrows = current.drawFieldArrows;
     target.fieldAutoScale = current.fieldAutoScale;
     target.fieldPotentialScale = current.fieldPotentialScale;
     target.fieldCellSize = current.fieldCellSize;

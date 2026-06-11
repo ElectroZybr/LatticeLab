@@ -101,6 +101,7 @@ namespace App::Viewport {
                 const glm::ivec3 coverageSize = vectorField.domainSize();
                 renderData.vectorField = RenderVectorFieldView{
                     .values = vectorField.values().data(),
+                    .vectors = vectorField.vectors().data(),
                     .gridSize = glm::ivec2(gridSize.x, gridSize.y),
                     .coverageSize = glm::ivec2(coverageSize.x, coverageSize.y),
                     .cellSize = vectorField.cellScale(),

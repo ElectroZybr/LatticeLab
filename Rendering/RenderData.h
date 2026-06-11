@@ -76,6 +76,7 @@ struct RenderGridView {
 
 struct RenderVectorFieldView {
     const float* values = nullptr;
+    const glm::vec2* vectors = nullptr;
     glm::ivec2 gridSize{0, 0};
     glm::ivec2 coverageSize{0, 0};
     float cellSize = 1.0f;
@@ -90,6 +91,12 @@ struct RenderVectorFieldView {
     }
     [[nodiscard]] float valueAt(int x, int y) const noexcept {
         return values[x + gridSize.x * y];
+    }
+    [[nodiscard]] glm::vec2 vectorAt(int x, int y) const noexcept {
+        return vectors == nullptr ? glm::vec2(0.0f) : vectors[x + gridSize.x * y];
+    }
+    [[nodiscard]] size_t vectorCount() const noexcept {
+        return empty() ? 0 : static_cast<size_t>(gridSize.x) * static_cast<size_t>(gridSize.y);
     }
 };
 
@@ -116,6 +123,7 @@ public:
     bool drawAtoms = true;
     bool drawGrid = false;
     bool drawVectorField = false;
+    bool drawFieldArrows = false;
     bool drawBonds = false;
     bool drawBox = true;
     bool drawMemoryOrder = false;

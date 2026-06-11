@@ -19,8 +19,12 @@ public:
     [[nodiscard]] int zSlice() const noexcept { return sliceZ; }
     [[nodiscard]] float cellScale() const noexcept { return scale; }
     [[nodiscard]] const std::vector<float>& values() const noexcept { return field; }
+    [[nodiscard]] const std::vector<glm::vec2>& vectors() const noexcept { return vectorField; }
     float potentialAt(int x, int y) const {
         return field[x + size.x * y];
+    }
+    glm::vec2 vectorAt(int x, int y) const {
+        return vectorField[x + size.x * y];
     }
     void show() const;
 private:
@@ -29,4 +33,5 @@ private:
     int sliceZ = 0;
     float scale = 1.0f;
     std::vector<float> field;
+    std::vector<glm::vec2> vectorField;
 };

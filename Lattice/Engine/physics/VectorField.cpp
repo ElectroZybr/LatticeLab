@@ -20,6 +20,7 @@ void VectorField::resize(glm::ivec3 newDomainSize, int newSliceZ, float newScale
     const int nodeCountY = static_cast<int>(std::ceil(static_cast<float>(domain.y) / scale)) + 1;
     size = glm::ivec3(std::max(2, nodeCountX), std::max(2, nodeCountY), std::max(1, domain.z));
     field.assign(static_cast<size_t>(size.x) * static_cast<size_t>(size.y), 0.0f);
+    vectorField.assign(field.size(), glm::vec2(0.0f));
     setSliceZ(newSliceZ);
 }
 
@@ -37,7 +38,10 @@ void VectorField::compute(ForceField& forceField, AtomStorage& atoms, SpatialGri
         for (int x = 0; x < size.x; ++x) {
             const float sampleX = std::min(static_cast<float>(x) * scale, static_cast<float>(domain.x));
             const float sampleY = std::min(static_cast<float>(y) * scale, static_cast<float>(domain.y));
-            field[x + size.x * y] = forceField.coulombForceField_.PeAtPoint(atoms, grid, sampleX, sampleY, z);
+            const auto sample = forceField.coulombForceField_.fieldAtPoint(atoms, grid, sampleX, sampleY, z);
+            const int index = x + size.x * y;
+            field[index] = sample.potential;
+            vectorField[index] = glm::vec2(sample.field.x, sample.field.y);
         }
     }
 }

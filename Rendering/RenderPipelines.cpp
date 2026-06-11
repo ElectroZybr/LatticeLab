@@ -403,5 +403,63 @@ void RendererWGPU::initPotentialFieldPipeline(std::string_view potentialFieldWGS
     potentialFieldPipeline = WGPUContext::instance().device()->createRenderPipeline(pDesc);
 }
 
+void RendererWGPU::initFieldArrowPipeline(std::string_view fieldArrowWGSL) {
+    wgpu::ShaderModule shader = createShaderModule(fieldArrowWGSL);
+
+    wgpu::VertexAttribute vectorAttr{};
+    vectorAttr.format = wgpu::VertexFormat::Float32x2;
+    vectorAttr.offset = 0;
+    vectorAttr.shaderLocation = 0;
+
+    wgpu::VertexBufferLayout vectorLayout{};
+    vectorLayout.arrayStride = sizeof(glm::vec2);
+    vectorLayout.stepMode = wgpu::VertexStepMode::Instance;
+    vectorLayout.attributeCount = 1;
+    vectorLayout.attributes = &vectorAttr;
+
+    wgpu::BlendState blend{};
+    blend.color.srcFactor = wgpu::BlendFactor::SrcAlpha;
+    blend.color.dstFactor = wgpu::BlendFactor::OneMinusSrcAlpha;
+    blend.color.operation = wgpu::BlendOperation::Add;
+    blend.alpha = blend.color;
+
+    wgpu::ColorTargetState colorTarget{};
+    colorTarget.format = surfaceFormat;
+    colorTarget.writeMask = wgpu::ColorWriteMask::All;
+    colorTarget.blend = &blend;
+
+    wgpu::FragmentState fragState{};
+    fragState.module = shader;
+    fragState.entryPoint = wgpu::StringView("fs_main");
+    fragState.targetCount = 1;
+    fragState.targets = &colorTarget;
+
+    wgpu::DepthStencilState depthState{};
+    depthState.format = wgpu::TextureFormat::Depth24Plus;
+    depthState.depthWriteEnabled = wgpu::OptionalBool::False;
+    depthState.depthCompare = wgpu::CompareFunction::Less;
+
+    wgpu::PipelineLayoutDescriptor plDesc{};
+    plDesc.label = wgpu::StringView("FieldArrowPipelineLayout");
+    plDesc.bindGroupLayoutCount = 1;
+    plDesc.bindGroupLayouts = (WGPUBindGroupLayout*)&lineBindGroupLayout;
+
+    wgpu::RenderPipelineDescriptor pDesc{};
+    pDesc.label = wgpu::StringView("FieldArrowRenderPipeline");
+    pDesc.layout = WGPUContext::instance().device()->createPipelineLayout(plDesc);
+    pDesc.vertex.module = shader;
+    pDesc.vertex.entryPoint = wgpu::StringView("vs_main");
+    pDesc.vertex.bufferCount = 1;
+    pDesc.vertex.buffers = &vectorLayout;
+    pDesc.fragment = &fragState;
+    pDesc.depthStencil = &depthState;
+    pDesc.primitive.topology = wgpu::PrimitiveTopology::LineList;
+    pDesc.multisample.count = 1;
+    pDesc.multisample.mask = 0xFFFFFFFF;
+    pDesc.multisample.alphaToCoverageEnabled = false;
+
+    fieldArrowPipeline = WGPUContext::instance().device()->createRenderPipeline(pDesc);
+}
+
 void RendererWGPU::initBoxPipeline(std::string_view boxWGSL) { initLinePipeline(*boxPipeline, boxWGSL); }
 void RendererWGPU::initBondPipeline(std::string_view bondWGSL) { initLinePipeline(*bondPipeline, bondWGSL); }

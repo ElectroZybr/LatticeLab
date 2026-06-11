@@ -289,6 +289,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     ImGui::Checkbox("imgui_atoms"_tr.data(), &activeRenderData.drawAtoms);
     ImGui::Checkbox("imgui_grid"_tr.data(), &activeRenderData.drawGrid);
     ImGui::Checkbox("Potential gradient", &activeRenderData.drawVectorField);
+    ImGui::Checkbox("Field arrows", &activeRenderData.drawFieldArrows);
     ImGui::BeginDisabled(!activeRenderData.drawVectorField || activeRenderData.fieldAutoScale);
     ImGui::PushItemWidth(180.0f * uiScale);
     ImGui::SliderFloat("Field scale", &activeRenderData.fieldPotentialScale, 0.1f, 500.0f, "%.1f", ImGuiSliderFlags_Logarithmic);
@@ -507,6 +508,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
 
         activeRenderData.drawAtoms = defaults.rendererDrawAtoms;
         activeRenderData.drawGrid = defaults.rendererDrawGrid;
+        activeRenderData.drawFieldArrows = defaults.rendererDrawFieldArrows;
         activeRenderData.drawBonds = defaults.rendererDrawBonds;
         activeRenderData.drawBox = defaults.rendererDrawBox;
         activeRenderData.drawMemoryOrder = defaults.rendererDrawMemoryOrder;

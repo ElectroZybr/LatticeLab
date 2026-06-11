@@ -190,6 +190,39 @@ void RendererWGPU::drawVectorFieldImpl(const RenderData& renderData) {
     currentPass->draw(6, fieldData.size(), 0, 0);
 }
 
+void RendererWGPU::drawFieldArrowsImpl(const RenderData& renderData) {
+    const RenderVectorFieldView& field = renderData.vectorField;
+    if (field.empty() || field.vectors == nullptr) {
+        return;
+    }
+
+    const size_t vectorCount = field.vectorCount();
+    if (vectorCount == 0) {
+        return;
+    }
+
+    const uint64_t bytes = vectorCount * sizeof(glm::vec2);
+    if (!fieldArrowVb || bytes > fieldArrowVbCapacity_) {
+        fieldArrowVb = WGPUContext::instance().createBuffer(bytes * 2, wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst, "Field_Arrow_Vectors");
+        fieldArrowVbCapacity_ = bytes * 2;
+    }
+    WGPUContext::instance().queue()->writeBuffer(*fieldArrowVb, 0, field.vectors, bytes);
+
+    if (lineUniformSlotIndex_ >= kLineUniformSlotCount) {
+        lineUniformSlotIndex_ = kLineUniformSlotCount - 1;
+    }
+    const size_t uniformSlot = lineUniformSlotIndex_++;
+    SceneUniforms arrowUniforms = currentSceneUniforms_;
+    arrowUniforms.lineColor = glm::vec4(1.0f, 0.86f, 0.28f, 0.75f);
+    arrowUniforms.maxCount = glm::vec4(static_cast<float>(field.gridSize.x), static_cast<float>(field.gridSize.y), field.cellSize, field.z);
+    WGPUContext::instance().queue()->writeBuffer(*lineUniformBuffers[uniformSlot], 0, &arrowUniforms, sizeof(arrowUniforms));
+
+    currentPass->setPipeline(*fieldArrowPipeline);
+    currentPass->setBindGroup(0, *lineBindGroups[lineUniformSlotIndex_ - 1], 0, nullptr);
+    currentPass->setVertexBuffer(0, *fieldArrowVb, 0, bytes);
+    currentPass->draw(6, vectorCount, 0, 0);
+}
+
 void RendererWGPU::drawMemoryOrderImpl(const RenderAtomsView& atoms) {
     if (atoms.count < 2 || !atoms.hasPositions()) {
         return;

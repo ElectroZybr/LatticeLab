@@ -177,6 +177,9 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
         else if (tag == "renderer_draw_vector_field") {
             file >> settings.rendererDrawVectorField;
         }
+        else if (tag == "renderer_draw_field_arrows" || tag == "renderer_draw_charge_lines") {
+            file >> settings.rendererDrawFieldArrows;
+        }
         else if (tag == "renderer_field_auto_scale") {
             file >> settings.rendererFieldAutoScale;
         }
@@ -280,6 +283,7 @@ void UserSettingsIO::save(const UserSettings& settings, const std::filesystem::p
     file << "renderer_draw_atoms " << static_cast<int>(settings.rendererDrawAtoms) << "\n";
     file << "renderer_draw_grid " << static_cast<int>(settings.rendererDrawGrid) << "\n";
     file << "renderer_draw_vector_field " << static_cast<int>(settings.rendererDrawVectorField) << "\n";
+    file << "renderer_draw_field_arrows " << static_cast<int>(settings.rendererDrawFieldArrows) << "\n";
     file << "renderer_field_auto_scale " << static_cast<int>(settings.rendererFieldAutoScale) << "\n";
     file << "renderer_field_potential_scale " << settings.rendererFieldPotentialScale << "\n";
     file << "renderer_field_cell_size " << settings.rendererFieldCellSize << "\n";
