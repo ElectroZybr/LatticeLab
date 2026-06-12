@@ -5,8 +5,8 @@
 #include "Lattice/Engine/Simulation.h"
 #include "Lattice/Engine/metrics/Profiler.h"
 #include "GUI/interface/interface.h"
-#include "Rendering/2d/Renderer2D.h"
-#include "Rendering/3d/Renderer3D.h"
+#include "Rendering/Renderer2D.h"
+#include "Rendering/Renderer3D.h"
 #include "Rendering/BaseRenderer.h"
 
 SceneViewport::SceneViewport(RendererType type, CaptureController& captureController) : captureController_(&captureController), renderer_(createRenderer(type)) {}
@@ -28,7 +28,7 @@ void SceneViewport::renderFrame(Lattice::Simulation& simulation, Interface& appI
     appInterface.update();
     if (renderer_->getRenderDataCount() > simulation.activeWorldId()) {
         const RenderData& activeRenderData = renderer_->getRenderData(simulation.activeWorldId());
-        if (activeRenderData.drawVectorField || activeRenderData.drawFieldArrows) {
+        if (activeRenderData.drawVectorField || activeRenderData.drawFieldArrows || activeRenderData.drawFieldContours) {
             simulation.world().updateVectorField();
         }
     }
@@ -48,6 +48,12 @@ void SceneViewport::renderFrame(Lattice::Simulation& simulation, Interface& appI
 }
 
 bool SceneViewport::setRendererType(RendererType type, const Lattice::Simulation& simulation) {
+    if (renderer_ && renderer_->camera.getMode() == Camera::Mode::Mode2D) {
+        cached2DCameraState_.valid = true;
+        cached2DCameraState_.position = renderer_->camera.getPosition();
+        cached2DCameraState_.zoom = renderer_->camera.getZoom();
+    }
+
     std::unique_ptr<BaseRenderer> newRenderer = createRenderer(type);
     if (!newRenderer) {
         return false;
@@ -59,7 +65,13 @@ bool SceneViewport::setRendererType(RendererType type, const Lattice::Simulation
     }
 
     App::Viewport::syncRendererWithSimulation(*newRenderer, simulation);
-    newRenderer->camera.resetView();
+    if (type == RendererType::Renderer2D && cached2DCameraState_.valid) {
+        newRenderer->camera.setPosition(cached2DCameraState_.position);
+        newRenderer->camera.setZoom(cached2DCameraState_.zoom);
+    }
+    else {
+        newRenderer->camera.resetView();
+    }
     renderer_ = std::move(newRenderer);
     return true;
 }
@@ -86,10 +98,12 @@ void SceneViewport::copyRenderSettings(BaseRenderer& destination, const BaseRend
     target.drawGrid = current.drawGrid;
     target.drawVectorField = current.drawVectorField;
     target.drawFieldArrows = current.drawFieldArrows;
+    target.drawFieldContours = current.drawFieldContours;
     target.fieldAutoScale = current.fieldAutoScale;
     target.fieldPotentialScale = current.fieldPotentialScale;
     target.fieldCellSize = current.fieldCellSize;
     target.fieldSmoothing = current.fieldSmoothing;
+    target.fieldContourStep = current.fieldContourStep;
     target.drawBonds = current.drawBonds;
     target.drawBox = current.drawBox;
     target.drawMemoryOrder = current.drawMemoryOrder;
