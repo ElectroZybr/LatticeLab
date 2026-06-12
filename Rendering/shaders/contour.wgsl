@@ -11,6 +11,12 @@ struct SceneUniforms {
 }
 @group(0) @binding(0) var<uniform> uScene: SceneUniforms;
 
+fn compressContourPotential(value: f32) -> f32 {
+    let strength = abs(value);
+    let compressed = log(1.0 + strength * 4.0) / log(5.0);
+    return select(-compressed, compressed, value >= 0.0);
+}
+
 struct VertOut {
     @builtin(position) pos   : vec4<f32>,
     @location(0)       localPos : vec2<f32>,
@@ -35,18 +41,22 @@ fn vs_main(
 @fragment
 fn fs_main(in: VertOut) -> @location(0) vec4<f32> {
     let contourScale = max(uScene.maxCount.x, 0.0001);
+    let interpolation = clamp(uScene.maxCount.y, 0.0, 1.0);
     let contourStep = max(uScene.maxCount.z, 0.01);
+    let samplePos = mix(vec2<f32>(0.5, 0.5), in.localPos, interpolation);
 
-    let pBottom = mix(in.potentials.x, in.potentials.y, in.localPos.x);
-    let pTop = mix(in.potentials.z, in.potentials.w, in.localPos.x);
-    let scaledPotential = mix(pBottom, pTop, in.localPos.y) / contourScale;
+    let pBottom = mix(in.potentials.x, in.potentials.y, samplePos.x);
+    let pTop = mix(in.potentials.z, in.potentials.w, samplePos.x);
+    let scaledPotential = mix(pBottom, pTop, samplePos.y) / contourScale;
+    let contourPotential = compressContourPotential(scaledPotential);
 
-    let contourCoord = scaledPotential / contourStep;
+    let contourCoord = contourPotential / contourStep;
     let contourPhase = fract(contourCoord);
     let contourDistance = min(contourPhase, 1.0 - contourPhase);
-    let aa = max(fwidth(contourCoord), 0.0001);
-    let contourMask = 1.0 - smoothstep(0.0, 1.0 * aa, contourDistance);
+    let aa = max(fwidth(contourCoord) * 1.5, 0.0002);
+    let contourMask = 1.0 - smoothstep(0.0, aa, contourDistance);
     let zeroMask = 1.0 - step(contourStep * 0.5, abs(scaledPotential));
-    let visibleMask = contourMask * (1.0 - zeroMask);
+    let sourceFade = 1.0 - smoothstep(1.25, 1.75, abs(scaledPotential));
+    let visibleMask = contourMask * (1.0 - zeroMask) * sourceFade;
     return vec4<f32>(uScene.lineColor.rgb, uScene.lineColor.a * visibleMask);
 }

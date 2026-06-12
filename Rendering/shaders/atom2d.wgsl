@@ -47,6 +47,7 @@ fn vs_main(
     @builtin(instance_index) iid     : u32,
 ) -> VertOut {
     let pos    = sPos[iid].xy + uScene.renderOffset.xy;
+    let z      = sPos[iid].z + uScene.renderOffset.z;
     let vel    = sVel[iid].xyz;
     let radius = sRadius[iid];
     let aType  = u32(sType[iid]);
@@ -68,7 +69,7 @@ fn vs_main(
         }
     }
 
-    let worldPos = vec4<f32>(pos + quadPos * radius, 0.0, 1.0);
+    let worldPos = vec4<f32>(pos + quadPos * radius, z, 1.0);
 
     var out: VertOut;
     out.pos   = uScene.projection * uScene.view * worldPos;

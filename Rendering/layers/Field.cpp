@@ -138,6 +138,7 @@ void RendererWGPU::drawFieldContoursImpl(const RenderData& renderData) {
     const size_t uniformSlot = gridUniformSlotIndex_++;
     RendererWGPU::SceneUniforms contourUniforms = currentSceneUniforms_;
     contourUniforms.maxCount.x = resolveContourScale(renderData, field);
+    contourUniforms.maxCount.y = std::clamp(renderData.fieldSmoothing, 0.0f, 1.0f);
     contourUniforms.maxCount.z = std::clamp(renderData.fieldContourStep, 0.01f, 1.0f);
     contourUniforms.lineColor = glm::vec4(0.96f, 0.96f, 0.96f, 0.92f);
     WGPUContext::instance().queue()->writeBuffer(*gridLayer_.uniformBuffers[uniformSlot], 0, &contourUniforms, sizeof(contourUniforms));
