@@ -29,6 +29,12 @@ namespace {
         const float s = std::sin(angle);
         return v * c + glm::cross(axis, v) * s + axis * glm::dot(axis, v) * (1.0f - c);
     }
+
+    float defaultOrbitDistanceForScene(const glm::vec3& sceneSize) {
+        constexpr float kOrbitFov = 45.0f;
+        const float maxSide = std::max({sceneSize.x, sceneSize.y, sceneSize.z});
+        return (maxSide * 0.5f * 1.1f) / std::tan(glm::radians(kOrbitFov) * 0.5f);
+    }
 }
 
 Camera::Camera(float moveSpeed, float zoomSpeed) : moveSpeed(moveSpeed), zoomSpeed(zoomSpeed), isDragging(false), lastMousePos(0, 0) {}
@@ -38,8 +44,7 @@ void Camera::resetView() {
     elevation = 0.f;
     orbitUp = glm::vec3(0.f, 1.f, 0.f);
 
-    const float max_side = std::max({sceneSize.x, sceneSize.y, sceneSize.z});
-    const float distance = (max_side * 0.5f * 1.1f) / std::tan(glm::radians(Camera::FOV_ORBIT) * 0.5f);
+    const float distance = defaultOrbitDistanceForScene(sceneSize);
     orbitCenter = sceneOffset + sceneSize * 0.5f;
     position = glm::vec2(orbitCenter);
 
@@ -206,6 +211,39 @@ glm::mat4 Camera::getProjectionMatrix() const {
     const float fov = (mode == Mode::Free) ? FOV_FREE : FOV_ORBIT;
     return glm::perspective(glm::radians(fov), screenSize.x / screenSize.y, NEAR, FAR);
 }
+
+void Camera::snapToDirection(glm::vec3 direction) {
+    if (glm::dot(direction, direction) <= 1e-8f) {
+        return;
+    }
+
+    direction = glm::normalize(direction);
+    if (mode == Mode::Free) {
+        setMode(Mode::Orbit);
+    }
+    else if (mode == Mode::Mode2D) {
+        mode = Mode::Orbit;
+    }
+
+    orbitCenter = sceneOffset + sceneSize * 0.5f;
+    const glm::vec3 currentOffset = getEyePosition() - orbitCenter;
+    float distance = glm::length(currentOffset);
+    if (distance <= 1e-6f) {
+        distance = defaultOrbitDistanceForScene(sceneSize);
+    }
+
+    const float eyeSide = glm::dot(currentOffset, direction);
+    const glm::vec3 forward = eyeSide >= 0.0f ? -direction : direction;
+    const glm::vec3 offset = -forward * distance;
+
+    const glm::vec3 preferredUp = std::abs(direction.y) > 0.9f ? glm::vec3(0.0f, 0.0f, 1.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
+    orbitUp = glm::normalize(preferredUp - glm::normalize(offset) * glm::dot(preferredUp, glm::normalize(offset)));
+    azimuth = wrapRadians(std::atan2(offset.x, offset.z));
+    elevation = wrapRadians(std::asin(std::clamp(offset.y / distance, -1.0f, 1.0f)));
+    setZoom(moveSpeed / distance);
+}
+
+void Camera::snapToAxis(glm::vec3 axis) { snapToDirection(axis); }
 
 RenderRay Camera::screenToRay(float screenX, float screenY) const {
     const float ndcX = (2.0f * screenX) / screenSize.x - 1.0f;

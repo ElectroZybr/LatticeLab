@@ -2,12 +2,393 @@
 
 #include "App/debug/DebugRuntime.h"
 #include "App/interaction/ToolsManager.h"
+#include <array>
+#include <algorithm>
+#include <cmath>
+#include <imgui.h>
+#include <glm/geometric.hpp>
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
 #include "Lattice/Engine/Simulation.h"
 #include "Lattice/Engine/metrics/Profiler.h"
 #include "GUI/interface/interface.h"
 #include "Rendering/Renderer2D.h"
 #include "Rendering/Renderer3D.h"
 #include "Rendering/BaseRenderer.h"
+
+namespace {
+    struct ViewCubeVertex {
+        glm::vec3 local;
+        glm::vec3 view;
+        ImVec2 screen;
+    };
+
+    struct ViewCubeFace {
+        std::array<int, 4> corners;
+    };
+
+    struct SortedViewCubeFace {
+        float depth;
+        ViewCubeFace face;
+        bool frontFacing;
+        glm::vec3 localDirection;
+    };
+
+    struct ViewCubeEdge {
+        int startVertex;
+        int endVertex;
+        int firstFace;
+        int secondFace;
+    };
+
+    float signedArea2D(ImVec2 a, ImVec2 b, ImVec2 c) { return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x); }
+
+    bool pointInConvexQuad(ImVec2 point, const std::array<ImVec2, 4>& quad) {
+        bool hasPositive = false;
+        bool hasNegative = false;
+        for (size_t i = 0; i < quad.size(); ++i) {
+            const ImVec2 a = quad[i];
+            const ImVec2 b = quad[(i + 1) % quad.size()];
+            const float side = signedArea2D(a, b, point);
+            hasPositive |= side > 0.0f;
+            hasNegative |= side < 0.0f;
+            if (hasPositive && hasNegative) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    ImVec2 bilerp(const std::array<ImVec2, 4>& quad, float u, float v) {
+        const ImVec2 top{
+            quad[0].x + (quad[1].x - quad[0].x) * u,
+            quad[0].y + (quad[1].y - quad[0].y) * u,
+        };
+        const ImVec2 bottom{
+            quad[3].x + (quad[2].x - quad[3].x) * u,
+            quad[3].y + (quad[2].y - quad[3].y) * u,
+        };
+        return ImVec2(
+            top.x + (bottom.x - top.x) * v,
+            top.y + (bottom.y - top.y) * v
+        );
+    }
+
+    glm::vec3 bilerp(const std::array<glm::vec3, 4>& quad, float u, float v) {
+        const glm::vec3 top = quad[0] + (quad[1] - quad[0]) * u;
+        const glm::vec3 bottom = quad[3] + (quad[2] - quad[3]) * u;
+        return top + (bottom - top) * v;
+    }
+
+    glm::vec3 axisDirectionFromComponent(int axisIndex, float sign) {
+        glm::vec3 direction(0.0f);
+        direction[axisIndex] = sign >= 0.0f ? 1.0f : -1.0f;
+        return direction;
+    }
+
+    glm::vec3 canonicalDirectionSigns(glm::vec3 direction) {
+        glm::vec3 canonical(0.0f);
+        canonical.x = direction.x >= 0.0f ? 1.0f : -1.0f;
+        canonical.y = direction.y >= 0.0f ? 1.0f : -1.0f;
+        canonical.z = direction.z >= 0.0f ? 1.0f : -1.0f;
+        return glm::normalize(canonical);
+    }
+
+    int findSortedFaceByDirection(const std::array<SortedViewCubeFace, 6>& sortedFaces, glm::vec3 direction) {
+        float bestDot = -1.0f;
+        int bestIndex = -1;
+        for (size_t i = 0; i < sortedFaces.size(); ++i) {
+            const float dotValue = glm::dot(sortedFaces[i].localDirection, direction);
+            if (dotValue > bestDot) {
+                bestDot = dotValue;
+                bestIndex = static_cast<int>(i);
+            }
+        }
+        return bestDot > 0.9f ? bestIndex : -1;
+    }
+
+    std::pair<int, int> cellForFaceDirection(const SortedViewCubeFace& face, const std::array<ViewCubeVertex, 8>& vertices,
+                                             glm::vec3 targetDirection) {
+        std::array<glm::vec3, 4> localQuad{};
+        for (int i = 0; i < 4; ++i) {
+            const size_t cornerIndex = static_cast<size_t>(face.face.corners[static_cast<size_t>(i)]);
+            localQuad[static_cast<size_t>(i)] = vertices[cornerIndex].local;
+        }
+
+        const glm::vec3 uAxis = localQuad[1] - localQuad[0];
+        const glm::vec3 vAxis = localQuad[3] - localQuad[0];
+        const float uValue = glm::dot(targetDirection, uAxis);
+        const float vValue = glm::dot(targetDirection, vAxis);
+
+        int col = 1;
+        if (uValue < -1e-4f) {
+            col = 0;
+        }
+        else if (uValue > 1e-4f) {
+            col = 2;
+        }
+
+        int row = 1;
+        if (vValue < -1e-4f) {
+            row = 0;
+        }
+        else if (vValue > 1e-4f) {
+            row = 2;
+        }
+
+        return {row, col};
+    }
+
+    void drawViewCubeOverlay(Camera& camera) {
+        const glm::vec2 screenSize = camera.getScreenSize();
+        if (screenSize.x <= 0.0f || screenSize.y <= 0.0f) {
+            return;
+        }
+
+        ImDrawList* drawList = ImGui::GetForegroundDrawList();
+        const ImVec2 center(screenSize.x - 200.0f, 200.0f);
+        constexpr float cubeScale = 22.0f;
+        const ImU32 cubeFillColor = IM_COL32(120, 140, 155, 255);
+        const ImU32 cubeFaceHoverColor = IM_COL32(144, 167, 184, 255);
+        const ImU32 cubeEdgeColor = IM_COL32(128, 199, 255, 140);
+        const ImU32 cubeCutColor = IM_COL32(214, 232, 255, 150);
+        constexpr std::array<float, 4> kFaceCuts = {0.0f, 0.22f, 0.78f, 1.0f};
+
+        const glm::mat3 viewRotation(camera.getViewMatrix());
+        std::array<ViewCubeVertex, 8> vertices{};
+        for (size_t i = 0; i < vertices.size(); ++i) {
+            const glm::vec3 local((i & 1) ? 1.0f : -1.0f, (i & 2) ? 1.0f : -1.0f, (i & 4) ? 1.0f : -1.0f);
+            const glm::vec3 view = viewRotation * local;
+            vertices[i] = {
+                .local = local,
+                .view = view,
+                .screen = ImVec2(center.x + view.x * cubeScale, center.y - view.y * cubeScale),
+            };
+        }
+
+        const std::array<ViewCubeFace, 6> faces = {{
+            {{{0, 2, 6, 4}}},
+            {{{1, 5, 7, 3}}},
+            {{{0, 1, 3, 2}}},
+            {{{4, 6, 7, 5}}},
+            {{{0, 4, 5, 1}}},
+            {{{2, 3, 7, 6}}},
+        }};
+
+        std::array<SortedViewCubeFace, 6> sortedFaces{};
+        for (size_t i = 0; i < faces.size(); ++i) {
+            float depth = 0.0f;
+            glm::vec3 localDirection(0.0f);
+            for (int corner : faces[i].corners) {
+                depth += vertices[static_cast<size_t>(corner)].view.z;
+                localDirection += vertices[static_cast<size_t>(corner)].local;
+            }
+            const glm::vec3 edgeA = vertices[static_cast<size_t>(faces[i].corners[1])].view - vertices[static_cast<size_t>(faces[i].corners[0])].view;
+            const glm::vec3 edgeB = vertices[static_cast<size_t>(faces[i].corners[2])].view - vertices[static_cast<size_t>(faces[i].corners[0])].view;
+            const glm::vec3 normal = glm::cross(edgeA, edgeB);
+            sortedFaces[i] = {.depth = depth, .face = faces[i], .frontFacing = normal.z < 0.0f, .localDirection = glm::normalize(localDirection)};
+        }
+        std::sort(sortedFaces.begin(), sortedFaces.end(), [](const SortedViewCubeFace& a, const SortedViewCubeFace& b) { return a.depth < b.depth; });
+
+        constexpr std::array<ViewCubeEdge, 12> edges = {{
+            {.startVertex = 0, .endVertex = 1, .firstFace = 2, .secondFace = 4},
+            {.startVertex = 1, .endVertex = 3, .firstFace = 1, .secondFace = 2},
+            {.startVertex = 3, .endVertex = 2, .firstFace = 2, .secondFace = 5},
+            {.startVertex = 2, .endVertex = 0, .firstFace = 0, .secondFace = 2},
+            {.startVertex = 4, .endVertex = 5, .firstFace = 3, .secondFace = 4},
+            {.startVertex = 5, .endVertex = 7, .firstFace = 1, .secondFace = 3},
+            {.startVertex = 7, .endVertex = 6, .firstFace = 3, .secondFace = 5},
+            {.startVertex = 6, .endVertex = 4, .firstFace = 0, .secondFace = 3},
+            {.startVertex = 0, .endVertex = 4, .firstFace = 0, .secondFace = 4},
+            {.startVertex = 1, .endVertex = 5, .firstFace = 1, .secondFace = 4},
+            {.startVertex = 2, .endVertex = 6, .firstFace = 0, .secondFace = 5},
+            {.startVertex = 3, .endVertex = 7, .firstFace = 1, .secondFace = 5},
+        }};
+
+        const ImVec2 mousePos = ImGui::GetIO().MousePos;
+        int hoveredFace = -1;
+        int hoveredFaceCell = -1;
+        glm::vec3 hoveredFaceDirection(0.0f);
+        for (int sortedIndex = static_cast<int>(sortedFaces.size()) - 1; sortedIndex >= 0; --sortedIndex) {
+            const SortedViewCubeFace& sortedFace = sortedFaces[static_cast<size_t>(sortedIndex)];
+            if (!sortedFace.frontFacing) {
+                continue;
+            }
+            std::array<ImVec2, 4> quad{};
+            std::array<glm::vec3, 4> localQuad{};
+            for (int i = 0; i < 4; ++i) {
+                const size_t cornerIndex = static_cast<size_t>(sortedFace.face.corners[static_cast<size_t>(i)]);
+                quad[i] = vertices[cornerIndex].screen;
+                localQuad[i] = vertices[cornerIndex].local;
+            }
+
+            for (int row = 0; row < 3; ++row) {
+                for (int col = 0; col < 3; ++col) {
+                    const std::array<ImVec2, 4> cellQuad = {{
+                        bilerp(quad, kFaceCuts[static_cast<size_t>(col)], kFaceCuts[static_cast<size_t>(row)]),
+                        bilerp(quad, kFaceCuts[static_cast<size_t>(col + 1)], kFaceCuts[static_cast<size_t>(row)]),
+                        bilerp(quad, kFaceCuts[static_cast<size_t>(col + 1)], kFaceCuts[static_cast<size_t>(row + 1)]),
+                        bilerp(quad, kFaceCuts[static_cast<size_t>(col)], kFaceCuts[static_cast<size_t>(row + 1)]),
+                    }};
+                    if (!pointInConvexQuad(mousePos, cellQuad)) {
+                        continue;
+                    }
+
+                    hoveredFace = sortedIndex;
+                    hoveredFaceCell = row * 3 + col;
+                    const float u = 0.5f * (kFaceCuts[static_cast<size_t>(col)] + kFaceCuts[static_cast<size_t>(col + 1)]);
+                    const float v = 0.5f * (kFaceCuts[static_cast<size_t>(row)] + kFaceCuts[static_cast<size_t>(row + 1)]);
+                    hoveredFaceDirection = glm::normalize(bilerp(localQuad, u, v));
+                    if (row != 1 && col != 1) {
+                        hoveredFaceDirection = canonicalDirectionSigns(hoveredFaceDirection);
+                    }
+                    break;
+                }
+                if (hoveredFace >= 0) {
+                    break;
+                }
+            }
+            if (hoveredFace >= 0) {
+                break;
+            }
+        }
+
+        std::array<int, 6> highlightedCells;
+        highlightedCells.fill(-1);
+        if (hoveredFace >= 0) {
+            highlightedCells[static_cast<size_t>(hoveredFace)] = hoveredFaceCell;
+
+            const int hoveredRow = hoveredFaceCell / 3;
+            const int hoveredCol = hoveredFaceCell % 3;
+            const bool isCenter = hoveredRow == 1 && hoveredCol == 1;
+
+            const glm::vec3 faceDirection = sortedFaces[static_cast<size_t>(hoveredFace)].localDirection;
+            int normalAxis = 0;
+            float maxNormalAbs = std::abs(faceDirection.x);
+            if (std::abs(faceDirection.y) > maxNormalAbs) {
+                normalAxis = 1;
+                maxNormalAbs = std::abs(faceDirection.y);
+            }
+            if (std::abs(faceDirection.z) > maxNormalAbs) {
+                normalAxis = 2;
+            }
+
+            if (!isCenter) {
+                for (int axis = 0; axis < 3; ++axis) {
+                    if (axis == normalAxis) {
+                        continue;
+                    }
+                    const float component = hoveredFaceDirection[axis];
+                    if (std::abs(component) <= 1e-4f) {
+                        continue;
+                    }
+                    const int adjacentFace = findSortedFaceByDirection(sortedFaces, axisDirectionFromComponent(axis, component));
+                    if (adjacentFace >= 0) {
+                        const auto [adjacentRow, adjacentCol] =
+                            cellForFaceDirection(sortedFaces[static_cast<size_t>(adjacentFace)], vertices, hoveredFaceDirection);
+                        highlightedCells[static_cast<size_t>(adjacentFace)] = adjacentRow * 3 + adjacentCol;
+                    }
+                }
+            }
+        }
+
+        for (size_t sortedIndex = 0; sortedIndex < sortedFaces.size(); ++sortedIndex) {
+            const SortedViewCubeFace& sortedFace = sortedFaces[sortedIndex];
+            std::array<ImVec2, 4> quad{};
+            for (int i = 0; i < 4; ++i) {
+                quad[i] = vertices[static_cast<size_t>(sortedFace.face.corners[static_cast<size_t>(i)])].screen;
+            }
+            drawList->AddConvexPolyFilled(quad.data(), 4, cubeFillColor);
+
+            if (sortedFace.frontFacing) {
+                const int highlightedCell = highlightedCells[sortedIndex];
+                if (highlightedCell >= 0) {
+                    const int row = highlightedCell / 3;
+                    const int col = highlightedCell % 3;
+                    const std::array<ImVec2, 4> cellQuad = {{
+                        bilerp(quad, kFaceCuts[static_cast<size_t>(col)], kFaceCuts[static_cast<size_t>(row)]),
+                        bilerp(quad, kFaceCuts[static_cast<size_t>(col + 1)], kFaceCuts[static_cast<size_t>(row)]),
+                        bilerp(quad, kFaceCuts[static_cast<size_t>(col + 1)], kFaceCuts[static_cast<size_t>(row + 1)]),
+                        bilerp(quad, kFaceCuts[static_cast<size_t>(col)], kFaceCuts[static_cast<size_t>(row + 1)]),
+                    }};
+                    drawList->AddConvexPolyFilled(cellQuad.data(), 4, cubeFaceHoverColor);
+                }
+
+                for (int split = 1; split <= 2; ++split) {
+                    const float t = kFaceCuts[static_cast<size_t>(split)];
+                    const ImVec2 v0 = bilerp(quad, t, 0.0f);
+                    const ImVec2 v1 = bilerp(quad, t, 1.0f);
+                    const ImVec2 h0 = bilerp(quad, 0.0f, t);
+                    const ImVec2 h1 = bilerp(quad, 1.0f, t);
+                    drawList->AddLine(v0, v1, cubeCutColor, 1.4f);
+                    drawList->AddLine(h0, h1, cubeCutColor, 1.4f);
+                }
+            }
+        }
+
+        for (const ViewCubeEdge& edge : edges) {
+            const ViewCubeVertex& a = vertices[static_cast<size_t>(edge.startVertex)];
+            const ViewCubeVertex& b = vertices[static_cast<size_t>(edge.endVertex)];
+            drawList->AddLine(a.screen, b.screen, cubeEdgeColor, 2.4f);
+        }
+
+        for (const SortedViewCubeFace& sortedFace : sortedFaces) {
+            if (!sortedFace.frontFacing) {
+                continue;
+            }
+            for (int i = 0; i < 4; ++i) {
+                const int startCorner = sortedFace.face.corners[static_cast<size_t>(i)];
+                const int endCorner = sortedFace.face.corners[static_cast<size_t>((i + 1) % 4)];
+                drawList->AddLine(vertices[static_cast<size_t>(startCorner)].screen, vertices[static_cast<size_t>(endCorner)].screen, cubeEdgeColor, 2.4f);
+            }
+        }
+
+        if (hoveredFace >= 0 && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+            const int hoveredRow = hoveredFaceCell / 3;
+            const int hoveredCol = hoveredFaceCell % 3;
+            const bool isCorner = hoveredRow != 1 && hoveredCol != 1;
+            const bool isCenter = hoveredRow == 1 && hoveredCol == 1;
+
+            if (isCorner) {
+                camera.snapToDirection(hoveredFaceDirection);
+            }
+            else if (isCenter) {
+                camera.snapToDirection(sortedFaces[static_cast<size_t>(hoveredFace)].localDirection);
+            }
+            else {
+                const glm::vec3 faceDirection = sortedFaces[static_cast<size_t>(hoveredFace)].localDirection;
+                int normalAxis = 0;
+                float maxNormalAbs = std::abs(faceDirection.x);
+                if (std::abs(faceDirection.y) > maxNormalAbs) {
+                    normalAxis = 1;
+                    maxNormalAbs = std::abs(faceDirection.y);
+                }
+                if (std::abs(faceDirection.z) > maxNormalAbs) {
+                    normalAxis = 2;
+                }
+
+                int neighborAxis = -1;
+                float neighborValue = 0.0f;
+                for (int axis = 0; axis < 3; ++axis) {
+                    if (axis == normalAxis) {
+                        continue;
+                    }
+                    if (std::abs(hoveredFaceDirection[axis]) > std::abs(neighborValue)) {
+                        neighborAxis = axis;
+                        neighborValue = hoveredFaceDirection[axis];
+                    }
+                }
+
+                if (neighborAxis >= 0 && std::abs(neighborValue) > 1e-4f) {
+                    camera.snapToDirection(axisDirectionFromComponent(neighborAxis, neighborValue));
+                }
+                else {
+                    camera.snapToDirection(faceDirection);
+                }
+            }
+        }
+    }
+}
 
 SceneViewport::SceneViewport(RendererType type, CaptureController& captureController) : captureController_(&captureController), renderer_(createRenderer(type)) {}
 
@@ -43,6 +424,7 @@ void SceneViewport::renderFrame(Lattice::Simulation& simulation, Interface& appI
     refreshAtomDebugViews(debugViews, simulation);
     captureController_->renderFrame(*renderer_, [&]() {
         ToolsManager::overlay.draw();
+        drawViewCubeOverlay(renderer_->camera);
         appInterface.draw(*renderer_);
     });
 }

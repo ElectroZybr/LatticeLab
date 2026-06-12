@@ -51,6 +51,8 @@ public:
     glm::vec3 getForwardVector() const;
     glm::mat4 getViewMatrix() const;
     glm::mat4 getProjectionMatrix() const;
+    void snapToDirection(glm::vec3 direction);
+    void snapToAxis(glm::vec3 axis);
 
     RenderRay screenToRay(float screenX, float screenY) const;
 
