@@ -70,6 +70,9 @@ void RendererWGPU::drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView
 
     beginPass(targetView, depthView, targetLoadOp);
 
+    if (renderData.drawAtoms) {
+        drawAtomsImpl(renderData.atoms, renderData, applySelection);
+    }
     if (renderData.drawBonds && !renderData.bonds.empty()) {
         setLineColor(glm::vec4(0.4f, 0.6f, 1.0f, 0.3f));
         drawBondsImpl(renderData.atoms, renderData.bonds);
@@ -93,9 +96,6 @@ void RendererWGPU::drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView
     if (renderData.drawMemoryOrder) {
         setLineColor(glm::vec4(0.35f, 0.52f, 0.9f, 0.3f));
         drawMemoryOrderImpl(renderData.atoms);
-    }
-    if (renderData.drawAtoms) {
-        drawAtomsImpl(renderData.atoms, renderData, applySelection);
     }
 }
 
