@@ -548,11 +548,13 @@ bool SceneViewport::setRendererType(RendererType type, const Lattice::Simulation
     }
 
     if (renderer_) {
-        copyRenderSettings(*newRenderer, *renderer_);
         newRenderer->camera.setScreenSize(renderer_->camera.getScreenSize());
     }
 
     App::Viewport::syncRendererWithSimulation(*newRenderer, simulation);
+    if (renderer_) {
+        copyRenderSettings(*newRenderer, *renderer_);
+    }
     if (type == RendererType::Renderer2D && cached2DCameraState_.valid) {
         newRenderer->camera.setOrthographicView(cached2DCameraState_.direction, cached2DCameraState_.up);
         newRenderer->camera.setPosition(cached2DCameraState_.position);
@@ -581,21 +583,25 @@ void SceneViewport::copyRenderSettings(BaseRenderer& destination, const BaseRend
         return;
     }
 
-    RenderData& target = destination.getRenderData(0);
-    const RenderData& current = source.getRenderData(0);
-    target.drawAtoms = current.drawAtoms;
-    target.drawGrid = current.drawGrid;
-    target.drawVectorField = current.drawVectorField;
-    target.drawFieldArrows = current.drawFieldArrows;
-    target.drawFieldContours = current.drawFieldContours;
-    target.fieldAutoScale = current.fieldAutoScale;
-    target.fieldPotentialScale = current.fieldPotentialScale;
-    target.fieldCellSize = current.fieldCellSize;
-    target.fieldSmoothing = current.fieldSmoothing;
-    target.fieldContourStep = current.fieldContourStep;
-    target.drawBonds = current.drawBonds;
-    target.drawBox = current.drawBox;
-    target.drawMemoryOrder = current.drawMemoryOrder;
-    target.speedColorMode = current.speedColorMode;
-    target.speedGradientMax = current.speedGradientMax;
+    const size_t count = std::min(destination.getRenderDataCount(), source.getRenderDataCount());
+    for (size_t i = 0; i < count; ++i) {
+        RenderData& target = destination.getRenderData(i);
+        const RenderData& current = source.getRenderData(i);
+        target.drawAtoms = current.drawAtoms;
+        target.drawGrid = current.drawGrid;
+        target.drawVectorField = current.drawVectorField;
+        target.drawFieldArrows = current.drawFieldArrows;
+        target.drawFieldContours = current.drawFieldContours;
+        target.fieldAutoScale = current.fieldAutoScale;
+        target.fieldPotentialScale = current.fieldPotentialScale;
+        target.fieldCellSize = current.fieldCellSize;
+        target.fieldSmoothing = current.fieldSmoothing;
+        target.fieldContourStep = current.fieldContourStep;
+        target.drawBonds = current.drawBonds;
+        target.drawBox = current.drawBox;
+        target.drawMemoryOrder = current.drawMemoryOrder;
+        target.speedColorMode = current.speedColorMode;
+        target.speedGradientMax = current.speedGradientMax;
+        target.alpha = current.alpha;
+    }
 }

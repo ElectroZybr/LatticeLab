@@ -181,7 +181,7 @@ void Camera::zoomAt(float factor, glm::vec2 mousePos) {
     if (zoom > 1.f && zoom < 500.f) {
         glm::vec2 deltaPos(mousePos - screenSize * 0.5f);
         deltaPos.y *= -1.f;
-        position += deltaPos * 0.1f / zoom * factor;
+        setPosition(getPosition() + deltaPos * 0.1f / zoom * factor);
     }
 }
 
