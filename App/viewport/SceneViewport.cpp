@@ -80,6 +80,36 @@ namespace {
         return top + (bottom - top) * v;
     }
 
+    void orderFaceQuadForScreen(std::array<ImVec2, 4>& screenQuad, std::array<glm::vec3, 4>& localQuad) {
+        std::array<int, 4> indices = {0, 1, 2, 3};
+        std::sort(indices.begin(), indices.end(), [&](int a, int b) {
+            if (std::abs(screenQuad[static_cast<size_t>(a)].y - screenQuad[static_cast<size_t>(b)].y) > 1e-4f) {
+                return screenQuad[static_cast<size_t>(a)].y < screenQuad[static_cast<size_t>(b)].y;
+            }
+            return screenQuad[static_cast<size_t>(a)].x < screenQuad[static_cast<size_t>(b)].x;
+        });
+
+        int topLeft = indices[0];
+        int topRight = indices[1];
+        if (screenQuad[static_cast<size_t>(topLeft)].x > screenQuad[static_cast<size_t>(topRight)].x) {
+            std::swap(topLeft, topRight);
+        }
+
+        int bottomLeft = indices[2];
+        int bottomRight = indices[3];
+        if (screenQuad[static_cast<size_t>(bottomLeft)].x > screenQuad[static_cast<size_t>(bottomRight)].x) {
+            std::swap(bottomLeft, bottomRight);
+        }
+
+        const std::array<int, 4> ordered = {topLeft, topRight, bottomRight, bottomLeft};
+        const std::array<ImVec2, 4> originalScreen = screenQuad;
+        const std::array<glm::vec3, 4> originalLocal = localQuad;
+        for (size_t i = 0; i < ordered.size(); ++i) {
+            screenQuad[i] = originalScreen[static_cast<size_t>(ordered[i])];
+            localQuad[i] = originalLocal[static_cast<size_t>(ordered[i])];
+        }
+    }
+
     glm::vec3 axisDirectionFromComponent(int axisIndex, float sign) {
         glm::vec3 direction(0.0f);
         direction[axisIndex] = sign >= 0.0f ? 1.0f : -1.0f;
@@ -92,6 +122,23 @@ namespace {
         canonical.y = direction.y >= 0.0f ? 1.0f : -1.0f;
         canonical.z = direction.z >= 0.0f ? 1.0f : -1.0f;
         return glm::normalize(canonical);
+    }
+
+    ImU32 edgeAccentColor(glm::vec3 localAxis, bool highlighted) {
+        const glm::vec3 absAxis = glm::abs(localAxis);
+        if (absAxis.x > absAxis.y && absAxis.x > absAxis.z) {
+            return highlighted ? IM_COL32(255, 96, 96, 255) : IM_COL32(240, 72, 72, 235);
+        }
+        if (absAxis.y > absAxis.z) {
+            return highlighted ? IM_COL32(96, 255, 96, 255) : IM_COL32(72, 240, 72, 235);
+        }
+        return highlighted ? IM_COL32(96, 160, 255, 255) : IM_COL32(72, 136, 240, 235);
+    }
+
+    bool isAccentEdge(const ViewCubeEdge& edge) {
+        const int a = std::min(edge.startVertex, edge.endVertex);
+        const int b = std::max(edge.startVertex, edge.endVertex);
+        return (a == 4 && b == 5) || (a == 4 && b == 6) || (a == 0 && b == 4);
     }
 
     int findSortedFaceByDirection(const std::array<SortedViewCubeFace, 6>& sortedFaces, glm::vec3 direction) {
@@ -109,11 +156,14 @@ namespace {
 
     std::pair<int, int> cellForFaceDirection(const SortedViewCubeFace& face, const std::array<ViewCubeVertex, 8>& vertices,
                                              glm::vec3 targetDirection) {
+        std::array<ImVec2, 4> screenQuad{};
         std::array<glm::vec3, 4> localQuad{};
         for (int i = 0; i < 4; ++i) {
             const size_t cornerIndex = static_cast<size_t>(face.face.corners[static_cast<size_t>(i)]);
+            screenQuad[static_cast<size_t>(i)] = vertices[cornerIndex].screen;
             localQuad[static_cast<size_t>(i)] = vertices[cornerIndex].local;
         }
+        orderFaceQuadForScreen(screenQuad, localQuad);
 
         const glm::vec3 uAxis = localQuad[1] - localQuad[0];
         const glm::vec3 vAxis = localQuad[3] - localQuad[0];
@@ -146,7 +196,7 @@ namespace {
         }
 
         ImDrawList* drawList = ImGui::GetForegroundDrawList();
-        const ImVec2 center(screenSize.x - 200.0f, 200.0f);
+        const ImVec2 center(screenSize.x - 200.0f, 75.0f);
         constexpr float cubeScale = 22.0f;
         const ImU32 cubeFillColor = IM_COL32(120, 140, 155, 255);
         const ImU32 cubeFaceHoverColor = IM_COL32(144, 167, 184, 255);
@@ -204,6 +254,19 @@ namespace {
             {.startVertex = 2, .endVertex = 6, .firstFace = 0, .secondFace = 5},
             {.startVertex = 3, .endVertex = 7, .firstFace = 1, .secondFace = 5},
         }};
+        std::array<int, 12> sortedEdgeIndices{};
+        for (size_t i = 0; i < edges.size(); ++i) {
+            sortedEdgeIndices[i] = static_cast<int>(i);
+        }
+        std::sort(sortedEdgeIndices.begin(), sortedEdgeIndices.end(), [&](int lhs, int rhs) {
+            const ViewCubeEdge& a = edges[static_cast<size_t>(lhs)];
+            const ViewCubeEdge& b = edges[static_cast<size_t>(rhs)];
+            const float depthA =
+                0.5f * (vertices[static_cast<size_t>(a.startVertex)].view.z + vertices[static_cast<size_t>(a.endVertex)].view.z);
+            const float depthB =
+                0.5f * (vertices[static_cast<size_t>(b.startVertex)].view.z + vertices[static_cast<size_t>(b.endVertex)].view.z);
+            return depthA < depthB;
+        });
 
         const ImVec2 mousePos = ImGui::GetIO().MousePos;
         int hoveredFace = -1;
@@ -221,6 +284,7 @@ namespace {
                 quad[i] = vertices[cornerIndex].screen;
                 localQuad[i] = vertices[cornerIndex].local;
             }
+            orderFaceQuadForScreen(quad, localQuad);
 
             for (int row = 0; row < 3; ++row) {
                 for (int col = 0; col < 3; ++col) {
@@ -295,9 +359,13 @@ namespace {
         for (size_t sortedIndex = 0; sortedIndex < sortedFaces.size(); ++sortedIndex) {
             const SortedViewCubeFace& sortedFace = sortedFaces[sortedIndex];
             std::array<ImVec2, 4> quad{};
+            std::array<glm::vec3, 4> localQuad{};
             for (int i = 0; i < 4; ++i) {
-                quad[i] = vertices[static_cast<size_t>(sortedFace.face.corners[static_cast<size_t>(i)])].screen;
+                const size_t cornerIndex = static_cast<size_t>(sortedFace.face.corners[static_cast<size_t>(i)]);
+                quad[static_cast<size_t>(i)] = vertices[cornerIndex].screen;
+                localQuad[static_cast<size_t>(i)] = vertices[cornerIndex].local;
             }
+            orderFaceQuadForScreen(quad, localQuad);
             drawList->AddConvexPolyFilled(quad.data(), 4, cubeFillColor);
 
             if (sortedFace.frontFacing) {
@@ -326,20 +394,23 @@ namespace {
             }
         }
 
-        for (const ViewCubeEdge& edge : edges) {
-            const ViewCubeVertex& a = vertices[static_cast<size_t>(edge.startVertex)];
-            const ViewCubeVertex& b = vertices[static_cast<size_t>(edge.endVertex)];
-            drawList->AddLine(a.screen, b.screen, cubeEdgeColor, 2.4f);
-        }
-
-        for (const SortedViewCubeFace& sortedFace : sortedFaces) {
-            if (!sortedFace.frontFacing) {
-                continue;
+        for (int edgeIndex : sortedEdgeIndices) {
+            const ViewCubeEdge& edge = edges[static_cast<size_t>(edgeIndex)];
+            const bool accentEdge = isAccentEdge(edge);
+            if (accentEdge) {
+                const int fromVertex = edge.startVertex == 4 ? edge.startVertex : edge.endVertex;
+                const int toVertex = edge.startVertex == 4 ? edge.endVertex : edge.startVertex;
+                const ViewCubeVertex& a = vertices[static_cast<size_t>(fromVertex)];
+                const ViewCubeVertex& b = vertices[static_cast<size_t>(toVertex)];
+                const bool edgeHighlighted =
+                    highlightedCells[static_cast<size_t>(edge.firstFace)] >= 0 || highlightedCells[static_cast<size_t>(edge.secondFace)] >= 0;
+                const glm::vec3 localAxis = vertices[static_cast<size_t>(toVertex)].local - vertices[static_cast<size_t>(fromVertex)].local;
+                const ImU32 accentColor = edgeAccentColor(localAxis, edgeHighlighted);
+                drawList->AddLine(a.screen, b.screen, accentColor, 2.2f);
             }
-            for (int i = 0; i < 4; ++i) {
-                const int startCorner = sortedFace.face.corners[static_cast<size_t>(i)];
-                const int endCorner = sortedFace.face.corners[static_cast<size_t>((i + 1) % 4)];
-                drawList->AddLine(vertices[static_cast<size_t>(startCorner)].screen, vertices[static_cast<size_t>(endCorner)].screen, cubeEdgeColor, 2.4f);
+            else {
+                drawList->AddLine(vertices[static_cast<size_t>(edge.startVertex)].screen,
+                                  vertices[static_cast<size_t>(edge.endVertex)].screen, cubeEdgeColor, 2.2f);
             }
         }
 
@@ -356,35 +427,7 @@ namespace {
                 camera.snapToDirection(sortedFaces[static_cast<size_t>(hoveredFace)].localDirection);
             }
             else {
-                const glm::vec3 faceDirection = sortedFaces[static_cast<size_t>(hoveredFace)].localDirection;
-                int normalAxis = 0;
-                float maxNormalAbs = std::abs(faceDirection.x);
-                if (std::abs(faceDirection.y) > maxNormalAbs) {
-                    normalAxis = 1;
-                    maxNormalAbs = std::abs(faceDirection.y);
-                }
-                if (std::abs(faceDirection.z) > maxNormalAbs) {
-                    normalAxis = 2;
-                }
-
-                int neighborAxis = -1;
-                float neighborValue = 0.0f;
-                for (int axis = 0; axis < 3; ++axis) {
-                    if (axis == normalAxis) {
-                        continue;
-                    }
-                    if (std::abs(hoveredFaceDirection[axis]) > std::abs(neighborValue)) {
-                        neighborAxis = axis;
-                        neighborValue = hoveredFaceDirection[axis];
-                    }
-                }
-
-                if (neighborAxis >= 0 && std::abs(neighborValue) > 1e-4f) {
-                    camera.snapToDirection(axisDirectionFromComponent(neighborAxis, neighborValue));
-                }
-                else {
-                    camera.snapToDirection(faceDirection);
-                }
+                camera.snapToDirection(hoveredFaceDirection);
             }
         }
     }
@@ -407,6 +450,7 @@ void SceneViewport::renderFrame(Lattice::Simulation& simulation, Interface& appI
     uiState.simStep = simulation.world().getSimStep();
 
     appInterface.update();
+    renderer_->camera.update(ImGui::GetIO().DeltaTime);
     if (renderer_->getRenderDataCount() > simulation.activeWorldId()) {
         const RenderData& activeRenderData = renderer_->getRenderData(simulation.activeWorldId());
         if (activeRenderData.drawVectorField || activeRenderData.drawFieldArrows || activeRenderData.drawFieldContours) {

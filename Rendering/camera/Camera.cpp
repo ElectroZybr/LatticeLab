@@ -1,7 +1,9 @@
 #include "Camera.h"
 
+#include <array>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/constants.hpp>
@@ -17,6 +19,8 @@ namespace {
         }
         return angle - pi;
     }
+
+    float smoothStep01(float t) { return t * t * (3.0f - 2.0f * t); }
 
     glm::vec3 orbitUpVector(float azimuth, float elevation) {
         return glm::normalize(glm::vec3(-std::sin(elevation) * std::sin(azimuth), std::cos(elevation),
@@ -35,11 +39,56 @@ namespace {
         const float maxSide = std::max({sceneSize.x, sceneSize.y, sceneSize.z});
         return (maxSide * 0.5f * 1.1f) / std::tan(glm::radians(kOrbitFov) * 0.5f);
     }
+
+    glm::vec3 projectOntoPlane(glm::vec3 v, glm::vec3 normal) { return v - normal * glm::dot(v, normal); }
+
+    glm::vec3 stabilizedOrbitUp(glm::vec3 direction, glm::vec3 currentUp) {
+        glm::vec3 desiredUp = projectOntoPlane(currentUp, direction);
+        if (glm::dot(desiredUp, desiredUp) <= 1e-6f) {
+            const glm::vec3 preferredUp = std::abs(direction.y) > 0.9f ? glm::vec3(0.0f, 0.0f, 1.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
+            desiredUp = projectOntoPlane(preferredUp, direction);
+        }
+        if (glm::dot(desiredUp, desiredUp) <= 1e-6f) {
+            desiredUp = projectOntoPlane(glm::vec3(1.0f, 0.0f, 0.0f), direction);
+        }
+
+        desiredUp = glm::normalize(desiredUp);
+        const std::array<glm::vec3, 6> candidateAxes = {
+            glm::vec3(0.0f, 1.0f, 0.0f),
+            glm::vec3(0.0f, -1.0f, 0.0f),
+            glm::vec3(0.0f, 0.0f, 1.0f),
+            glm::vec3(0.0f, 0.0f, -1.0f),
+            glm::vec3(1.0f, 0.0f, 0.0f),
+            glm::vec3(-1.0f, 0.0f, 0.0f),
+        };
+
+        float bestDot = -std::numeric_limits<float>::infinity();
+        glm::vec3 bestUp(0.0f);
+        for (const glm::vec3& axis : candidateAxes) {
+            glm::vec3 candidateUp = projectOntoPlane(axis, direction);
+            if (glm::dot(candidateUp, candidateUp) <= 1e-6f) {
+                continue;
+            }
+            candidateUp = glm::normalize(candidateUp);
+            const float alignment = glm::dot(candidateUp, desiredUp);
+            if (alignment > bestDot) {
+                bestDot = alignment;
+                bestUp = candidateUp;
+            }
+        }
+
+        if (glm::dot(bestUp, bestUp) <= 1e-6f) {
+            const glm::vec3 fallbackUp = projectOntoPlane(glm::vec3(1.0f, 0.0f, 0.0f), direction);
+            return glm::normalize(fallbackUp);
+        }
+        return bestUp;
+    }
 }
 
 Camera::Camera(float moveSpeed, float zoomSpeed) : moveSpeed(moveSpeed), zoomSpeed(zoomSpeed), isDragging(false), lastMousePos(0, 0) {}
 
 void Camera::resetView() {
+    orbitAnimationActive = false;
     azimuth = 0.f;
     elevation = 0.f;
     orbitUp = glm::vec3(0.f, 1.f, 0.f);
@@ -70,6 +119,7 @@ void Camera::setZoom(float new_zoom) {
 }
 
 void Camera::setMode(Mode newMode) {
+    orbitAnimationActive = false;
     if (mode == newMode) {
         return;
     }
@@ -96,6 +146,7 @@ void Camera::setMode(Mode newMode) {
 }
 
 void Camera::zoomAt(float factor, glm::vec2 mousePos) {
+    orbitAnimationActive = false;
     // Изменяем уровень зума с учетом направления к курсору
     zoom *= (1.f + factor * zoomSpeed);
     zoom = std::clamp(zoom, 1.f, 500.f);
@@ -115,6 +166,7 @@ void Camera::orbitDrag(glm::ivec2 delta) {
 }
 
 void Camera::orbitRotate(float azimuthDelta, float elevationDelta) {
+    orbitAnimationActive = false;
     const glm::vec3 center(orbitCenter.x, orbitCenter.y, orbitCenter.z);
     const glm::vec3 eye = getEyePosition();
     glm::vec3 offset = eye - center;
@@ -140,6 +192,7 @@ void Camera::orbitRotate(float azimuthDelta, float elevationDelta) {
 }
 
 void Camera::freeDrag(glm::ivec2 delta) {
+    orbitAnimationActive = false;
     constexpr float sensitivity = 0.003f;
     azimuth -= delta.x * sensitivity;
     elevation += delta.y * sensitivity;
@@ -212,6 +265,40 @@ glm::mat4 Camera::getProjectionMatrix() const {
     return glm::perspective(glm::radians(fov), screenSize.x / screenSize.y, NEAR, FAR);
 }
 
+void Camera::update(float deltaTime) {
+    if (!orbitAnimationActive || mode == Mode::Free) {
+        return;
+    }
+
+    orbitAnimationT = std::min(orbitAnimationT + std::max(deltaTime, 0.0f), orbitAnimationDuration);
+    const float rawT = orbitAnimationDuration > 1e-6f ? (orbitAnimationT / orbitAnimationDuration) : 1.0f;
+    const float t = smoothStep01(std::clamp(rawT, 0.0f, 1.0f));
+
+    glm::vec3 direction = glm::mix(orbitAnimationStartDirection, orbitAnimationTargetDirection, t);
+    if (glm::dot(direction, direction) <= 1e-8f) {
+        direction = orbitAnimationTargetDirection;
+    }
+    direction = glm::normalize(direction);
+    azimuth = wrapRadians(std::atan2(direction.x, direction.z));
+    elevation = wrapRadians(std::asin(std::clamp(direction.y, -1.0f, 1.0f)));
+
+    orbitUp = orbitAnimationStartUp + (orbitAnimationTargetUp - orbitAnimationStartUp) * t;
+    orbitUp = orbitUp - direction * glm::dot(orbitUp, direction);
+    if (glm::dot(orbitUp, orbitUp) <= 1e-8f) {
+        orbitUp = orbitAnimationTargetUp;
+    }
+    orbitUp = glm::normalize(orbitUp);
+    setZoom(orbitAnimationStartZoom + (orbitAnimationTargetZoom - orbitAnimationStartZoom) * t);
+
+    if (rawT >= 1.0f) {
+        azimuth = orbitAnimationTargetAzimuth;
+        elevation = orbitAnimationTargetElevation;
+        orbitUp = orbitAnimationTargetUp;
+        setZoom(orbitAnimationTargetZoom);
+        orbitAnimationActive = false;
+    }
+}
+
 void Camera::snapToDirection(glm::vec3 direction) {
     if (glm::dot(direction, direction) <= 1e-8f) {
         return;
@@ -232,15 +319,23 @@ void Camera::snapToDirection(glm::vec3 direction) {
         distance = defaultOrbitDistanceForScene(sceneSize);
     }
 
-    const float eyeSide = glm::dot(currentOffset, direction);
-    const glm::vec3 forward = eyeSide >= 0.0f ? -direction : direction;
-    const glm::vec3 offset = -forward * distance;
+    const glm::vec3 offset = direction * distance;
 
-    const glm::vec3 preferredUp = std::abs(direction.y) > 0.9f ? glm::vec3(0.0f, 0.0f, 1.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
-    orbitUp = glm::normalize(preferredUp - glm::normalize(offset) * glm::dot(preferredUp, glm::normalize(offset)));
-    azimuth = wrapRadians(std::atan2(offset.x, offset.z));
-    elevation = wrapRadians(std::asin(std::clamp(offset.y / distance, -1.0f, 1.0f)));
-    setZoom(moveSpeed / distance);
+    const glm::vec3 targetUp = stabilizedOrbitUp(direction, orbitUp);
+    const float targetAzimuth = wrapRadians(std::atan2(offset.x, offset.z));
+    const float targetElevation = wrapRadians(std::asin(std::clamp(offset.y / distance, -1.0f, 1.0f)));
+    const float targetZoom = moveSpeed / distance;
+
+    orbitAnimationStartDirection = distance > 1e-6f ? glm::normalize(currentOffset) : direction;
+    orbitAnimationTargetDirection = direction;
+    orbitAnimationStartUp = orbitUp;
+    orbitAnimationStartZoom = zoom;
+    orbitAnimationTargetAzimuth = targetAzimuth;
+    orbitAnimationTargetElevation = targetElevation;
+    orbitAnimationTargetUp = targetUp;
+    orbitAnimationTargetZoom = targetZoom;
+    orbitAnimationT = 0.0f;
+    orbitAnimationActive = true;
 }
 
 void Camera::snapToAxis(glm::vec3 axis) { snapToDirection(axis); }

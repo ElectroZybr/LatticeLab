@@ -39,6 +39,7 @@ public:
     void orbitDrag(glm::ivec2 delta);
     void orbitRotate(float azimuthDelta, float elevationDelta);
     void freeDrag(glm::ivec2 delta); // для Free mode
+    void update(float deltaTime);
 
     glm::vec3 screenToWorld(glm::ivec2 screenPos) const;
     glm::ivec2 worldToScreen(glm::vec3 worldPos) const;
@@ -80,6 +81,17 @@ private:
     // Orbit / Free
     float azimuth = 0.f;
     float elevation = 0.f;
+    bool orbitAnimationActive = false;
+    float orbitAnimationT = 0.0f;
+    float orbitAnimationDuration = 0.18f;
+    float orbitAnimationTargetAzimuth = 0.0f;
+    float orbitAnimationTargetElevation = 0.0f;
+    float orbitAnimationStartZoom = 1.0f;
+    float orbitAnimationTargetZoom = 1.0f;
+    glm::vec3 orbitAnimationStartDirection{0.0f, 0.0f, 1.0f};
+    glm::vec3 orbitAnimationTargetDirection{0.0f, 0.0f, 1.0f};
+    glm::vec3 orbitAnimationStartUp{0.0f, 1.0f, 0.0f};
+    glm::vec3 orbitAnimationTargetUp{0.0f, 1.0f, 0.0f};
 
     // Перспектива
     static constexpr float FOV_ORBIT = 45.f;
