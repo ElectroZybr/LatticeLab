@@ -124,6 +124,49 @@ namespace {
         return glm::normalize(canonical);
     }
 
+    glm::vec3 screenStripeDirection(glm::vec3 faceDirection, const glm::mat3& viewRotation, int row, int col) {
+        int normalAxis = 0;
+        float maxNormalAbs = std::abs(faceDirection.x);
+        if (std::abs(faceDirection.y) > maxNormalAbs) {
+            normalAxis = 1;
+            maxNormalAbs = std::abs(faceDirection.y);
+        }
+        if (std::abs(faceDirection.z) > maxNormalAbs) {
+            normalAxis = 2;
+        }
+
+        float bestScore = -std::numeric_limits<float>::infinity();
+        glm::vec3 bestDirection(0.0f);
+        for (int axis = 0; axis < 3; ++axis) {
+            if (axis == normalAxis) {
+                continue;
+            }
+            for (float sign : {-1.0f, 1.0f}) {
+                const glm::vec3 direction = axisDirectionFromComponent(axis, sign);
+                const glm::vec3 viewDirection = viewRotation * direction;
+                float score = -std::numeric_limits<float>::infinity();
+                if (row == 1 && col == 0) {
+                    score = -viewDirection.x;
+                }
+                else if (row == 1 && col == 2) {
+                    score = viewDirection.x;
+                }
+                else if (row == 0 && col == 1) {
+                    score = viewDirection.y;
+                }
+                else if (row == 2 && col == 1) {
+                    score = -viewDirection.y;
+                }
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestDirection = direction;
+                }
+            }
+        }
+        return bestDirection;
+    }
+
     ImU32 edgeAccentColor(glm::vec3 localAxis, bool highlighted) {
         const glm::vec3 absAxis = glm::abs(localAxis);
         if (absAxis.x > absAxis.y && absAxis.x > absAxis.z) {
@@ -415,6 +458,22 @@ namespace {
         }
 
         if (hoveredFace >= 0 && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+            if (camera.getMode() == Camera::Mode::Mode2D) {
+                const int hoveredRow = hoveredFaceCell / 3;
+                const int hoveredCol = hoveredFaceCell % 3;
+                if (hoveredRow == 1 && hoveredCol == 1) {
+                    camera.snapToDirection(sortedFaces[static_cast<size_t>(hoveredFace)].localDirection);
+                }
+                else if (hoveredRow == 1 || hoveredCol == 1) {
+                    camera.snapToDirection(
+                        screenStripeDirection(sortedFaces[static_cast<size_t>(hoveredFace)].localDirection, viewRotation, hoveredRow, hoveredCol));
+                }
+                else {
+                    camera.snapToDirection(hoveredFaceDirection);
+                }
+                return;
+            }
+
             const int hoveredRow = hoveredFaceCell / 3;
             const int hoveredCol = hoveredFaceCell % 3;
             const bool isCorner = hoveredRow != 1 && hoveredCol != 1;
@@ -478,6 +537,9 @@ bool SceneViewport::setRendererType(RendererType type, const Lattice::Simulation
         cached2DCameraState_.valid = true;
         cached2DCameraState_.position = renderer_->camera.getPosition();
         cached2DCameraState_.zoom = renderer_->camera.getZoom();
+        cached2DCameraState_.direction = -renderer_->camera.getForwardVector();
+        cached2DCameraState_.up = renderer_->camera.getOrthographicUp();
+        cached2DCameraState_.center = renderer_->camera.getOrbitCenter();
     }
 
     std::unique_ptr<BaseRenderer> newRenderer = createRenderer(type);
@@ -492,6 +554,7 @@ bool SceneViewport::setRendererType(RendererType type, const Lattice::Simulation
 
     App::Viewport::syncRendererWithSimulation(*newRenderer, simulation);
     if (type == RendererType::Renderer2D && cached2DCameraState_.valid) {
+        newRenderer->camera.setOrthographicView(cached2DCameraState_.direction, cached2DCameraState_.up);
         newRenderer->camera.setPosition(cached2DCameraState_.position);
         newRenderer->camera.setZoom(cached2DCameraState_.zoom);
     }

@@ -21,12 +21,8 @@ protected:
     bool useLighting() override { return false; }
 
     void updateMatrices() override {
-        const float aspect = static_cast<float>(camera.screenSize.x) / static_cast<float>(camera.screenSize.y);
-        const float viewWidth = static_cast<float>(camera.screenSize.x) / camera.getZoom();
-        const float viewHeight = viewWidth / aspect;
-
-        projection = glm::orthoRH_ZO(-viewWidth / 2.f, viewWidth / 2.f, -viewHeight / 2.f, viewHeight / 2.f, -10000.f, 10000.f);
-        view = glm::translate(glm::mat4(1.f), glm::vec3(-camera.getPosition().x, -camera.getPosition().y, 0.f));
+        projection = camera.getProjectionMatrix();
+        view = camera.getViewMatrix();
     }
 
     glm::vec3 getLightDir() override { return glm::vec3(0.f); }

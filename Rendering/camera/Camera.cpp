@@ -40,6 +40,10 @@ namespace {
         return (maxSide * 0.5f * 1.1f) / std::tan(glm::radians(kOrbitFov) * 0.5f);
     }
 
+    glm::vec3 orbitOffsetDirection(float azimuth, float elevation) {
+        return glm::vec3(std::cos(elevation) * std::sin(azimuth), std::sin(elevation), std::cos(elevation) * std::cos(azimuth));
+    }
+
     glm::vec3 projectOntoPlane(glm::vec3 v, glm::vec3 normal) { return v - normal * glm::dot(v, normal); }
 
     glm::vec3 stabilizedOrbitUp(glm::vec3 direction, glm::vec3 currentUp) {
@@ -95,9 +99,9 @@ void Camera::resetView() {
 
     const float distance = defaultOrbitDistanceForScene(sceneSize);
     orbitCenter = sceneOffset + sceneSize * 0.5f;
-    position = glm::vec2(orbitCenter);
 
     if (mode == Camera::Mode::Mode2D) {
+        position = glm::vec2(orbitCenter.x, orbitCenter.y);
         constexpr float margin = 0.85f;
 
         const float zoomX = (screenSize.x * margin) / sceneSize.x;
@@ -106,11 +110,32 @@ void Camera::resetView() {
         setZoom(std::min(zoomX, zoomY));
     }
     else {
+        position = glm::vec2(orbitCenter);
         const float safeDistance = std::max(distance, 1e-3f);
         setZoom(moveSpeed / safeDistance);
         const glm::vec3 orbitOffset(std::cos(elevation) * std::sin(azimuth), std::sin(elevation), std::cos(elevation) * std::cos(azimuth));
         freePosition = orbitCenter + orbitOffset * safeDistance;
     }
+}
+
+void Camera::move(glm::vec2 offset) { setPosition(getPosition() + offset); }
+
+void Camera::setPosition(glm::vec2 pos) {
+    position = pos;
+    if (mode != Mode::Mode2D) {
+        return;
+    }
+
+    const glm::vec3 forward = -getForwardVector();
+    const float depth = glm::dot(orbitCenter, forward);
+    orbitCenter = getPlanarRightAxis() * pos.x + getPlanarUpAxis() * pos.y + forward * depth;
+}
+
+glm::vec2 Camera::getPosition() const {
+    if (mode != Mode::Mode2D) {
+        return position;
+    }
+    return glm::vec2(glm::dot(orbitCenter, getPlanarRightAxis()), glm::dot(orbitCenter, getPlanarUpAxis()));
 }
 
 void Camera::setZoom(float new_zoom) {
@@ -202,10 +227,14 @@ void Camera::freeDrag(glm::ivec2 delta) {
 // Для 3д режимов возвращает cameraPos + cameraDir * 10
 glm::vec3 Camera::screenToWorld(glm::ivec2 screenPos) const {
     if (mode == Mode::Mode2D) {
-        glm::vec2 offset = glm::vec2(screenPos) - screenSize * 0.5f;
-        offset.y *= -1.f;
-        const glm::vec2 w = position + offset / zoom;
-        return glm::vec3(w, 0.0f);
+        const RenderRay ray = screenToRay(static_cast<float>(screenPos.x), static_cast<float>(screenPos.y));
+        const glm::vec3 planeNormal = -getForwardVector();
+        const float denominator = glm::dot(ray.dir, planeNormal);
+        if (std::abs(denominator) <= 1e-6f) {
+            return orbitCenter;
+        }
+        const float t = glm::dot(orbitCenter - ray.origin, planeNormal) / denominator;
+        return ray.at(t);
     }
 
     const RenderRay ray = screenToRay(screenPos.x, screenPos.y);
@@ -213,16 +242,8 @@ glm::vec3 Camera::screenToWorld(glm::ivec2 screenPos) const {
 }
 
 glm::ivec2 Camera::worldToScreen(glm::vec3 worldPos) const {
-    if (mode == Mode::Mode2D) {
-        glm::vec2 offset = glm::vec2(worldPos) - position;
-        offset.y *= -1.f;
-        const glm::vec2 s = offset * zoom + screenSize * 0.5f;
-        return glm::ivec2(s);
-    }
-
     const glm::vec4 clip = getProjectionMatrix() * getViewMatrix() * glm::vec4(worldPos.x, worldPos.y, worldPos.z, 1.f);
-
-    if (clip.w <= 0.f) {
+    if (mode != Mode::Mode2D && clip.w <= 0.f) {
         return {0, 0};
     }
 
@@ -238,13 +259,12 @@ glm::vec3 Camera::getEyePosition() const {
     }
 
     const glm::vec3 glmCenter(orbitCenter.x, orbitCenter.y, orbitCenter.z);
-    const float r = moveSpeed / zoom;
-    return glmCenter + r * glm::vec3(std::cos(elevation) * std::sin(azimuth), std::sin(elevation), std::cos(elevation) * std::cos(azimuth));
+    const float r = (mode == Mode::Mode2D) ? defaultOrbitDistanceForScene(sceneSize) : (moveSpeed / zoom);
+    return glmCenter + r * orbitOffsetDirection(azimuth, elevation);
 }
 
 glm::vec3 Camera::getForwardVector() const {
-    return glm::normalize(glm::vec3(-std::cos(elevation) * std::sin(azimuth), -std::sin(elevation),
-                                   -std::cos(elevation) * std::cos(azimuth)));
+    return glm::normalize(-orbitOffsetDirection(azimuth, elevation));
 }
 
 glm::mat4 Camera::getViewMatrix() const {
@@ -261,8 +281,28 @@ glm::mat4 Camera::getViewMatrix() const {
 }
 
 glm::mat4 Camera::getProjectionMatrix() const {
+    if (mode == Mode::Mode2D) {
+        const float aspect = static_cast<float>(screenSize.x) / static_cast<float>(screenSize.y);
+        const float viewWidth = static_cast<float>(screenSize.x) / getZoom();
+        const float viewHeight = viewWidth / aspect;
+        return glm::orthoRH_ZO(-viewWidth / 2.f, viewWidth / 2.f, -viewHeight / 2.f, viewHeight / 2.f, -10000.f, 10000.f);
+    }
     const float fov = (mode == Mode::Free) ? FOV_FREE : FOV_ORBIT;
     return glm::perspective(glm::radians(fov), screenSize.x / screenSize.y, NEAR, FAR);
+}
+
+void Camera::setOrthographicView(glm::vec3 direction, glm::vec3 up) {
+    if (glm::dot(direction, direction) <= 1e-8f) {
+        return;
+    }
+
+    direction = glm::normalize(direction);
+    orbitUp = stabilizedOrbitUp(direction, up);
+    const glm::vec3 offsetDirection = -direction;
+    azimuth = wrapRadians(std::atan2(offsetDirection.x, offsetDirection.z));
+    elevation = wrapRadians(std::asin(std::clamp(offsetDirection.y, -1.0f, 1.0f)));
+    orbitCenter = sceneOffset + sceneSize * 0.5f;
+    position = glm::vec2(glm::dot(orbitCenter, getPlanarRightAxis()), glm::dot(orbitCenter, getPlanarUpAxis()));
 }
 
 void Camera::update(float deltaTime) {
@@ -305,11 +345,9 @@ void Camera::snapToDirection(glm::vec3 direction) {
     }
 
     direction = glm::normalize(direction);
+    const bool keepOrthographic = mode == Mode::Mode2D;
     if (mode == Mode::Free) {
         setMode(Mode::Orbit);
-    }
-    else if (mode == Mode::Mode2D) {
-        mode = Mode::Orbit;
     }
 
     orbitCenter = sceneOffset + sceneSize * 0.5f;
@@ -324,7 +362,7 @@ void Camera::snapToDirection(glm::vec3 direction) {
     const glm::vec3 targetUp = stabilizedOrbitUp(direction, orbitUp);
     const float targetAzimuth = wrapRadians(std::atan2(offset.x, offset.z));
     const float targetElevation = wrapRadians(std::asin(std::clamp(offset.y / distance, -1.0f, 1.0f)));
-    const float targetZoom = moveSpeed / distance;
+    const float targetZoom = keepOrthographic ? zoom : (moveSpeed / distance);
 
     orbitAnimationStartDirection = distance > 1e-6f ? glm::normalize(currentOffset) : direction;
     orbitAnimationTargetDirection = direction;
@@ -341,6 +379,12 @@ void Camera::snapToDirection(glm::vec3 direction) {
 void Camera::snapToAxis(glm::vec3 axis) { snapToDirection(axis); }
 
 RenderRay Camera::screenToRay(float screenX, float screenY) const {
+    if (mode == Mode::Mode2D) {
+        const glm::vec2 offset((screenX - screenSize.x * 0.5f) / zoom, (screenSize.y * 0.5f - screenY) / zoom);
+        const glm::vec3 origin = orbitCenter + getPlanarRightAxis() * offset.x + getPlanarUpAxis() * offset.y;
+        return RenderRay(origin, getForwardVector());
+    }
+
     const float ndcX = (2.0f * screenX) / screenSize.x - 1.0f;
     const float ndcY = 1.0f - (2.0f * screenY) / screenSize.y;
 
@@ -357,3 +401,9 @@ RenderRay Camera::screenToRay(float screenX, float screenY) const {
 
     return RenderRay(getEyePosition(), rayDirWorld);
 }
+
+glm::vec3 Camera::getPlanarRightAxis() const { return glm::normalize(glm::cross(getForwardVector(), orbitUp)); }
+
+glm::vec3 Camera::getPlanarUpAxis() const { return glm::normalize(orbitUp); }
+
+glm::vec3 Camera::getPlanarCenter() const { return orbitCenter; }

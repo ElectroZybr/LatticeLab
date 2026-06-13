@@ -27,11 +27,11 @@ public:
     void setScreenSize(glm::vec2 screenSize) { this->screenSize = screenSize; }
     glm::vec2 getScreenSize() const { return screenSize; }
 
-    void move(glm::vec2 offset) { position += offset; }
+    void move(glm::vec2 offset);
     void move3D(glm::vec3 offset) { freePosition += offset; }
 
-    void setPosition(glm::vec2 pos) { position = pos; };
-    glm::vec2 getPosition() const { return position; };
+    void setPosition(glm::vec2 pos);
+    glm::vec2 getPosition() const;
 
     void setMode(Mode newMode);
     Mode getMode() const { return mode; }
@@ -52,6 +52,9 @@ public:
     glm::vec3 getForwardVector() const;
     glm::mat4 getViewMatrix() const;
     glm::mat4 getProjectionMatrix() const;
+    void setOrthographicView(glm::vec3 direction, glm::vec3 up);
+    glm::vec3 getOrthographicUp() const { return orbitUp; }
+    glm::vec3 getOrbitCenter() const { return orbitCenter; }
     void snapToDirection(glm::vec3 direction);
     void snapToAxis(glm::vec3 axis);
 
@@ -98,4 +101,8 @@ private:
     static constexpr float FOV_FREE = 60.f;
     static constexpr float NEAR = 0.1f;
     static constexpr float FAR = 10000.f;
+
+    glm::vec3 getPlanarRightAxis() const;
+    glm::vec3 getPlanarUpAxis() const;
+    glm::vec3 getPlanarCenter() const;
 };

@@ -39,6 +39,9 @@ private:
         bool valid = false;
         glm::vec2 position{0.0f, 0.0f};
         float zoom = 1.0f;
+        glm::vec3 direction{0.0f, 0.0f, 1.0f};
+        glm::vec3 up{0.0f, 1.0f, 0.0f};
+        glm::vec3 center{0.0f, 0.0f, 0.0f};
     };
 
     static std::unique_ptr<BaseRenderer> createRenderer(RendererType type);
