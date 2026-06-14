@@ -70,13 +70,11 @@ void RendererWGPU::initAtomQuadBuffer() {
     ctx.queue()->writeBuffer(*atomLayer_.atomQuadVb, 0, quad, sizeof(quad));
 }
 
-void RendererWGPU::drawAtomsImpl(const RenderAtomsView& atoms, const RenderData& renderData, bool applySelection) {
+bool RendererWGPU::prepareAtomsCpuData(const View::RenderAtomsView& atoms, const RenderData& renderData, bool applySelection) {
     const size_t count = atoms.count;
     if (count == 0 || !atoms.hasPositions() || !atoms.hasTypes()) {
-        return;
+        return false;
     }
-
-    ensureStorageBuffers(count);
 
     atomLayer_.posData.resize(count);
     atomLayer_.velData.resize(count);
@@ -98,6 +96,16 @@ void RendererWGPU::drawAtomsImpl(const RenderAtomsView& atoms, const RenderData&
             }
         }
     }
+    return true;
+}
+
+void RendererWGPU::uploadPreparedAtomsGpu(const View::RenderAtomsView& atoms, const RenderData& renderData) {
+    const size_t count = atoms.count;
+    if (count == 0 || atomLayer_.posData.size() != count || atomLayer_.typeData.size() != count) {
+        return;
+    }
+
+    ensureStorageBuffers(count);
 
     uploadStorageBuffer(*atomLayer_.sbPos, atomLayer_.posData.data(), count);
     uploadStorageBuffer(*atomLayer_.sbVel, atomLayer_.velData.data(), count);
@@ -119,9 +127,24 @@ void RendererWGPU::drawAtomsImpl(const RenderAtomsView& atoms, const RenderData&
         }
     }
     WGPUContext::instance().queue()->writeBuffer(*uniformBuffer, offsetof(SceneUniforms, maxSpeedSqr), &maxSpeedSqr, sizeof(float));
+}
+
+void RendererWGPU::drawPreparedAtomsGpu(size_t count) {
+    if (count == 0 || !atomLayer_.bindGroup || !atomLayer_.atomQuadVb || !currentPass) {
+        return;
+    }
 
     currentPass->setPipeline(*pipelines_.atomSphere);
     currentPass->setBindGroup(0, *atomLayer_.bindGroup, 0, nullptr);
     currentPass->setVertexBuffer(0, *atomLayer_.atomQuadVb, 0, atomLayer_.atomQuadVb->getSize());
     currentPass->draw(6, count, 0, 0);
+}
+
+void RendererWGPU::drawAtomsImpl(const View::RenderAtomsView& atoms, const RenderData& renderData, bool applySelection) {
+    if (!prepareAtomsCpuData(atoms, renderData, applySelection)) {
+        return;
+    }
+
+    uploadPreparedAtomsGpu(atoms, renderData);
+    drawPreparedAtomsGpu(atoms.count);
 }

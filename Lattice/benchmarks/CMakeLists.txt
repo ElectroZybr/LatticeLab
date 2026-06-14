@@ -1,9 +1,18 @@
+set(RENDERING_BENCHMARK_SOURCES)
+set(RENDERING_BENCHMARK_INCLUDE_DIRS)
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/Rendering/benchmarks/CMakeLists.txt")
+    add_subdirectory("${CMAKE_SOURCE_DIR}/Rendering/benchmarks" "${CMAKE_BINARY_DIR}/Rendering/benchmarks")
+endif()
+
 file(GLOB_RECURSE BENCHMARK_SOURCES CONFIGURE_DEPENDS
     "physics/*.cpp"
     "rendering/*.cpp"
     "BenchmarkScenes.cpp"
     "bench_main.cpp"
 )
+
+list(APPEND BENCHMARK_SOURCES ${RENDERING_BENCHMARK_SOURCES})
 
 add_executable(benchmarks ${BENCHMARK_SOURCES})
 
@@ -34,6 +43,7 @@ set_target_properties(bench PROPERTIES
 target_include_directories(benchmarks PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}
+    ${RENDERING_BENCHMARK_INCLUDE_DIRS}
 )
 
 target_include_directories(bench PRIVATE

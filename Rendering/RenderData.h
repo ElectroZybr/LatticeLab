@@ -6,6 +6,7 @@
 
 #include <glm/glm.hpp>
 
+namespace View {
 struct RenderColor {
     float r = 1.0f;
     float g = 1.0f;
@@ -100,6 +101,26 @@ struct RenderVectorFieldView {
     }
 };
 
+struct RenderRectGridCell {
+    glm::vec3 origin{};
+    float cellSize = 1.0f;
+    float atomCount = 0.0f;
+};
+
+struct RenderRectGridView {
+    const void* context = nullptr;
+    size_t count = 0;
+    void (*forEachFn)(const void* context, RenderGridCellVisitor visitor, void* userData) = nullptr;
+
+    [[nodiscard]] bool empty() const noexcept { return count == 0 || context == nullptr || forEachFn == nullptr; }
+    void forEach(RenderGridCellVisitor visitor, void* userData) const {
+        if (!empty()) {
+            forEachFn(context, visitor, userData);
+        }
+    }
+};
+} // namespace View
+
 class RenderData {
 public:
     enum class SpeedColorMode : uint8_t {
@@ -108,12 +129,14 @@ public:
         GradientTurbo = 2,
     };
 
-    RenderAtomsView atoms{};
+    View::RenderAtomsView atoms{};
 
-    RenderBondsView bonds{};
-    RenderGridView grid{};
-    RenderVectorFieldView vectorField{};
+    View::RenderBondsView bonds{};
+    View::RenderVectorFieldView vectorField{};
     std::vector<size_t> selectedAtomIndices;
+
+    View::RenderRectGridView grid{};
+    View::RenderRectGridView barnesHutTree{};
 
     glm::vec3 worldSize{0.0f, 0.0f, 0.0f};
     glm::vec3 renderOffset{0.0f, 0.0f, 0.0f};
@@ -128,6 +151,8 @@ public:
     bool drawBonds = false;
     bool drawBox = true;
     bool drawMemoryOrder = false;
+    bool drawBHtree = false;
+
     bool fieldAutoScale = true;
     SpeedColorMode speedColorMode = SpeedColorMode::AtomColor;
     float speedGradientMax = 5.0f;

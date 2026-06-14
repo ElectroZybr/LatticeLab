@@ -5,7 +5,7 @@
 #include "Rendering/backend/WGPUContext.h"
 
 namespace {
-    float resolvePotentialScale(const RenderData& renderData, const RenderVectorFieldView& field) {
+    float resolvePotentialScaleImpl(const RenderData& renderData, const View::RenderVectorFieldView& field) {
         if (!renderData.fieldAutoScale) {
             return std::max(renderData.fieldPotentialScale, 0.0001f);
         }
@@ -19,7 +19,7 @@ namespace {
         return maxValue;
     }
 
-    float resolveContourScale(const RenderData& renderData, const RenderVectorFieldView& field) {
+    float resolveContourScaleImpl(const RenderData& renderData, const View::RenderVectorFieldView& field) {
         float contourScale = std::max(renderData.fieldPotentialScale, 0.0001f);
         if (!renderData.fieldAutoScale) {
             return contourScale;
@@ -44,7 +44,50 @@ namespace {
 
 }
 
-bool RendererWGPU::rebuildFieldInstances(const RenderVectorFieldView& field, bool skipZeroCells) {
+float RendererWGPU::resolveFieldPotentialScale(const RenderData& renderData, const View::RenderVectorFieldView& field) {
+    return resolvePotentialScaleImpl(renderData, field);
+}
+
+float RendererWGPU::resolveFieldContourScale(const RenderData& renderData, const View::RenderVectorFieldView& field) {
+    return resolveContourScaleImpl(renderData, field);
+}
+
+bool RendererWGPU::prepareFieldPotentialCpuData(const RenderData& renderData) {
+    const View::RenderVectorFieldView& field = renderData.vectorField;
+    if (field.empty()) {
+        return false;
+    }
+
+    fieldLayer_.preparedScaleX = resolveFieldPotentialScale(renderData, field);
+    fieldLayer_.preparedScaleY = glm::clamp(renderData.fieldSmoothing, 0.0f, 1.0f);
+    fieldLayer_.preparedScaleZ = 0.0f;
+    return rebuildFieldInstances(field, true);
+}
+
+bool RendererWGPU::prepareFieldContoursCpuData(const RenderData& renderData) {
+    const View::RenderVectorFieldView& field = renderData.vectorField;
+    if (field.empty()) {
+        return false;
+    }
+
+    fieldLayer_.preparedScaleX = resolveFieldContourScale(renderData, field);
+    fieldLayer_.preparedScaleY = glm::clamp(renderData.fieldSmoothing, 0.0f, 1.0f);
+    fieldLayer_.preparedScaleZ = glm::clamp(renderData.fieldContourStep, 0.01f, 1.0f);
+    return rebuildFieldInstances(field, false);
+}
+
+bool RendererWGPU::prepareFieldArrowsCpuData(const RenderData& renderData) {
+    const View::RenderVectorFieldView& field = renderData.vectorField;
+    if (field.empty() || field.vectors == nullptr) {
+        fieldLayer_.preparedVectorCount = 0;
+        return false;
+    }
+
+    fieldLayer_.preparedVectorCount = field.vectorCount();
+    return fieldLayer_.preparedVectorCount > 0;
+}
+
+bool RendererWGPU::rebuildFieldInstances(const View::RenderVectorFieldView& field, bool skipZeroCells) {
     fieldLayer_.fieldData.clear();
     fieldLayer_.fieldData.reserve(field.cellCount());
     for (int y = 0; y + 1 < field.gridSize.y; ++y) {
@@ -88,13 +131,22 @@ void RendererWGPU::initPotentialFieldQuadBuffer() {
     ctx.queue()->writeBuffer(*fieldLayer_.potentialFieldQuadVb, 0, quad, sizeof(quad));
 }
 
-void RendererWGPU::drawVectorFieldImpl(const RenderData& renderData) {
-    const RenderVectorFieldView& field = renderData.vectorField;
-    if (field.empty()) {
+void RendererWGPU::uploadPreparedFieldInstancesGpu() {
+    const uint64_t instBytes = fieldLayer_.fieldData.size() * sizeof(FieldInstance);
+    if (instBytes == 0) {
         return;
     }
 
-    if (!rebuildFieldInstances(field, true)) {
+    if (!fieldLayer_.potentialFieldInstVb || instBytes > fieldLayer_.potentialFieldInstVbCapacity) {
+        fieldLayer_.potentialFieldInstVb =
+            WGPUContext::instance().createBuffer(instBytes * 2, wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst, "Vector_Field_Grid_Instances");
+        fieldLayer_.potentialFieldInstVbCapacity = instBytes * 2;
+    }
+    WGPUContext::instance().queue()->writeBuffer(*fieldLayer_.potentialFieldInstVb, 0, fieldLayer_.fieldData.data(), instBytes);
+}
+
+void RendererWGPU::drawPreparedFieldPotentialGpu() {
+    if (fieldLayer_.fieldData.empty()) {
         return;
     }
 
@@ -103,17 +155,11 @@ void RendererWGPU::drawVectorFieldImpl(const RenderData& renderData) {
     }
     const size_t uniformSlot = gridUniformSlotIndex_++;
     RendererWGPU::SceneUniforms fieldUniforms = currentSceneUniforms_;
-    fieldUniforms.maxCount.x = resolvePotentialScale(renderData, field);
-    fieldUniforms.maxCount.y = std::clamp(renderData.fieldSmoothing, 0.0f, 1.0f);
+    fieldUniforms.maxCount.x = fieldLayer_.preparedScaleX;
+    fieldUniforms.maxCount.y = fieldLayer_.preparedScaleY;
     WGPUContext::instance().queue()->writeBuffer(*gridLayer_.uniformBuffers[uniformSlot], 0, &fieldUniforms, sizeof(fieldUniforms));
 
     const uint64_t instBytes = fieldLayer_.fieldData.size() * sizeof(FieldInstance);
-    if (!fieldLayer_.potentialFieldInstVb || instBytes > fieldLayer_.potentialFieldInstVbCapacity) {
-        fieldLayer_.potentialFieldInstVb =
-            WGPUContext::instance().createBuffer(instBytes * 2, wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst, "Vector_Field_Grid_Instances");
-        fieldLayer_.potentialFieldInstVbCapacity = instBytes * 2;
-    }
-    WGPUContext::instance().queue()->writeBuffer(*fieldLayer_.potentialFieldInstVb, 0, fieldLayer_.fieldData.data(), instBytes);
 
     currentPass->setPipeline(*pipelines_.potentialField);
     currentPass->setBindGroup(0, *gridLayer_.bindGroups[uniformSlot], 0, nullptr);
@@ -122,13 +168,8 @@ void RendererWGPU::drawVectorFieldImpl(const RenderData& renderData) {
     currentPass->draw(6, fieldLayer_.fieldData.size(), 0, 0);
 }
 
-void RendererWGPU::drawFieldContoursImpl(const RenderData& renderData) {
-    const RenderVectorFieldView& field = renderData.vectorField;
-    if (field.empty()) {
-        return;
-    }
-
-    if (!rebuildFieldInstances(field, false)) {
+void RendererWGPU::drawPreparedFieldContoursGpu() {
+    if (fieldLayer_.fieldData.empty()) {
         return;
     }
 
@@ -137,19 +178,13 @@ void RendererWGPU::drawFieldContoursImpl(const RenderData& renderData) {
     }
     const size_t uniformSlot = gridUniformSlotIndex_++;
     RendererWGPU::SceneUniforms contourUniforms = currentSceneUniforms_;
-    contourUniforms.maxCount.x = resolveContourScale(renderData, field);
-    contourUniforms.maxCount.y = std::clamp(renderData.fieldSmoothing, 0.0f, 1.0f);
-    contourUniforms.maxCount.z = std::clamp(renderData.fieldContourStep, 0.01f, 1.0f);
+    contourUniforms.maxCount.x = fieldLayer_.preparedScaleX;
+    contourUniforms.maxCount.y = fieldLayer_.preparedScaleY;
+    contourUniforms.maxCount.z = fieldLayer_.preparedScaleZ;
     contourUniforms.lineColor = glm::vec4(0.96f, 0.96f, 0.96f, 0.92f);
     WGPUContext::instance().queue()->writeBuffer(*gridLayer_.uniformBuffers[uniformSlot], 0, &contourUniforms, sizeof(contourUniforms));
 
     const uint64_t instBytes = fieldLayer_.fieldData.size() * sizeof(FieldInstance);
-    if (!fieldLayer_.potentialFieldInstVb || instBytes > fieldLayer_.potentialFieldInstVbCapacity) {
-        fieldLayer_.potentialFieldInstVb =
-            WGPUContext::instance().createBuffer(instBytes * 2, wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst, "Vector_Field_Grid_Instances");
-        fieldLayer_.potentialFieldInstVbCapacity = instBytes * 2;
-    }
-    WGPUContext::instance().queue()->writeBuffer(*fieldLayer_.potentialFieldInstVb, 0, fieldLayer_.fieldData.data(), instBytes);
 
     currentPass->setPipeline(*pipelines_.fieldContours);
     currentPass->setBindGroup(0, *gridLayer_.bindGroups[uniformSlot], 0, nullptr);
@@ -158,14 +193,9 @@ void RendererWGPU::drawFieldContoursImpl(const RenderData& renderData) {
     currentPass->draw(6, fieldLayer_.fieldData.size(), 0, 0);
 }
 
-void RendererWGPU::drawFieldArrowsImpl(const RenderData& renderData) {
-    const RenderVectorFieldView& field = renderData.vectorField;
-    if (field.empty() || field.vectors == nullptr) {
-        return;
-    }
-
-    const size_t vectorCount = field.vectorCount();
-    if (vectorCount == 0) {
+void RendererWGPU::uploadPreparedFieldArrowsGpu(const View::RenderVectorFieldView& field) {
+    const size_t vectorCount = fieldLayer_.preparedVectorCount;
+    if (vectorCount == 0 || field.vectors == nullptr) {
         return;
     }
 
@@ -176,6 +206,16 @@ void RendererWGPU::drawFieldArrowsImpl(const RenderData& renderData) {
         fieldLayer_.fieldArrowVbCapacity = bytes * 2;
     }
     WGPUContext::instance().queue()->writeBuffer(*fieldLayer_.fieldArrowVb, 0, field.vectors, bytes);
+}
+
+void RendererWGPU::drawPreparedFieldArrowsGpu(const RenderData& renderData) {
+    const View::RenderVectorFieldView& field = renderData.vectorField;
+    const size_t vectorCount = fieldLayer_.preparedVectorCount;
+    if (vectorCount == 0) {
+        return;
+    }
+
+    const uint64_t bytes = vectorCount * sizeof(glm::vec2);
 
     if (lineUniformSlotIndex_ >= RendererWGPU::kLineUniformSlotCount) {
         lineUniformSlotIndex_ = RendererWGPU::kLineUniformSlotCount - 1;
@@ -190,4 +230,52 @@ void RendererWGPU::drawFieldArrowsImpl(const RenderData& renderData) {
     currentPass->setBindGroup(0, *lineLayer_.bindGroups[uniformSlot], 0, nullptr);
     currentPass->setVertexBuffer(0, *fieldLayer_.fieldArrowVb, 0, bytes);
     currentPass->draw(6, vectorCount, 0, 0);
+}
+
+void RendererWGPU::drawVectorFieldImpl(const RenderData& renderData) {
+    const View::RenderVectorFieldView& field = renderData.vectorField;
+    if (field.empty()) {
+        return;
+    }
+
+    fieldLayer_.preparedScaleX = resolvePotentialScaleImpl(renderData, field);
+    fieldLayer_.preparedScaleY = std::clamp(renderData.fieldSmoothing, 0.0f, 1.0f);
+    if (!rebuildFieldInstances(field, true)) {
+        return;
+    }
+
+    uploadPreparedFieldInstancesGpu();
+    drawPreparedFieldPotentialGpu();
+}
+
+void RendererWGPU::drawFieldContoursImpl(const RenderData& renderData) {
+    const View::RenderVectorFieldView& field = renderData.vectorField;
+    if (field.empty()) {
+        return;
+    }
+
+    fieldLayer_.preparedScaleX = resolveContourScaleImpl(renderData, field);
+    fieldLayer_.preparedScaleY = std::clamp(renderData.fieldSmoothing, 0.0f, 1.0f);
+    fieldLayer_.preparedScaleZ = std::clamp(renderData.fieldContourStep, 0.01f, 1.0f);
+    if (!rebuildFieldInstances(field, false)) {
+        return;
+    }
+
+    uploadPreparedFieldInstancesGpu();
+    drawPreparedFieldContoursGpu();
+}
+
+void RendererWGPU::drawFieldArrowsImpl(const RenderData& renderData) {
+    const View::RenderVectorFieldView& field = renderData.vectorField;
+    if (field.empty() || field.vectors == nullptr) {
+        return;
+    }
+
+    fieldLayer_.preparedVectorCount = field.vectorCount();
+    if (fieldLayer_.preparedVectorCount == 0) {
+        return;
+    }
+
+    uploadPreparedFieldArrowsGpu(field);
+    drawPreparedFieldArrowsGpu(renderData);
 }

@@ -266,7 +266,11 @@ namespace Benchmarks::BmRunner {
         return std::string(fullName.substr(pos));
     }
 
-    int atomCountForSceneKey(std::string_view key, int sceneExtent) {
+    bool usesSceneExtentArg(std::string_view benchId) {
+        return benchId.rfind("Fixture/", 0) == 0 || benchId.rfind("SimulationFixture/", 0) == 0;
+    }
+
+    std::int64_t atomCountForSceneKey(std::string_view key, std::int64_t sceneExtent) {
         if (key == "ideal_crystal3d" || key == "crystal3d") {
             return sceneExtent * sceneExtent * sceneExtent;
         }

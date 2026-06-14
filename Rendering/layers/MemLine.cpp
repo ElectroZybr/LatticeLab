@@ -9,7 +9,7 @@ void RendererWGPU::initMemoryOrderBuffer() {
     lineLayer_.memoryOrderVbCapacity = 128;
 }
 
-void RendererWGPU::drawMemoryOrderImpl(const RenderAtomsView& atoms) {
+void RendererWGPU::drawMemoryOrderImpl(const View::RenderAtomsView& atoms) {
     if (atoms.count < 2 || !atoms.hasPositions()) {
         return;
     }

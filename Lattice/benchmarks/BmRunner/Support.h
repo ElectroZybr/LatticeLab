@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <string_view>
@@ -27,7 +28,8 @@ namespace Benchmarks::BmRunner {
     std::string shortBenchId(std::string_view fullName);
     std::string metaLookupId(std::string_view runName);
     std::string benchArg(std::string_view fullName);
-    int atomCountForSceneKey(std::string_view key, int sceneExtent);
+    bool usesSceneExtentArg(std::string_view benchId);
+    std::int64_t atomCountForSceneKey(std::string_view key, std::int64_t sceneExtent);
     int temporalAgeStepsFromArg(int arg);
     std::string degradationLabel(std::string_view key);
 }

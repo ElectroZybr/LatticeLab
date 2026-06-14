@@ -175,6 +175,7 @@ public:
 
     void present() { surface_->present(); }
     void processEvents() { device_->poll(false, nullptr); }
+    void waitIdle() { device_->poll(true, nullptr); }
 
     void shutdown() {
         if (!initialized_) {

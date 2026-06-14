@@ -10,7 +10,6 @@
 #include "Rendering/layers/LayerState.h"
 #include "Rendering/pipelines/PipelineState.h"
 
-
 class RendererWGPU : public BaseRenderer {
 public:
     RendererWGPU();
@@ -20,6 +19,22 @@ public:
     void endFrame() override;
     wgpu::raii::RenderPassEncoder* currentRenderPass() override { return &currentPass; }
     const wgpu::raii::RenderPassEncoder* currentRenderPass() const override { return &currentPass; }
+    void beginPass(wgpu::TextureView targetView, wgpu::TextureView depthView, wgpu::LoadOp targetLoadOp);
+    void setupSceneUniforms(const RenderData& renderData);
+    bool prepareAtomsCpuData(const View::RenderAtomsView& atoms, const RenderData& renderData, bool applySelection);
+    void uploadPreparedAtomsGpu(const View::RenderAtomsView& atoms, const RenderData& renderData);
+    void drawPreparedAtomsGpu(size_t count);
+    bool prepareGridCpuData(const View::RenderRectGridView& grid);
+    void uploadPreparedGridGpu();
+    void drawPreparedGridGpu(const RenderData& renderData);
+    bool prepareFieldPotentialCpuData(const RenderData& renderData);
+    bool prepareFieldContoursCpuData(const RenderData& renderData);
+    bool prepareFieldArrowsCpuData(const RenderData& renderData);
+    void uploadPreparedFieldInstancesGpu();
+    void drawPreparedFieldPotentialGpu();
+    void drawPreparedFieldContoursGpu();
+    void uploadPreparedFieldArrowsGpu(const View::RenderVectorFieldView& field);
+    void drawPreparedFieldArrowsGpu(const RenderData& renderData);
 
 protected:
     virtual void updateMatrices() = 0;
@@ -77,19 +92,19 @@ private:
     void ensureStorageBuffers(size_t count);
     template <typename T> void uploadStorageBuffer(wgpu::Buffer& buf, const T* data, size_t count);
 
-    void drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView depthView, const RenderData& renderData, wgpu::LoadOp targetLoadOp,
-                       bool applySelection);
-    void beginPass(wgpu::TextureView targetView, wgpu::TextureView depthView, wgpu::LoadOp targetLoadOp);
-    void drawAtomsImpl(const RenderAtomsView& atoms, const RenderData& renderData, bool applySelection);
-    void drawBondsImpl(const RenderAtomsView& atoms, const RenderBondsView& bonds);
+    void drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView depthView, const RenderData& renderData, wgpu::LoadOp targetLoadOp, bool applySelection);
+    void drawAtomsImpl(const View::RenderAtomsView& atoms, const RenderData& renderData, bool applySelection);
+    void drawBondsImpl(const View::RenderAtomsView& atoms, const View::RenderBondsView& bonds);
     void drawBoxImpl(const glm::vec3& worldSize);
-    void drawGridImpl(const RenderGridView& grid);
+    void drawGridImpl(const View::RenderRectGridView& grid);
     void drawVectorFieldImpl(const RenderData& renderData);
     void drawFieldArrowsImpl(const RenderData& renderData);
     void drawFieldContoursImpl(const RenderData& renderData);
-    void drawMemoryOrderImpl(const RenderAtomsView& atoms);
+    void drawMemoryOrderImpl(const View::RenderAtomsView& atoms);
     void setLineColor(const glm::vec4& color);
-    bool rebuildFieldInstances(const RenderVectorFieldView& field, bool skipZeroCells);
+    bool rebuildFieldInstances(const View::RenderVectorFieldView& field, bool skipZeroCells);
+    float resolveFieldPotentialScale(const RenderData& renderData, const View::RenderVectorFieldView& field);
+    float resolveFieldContourScale(const RenderData& renderData, const View::RenderVectorFieldView& field);
 
     wgpu::raii::CommandEncoder currentEncoder;
     SceneUniforms currentSceneUniforms_{};

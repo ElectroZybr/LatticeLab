@@ -10,7 +10,7 @@
 
 RendererWGPU::RendererWGPU() : surfaceFormat(WGPUContext::instance().surfaceFormat()) {
     uniformBuffer = WGPUContext::instance().createBuffer(sizeof(SceneUniforms), wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst, "RenderingUniforms");
-
+    // инициализируем буфера на GPU
     initAtomColors();
     initAtomQuadBuffer();
     initBoxBuffer();
@@ -22,6 +22,7 @@ RendererWGPU::RendererWGPU() : surfaceFormat(WGPUContext::instance().surfaceForm
 }
 
 void RendererWGPU::initSharedPipelines() {
+    // создаем конвееры (конфигурации) GPU
     initBoxPipeline(lineWGSL);
     initBondPipeline(lineWGSL);
     initMemoryOrderPipeline(memlineWGSL);
@@ -47,7 +48,7 @@ void RendererWGPU::drawShot(wgpu::TextureView targetView, wgpu::TextureView dept
     }
 }
 
-void RendererWGPU::drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView depthView, const RenderData& renderData, wgpu::LoadOp targetLoadOp, bool applySelection) {
+void RendererWGPU::setupSceneUniforms(const RenderData& renderData) {
     updateMatrices();
 
     SceneUniforms uniforms{};
@@ -67,7 +68,10 @@ void RendererWGPU::drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView
     gridUniformSlotIndex_ = 0;
 
     WGPUContext::instance().queue()->writeBuffer(*uniformBuffer, 0, &uniforms, sizeof(uniforms));
+}
 
+void RendererWGPU::drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView depthView, const RenderData& renderData, wgpu::LoadOp targetLoadOp, bool applySelection) {
+    setupSceneUniforms(renderData);
     beginPass(targetView, depthView, targetLoadOp);
 
     if (renderData.drawAtoms) {

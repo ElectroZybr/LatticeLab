@@ -82,7 +82,7 @@ namespace Benchmarks::BmRunner {
         return paint(cell, kColorHint);
     }
 
-    std::string paintNGradient(const std::string& cell, int minN, int maxN) {
+    std::string paintNGradient(const std::string& cell, std::int64_t minN, std::int64_t maxN) {
         std::string raw = cell;
         raw.erase(0, raw.find_first_not_of(' '));
         raw.erase(raw.find_last_not_of(' ') + 1);
@@ -90,7 +90,7 @@ namespace Benchmarks::BmRunner {
             return cell;
         }
 
-        const int n = std::stoi(raw);
+        const std::int64_t n = std::stoll(raw);
         if (maxN <= minN) {
             return paint256(cell, 81);
         }

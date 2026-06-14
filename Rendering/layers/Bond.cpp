@@ -9,18 +9,18 @@ void RendererWGPU::initBondBuffer() {
     lineLayer_.bondVbCapacity = 128;
 }
 
-void RendererWGPU::drawBondsImpl(const RenderAtomsView& atoms, const RenderBondsView& bonds) {
+void RendererWGPU::drawBondsImpl(const View::RenderAtomsView& atoms, const View::RenderBondsView& bonds) {
     if (bonds.empty()) {
         return;
     }
 
     struct BondVertexBuildContext {
-        const RenderAtomsView* atoms = nullptr;
+        const View::RenderAtomsView* atoms = nullptr;
         std::vector<glm::vec3>* verts = nullptr;
 
         static void append(size_t aIndex, size_t bIndex, void* userData) {
             auto& ctx = *static_cast<BondVertexBuildContext*>(userData);
-            const RenderAtomsView& atoms = *ctx.atoms;
+            const View::RenderAtomsView& atoms = *ctx.atoms;
             if (aIndex >= atoms.count || bIndex >= atoms.count || !atoms.hasPositions()) {
                 return;
             }

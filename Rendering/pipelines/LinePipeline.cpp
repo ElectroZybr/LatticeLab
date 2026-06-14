@@ -18,7 +18,9 @@ void RendererWGPU::initLinePipeline(wgpu::RenderPipeline& outPipeline, std::stri
     uboEntry.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
     uboEntry.buffer.type = wgpu::BufferBindingType::Uniform;
 
-    renderer.lineLayer_.bindGroupLayout = WGPUContext::instance().createBindGroupLayout({&uboEntry, 1}, "LineBindGroupLayout");
+    const std::array<wgpu::BindGroupLayoutEntry, 1> bindGroupLayoutEntries = {uboEntry};
+    renderer.lineLayer_.bindGroupLayout =
+        WGPUContext::instance().createBindGroupLayout(bindGroupLayoutEntries, "LineBindGroupLayout");
 
     wgpu::PipelineLayout pipelineLayout = Pipeline::createPipelineLayout("LinePipelineLayout", *renderer.lineLayer_.bindGroupLayout);
 
@@ -39,8 +41,7 @@ void RendererWGPU::initLinePipeline(wgpu::RenderPipeline& outPipeline, std::stri
     wgpu::DepthStencilState depthState = Pipeline::makeDepthState(wgpu::OptionalBool::False);
 
     const std::array<wgpu::VertexBufferLayout, 1> layouts = {vbl};
-    outPipeline = Pipeline::createRenderPipeline("LineRenderPipeline", pipelineLayout, shader, layouts, fragState,
-                                                 wgpu::PrimitiveTopology::LineList, &depthState);
+    outPipeline = Pipeline::createRenderPipeline("LineRenderPipeline", pipelineLayout, shader, layouts, fragState, wgpu::PrimitiveTopology::LineList, &depthState);
 
     for (size_t i = 0; i < RendererWGPU::kLineUniformSlotCount; ++i) {
         renderer.lineLayer_.uniformBuffers[i] =
@@ -51,7 +52,9 @@ void RendererWGPU::initLinePipeline(wgpu::RenderPipeline& outPipeline, std::stri
         entry.buffer = *renderer.lineLayer_.uniformBuffers[i];
         entry.size = sizeof(RendererWGPU::SceneUniforms);
 
-        renderer.lineLayer_.bindGroups[i] = WGPUContext::instance().createBindGroup(*renderer.lineLayer_.bindGroupLayout, {&entry, 1}, "LineBindGroup");
+        const std::array<wgpu::BindGroupEntry, 1> bindGroupEntries = {entry};
+        renderer.lineLayer_.bindGroups[i] =
+            WGPUContext::instance().createBindGroup(*renderer.lineLayer_.bindGroupLayout, bindGroupEntries, "LineBindGroup");
     }
 }
 
@@ -65,7 +68,9 @@ void RendererWGPU::initMemoryOrderPipeline(std::string_view wgsl) {
     uboEntry.buffer.type = wgpu::BufferBindingType::Uniform;
 
     if (!renderer.lineLayer_.bindGroupLayout) {
-        renderer.lineLayer_.bindGroupLayout = WGPUContext::instance().createBindGroupLayout({&uboEntry, 1}, "LineBindGroupLayout");
+        const std::array<wgpu::BindGroupLayoutEntry, 1> bindGroupLayoutEntries = {uboEntry};
+        renderer.lineLayer_.bindGroupLayout =
+            WGPUContext::instance().createBindGroupLayout(bindGroupLayoutEntries, "LineBindGroupLayout");
     }
 
     wgpu::PipelineLayout pipelineLayout = Pipeline::createPipelineLayout("MemoryOrderPipelineLayout", *renderer.lineLayer_.bindGroupLayout);

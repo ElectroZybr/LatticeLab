@@ -189,7 +189,7 @@ namespace Benchmarks::BmRunner {
                 return;
             }
 
-            std::unordered_map<std::string, std::vector<std::pair<int, double>>> grouped;
+            std::unordered_map<std::string, std::vector<std::pair<std::int64_t, double>>> grouped;
 
             for (const auto& [runName, metrics] : rows) {
                 const std::string arg = benchArg(runName);
@@ -202,7 +202,10 @@ namespace Benchmarks::BmRunner {
                     continue;
                 }
 
-                grouped[shortBenchId(runName)].push_back({atomCountForSceneKey(sceneKey, std::stoi(arg)), *timeValue});
+                const std::string benchId = shortBenchId(runName);
+                const std::int64_t numericArg = std::stoll(arg);
+                const std::int64_t nValue = usesSceneExtentArg(benchId) ? atomCountForSceneKey(sceneKey, numericArg) : numericArg;
+                grouped[benchId].push_back({nValue, *timeValue});
             }
 
             struct ComplexityRow {
@@ -337,7 +340,7 @@ namespace Benchmarks::BmRunner {
             const bool lhsNum = !lhsArg.empty() && std::all_of(lhsArg.begin(), lhsArg.end(), [](unsigned char ch) { return std::isdigit(ch) != 0; });
             const bool rhsNum = !rhsArg.empty() && std::all_of(rhsArg.begin(), rhsArg.end(), [](unsigned char ch) { return std::isdigit(ch) != 0; });
             if (lhsNum && rhsNum) {
-                return std::stoi(lhsArg) < std::stoi(rhsArg);
+                return std::stoll(lhsArg) < std::stoll(rhsArg);
             }
             return lhsArg < rhsArg;
         });
@@ -366,10 +369,10 @@ namespace Benchmarks::BmRunner {
             const std::string extentArg = benchArg(runName);
             std::string nDisplay = extentArg;
             if (!extentArg.empty() && std::all_of(extentArg.begin(), extentArg.end(), [](unsigned char ch) { return std::isdigit(ch) != 0; })) {
-                const int numericArg = std::stoi(extentArg);
+                const std::int64_t numericArg = std::stoll(extentArg);
                 if (degradationKey == "time") {
-                    nDisplay = std::to_string(temporalAgeStepsFromArg(numericArg));
-                } else {
+                    nDisplay = std::to_string(temporalAgeStepsFromArg(static_cast<int>(numericArg)));
+                } else if (usesSceneExtentArg(benchId)) {
                     nDisplay = std::to_string(atomCountForSceneKey(sceneKey, numericArg));
                 }
             }
@@ -401,14 +404,14 @@ namespace Benchmarks::BmRunner {
             table.push_back(std::move(row));
         }
 
-        std::vector<int> nValues;
+        std::vector<std::int64_t> nValues;
         for (const auto& row : table) {
             if (!row.n.empty() && std::all_of(row.n.begin(), row.n.end(), [](unsigned char ch) { return std::isdigit(ch) != 0; })) {
-                nValues.push_back(std::stoi(row.n));
+                nValues.push_back(std::stoll(row.n));
             }
         }
-        const int minN = nValues.empty() ? 0 : *std::min_element(nValues.begin(), nValues.end());
-        const int maxN = nValues.empty() ? 0 : *std::max_element(nValues.begin(), nValues.end());
+        const std::int64_t minN = nValues.empty() ? 0 : *std::min_element(nValues.begin(), nValues.end());
+        const std::int64_t maxN = nValues.empty() ? 0 : *std::max_element(nValues.begin(), nValues.end());
 
         if (hasBaseline) {
             std::cout << '\n' << paint("baseline found", kColorOk) << '\n';

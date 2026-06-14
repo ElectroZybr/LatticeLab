@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 namespace Benchmarks::BmRunner {
@@ -11,7 +12,7 @@ namespace Benchmarks::BmRunner {
 
     std::string paintNumeric(const std::string& cell, bool cvMode = false);
     std::string paintDelta(const std::string& cell, double neutralThreshold = 2.5);
-    std::string paintNGradient(const std::string& cell, int minN, int maxN);
+    std::string paintNGradient(const std::string& cell, std::int64_t minN, std::int64_t maxN);
     std::string paintTimeCell(const std::string& cell);
     std::string paintComplexityLabel(const std::string& cell);
     std::string paintPointsCount(const std::string& cell);

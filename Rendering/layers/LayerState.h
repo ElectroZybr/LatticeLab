@@ -78,6 +78,7 @@ struct GridLayerState {
     size_t gridInstVbCapacity = 0;
 
     std::vector<GridInstance> gridData;
+    float preparedMaxCount = 1.0f;
 };
 
 struct FieldLayerState {
@@ -89,4 +90,8 @@ struct FieldLayerState {
     size_t potentialFieldInstVbCapacity = 0;
 
     std::vector<FieldInstance> fieldData;
+    float preparedScaleX = 1.0f;
+    float preparedScaleY = 0.0f;
+    float preparedScaleZ = 0.0f;
+    size_t preparedVectorCount = 0;
 };

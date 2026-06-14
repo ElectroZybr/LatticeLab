@@ -12,14 +12,14 @@ namespace App::Viewport {
         return world.getWorldSize();
     }
 
-    inline void forEachWorldBond(const void* context, RenderBondVisitor visitor, void* userData) {
+    inline void forEachWorldBond(const void* context, View::RenderBondVisitor visitor, void* userData) {
         const auto& bonds = *static_cast<const Bond::List*>(context);
         for (const Bond& bond : bonds) {
             visitor(bond.aIndex, bond.bIndex, userData);
         }
     }
 
-    inline void forEachWorldGridCell(const void* context, RenderGridCellVisitor visitor, void* userData) {
+    inline void forEachWorldGridCell(const void* context, View::RenderGridCellVisitor visitor, void* userData) {
         const auto& grid = *static_cast<const SpatialGrid*>(context);
         for (unsigned int z = 1; z < grid.size.z - 1; ++z) {
             for (unsigned int y = 1; y < grid.size.y - 1; ++y) {
@@ -29,7 +29,7 @@ namespace App::Viewport {
                         continue;
                     }
 
-                    const RenderGridCell cell{
+                    const View::RenderGridCell cell{
                         .origin = glm::vec3(static_cast<float>((x - 1) * grid.cellSize), static_cast<float>((y - 1) * grid.cellSize),
                                             static_cast<float>((z - 1) * grid.cellSize)),
                         .cellSize = static_cast<float>(grid.cellSize),
@@ -41,9 +41,9 @@ namespace App::Viewport {
         }
     }
 
-    inline RenderAtomsView makeRenderAtomsView(const World& world) {
+    inline View::RenderAtomsView makeRenderAtomsView(const World& world) {
         const AtomStorage& atoms = world.getAtomStorage();
-        return RenderAtomsView{
+        return View::RenderAtomsView{
             .count = atoms.size(),
             .x = atoms.xData(),
             .y = atoms.yData(),
@@ -84,12 +84,12 @@ namespace App::Viewport {
             renderData.worldSize = makeRenderBoxSize(world);
             renderData.renderOffset = world.getRenderOffset();
             renderData.isActiveWorld = (worldId == simulation.activeWorldId());
-            renderData.bonds = RenderBondsView{
+            renderData.bonds = View::RenderBondsView{
                 .context = &world.getBonds(),
                 .count = world.getBonds().size(),
                 .forEachFn = forEachWorldBond,
             };
-            renderData.grid = RenderGridView{
+            renderData.grid = View::RenderRectGridView{
                 .context = &world.getGrid(),
                 .count = world.getGrid().countCells,
                 .forEachFn = forEachWorldGridCell,
@@ -99,7 +99,7 @@ namespace App::Viewport {
                 const VectorField& vectorField = world.getVectorField();
                 const glm::ivec3 gridSize = vectorField.gridSize();
                 const glm::ivec3 coverageSize = vectorField.domainSize();
-                renderData.vectorField = RenderVectorFieldView{
+                renderData.vectorField = View::RenderVectorFieldView{
                     .values = vectorField.values().data(),
                     .vectors = vectorField.vectors().data(),
                     .gridSize = glm::ivec2(gridSize.x, gridSize.y),
