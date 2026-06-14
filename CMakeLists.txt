@@ -1,13 +1,45 @@
 cmake_minimum_required(VERSION 3.17)
 cmake_policy(SET CMP0069 NEW)
 
-project(LatticeLab VERSION 0.1.2 LANGUAGES CXX)
+project(LatticeLab VERSION 0.1.3 LANGUAGES CXX)
 
 set(APP_NAME "${PROJECT_NAME}")
 set(APP_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
 set(APP_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
 set(APP_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
 set(APP_VERSION_STRING "${PROJECT_VERSION}")
+set(APP_VERSION_BASE "${PROJECT_VERSION}")
+set(APP_VERSION_SUFFIX "")
+set(APP_GIT_COMMIT "unknown")
+option(APP_RELEASE_BUILD "Build application with clean release version string" OFF)
+
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" rev-parse --short HEAD
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        OUTPUT_VARIABLE APP_GIT_COMMIT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" describe --tags --exact-match HEAD
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        OUTPUT_VARIABLE APP_GIT_TAG
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE APP_GIT_TAG_RESULT
+    )
+
+    if(NOT APP_RELEASE_BUILD AND (NOT APP_GIT_TAG_RESULT EQUAL 0 OR NOT APP_GIT_TAG STREQUAL "v${APP_VERSION_BASE}"))
+        set(APP_VERSION_SUFFIX "+g${APP_GIT_COMMIT}")
+    endif()
+elseif(NOT APP_RELEASE_BUILD)
+    set(APP_VERSION_SUFFIX "+g${APP_GIT_COMMIT}")
+endif()
+
+set(APP_VERSION_STRING "${APP_VERSION_BASE}${APP_VERSION_SUFFIX}")
 
 option(OPTIMIZE_FOR_NATIVE "Enable native CPU optimizations outside Debug builds" OFF)
 option(BUILD_BENCHMARKS "Build benchmarks" OFF)
@@ -103,7 +135,7 @@ if(APPLE)
     find_library(QUARTZCORE_FRAMEWORK QuartzCore)
 
     target_sources(latticelab_lib PRIVATE
-        Rendering/MetalBackend.mm
+        Rendering/backend/MetalBackend.mm
     )
 
     target_link_libraries(latticelab_lib PUBLIC
