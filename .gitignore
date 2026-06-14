@@ -1,8 +1,9 @@
-# Build directories
+# Directories
 /build/
 /build-*/
 /Debug/
 /Release/
+/Docs/.obsidian/
 
 # Binaries and libraries
 /bin2c
