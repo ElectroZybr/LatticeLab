@@ -13,6 +13,7 @@
 #include "App/capture/CaptureController.h"
 #include "App/localization/i18n.h"
 #include "Lattice/Engine/Simulation.h"
+#include "Lattice/Engine/physics/Atom/AtomStorage.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
 #include "GUI/interface/interface.h"
 #include "GUI/interface/style/ComboStyle.h"
@@ -26,6 +27,23 @@ namespace {
         constexpr float epsilon = 0.001f;
         return std::abs(currentSize.x - targetSize.x) <= epsilon && std::abs(currentSize.y - targetSize.y) <= epsilon &&
                std::abs(currentSize.z - targetSize.z) <= epsilon;
+    }
+
+    float resolveAutoSpeedGradientMax(const Lattice::Simulation& simulation) {
+        const AtomStorage& atoms = simulation.atoms();
+        const size_t count = atoms.size();
+        const float* vx = atoms.vxData();
+        const float* vy = atoms.vyData();
+        const float* vz = atoms.vzData();
+        if (count == 0 || vx == nullptr || vy == nullptr || vz == nullptr) {
+            return 1.0f;
+        }
+
+        float maxSpeedSqr = 0.f;
+        for (size_t i = 0; i < count; ++i) {
+            maxSpeedSqr = std::max(maxSpeedSqr, vx[i] * vx[i] + vy[i] * vy[i] + vz[i] * vz[i]);
+        }
+        return std::sqrt(std::max(1e-6f, maxSpeedSqr));
     }
 
     std::string_view integratorName(Integrator::Scheme scheme) {
@@ -385,20 +403,27 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     static float manualSpeedGradientMax = 5.0f;
     bool autoSpeedGradient = activeRenderData.speedGradientMax <= 0.0f;
     const bool gradientModeEnabled = activeRenderData.speedColorMode != RenderData::SpeedColorMode::AtomColor;
-    if (!autoSpeedGradient) {
+    if (autoSpeedGradient) {
+        manualSpeedGradientMax = resolveAutoSpeedGradientMax(simulation);
+    } else {
         manualSpeedGradientMax = activeRenderData.speedGradientMax;
     }
 
     ImGui::PushItemWidth(180.0f * uiScale);
     ImGui::BeginDisabled(autoSpeedGradient || !gradientModeEnabled);
-    if (ImGui::SliderFloat("imgui_speed_gradient_max_slider"_tr.data(), &manualSpeedGradientMax, 0.1f, 10.0f, "%.2f")) {
+    if (ImGui::SliderFloat("imgui_speed_gradient_max_slider"_tr.data(), &manualSpeedGradientMax, 0.1f, 10.0f, "%.2f",
+                           ImGuiSliderFlags_AlwaysClamp)) {
+        activeRenderData.speedGradientMax = manualSpeedGradientMax;
+    }
+    if (!autoSpeedGradient) {
+        manualSpeedGradientMax = std::max(manualSpeedGradientMax, 0.1f);
         activeRenderData.speedGradientMax = manualSpeedGradientMax;
     }
     ImGui::EndDisabled();
     ImGui::SameLine();
     ImGui::BeginDisabled(!gradientModeEnabled);
     if (ImGui::Checkbox("imgui_auto_speed_gradien"_tr.data(), &autoSpeedGradient)) {
-        activeRenderData.speedGradientMax = autoSpeedGradient ? 0.0f : manualSpeedGradientMax;
+        activeRenderData.speedGradientMax = autoSpeedGradient ? 0.0f : std::max(0.1f, manualSpeedGradientMax);
     }
     ImGui::EndDisabled();
     ImGui::PopItemWidth();
