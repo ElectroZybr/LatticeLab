@@ -391,14 +391,19 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
 
     ImGui::PushItemWidth(180.0f * uiScale);
     ImGui::BeginDisabled(autoSpeedGradient || !gradientModeEnabled);
-    if (ImGui::SliderFloat("imgui_speed_gradient_max_slider"_tr.data(), &manualSpeedGradientMax, 0.1f, 10.0f, "%.2f")) {
+    if (ImGui::SliderFloat("imgui_speed_gradient_max_slider"_tr.data(), &manualSpeedGradientMax, 0.1f, 10.0f, "%.2f",
+                           ImGuiSliderFlags_AlwaysClamp)) {
+        activeRenderData.speedGradientMax = manualSpeedGradientMax;
+    }
+    if (!autoSpeedGradient) {
+        manualSpeedGradientMax = std::max(manualSpeedGradientMax, 0.1f);
         activeRenderData.speedGradientMax = manualSpeedGradientMax;
     }
     ImGui::EndDisabled();
     ImGui::SameLine();
     ImGui::BeginDisabled(!gradientModeEnabled);
     if (ImGui::Checkbox("imgui_auto_speed_gradien"_tr.data(), &autoSpeedGradient)) {
-        activeRenderData.speedGradientMax = autoSpeedGradient ? 0.0f : manualSpeedGradientMax;
+        activeRenderData.speedGradientMax = autoSpeedGradient ? 0.0f : std::max(0.1f, manualSpeedGradientMax);
     }
     ImGui::EndDisabled();
     ImGui::PopItemWidth();
