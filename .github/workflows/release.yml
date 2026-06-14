@@ -4,60 +4,128 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version (e.g. v1.0.0)'
+        description: "Version (e.g. v1.0.0)"
         required: true
       release_notes:
-        description: 'Release notes'
+        description: "Release notes"
         required: true
 
 permissions:
   contents: write
 
 jobs:
-  build-and-release:
-    name: Build and Release (Windows)
-    runs-on: windows-latest
+  build:
+    name: Build ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    env:
+      VERSION: ${{ github.event.inputs.version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: Windows
+            archive_suffix: win64
+            archive_ext: zip
+            package_glob: "*.dll"
+          - os: ubuntu-latest
+            label: Linux
+            archive_suffix: linux-x64
+            archive_ext: tar.gz
+            package_glob: "*.so*"
+          - os: macos-latest
+            label: macOS
+            archive_suffix: macos
+            archive_ext: tar.gz
+            package_glob: "*.dylib"
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Configure and Build
-      shell: bash
-      run: |
-        export PATH=$(echo $PATH | tr ':' '\n' | grep -v "Git/bin" | tr '\n' ':')
-        cmake -S . -B build -G "MinGW Makefiles" \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_CXX_FLAGS="-O3" \
-          -DCMAKE_C_FLAGS="-O3" \
-          -DOPTIMIZE_FOR_NATIVE=OFF \
-          -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++"
-        
-        cmake --build build --config Release -j 4
+      - name: Install Dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxrandr-dev libudev-dev libgl1-mesa-dev \
+            libxcursor-dev libxi-dev libfreetype6-dev libxinerama-dev libwayland-dev
 
-    - name: Check Dependencies (Verification)
-      shell: bash
-      run: |
-        objdump -p LatticeLab.exe | grep "DLL Name"
+      - name: Configure and Build (Windows MinGW)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v "Git/bin" | tr '\n' ':')
+          cmake -S . -B build -G "MinGW Makefiles" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_FLAGS="-O3" \
+            -DCMAKE_C_FLAGS="-O3" \
+            -DOPTIMIZE_FOR_NATIVE=OFF \
+            -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++"
+          cmake --build build --config Release -j 4
 
-    - name: Prepare Release Artifacts
-      shell: bash
-      run: |
-        mkdir -p release_dist/assets
-        mkdir -p release_dist/demo
-        cp LatticeLab.exe release_dist/
-        cp -r assets/* release_dist/assets/
-        echo "Contents of demo:"
-        ls -R demo || true
-        cp -r demo/scenes release_dist/demo/
-        cd release_dist
-        7z a ../LatticeLab-${{ github.event.inputs.version }}-win64.zip *
+      - name: Configure and Build (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          cmake --preset release -DOPTIMIZE_FOR_NATIVE=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+          cmake --build --preset release
 
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ github.event.inputs.version }}
-        name: Release ${{ github.event.inputs.version }}
-        body: ${{ github.event.inputs.release_notes }}
-        files: LatticeLab-${{ github.event.inputs.version }}-win64.zip
-        draft: true
-        prerelease: false
+      - name: Prepare Release Dist (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          archive_name="LatticeLab-${VERSION}-${{ matrix.archive_suffix }}.${{ matrix.archive_ext }}"
+          mkdir -p release_dist/assets release_dist/demo
+          cp LatticeLab.exe release_dist/
+          find . -maxdepth 1 -type f -name "*.dll" -exec cp {} release_dist/ \;
+          cp -r assets/* release_dist/assets/
+          if [ -d demo/scenes ]; then
+            cp -r demo/scenes release_dist/demo/
+          fi
+          cd release_dist
+          7z a "../${archive_name}" *
+
+      - name: Prepare Release Dist (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          archive_name="LatticeLab-${VERSION}-${{ matrix.archive_suffix }}.${{ matrix.archive_ext }}"
+          mkdir -p release_dist/assets release_dist/demo
+          cp LatticeLab release_dist/
+          find . -maxdepth 1 -type f \( -name "${{ matrix.package_glob }}" \) -exec cp {} release_dist/ \; || true
+          cp -r assets/* release_dist/assets/
+          if [ -d demo/scenes ]; then
+            cp -r demo/scenes release_dist/demo/
+          fi
+          tar -czf "${archive_name}" -C release_dist .
+
+      - name: Upload Release Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.label }}-release
+          path: LatticeLab-${{ env.VERSION }}-${{ matrix.archive_suffix }}.${{ matrix.archive_ext }}
+          if-no-files-found: error
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download Built Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release_artifacts
+
+      - name: Show Release Files
+        run: find release_artifacts -maxdepth 3 -type f | sort
+
+      - name: Publish Draft Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version }}
+          name: Release ${{ github.event.inputs.version }}
+          body: ${{ github.event.inputs.release_notes }}
+          files: |
+            release_artifacts/**/*.zip
+            release_artifacts/**/*.tar.gz
+          draft: true
+          prerelease: false
