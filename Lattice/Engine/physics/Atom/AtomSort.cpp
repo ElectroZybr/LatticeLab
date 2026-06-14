@@ -51,7 +51,6 @@ void AtomSort::applyViewToStorage(AtomStorage& atoms, size_t index, const AtomVi
     atoms.type(index) = view.type;
     atoms.valenceCount(index) = view.valenceCount;
     atoms.setAtomId(index, view.id);
-    oldToNew_[view.id] = index;
 }
 
 void AtomSort::reorder(AtomStorage& atoms, std::span<uint32_t> indices) {
