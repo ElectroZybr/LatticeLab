@@ -97,10 +97,10 @@ private:
     glm::vec3 orbitAnimationTargetUp{0.0f, 1.0f, 0.0f};
 
     // Перспектива
-    static constexpr float FOV_ORBIT = 45.f;
-    static constexpr float FOV_FREE = 60.f;
-    static constexpr float NEAR = 0.1f;
-    static constexpr float FAR = 10000.f;
+    static constexpr float kOrbitFovDegrees = 45.f;
+    static constexpr float kFreeFovDegrees = 60.f;
+    static constexpr float kNearPlane = 0.1f;
+    static constexpr float kFarPlane = 10000.f;
 
     glm::vec3 getPlanarRightAxis() const;
     glm::vec3 getPlanarUpAxis() const;

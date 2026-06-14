@@ -34,10 +34,9 @@ namespace {
         return v * c + glm::cross(axis, v) * s + axis * glm::dot(axis, v) * (1.0f - c);
     }
 
-    float defaultOrbitDistanceForScene(const glm::vec3& sceneSize) {
-        constexpr float kOrbitFov = 45.0f;
+    float defaultOrbitDistanceForScene(const glm::vec3& sceneSize, float orbitFovDegrees) {
         const float maxSide = std::max({sceneSize.x, sceneSize.y, sceneSize.z});
-        return (maxSide * 0.5f * 1.1f) / std::tan(glm::radians(kOrbitFov) * 0.5f);
+        return (maxSide * 0.5f * 1.1f) / std::tan(glm::radians(orbitFovDegrees) * 0.5f);
     }
 
     glm::vec3 orbitOffsetDirection(float azimuth, float elevation) {
@@ -97,7 +96,7 @@ void Camera::resetView() {
     elevation = 0.f;
     orbitUp = glm::vec3(0.f, 1.f, 0.f);
 
-    const float distance = defaultOrbitDistanceForScene(sceneSize);
+    const float distance = defaultOrbitDistanceForScene(sceneSize, kOrbitFovDegrees);
     orbitCenter = sceneOffset + sceneSize * 0.5f;
 
     if (mode == Camera::Mode::Mode2D) {
@@ -259,7 +258,7 @@ glm::vec3 Camera::getEyePosition() const {
     }
 
     const glm::vec3 glmCenter(orbitCenter.x, orbitCenter.y, orbitCenter.z);
-    const float r = (mode == Mode::Mode2D) ? defaultOrbitDistanceForScene(sceneSize) : (moveSpeed / zoom);
+    const float r = (mode == Mode::Mode2D) ? defaultOrbitDistanceForScene(sceneSize, kOrbitFovDegrees) : (moveSpeed / zoom);
     return glmCenter + r * orbitOffsetDirection(azimuth, elevation);
 }
 
@@ -287,8 +286,8 @@ glm::mat4 Camera::getProjectionMatrix() const {
         const float viewHeight = viewWidth / aspect;
         return glm::orthoRH_ZO(-viewWidth / 2.f, viewWidth / 2.f, -viewHeight / 2.f, viewHeight / 2.f, -10000.f, 10000.f);
     }
-    const float fov = (mode == Mode::Free) ? FOV_FREE : FOV_ORBIT;
-    return glm::perspective(glm::radians(fov), screenSize.x / screenSize.y, NEAR, FAR);
+    const float fovDegrees = (mode == Mode::Free) ? kFreeFovDegrees : kOrbitFovDegrees;
+    return glm::perspective(glm::radians(fovDegrees), screenSize.x / screenSize.y, kNearPlane, kFarPlane);
 }
 
 void Camera::setOrthographicView(glm::vec3 direction, glm::vec3 up) {
@@ -354,7 +353,7 @@ void Camera::snapToDirection(glm::vec3 direction) {
     const glm::vec3 currentOffset = getEyePosition() - orbitCenter;
     float distance = glm::length(currentOffset);
     if (distance <= 1e-6f) {
-        distance = defaultOrbitDistanceForScene(sceneSize);
+        distance = defaultOrbitDistanceForScene(sceneSize, kOrbitFovDegrees);
     }
 
     const glm::vec3 offset = direction * distance;

@@ -12,6 +12,18 @@
 #include "Lattice/Engine/metrics/Profiler.h"
 #include "GUI/interface/panels/debug/view/DebugView.h"
 
+namespace {
+    double lastProfileSampleMs(const Profiler& profiler, std::initializer_list<const char*> names) {
+        for (const char* name : names) {
+            const double ms = profiler.lastActiveMs(name);
+            if (ms > 0.0) {
+                return ms;
+            }
+        }
+        return 0.0;
+    }
+}
+
 void updateAtomSelectionDebug(const DebugViews& debugViews, const Lattice::Simulation& simulation) {
     const AtomStorage& atoms = simulation.atoms();
     const auto& selectedAtomIds = ToolsManager::pickingSystem->getSelectedAtomIds();
@@ -54,9 +66,9 @@ void updateSimulationDebug(const DebugViews& debugViews, const Lattice::Simulati
     const World& world = simulation.world();
     const NeighborList& neighborList = simulation.neighborList();
     const Profiler& profiler = Profiler::instance();
-    const double renderMs = profiler.lastActiveMs("Application::RenderFrame");
-    const double captureReadbackMs = profiler.lastActiveMs("Capture::readback");
-    const double captureEncodeMs = profiler.lastActiveMs("Capture::encodeFrame");
+    const double renderMs = lastProfileSampleMs(profiler, {"SceneViewport::renderFrame", "Application::RenderFrame"});
+    const double captureReadbackMs = lastProfileSampleMs(profiler, {"Capture::readback", "FrameProducer::onBufferMapped"});
+    const double captureEncodeMs = lastProfileSampleMs(profiler, {"Capture::encodeFrame", "FFmpegStreamer::writeFrame"});
     const double physicsMs =
         std::max({profiler.lastActiveMs("Simulation::update"), profiler.lastActiveMs("Simulation::updateAll"),
                   profiler.lastActiveMs("Simulation::updateWorld")});

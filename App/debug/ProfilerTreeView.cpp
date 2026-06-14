@@ -17,10 +17,13 @@ namespace {
         std::string_view shortName;
     };
 
-    constexpr std::array<ProfileNameAlias, 21> kProfileNameAliases{{
+    constexpr std::array<ProfileNameAlias, 23> kProfileNameAliases{{
+        {"SceneViewport::renderFrame", "Render"},
         {"Application::RenderFrame", "Render"},
         {"Capture::readback", "capture"},
+        {"FrameProducer::onBufferMapped", "capture"},
         {"Capture::encodeFrame", "encode"},
+        {"FFmpegStreamer::writeFrame", "encode"},
         {"Simulation::update", "Physics"},
         {"RendererGL::drawShot", "drawShot"},
         {"RendererGL::drawAtoms", "drawAtoms"},
