@@ -161,7 +161,7 @@ UI / input / tools
 
 ## Связи
 
-- [Входная Точка](../README.md)
+- [Входная Точка](Docs/ru/Main.md)
 - [Термины](./Glossary.md)
 - [Движок Lattice](./Lattice.md)
 - [Рендер](./Rendering.md)

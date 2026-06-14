@@ -149,7 +149,7 @@ Application
 
 ## Связи
 
-- [Входная Точка](../README.md)
+- [Входная Точка](Docs/ru/Main.md)
 - [Приложение](./App.md)
 - [Поток Данных](./DataFlow.md)
 - [Локализация](./Localization.md)

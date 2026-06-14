@@ -134,7 +134,7 @@ ImGui::TextUnformatted("imgui_new_option"_tr.data());
 
 ## Связи
 
-- [Входная Точка](../README.md)
+- [Входная Точка](Docs/ru/Main.md)
 - [Приложение](./App.md)
 - [GUI](./GUI.md)
 - [Термины](./Glossary.md)

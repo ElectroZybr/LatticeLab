@@ -3,7 +3,9 @@
 /build-*/
 /Debug/
 /Release/
-/Docs/.obsidian/
+
+# Obsidian
+**/.obsidian/
 
 # Binaries and libraries
 /bin2c

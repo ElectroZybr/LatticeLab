@@ -237,7 +237,7 @@
 
 ## Связи
 
-- [Входная Точка](../README.md)
+- [Входная Точка](Docs/ru/Main.md)
 - [Архитектура](./Architecture.md)
 - [Приложение](./App.md)
 - [Движок Lattice](./Lattice.md)

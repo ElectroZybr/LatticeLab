@@ -67,6 +67,6 @@ cmake --build --preset bench
 
 ## Связи
 
-- [Входная Точка](../README.md)
+- [Входная Точка](Docs/ru/Main.md)
 - [Benchmarks](./Benchmarks.md)
 - [Тесты](./Tests.md)

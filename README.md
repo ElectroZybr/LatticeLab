@@ -5,25 +5,18 @@
 <p align="center">
   Interactive matter simulation using <b>LATTICE</b>.
 </p>
-
-
 ## About
 
-LatticeLab - is a desktop app where you can experimente with atoms in
-real time.
+LatticeLab is a project built around the `LATTICE` molecular dynamics engine for interactive simulation and exploration of atomic behavior.
 
 The idea is simple:
 
-> you choose how particles should interact with each other, and observe
+> define how atoms interact and observe the resulting behavior
 
 Without any animations made in advance.  
-Only particles and forces between them.
+Only potentials and forces between them.
 
-But it's already enough to make the system behave like real matter.
-
-<p align="center">
-  <img src="demo/кристалл.gif" alt="LatticeLab demo" width="720">
-</p>
+But that is already enough for the system to behave very much like real matter.
 
 ---
 
@@ -31,7 +24,7 @@ But it's already enough to make the system behave like real matter.
 
 - self-formation of crystals
 - particle diffusion
-- grid's oscillation, waves and phonon-like vibration
+- lattice oscillations, waves, and phonon-like vibration
 - emergence of grains and domain boundaries
 - packing defects and local lattice distortions
 - nucleation of inhomogeneities
@@ -44,19 +37,27 @@ But it's already enough to make the system behave like real matter.
 
 ## What Is Planned
 
-- molecules and chemical reactions
-- charged particles and Coulomb forces
+- molecular modeling
+- chemical reactions
 - metals and alloys
+- charged particles and ions
+- [x] electrostatic interaction (Coulomb)
 - electricity and conductivity
-- more advanced physical models
+- simple models of nuclear interactions
+- radioactive decay
+- energy transitions
+- biochemistry
+- proteins and folding-like behavior
+- DNA and other chain-like molecular systems
+- [project tree and module map](https://latticelab.dev/tree.html)
 
 ---
 
 ## Why?
 
-Normally, physics is all about complex formulas
+Physics is often presented as equations first.
 
-But here, you can observe how composite behavior is born out of simple rules
+Here, you can watch complex behavior emerge from simple interaction rules:
 
 - for educational purposes
 - for experimenting
@@ -64,8 +65,53 @@ But here, you can observe how composite behavior is born out of simple rules
 
 ---
 
+## Documentation
+
+- [English documentation entry](Docs/en/Main.md)
+- [Russian documentation entry](Docs/ru/Main.md)
+
+If you want to start with project internals, the best first articles are:
+
+- [Architecture](Docs/en/articles/Architecture.md)
+- [Build Guide](Docs/en/articles/Build.md)
+- [LATTICE Engine](Docs/en/articles/Lattice.md)
+- [Rendering](Docs/en/articles/Rendering.md)
+
+---
+
+## Build
+
+The project uses `CMakePresets`.
+
+Typical local build:
+
+```bash
+cmake --preset debug
+cmake --build --preset debug
+```
+
+Release build:
+
+```bash
+cmake --preset release
+cmake --build --preset release
+```
+
+---
+
+## Repository Structure
+
+- `App/` - application layer, UI, viewport, input, and integration code
+- `Lattice/` - simulation engine, physical model, and core data structures
+- `Rendering/` - rendering backend, GPU pipelines, camera, and draw logic
+- `Docs/` - project documentation
+- `assets/` - runtime assets
+- `demo/` - demo scenes and media
+
+---
+
 ## Links
 
 #### [Official site](https://latticelab.dev)
-#### [YouTube channel](https://www.youtube.com/@ElectroChajnik) (russian)
+#### [YouTube channel](https://www.youtube.com/@ElectroChajnik) (Russian)
 #### [Support the project!](https://latticelab.dev/donate.html)

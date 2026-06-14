@@ -111,7 +111,7 @@ Rendering:
 ## Навигация
 
 ```text
-README.ru.md
+README.md
   -> Docs/ru/README.md
     -> Docs/ru/Architecture.md
       -> App/
@@ -123,8 +123,8 @@ README.ru.md
 
 ## Ссылки
 
-- [Входная Точка](../README.md)
+- [Входная Точка](Docs/ru/Main.md)
 - [Приложение](./App.md)
 - [Движок Lattice](./Lattice.md)
 - [Рендер](./Rendering.md)
-- [Общий README](../../../README.ru.md)
+- [Описание Проекта](README.ru.md)

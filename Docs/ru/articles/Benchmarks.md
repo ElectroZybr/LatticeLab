@@ -283,4 +283,4 @@ Fixture стоит использовать почти всегда, если be
 
 - [Рендер](./Rendering.md)
 - [Движок Lattice](./Lattice.md)
-- [Входная Точка](../README.md)
+- [Входная Точка](Docs/ru/Main.md)

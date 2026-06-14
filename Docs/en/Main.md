@@ -23,7 +23,7 @@ The repository is split into several major parts:
 
 ## Navigation
 
-[README.md](./README.md)
+[Main](Docs/en/Main.md)
 ├── [Architecture](./articles/Architecture.md)
 ├── [App](./articles/App.md)
 ├── [Build](./articles/Build.md)
