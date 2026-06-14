@@ -1,12 +1,11 @@
 > Язык: RU
-> Canonical: да
-> Статус EN: не создан
+> Статус EN: создан каркас
 # Документация LatticeLab
 
 Этот раздел нужен как рабочая точка входа в проект: что это за репозиторий, из каких частей он состоит, как его собирать и где искать нужный код.
 
-Если нужна общая презентация проекта, см. [README.ru.md](../../README.ru.md).
-Если нужен обзор архитектуры проекта и роли движка `LATTICE`, см. [Architecture.md](./articles/Architecture.md).
+Если нужна общая презентация проекта, см. [README](../../README.ru.md).
+Если нужен обзор архитектуры проекта и роли движка `LATTICE`, см. [Архитектура](./articles/Architecture.md).
 ## Обзор
 
 LatticeLab — desktop-приложение для интерактивного моделирования материи на движке `LATTICE`.
@@ -23,19 +22,19 @@ LatticeLab — desktop-приложение для интерактивного 
 ## Навигация
 
 [README.md](./README.md)
-├── [Architecture.md](./articles/Architecture.md)
-├── [App.md](./articles/App.md)
-├── [Build.md](./articles/Build.md)
-├── [DataFlow.md](./articles/DataFlow.md)
-├── [GUI.md](./articles/GUI.md)
-├── [Glossary.md](./articles/Glossary.md)
-├── [Localization.md](./articles/Localization.md)
-├── [Lattice.md](./articles/Lattice.md)
-├── [Rendering.md](./articles/Rendering.md)
-├── [Tests.md](./articles/Tests.md)
-├── [WGPU.md](./articles/WGPU.md)
-├── [CLI.md](./articles/CLI.md)
-└── [Benchmarks.md](./articles/Benchmarks.md)
+├── [Архитектура](./articles/Architecture.md)
+├── [Приложение](./articles/App.md)
+├── [Сборка](./articles/Build.md)
+├── [Поток Данных](./articles/DataFlow.md)
+├── [GUI](./articles/GUI.md)
+├── [Термины](./articles/Glossary.md)
+├── [Локализация](./articles/Localization.md)
+├── [Движок Lattice](./articles/Lattice.md)
+├── [Рендер](./articles/Rendering.md)
+├── [Тесты](./articles/Tests.md)
+├── [WGPU](./articles/WGPU.md)
+├── [CLI](./articles/CLI.md)
+└── [Benchmarks](./articles/Benchmarks.md)
 
 ## Код
 
@@ -54,7 +53,7 @@ LatticeLab — desktop-приложение для интерактивного 
 
 ## Сборка
 
-Полное руководство по сборке вынесено в отдельную статью: [Build.md](./articles/Build.md).
+Полное руководство по сборке вынесено в отдельную статью: [Сборка](./articles/Build.md).
 
 Коротко:
 

@@ -1,6 +1,5 @@
 > Язык: RU
-> Canonical: да
-> Статус EN: не создан
+> Статус EN: создан каркас
 # Термины
 
 Эта статья собирает базовые сущности проекта в одном месте. Она нужна как быстрый словарь: когда в коде или документации встречается `Simulation`, `World` или `RenderData`, сюда можно вернуться и быстро восстановить контекст.
@@ -238,10 +237,10 @@
 
 ## Связи
 
-- [README.md](../README.md)
-- [Architecture.md](./Architecture.md)
-- [App.md](./App.md)
-- [Lattice.md](./Lattice.md)
-- [Rendering.md](./Rendering.md)
-- [CLI.md](./CLI.md)
-- [Benchmarks.md](./Benchmarks.md)
+- [Входная Точка](../README.md)
+- [Архитектура](./Architecture.md)
+- [Приложение](./App.md)
+- [Движок Lattice](./Lattice.md)
+- [Рендер](./Rendering.md)
+- [CLI](./CLI.md)
+- [Benchmarks](./Benchmarks.md)

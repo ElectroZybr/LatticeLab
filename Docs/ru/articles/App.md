@@ -1,6 +1,5 @@
 > Язык: RU
-> Canonical: да
-> Статус EN: не создан
+> Статус EN: создан каркас
 # Модуль App
 
 `App/` — это прикладной слой LatticeLab. Он отвечает за все, что связано с пользовательским приложением: окно, UI, viewport, обработку ввода и связывание симуляции с рендером.
@@ -98,8 +97,8 @@ main()
 - визуальное управление сценой
 - состояние UI, которое влияет на поведение приложения
 
-Подробно GUI-слой описан в [GUI.md](./GUI.md).
-Локализация интерфейса описана в [Localization.md](./Localization.md).
+Подробно GUI-слой описан в статье [GUI](./GUI.md).
+Локализация интерфейса описана в статье [Локализация](./Localization.md).
 
 ### `ToolsManager`
 
@@ -176,7 +175,7 @@ Application
 
 ## Ссылки
 
-- [Architecture.md](./Architecture.md)
-- [GUI.md](./GUI.md)
-- [Lattice.md](./Lattice.md)
-- [Rendering.md](./Rendering.md)
+- [Архитектура](./Architecture.md)
+- [GUI](./GUI.md)
+- [Движок Lattice](./Lattice.md)
+- [Рендер](./Rendering.md)

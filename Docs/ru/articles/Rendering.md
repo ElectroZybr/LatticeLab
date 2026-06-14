@@ -1,6 +1,5 @@
 > Язык: RU
-> Canonical: да
-> Статус EN: не создан
+> Статус EN: создан каркас
 # Модуль Rendering
 
 `Rendering/` отвечает за визуальное представление состояния симуляции. Здесь находятся рендерер, GPU-пайплайны, слои отрисовки, а также rendering benchmarks и тесты.
@@ -152,9 +151,9 @@ drawShot()
 
 ## Ссылки
 
-- [Architecture.md](./Architecture.md)
-- [App.md](./App.md)
-- [Lattice.md](./Lattice.md)
-- [Tests.md](./Tests.md)
-- [WGPU.md](./WGPU.md)
-- [Benchmarks.md](./Benchmarks.md)
+- [Архитектура](./Architecture.md)
+- [Приложение](./App.md)
+- [Движок Lattice](./Lattice.md)
+- [Тесты](./Tests.md)
+- [WGPU](./WGPU.md)
+- [Benchmarks](./Benchmarks.md)

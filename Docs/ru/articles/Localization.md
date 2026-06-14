@@ -1,6 +1,5 @@
 > Язык: RU
-> Canonical: да
-> Статус EN: не создан
+> Статус EN: создан каркас
 # Локализация
 
 Эта статья описывает, как в проекте устроена локализация интерфейса, где лежат переводы и как правильно добавить новую строку.
@@ -135,7 +134,7 @@ ImGui::TextUnformatted("imgui_new_option"_tr.data());
 
 ## Связи
 
-- [README.md](../README.md)
-- [App.md](./App.md)
-- [GUI.md](./GUI.md)
-- [Glossary.md](./Glossary.md)
+- [Входная Точка](../README.md)
+- [Приложение](./App.md)
+- [GUI](./GUI.md)
+- [Термины](./Glossary.md)

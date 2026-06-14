@@ -1,6 +1,5 @@
 > Язык: RU
-> Canonical: да
-> Статус EN: не создан
+> Статус EN: создан каркас
 # GUI
 
 `App/GUI/` отвечает за пользовательский интерфейс приложения: `ImGui`-контекст, панели, стили, шрифты, диалоги, ввод и связку UI с состоянием симуляции и viewport.
@@ -150,9 +149,9 @@ Application
 
 ## Связи
 
-- [README.md](../README.md)
-- [App.md](./App.md)
-- [DataFlow.md](./DataFlow.md)
-- [Localization.md](./Localization.md)
-- [Rendering.md](./Rendering.md)
-- [Glossary.md](./Glossary.md)
+- [Входная Точка](../README.md)
+- [Приложение](./App.md)
+- [Поток Данных](./DataFlow.md)
+- [Локализация](./Localization.md)
+- [Рендер](./Rendering.md)
+- [Термины](./Glossary.md)

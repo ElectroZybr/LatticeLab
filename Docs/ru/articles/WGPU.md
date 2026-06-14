@@ -1,6 +1,5 @@
 > Язык: RU
-> Canonical: да
-> Статус EN: не создан
+> Статус EN: создан каркас
 # WGPU
 
 `WGPU` в проекте используется как графический бэкенд для `Rendering/`. Через него поднимаются `Instance`, `Adapter`, `Device`, `Queue`, `Surface`, depth target, GPU-буферы и render pipeline. Эта роль сосредоточена в `WGPUContext`.
@@ -55,8 +54,8 @@
 
 ## Связи
 
-- [README.md](../README.md)
-- [Glossary.md](./Glossary.md)
-- [Rendering.md](./Rendering.md)
-- [Benchmarks.md](./Benchmarks.md)
-- [Architecture.md](./Architecture.md)
+- [Входная Точка](../README.md)
+- [Термины](./Glossary.md)
+- [Рендер](./Rendering.md)
+- [Benchmarks](./Benchmarks.md)
+- [Архитектура](./Architecture.md)

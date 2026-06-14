@@ -1,6 +1,5 @@
 > Язык: RU
-> Canonical: да
-> Статус EN: не создан
+> Статус EN: создан каркас
 # Архитектура
 
 Этот документ описывает проект в виде крупных блоков: где находится движок `LATTICE`, как разделены ответственность и как идут данные от симуляции до экрана.
@@ -37,7 +36,7 @@ LatticeLab:
 
 ### `App/`
 
-Статья по модулю: [App.md](./App.md)
+Статья по модулю: [Приложение](./App.md)
 
 Здесь лежит прикладной слой:
 
@@ -51,7 +50,7 @@ LatticeLab:
 
 ### `Lattice/`
 
-Статья по модулю: [Lattice.md](./Lattice.md)
+Статья по модулю: [Движок Lattice](./Lattice.md)
 
 Это ядро проекта.
 
@@ -64,7 +63,7 @@ LatticeLab:
 
 ### `Rendering/`
 
-Статья по модулю: [Rendering.md](./Rendering.md)
+Статья по модулю: [Рендер](./Rendering.md)
 
 Этот модуль отвечает за визуальную часть:
 
@@ -124,8 +123,8 @@ README.ru.md
 
 ## Ссылки
 
-- [README.md](../README.md)
-- [App.md](./App.md)
-- [Lattice.md](./Lattice.md)
-- [Rendering.md](./Rendering.md)
-- [README.ru.md](../../../README.ru.md)
+- [Входная Точка](../README.md)
+- [Приложение](./App.md)
+- [Движок Lattice](./Lattice.md)
+- [Рендер](./Rendering.md)
+- [Общий README](../../../README.ru.md)

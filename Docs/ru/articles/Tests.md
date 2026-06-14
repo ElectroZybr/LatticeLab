@@ -1,7 +1,6 @@
 > Язык: RU
-> Canonical: да
-> Статус EN: не создан
-# Tests
+> Статус EN: создан каркас
+# Юнит Тесты
 
 Эта статья описывает тестовую инфраструктуру проекта: где лежат тесты, как они собираются и как добавлять новые проверки.
 
@@ -135,7 +134,7 @@ ctest --test-dir build/debug -R rendering.module --output-on-failure
 
 ## Связи
 
-- [README.md](../README.md)
-- [Lattice.md](./Lattice.md)
-- [Rendering.md](./Rendering.md)
-- [Benchmarks.md](./Benchmarks.md)
+- [Входная Точка](../README.md)
+- [Движок Lattice](./Lattice.md)
+- [Рендер](./Rendering.md)
+- [Benchmarks](./Benchmarks.md)

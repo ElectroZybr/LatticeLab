@@ -1,6 +1,5 @@
 > Язык: RU
-> Canonical: да
-> Статус EN: не создан
+> Статус EN: создан каркас
 # CLI
 
 `CLI` — это консольный вход в движок `LATTICE`.
@@ -88,6 +87,6 @@
 
 ## Ссылки
 
-- [Lattice.md](./Lattice.md)
-- [Architecture.md](./Architecture.md)
-- [README.md](../README.md)
+- [Движок Lattice](./Lattice.md)
+- [Архитектура](./Architecture.md)
+- [Входная Точка](../README.md)

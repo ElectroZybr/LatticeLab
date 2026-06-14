@@ -1,6 +1,5 @@
 > Язык: RU
-> Canonical: да
-> Статус EN: не создан
+> Статус EN: создан каркас
 # Сборка
 
 Эта статья описывает, как собирать проект, какие инструменты нужны и какие исполняемые файлы получаются на выходе.
@@ -68,6 +67,6 @@ cmake --build --preset bench
 
 ## Связи
 
-- [README.md](../README.md)
-- [Benchmarks.md](./Benchmarks.md)
-- [Tests.md](./Tests.md)
+- [Входная Точка](../README.md)
+- [Benchmarks](./Benchmarks.md)
+- [Тесты](./Tests.md)

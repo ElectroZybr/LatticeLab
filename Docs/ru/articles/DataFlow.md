@@ -1,6 +1,5 @@
 > Язык: RU
-> Canonical: да
-> Статус EN: не создан
+> Статус EN: создан каркас
 # Поток Данных
 
 Эта статья описывает основной путь данных в проекте: как состояние симуляции попадает в рендер, где происходит преобразование в draw-формат и через какие слои пользовательское действие возвращается обратно в движок.
@@ -162,9 +161,9 @@ UI / input / tools
 
 ## Связи
 
-- [README.md](../README.md)
-- [Glossary.md](./Glossary.md)
-- [Lattice.md](./Lattice.md)
-- [Rendering.md](./Rendering.md)
-- [WGPU.md](./WGPU.md)
-- [App.md](./App.md)
+- [Входная Точка](../README.md)
+- [Термины](./Glossary.md)
+- [Движок Lattice](./Lattice.md)
+- [Рендер](./Rendering.md)
+- [WGPU](./WGPU.md)
+- [Приложение](./App.md)
