@@ -5,6 +5,7 @@
 <p align="center">
   Interactive matter simulation using <b>LATTICE</b>.
 </p>
+
 ## About
 
 LatticeLab is a project built around the `LATTICE` molecular dynamics engine for interactive simulation and exploration of atomic behavior.
