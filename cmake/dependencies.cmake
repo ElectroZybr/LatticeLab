@@ -18,7 +18,12 @@ set(GLFW_INSTALL        OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_WAYLAND  OFF CACHE BOOL "" FORCE)
 set(GLFW_EXPOSE_NATIVE_WAYLAND  OFF CACHE BOOL "" FORCE)
 
+# Keep GLFW linked into the app binary instead of shipping a separate runtime.
+set(_saved_build_shared_libs "${BUILD_SHARED_LIBS}")
+set(BUILD_SHARED_LIBS OFF)
 FetchContent_MakeAvailable(glfw)
+set(BUILD_SHARED_LIBS "${_saved_build_shared_libs}")
+unset(_saved_build_shared_libs)
 
 # --- Настройка WebGPU ---
 FetchContent_Declare(
@@ -28,6 +33,7 @@ FetchContent_Declare(
     GIT_SHALLOW    ON
 )
 set(WEBGPU_BACKEND "WGPU" CACHE STRING "WebGPU backend" FORCE)
+set(WGPU_LINK_TYPE "STATIC" CACHE STRING "Link wgpu-native statically" FORCE)
 FetchContent_MakeAvailable(webgpu_distribution)
 
 FetchContent_Declare(
