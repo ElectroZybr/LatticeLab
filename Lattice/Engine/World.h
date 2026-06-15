@@ -158,7 +158,7 @@ private:
 
     bool ljEnabled = true;
     bool coulombEnabled = true;
-    bool longRangeForcesEnabled = true;
+    bool longRangeForcesEnabled = false;
 
     AtomStorage atomStorage_;
     SpatialGrid grid;

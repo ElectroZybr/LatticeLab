@@ -108,23 +108,10 @@ Rendering:
 - `Rendering` не должен хранить физику
 - `App` не должен тащить в себя детали GPU
 
-## Навигация
-
-```text
-README.md
-  -> Docs/ru/README.md
-    -> Docs/ru/Architecture.md
-      -> App/
-      -> Lattice/
-      -> Rendering/Renderer.h
-      -> Rendering/layers/
-      -> Rendering/benchmarks/
-```
-
 ## Ссылки
 
-- [Входная Точка](Docs/ru/Main.md)
+- [Входная Точка](../Main.md)
 - [Приложение](./App.md)
 - [Движок Lattice](./Lattice.md)
 - [Рендер](./Rendering.md)
-- [Описание Проекта](README.ru.md)
+- [Описание Проекта](../README.ru.md)

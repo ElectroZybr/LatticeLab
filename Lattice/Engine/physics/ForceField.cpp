@@ -1,12 +1,60 @@
 #include "ForceField.h"
+
+#include <algorithm>
+#include <vector>
+
 #include "Engine/World.h"
 #include "Engine/NeighborSearch/NeighborList.h"
 #include "Engine/metrics/Profiler.h"
 #include "Engine/physics/Atom/AtomStorage.h"
 
 namespace {
+    using ExclusionList = std::vector<std::vector<uint32_t>>;
+
+    ExclusionList buildExclusionList(const AtomStorage& atoms, const Bond::List& bonds) {
+        ExclusionList excluded(atoms.size());
+
+        for (const Bond& bond : bonds) {
+            if (bond.aIndex >= atoms.size() || bond.bIndex >= atoms.size()) {
+                continue;
+            }
+            excluded[bond.aIndex].push_back(static_cast<uint32_t>(bond.bIndex));
+            excluded[bond.bIndex].push_back(static_cast<uint32_t>(bond.aIndex));
+        }
+
+        // Exclude 1-3 pairs as well: atoms connected through a common bonded center.
+        for (size_t center = 0; center < excluded.size(); ++center) {
+            auto& bonded = excluded[center];
+            std::sort(bonded.begin(), bonded.end());
+            bonded.erase(std::unique(bonded.begin(), bonded.end()), bonded.end());
+
+            for (size_t i = 0; i + 1 < bonded.size(); ++i) {
+                for (size_t j = i + 1; j < bonded.size(); ++j) {
+                    excluded[bonded[i]].push_back(bonded[j]);
+                    excluded[bonded[j]].push_back(bonded[i]);
+                }
+            }
+        }
+
+        for (auto& row : excluded) {
+            std::sort(row.begin(), row.end());
+            row.erase(std::unique(row.begin(), row.end()), row.end());
+        }
+
+        return excluded;
+    }
+
+    bool isExcludedPair(const ExclusionList& excluded, uint32_t aIndex, uint32_t bIndex) {
+        if (aIndex >= excluded.size()) {
+            return false;
+        }
+        const auto& row = excluded[aIndex];
+        return std::binary_search(row.begin(), row.end(), bIndex);
+    }
+
     template <bool UseLJ, bool UseCoulomb>
-    void computePairInteractionsImpl(AtomStorage& atoms, const NeighborList& neighborList, const LJForceField& ljForceField, const CoulombForceField& coulombForceField) {
+    void computePairInteractionsImpl(AtomStorage& atoms, const NeighborList& neighborList, const ExclusionList& excluded,
+                                     const LJForceField& ljForceField, const CoulombForceField& coulombForceField) {
         const auto& offsets = neighborList.offsets();
         const auto& neighbours = neighborList.neighbors();
 
@@ -42,6 +90,10 @@ namespace {
 
             for (uint32_t p = begin; p < end; ++p) {
                 const uint32_t bIndex = neighbours[p];
+                if (isExcludedPair(excluded, static_cast<uint32_t>(atomIndex), bIndex)) {
+                    continue;
+                }
+
                 const float dx = atoms.posX(bIndex) - posX;
                 const float dy = atoms.posY(bIndex) - posY;
                 const float dz = atoms.posZ(bIndex) - posZ;
@@ -76,7 +128,7 @@ bool ForceField::compute(World& world, bool allowBondFormation, float dt) const 
     computePairInteractions(world);
 
     // расчет дальнодействующих кулоновских сил
-    if (world.isCoulombLongRangeEnabled()) {
+    if (world.isCoulombEnabled() && world.isCoulombLongRangeEnabled()) {
         coulombForceField_.computeLongRange(atoms, world.getGrid());
     }
 
@@ -86,14 +138,15 @@ bool ForceField::compute(World& world, bool allowBondFormation, float dt) const 
 void ForceField::computePairInteractions(World& world) const {
     AtomStorage& atoms = world.getAtomStorage();
     NeighborList& neighborList = world.getNeighborList();
+    const ExclusionList excluded = buildExclusionList(atoms, world.getBonds());
 
     if (world.isLJEnabled() && world.isCoulombEnabled()) {
-        computePairInteractionsImpl<true, true>(atoms, neighborList, ljForceField_, coulombForceField_);
+        computePairInteractionsImpl<true, true>(atoms, neighborList, excluded, ljForceField_, coulombForceField_);
     }
     else if (world.isLJEnabled()) {
-        computePairInteractionsImpl<true, false>(atoms, neighborList, ljForceField_, coulombForceField_);
+        computePairInteractionsImpl<true, false>(atoms, neighborList, excluded, ljForceField_, coulombForceField_);
     }
     else {
-        computePairInteractionsImpl<false, true>(atoms, neighborList, ljForceField_, coulombForceField_);
+        computePairInteractionsImpl<false, true>(atoms, neighborList, excluded, ljForceField_, coulombForceField_);
     }
 }

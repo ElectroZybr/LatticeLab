@@ -122,6 +122,7 @@ int Application::run() {
     // Generators::randomGasMixed(simulation, 500, gasSpecs, false, 6.0, 6.0, 1.0f, 5.0f, 0);
     // simulation.createAtom(glm::vec3(20, 25, 3), glm::vec3(0, 0, 0), AtomData::Type::Na);
     // simulation.createAtom(glm::vec3(30, 25, 3), glm::vec3(0, 0, 0), AtomData::Type::Cl);
+    // Generators::randomWaterGas(simulation, 1000, true);
     renderer.syncScene(simulation);
 
     auto startTime = Clock::now();

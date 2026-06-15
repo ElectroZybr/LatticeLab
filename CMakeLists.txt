@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.17)
 cmake_policy(SET CMP0069 NEW)
 
-project(LatticeLab VERSION 0.1.3 LANGUAGES CXX)
+project(LatticeLab VERSION 0.1.3 LANGUAGES C CXX)
 
 set(APP_NAME "${PROJECT_NAME}")
 set(APP_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")

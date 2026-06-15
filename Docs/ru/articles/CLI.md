@@ -89,4 +89,4 @@
 
 - [Движок Lattice](./Lattice.md)
 - [Архитектура](./Architecture.md)
-- [Входная Точка](Docs/ru/Main.md)
+- [Входная Точка](../Main.md)

@@ -31,7 +31,10 @@ target_include_directories(Lattice PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(Lattice PUBLIC glm::glm)
+target_link_libraries(Lattice PUBLIC
+    glm::glm
+    lua::lua
+)
 
 include(FetchContent)
 

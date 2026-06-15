@@ -1,10 +1,13 @@
 #include "Gas.h"
 
+#include <array>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <random>
 #include <vector>
+
+#include "molecules.h"
 
 namespace Generators {
     namespace detail {
@@ -13,7 +16,10 @@ namespace Generators {
         constexpr float kGasDensity2DMin = 0.005f;
         constexpr float kGasDensity2DMax = 0.060f;
         constexpr float kGasMinDistance = 4.0f;
+        constexpr float kWaterGasMinDistance = 6.0f;
         constexpr float kGasFlatBoxDepth = 6.0f;
+        constexpr float kWaterOHBondLength = 0.9572f;
+        constexpr float kWaterHOHAngleDegrees = 104.5f;
 
         inline float randomUnit() { return static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX); }
 
@@ -75,6 +81,13 @@ namespace Generators {
                 return std::cbrt(static_cast<double>(atomCount) / safeDensity);
             }
             return std::sqrt(static_cast<double>(atomCount) / safeDensity);
+        }
+
+        std::array<glm::vec3, 3> waterAtomOffsets() {
+            const float halfAngle = glm::radians(kWaterHOHAngleDegrees * 0.5f);
+            const glm::vec3 hydrogenOffsetA(glm::cos(halfAngle) * kWaterOHBondLength, glm::sin(halfAngle) * kWaterOHBondLength, 0.0f);
+            const glm::vec3 hydrogenOffsetB(glm::cos(halfAngle) * kWaterOHBondLength, -glm::sin(halfAngle) * kWaterOHBondLength, 0.0f);
+            return {glm::vec3(0.0f), hydrogenOffsetA, hydrogenOffsetB};
         }
     }
 
@@ -163,6 +176,124 @@ namespace Generators {
         return static_cast<int>(acceptedPositions.size());
     }
 
+    int randomWaterGasInCurrentBox(Lattice::Simulation& sim, int moleculeCount, bool is3d, float minDistance, float speedScale,
+                                   int maxAttemptsPerMolecule, uint32_t seed) {
+        moleculeCount = std::max(0, moleculeCount);
+        if (moleculeCount == 0) {
+            sim.neighborList().clear();
+            return 0;
+        }
+
+        std::srand(static_cast<unsigned>(detail::resolveSeed(seed)));
+
+        const World& world = sim.world();
+        const float minDistanceSqr = minDistance * minDistance;
+        const auto waterOffsets = detail::waterAtomOffsets();
+
+        float moleculeRadius = 0.0f;
+        for (const glm::vec3& offset : waterOffsets) {
+            moleculeRadius = std::max(moleculeRadius, glm::length(offset));
+        }
+
+        std::vector<std::vector<glm::vec3>> pendingByCell(static_cast<size_t>(world.getGrid().countCells));
+        const int pendingRadiusCells = std::max(1, static_cast<int>(std::ceil((minDistance + moleculeRadius) / static_cast<float>(world.getGrid().cellSize))));
+
+        const auto isTooCloseToPending = [&](const glm::vec3& coords) {
+            const int cx = world.getGrid().worldToCellX(coords.x);
+            const int cy = world.getGrid().worldToCellY(coords.y);
+            const int cz = world.getGrid().worldToCellZ(coords.z);
+
+            for (int dz = -pendingRadiusCells; dz <= pendingRadiusCells; ++dz) {
+                for (int dy = -pendingRadiusCells; dy <= pendingRadiusCells; ++dy) {
+                    for (int dx = -pendingRadiusCells; dx <= pendingRadiusCells; ++dx) {
+                        const int nx = cx + dx;
+                        const int ny = cy + dy;
+                        const int nz = cz + dz;
+                        if (nx < 0 || ny < 0 || nz < 0 || nx >= world.getGrid().size.x || ny >= world.getGrid().size.y ||
+                            nz >= world.getGrid().size.z) {
+                            continue;
+                        }
+
+                        const int cellIndex = world.getGrid().index(nx, ny, nz);
+                        const auto& bucket = pendingByCell[static_cast<size_t>(cellIndex)];
+                        for (const glm::vec3& other : bucket) {
+                            const glm::vec3 deltaVec = coords - other;
+                            if (glm::dot(deltaVec, deltaVec) < minDistanceSqr) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+
+        const float border = 2.0f + moleculeRadius;
+        const float xSpan = world.getWorldSize().x - border * 2.0f;
+        const float ySpan = world.getWorldSize().y - border * 2.0f;
+        const float zSpan = world.getWorldSize().z - border * 2.0f;
+        if (xSpan <= 0.0f || ySpan <= 0.0f || (is3d && zSpan <= 0.0f)) {
+            sim.neighborList().clear();
+            return 0;
+        }
+
+        const double zMid = world.getWorldSize().z * 0.5;
+        const int maxX = std::max(0, static_cast<int>(xSpan));
+        const int maxY = std::max(0, static_cast<int>(ySpan));
+        const int maxZ = std::max(0, static_cast<int>(zSpan));
+
+        std::vector<glm::vec3> oxygenPositions;
+        oxygenPositions.reserve(static_cast<size_t>(moleculeCount));
+        std::vector<glm::vec3> moleculeVelocities;
+        moleculeVelocities.reserve(static_cast<size_t>(moleculeCount));
+
+        for (int i = 0; i < moleculeCount; ++i) {
+            for (int attempt = 0; attempt < maxAttemptsPerMolecule; ++attempt) {
+                const float rx = static_cast<float>(std::rand() % (maxX + 1));
+                const float ry = static_cast<float>(std::rand() % (maxY + 1));
+                const float rz = is3d ? static_cast<float>(std::rand() % (maxZ + 1)) : static_cast<float>(zMid - border);
+                const glm::vec3 oxygenPos(border + rx, border + ry, is3d ? (border + rz) : static_cast<float>(zMid));
+
+                bool valid = true;
+                std::array<glm::vec3, 3> absolutePositions{};
+                for (size_t atomIdx = 0; atomIdx < waterOffsets.size(); ++atomIdx) {
+                    absolutePositions[atomIdx] = oxygenPos + waterOffsets[atomIdx];
+                    if (detail::hasNeighborInStorage(sim, absolutePositions[atomIdx], minDistance) ||
+                        isTooCloseToPending(absolutePositions[atomIdx])) {
+                        valid = false;
+                        break;
+                    }
+                }
+
+                if (!valid) {
+                    continue;
+                }
+
+                oxygenPositions.emplace_back(oxygenPos);
+                moleculeVelocities.emplace_back(detail::randomVelocity(speedScale));
+                for (const glm::vec3& atomPos : absolutePositions) {
+                    const int cell = world.getGrid().index(world.getGrid().worldToCellX(atomPos.x), world.getGrid().worldToCellY(atomPos.y),
+                                                           world.getGrid().worldToCellZ(atomPos.z));
+                    pendingByCell[static_cast<size_t>(cell)].emplace_back(atomPos);
+                }
+                break;
+            }
+        }
+
+        if (oxygenPositions.empty()) {
+            sim.neighborList().clear();
+            return 0;
+        }
+
+        sim.reserveAtoms(sim.atoms().size() + oxygenPositions.size() * 3);
+        for (size_t i = 0; i < oxygenPositions.size(); ++i) {
+            const glm::vec3 velocity = is3d ? moleculeVelocities[i] : glm::vec3(moleculeVelocities[i].x, moleculeVelocities[i].y, 0.0f);
+            h2o(sim, oxygenPositions[i], velocity, false);
+        }
+
+        return static_cast<int>(oxygenPositions.size());
+    }
+
     void randomGas(Lattice::Simulation& sim, int atomCount, AtomData::Type type, bool is3d, double spacing, double margin, float density,
                    float speedScale, uint32_t seed) {
         (void)spacing;
@@ -174,6 +305,23 @@ namespace Generators {
         sim.setSizeBox(glm::vec3(span, span, is3d ? span : detail::kGasFlatBoxDepth));
 
         randomGasInCurrentBox(sim, atomCount, type, is3d, detail::kGasMinDistance, speedScale, 20, seed);
+    }
+
+    void randomWaterGas(Lattice::Simulation& sim, int moleculeCount, bool is3d, double spacing, double margin, float density, float speedScale,
+                        uint32_t seed) {
+        moleculeCount = std::max(0, moleculeCount);
+        const int totalAtomCount = moleculeCount * 3;
+        const float clampedDensity = detail::clampGasDensity(density, is3d);
+        const float placementDistance = std::max(detail::kWaterGasMinDistance, static_cast<float>(spacing));
+        const double targetSpan = detail::densityDrivenGasSpan(totalAtomCount, is3d, clampedDensity);
+        const int sideCount = is3d ? std::max(1, static_cast<int>(std::ceil(std::cbrt(static_cast<double>(moleculeCount)))))
+                                   : std::max(1, static_cast<int>(std::ceil(std::sqrt(static_cast<double>(moleculeCount)))));
+        const double spacingSpan = static_cast<double>(sideCount) * static_cast<double>(placementDistance) + 2.0 * margin;
+        const double span = std::max(targetSpan, spacingSpan);
+
+        sim.setSizeBox(glm::vec3(span, span, is3d ? span : detail::kGasFlatBoxDepth));
+
+        randomWaterGasInCurrentBox(sim, moleculeCount, is3d, placementDistance, speedScale, 20, seed);
     }
 
     void randomGasMixed(Lattice::Simulation& sim, int totalAtomCount, const std::vector<AtomTypeSpec>& atomSpecs, bool is3d, double spacing,
