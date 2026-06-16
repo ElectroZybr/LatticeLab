@@ -34,6 +34,7 @@ target_include_directories(Lattice PUBLIC
 target_link_libraries(Lattice PUBLIC
     glm::glm
     lua::lua
+    sol2
 )
 
 include(FetchContent)

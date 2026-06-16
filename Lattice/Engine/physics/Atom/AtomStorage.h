@@ -201,7 +201,7 @@ public:
         atomIds_.reserve(count);
     }
 
-    void addAtom(const glm::vec3& coords, const glm::vec3& speed, AtomData::Type type, bool fixed = false) {
+    [[nodiscard]] AtomId addAtom(const glm::vec3& coords, const glm::vec3& speed, AtomData::Type type, bool fixed = false) {
         ensureCapacity(count_ + 1);
 
         x_[count_] = static_cast<float>(coords.x);
@@ -235,6 +235,8 @@ public:
             swapAtoms(count_ - 1, mobileCount_);
             ++mobileCount_;
         }
+
+        return newId;
     }
 
     void removeAtom(size_t index) {

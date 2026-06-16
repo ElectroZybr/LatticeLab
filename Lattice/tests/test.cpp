@@ -1,15 +1,19 @@
 #include <cassert>
 #include <cmath>
+#include <filesystem>
 #include <iostream>
 #include <vector>
 
 #include <glm/vec3.hpp>
 
+#include "Engine/Simulation.h"
+#include "Engine/io/MoleculePdb.h"
 #include "Engine/NeighborSearch/BarnesHut/Octree.h"
 #include "Engine/NeighborSearch/SpatialGrid.h"
 #include "Engine/physics/Atom/AtomSort.h"
 #include "Engine/physics/Atom/AtomStorage.h"
 #include "Engine/physics/ForceFields/CoulombForceField.h"
+#include "Scripting/LuaState.h"
 
 struct OctreeTestSupport {
     static float charge(const OctreeNode& node) { return node.charge; }
@@ -158,9 +162,82 @@ static void testCoulombFarFieldApproximation() {
     expect(isClose(potentialEnergy, expectedPotential, 1e-5f), "Far-field potential should match monopole approximation");
 }
 
+static float bondDistance(const Lattice::Simulation& simulation, const Bond& bond) {
+    const glm::vec3 a = simulation.atoms().pos(bond.aIndex);
+    const glm::vec3 b = simulation.atoms().pos(bond.bIndex);
+    return glm::length(a - b);
+}
+
+static void testSpawnWaterMoleculeCreatesLocalAtoms() {
+    Lattice::Simulation simulation;
+    simulation.createWorld(glm::vec3(20.0f, 20.0f, 20.0f));
+
+    const std::filesystem::path waterPath = std::filesystem::path("Mods") / "Base" / "Molecules" / "h2o.pdb";
+    expect(simulation.loadMoleculeTemplate("h2o", waterPath), "Water template should load");
+
+    expect(simulation.spawnMolecule("h2o", glm::vec3(10.0f, 10.0f, 10.0f), glm::mat3(1.0f), false), "Direct water spawn should succeed");
+    expect(std::ranges::distance(simulation.bonds()) == 2, "Direct water spawn should create two bonds");
+
+    for (const Bond& bond : simulation.bonds()) {
+        expect(bondDistance(simulation, bond) < 2.0f, "Directly spawned water bond should stay short");
+    }
+}
+
+static void testWaterMoleculeBondsStayLocalAfterNeighborSort() {
+    Lattice::Simulation simulation;
+    simulation.createWorld(glm::vec3(40.0f, 40.0f, 40.0f));
+
+    const std::filesystem::path waterPath = std::filesystem::path("Mods") / "Base" / "Molecules" / "h2o.pdb";
+    expect(simulation.loadMoleculeTemplate("h2o", waterPath), "Water template should load");
+
+    Lattice::SpawnOptions options;
+    options.min = glm::vec3(0.0f);
+    options.max = glm::vec3(40.0f, 40.0f, 40.0f);
+    options.margin = 6.0f;
+    options.minDistance = 4.0f;
+    options.maxAttempts = 128;
+    options.randomRotation = true;
+
+    const int moleculeCount = 20;
+    for (int i = 0; i < moleculeCount; ++i) {
+        expect(simulation.randomSpawn("h2o", options), "Each spawned water molecule should succeed");
+    }
+
+    expect(std::ranges::distance(simulation.bonds()) == moleculeCount * 2, "Each water molecule should contribute exactly two bonds");
+
+    for (const Bond& bond : simulation.bonds()) {
+        expect(bondDistance(simulation, bond) < 2.0f, "Freshly spawned water bond should stay short");
+    }
+
+    simulation.neighborList().rebuildPipeline(simulation.atoms(), simulation.world(), 0);
+
+    for (const Bond& bond : simulation.bonds()) {
+        expect(bondDistance(simulation, bond) < 2.0f, "Water bond should stay short after atom sorting/remap");
+    }
+}
+
+static void testLuaSceneObjectLoadsMoleculesDirectory() {
+    Lattice::Simulation simulation;
+    simulation.createWorld(glm::vec3(20.0f, 20.0f, 20.0f));
+
+    Lattice::LuaState luaState;
+    expect(luaState.valid(), "Lua state should be created");
+    luaState.bindSimulation(simulation);
+
+    const bool ok = luaState.runString(R"(
+        local count, names = scene:load_molecules("Mods/Base/Molecules")
+        assert(count >= 2)
+        assert(#names >= 2)
+    )");
+    expect(ok, luaState.lastError());
+}
+
 int main() {
     testOctreeBuildChargeAndChildren();
     testCoulombFarFieldApproximation();
+    testSpawnWaterMoleculeCreatesLocalAtoms();
+    testWaterMoleculeBondsStayLocalAfterNeighborSort();
+    testLuaSceneObjectLoadsMoleculesDirectory();
     std::cout << "All Lattice octree/Coulomb tests passed." << std::endl;
     return 0;
 }

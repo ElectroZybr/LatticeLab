@@ -1,10 +1,16 @@
 #pragma once
 
+#include <filesystem>
+#include <memory>
+#include <string>
 #include <string_view>
 
 struct lua_State;
 
 namespace Lattice {
+
+class Simulation;
+struct LuaStateImpl;
 
 class LuaState {
 public:
@@ -22,12 +28,16 @@ public:
 
     [[nodiscard]] bool valid() const noexcept { return state_ != nullptr; }
     [[nodiscard]] bool runString(std::string_view script);
+    [[nodiscard]] bool runFile(const std::filesystem::path& scriptPath);
+    void bindSimulation(Simulation& simulation);
     [[nodiscard]] const char* lastError() const noexcept;
 
 private:
     void reset() noexcept;
 
+    std::unique_ptr<LuaStateImpl> impl_;
     lua_State* state_ = nullptr;
+    std::string lastError_;
 };
 
 } // namespace Lattice

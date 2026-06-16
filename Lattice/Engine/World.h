@@ -76,10 +76,12 @@ public:
     };
     void clearBonds() { bonds_.clear(); }
     void reserveAtoms(size_t count) { atomStorage_.reserve(count); }
-    void appendAtomFast(const glm::vec3& startCoords, const glm::vec3& startSpeed, AtomData::Type type, bool fixed = false) {
-        atomStorage_.addAtom(startCoords, startSpeed, type, fixed);
+    [[nodiscard]] AtomStorage::AtomId appendAtomFast(const glm::vec3& startCoords, const glm::vec3& startSpeed, AtomData::Type type,
+                                                     bool fixed = false) {
+        const AtomStorage::AtomId atomId = atomStorage_.addAtom(startCoords, startSpeed, type, fixed);
         invalidateMetrics();
         invalidateVectorField();
+        return atomId;
     }
     void finalizeAtomBatch();
 

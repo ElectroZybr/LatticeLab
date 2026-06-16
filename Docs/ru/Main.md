@@ -25,6 +25,7 @@ LatticeLab — desktop-приложение для интерактивного 
 ├── [Архитектура](./articles/Architecture.md)
 ├── [Приложение](./articles/App.md)
 ├── [Сборка](./articles/Build.md)
+├── [Скрипты И Генераторы](./articles/scripting.md)
 ├── [Поток Данных](./articles/DataFlow.md)
 ├── [GUI](./articles/GUI.md)
 ├── [Термины](./articles/Glossary.md)

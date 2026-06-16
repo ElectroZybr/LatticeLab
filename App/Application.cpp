@@ -3,11 +3,14 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <filesystem>
+#include <iostream>
 
 #include "App/AppActions.h"
 #include "App/CreateWindow.h"
 #include "App/WindowController.h"
 #include "Lattice/Generators/Generators.h"
+#include "Lattice/Scripting/LuaState.h"
 #include "App/UserSettings.h"
 #include "App/viewport/SceneViewport.h"
 #include "App/interaction/ToolsManager.h"
@@ -28,6 +31,8 @@ constexpr int FPS = 60;
 constexpr int LPS = 20;
 
 namespace {
+    const std::filesystem::path kBootstrapScriptPath = std::filesystem::path("Mods") / "Base" / "Generators" / "molecules.lua";
+
     uint32_t makeXYZStepInterval(float simulationStepsPerSecond, int captureFps) {
         const float sanitizedStepsPerSecond = std::max(simulationStepsPerSecond, 1.0f);
         const int sanitizedCaptureFps = std::max(captureFps, 1);
@@ -58,6 +63,12 @@ int Application::run() {
     Lattice::Simulation simulation;
 
     simulation.createWorld(glm::vec3(120.0f, 120.0f, 120.0f));
+    Lattice::LuaState luaState;
+    luaState.bindSimulation(simulation);
+
+    if (std::filesystem::exists(kBootstrapScriptPath) && !luaState.runFile(kBootstrapScriptPath)) {
+        std::cerr << "Failed to execute Lua bootstrap script '" << kBootstrapScriptPath.string() << "': " << luaState.lastError() << std::endl;
+    }
 
     CaptureController captureController;
     const SceneViewport::RendererType initialRendererType =
@@ -122,7 +133,6 @@ int Application::run() {
     // Generators::randomGasMixed(simulation, 500, gasSpecs, false, 6.0, 6.0, 1.0f, 5.0f, 0);
     // simulation.createAtom(glm::vec3(20, 25, 3), glm::vec3(0, 0, 0), AtomData::Type::Na);
     // simulation.createAtom(glm::vec3(30, 25, 3), glm::vec3(0, 0, 0), AtomData::Type::Cl);
-    // Generators::randomWaterGas(simulation, 1000, true);
     renderer.syncScene(simulation);
 
     auto startTime = Clock::now();

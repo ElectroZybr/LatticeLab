@@ -1,15 +1,31 @@
 #pragma once
 
+#include <cstdint>
+#include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include <glm/glm.hpp>
 
 #include "Engine/World.h"
+#include "Engine/io/MoleculeTemplate.h"
 #include "Engine/io/XYZRecordingSession.h"
 
 namespace Lattice {
+
+struct SpawnOptions {
+    glm::vec3 velocity = glm::vec3(0.0f);
+    glm::vec3 min = glm::vec3(0.0f);
+    glm::vec3 max = glm::vec3(0.0f);
+    float margin = 2.0f;
+    float minDistance = 4.0f;
+    uint32_t maxAttempts = 32;
+    bool randomRotation = true;
+    bool fixed = false;
+};
 
 class Simulation {
 public:
@@ -40,6 +56,12 @@ public:
     void createAtom(glm::vec3 start_coords, glm::vec3 start_speed, AtomData::Type type, bool fixed = false);
     void removeAtom(size_t atomIndex);
     void addBond(size_t aIndex, size_t bIndex);
+    bool loadMoleculeTemplate(std::string name, const std::filesystem::path& pdbPath);
+    bool hasMoleculeTemplate(std::string_view name) const;
+    [[nodiscard]] const MoleculeTemplate* findMoleculeTemplate(std::string_view name) const;
+    [[nodiscard]] const std::unordered_map<std::string, MoleculeTemplate>& moleculeTemplates() const noexcept { return moleculeTemplates_; }
+    [[nodiscard]] bool spawnMolecule(std::string_view speciesName, glm::vec3 start_coords, const std::optional<glm::mat3>& rotation, bool fixed);
+    [[nodiscard]] bool randomSpawn(std::string_view speciesName, const SpawnOptions& options = {});
 
     void setDt(float dt) { world().setDt(dt); }
     float getDt() const { return world().getDt(); }
@@ -96,8 +118,8 @@ public:
 
     // Быстрое создание большого количества атомов
     void reserveAtoms(size_t count) { world().reserveAtoms(count); }
-    void appendAtomFast(glm::vec3 startCoords, glm::vec3 startSpeed, AtomData::Type type, bool fixed = false) {
-        world().appendAtomFast(startCoords, startSpeed, type, fixed);
+    [[nodiscard]] AtomStorage::AtomId appendAtomFast(glm::vec3 startCoords, glm::vec3 startSpeed, AtomData::Type type, bool fixed = false) {
+        return world().appendAtomFast(startCoords, startSpeed, type, fixed);
     }
     void finalizeAtomBatch() { world().finalizeAtomBatch(); }
 
@@ -113,9 +135,10 @@ public:
 
 private:
     friend class SimulationStateIO;
-
     std::vector<World> worlds_;
     WorldId activeWorldIndex_ = 0;
+    // загруженные шаблоны молекул
+    std::unordered_map<std::string, MoleculeTemplate> moleculeTemplates_;
     XYZRecordingSession xyzRecording_;
 };
 }

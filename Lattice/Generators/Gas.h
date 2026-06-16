@@ -26,6 +26,11 @@ namespace Generators {
     int randomGasInCurrentBox(Lattice::Simulation& sim, int atomCount, AtomData::Type type, bool is3d, float minDistance = 4.0f,
                               float speedScale = 5.0f, int maxAttemptsPerAtom = 20, uint32_t seed = 0);
 
+    /// Создает рандомный газ из молекул по шаблону в уже существующем ящике симуляции
+    int randomMoleculeGasInCurrentBox(Lattice::Simulation& sim, std::string_view moleculeName, int moleculeCount, bool is3d,
+                                      float minDistance = 6.0f, float speedScale = 1.0f, int maxAttemptsPerMolecule = 20,
+                                      uint32_t seed = 0);
+
     /// Создает рандомный газ одного типа атомов с автоматическим подбором размера ящика
     /// @param sim Симуляция
     /// @param atomCount Общее количество атомов
@@ -38,6 +43,11 @@ namespace Generators {
     /// @param seed Seed для рандома (0 = случайный)
     void randomGas(Lattice::Simulation& sim, int atomCount, AtomData::Type type, bool is3d, double spacing = 6.0, double margin = 6.0,
                    float density = 0.01f, float speedScale = 5.0f, uint32_t seed = 0);
+
+    /// Создает рандомный газ из молекул по шаблону с автоматическим подбором размера ящика
+    void randomMoleculeGas(Lattice::Simulation& sim, std::string_view moleculeName, int moleculeCount, bool is3d,
+                           double spacing = 6.0, double margin = 6.0, float density = 0.01f, float speedScale = 1.0f,
+                           uint32_t seed = 0);
 
     /// Создает смешанный рандомный газ с разными типами атомов
     /// @param sim Симуляция

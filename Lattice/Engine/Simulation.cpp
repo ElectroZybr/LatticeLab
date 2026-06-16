@@ -1,12 +1,51 @@
 #include "Simulation.h"
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
+#include <optional>
+#include <random>
 #include <stdexcept>
 
+#include <glm/gtc/constants.hpp>
+#include <glm/gtc/quaternion.hpp>
+
 #include "Engine/io/SimulationStateIO.h"
+#include "Engine/io/MoleculePdb.h"
 #include "Engine/metrics/Profiler.h"
 
 namespace Lattice {
+namespace {
+
+glm::mat3 randomRotationMatrix(bool is3d) {
+    static thread_local std::mt19937 rng(std::random_device{}());
+    std::uniform_real_distribution<float> angleDist(0.0f, glm::two_pi<float>());
+
+    if (!is3d) {
+        return glm::mat3_cast(glm::angleAxis(angleDist(rng), glm::vec3(0.0f, 0.0f, 1.0f)));
+    }
+
+    const glm::quat qx = glm::angleAxis(angleDist(rng), glm::vec3(1.0f, 0.0f, 0.0f));
+    const glm::quat qy = glm::angleAxis(angleDist(rng), glm::vec3(0.0f, 1.0f, 0.0f));
+    const glm::quat qz = glm::angleAxis(angleDist(rng), glm::vec3(0.0f, 0.0f, 1.0f));
+    return glm::mat3_cast(qz * qy * qx);
+}
+
+std::string lowercase(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(),
+                   [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+    return value;
+}
+
+std::string normalizeAtomSymbol(std::string value) {
+    value = lowercase(std::move(value));
+    if (!value.empty()) {
+        value[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(value[0])));
+    }
+    return value;
+}
+
+} // namespace
 
 Simulation::Simulation() = default;
 
@@ -108,6 +147,227 @@ void Simulation::removeAtom(size_t atomIndex) {
 }
 
 void Simulation::addBond(size_t aIndex, size_t bIndex) { world().addBond(aIndex, bIndex); }
+
+bool Simulation::loadMoleculeTemplate(std::string name, const std::filesystem::path& pdbPath) {
+    if (name.empty()) {
+        return false;
+    }
+
+    moleculeTemplates_[std::move(name)] = MoleculePdb::loadTemplate(pdbPath);
+    return true;
+}
+
+bool Simulation::hasMoleculeTemplate(std::string_view name) const {
+    return findMoleculeTemplate(name) != nullptr;
+}
+
+const MoleculeTemplate* Simulation::findMoleculeTemplate(std::string_view name) const {
+    const auto it = moleculeTemplates_.find(std::string(name));
+    if (it == moleculeTemplates_.end()) {
+        return nullptr;
+    }
+    return &it->second;
+}
+
+bool Simulation::spawnMolecule(std::string_view speciesName, glm::vec3 start_coords, const std::optional<glm::mat3>& rotation, bool fixed) {
+    const std::string moleculeKey = lowercase(std::string(speciesName));
+    if (const MoleculeTemplate* molecule = findMoleculeTemplate(moleculeKey); molecule != nullptr) {
+        if (molecule->atoms.empty()) {
+            return false;
+        }
+
+        const glm::mat3 actualRotation = rotation.value_or(glm::mat3(1.0f));
+
+        std::vector<AtomStorage::AtomId> createdIds;
+        createdIds.reserve(molecule->atoms.size());
+        reserveAtoms(atoms().size() + molecule->atoms.size());
+
+        for (const MoleculeAtom& atom : molecule->atoms) {
+            const glm::vec3 worldPos = start_coords + actualRotation * atom.localPos;
+            createdIds.push_back(appendAtomFast(worldPos, glm::vec3(0.0f), atom.type, fixed));
+        }
+        finalizeAtomBatch();
+
+        const AtomStorage& storage = atoms();
+        std::vector<size_t> createdIndices;
+        createdIndices.reserve(createdIds.size());
+        for (const AtomStorage::AtomId atomId : createdIds) {
+            const size_t atomIndex = storage.indexOf(atomId);
+            if (atomIndex >= storage.size()) {
+                return false;
+            }
+            createdIndices.push_back(atomIndex);
+        }
+
+        for (const MoleculeBond& bond : molecule->bonds) {
+            if (bond.atomA < createdIndices.size() && bond.atomB < createdIndices.size()) {
+                addBond(createdIndices[bond.atomA], createdIndices[bond.atomB]);
+            }
+        }
+
+        return true;
+    }
+
+    const std::string atomSymbol = normalizeAtomSymbol(std::string(speciesName));
+    for (size_t i = 0; i < static_cast<size_t>(AtomData::Type::COUNT); ++i) {
+        const AtomData::Type type = static_cast<AtomData::Type>(i);
+        if (AtomData::symbol(type) != atomSymbol) {
+            continue;
+        }
+
+        appendAtomFast(start_coords, glm::vec3(0.0f), type, fixed);
+        finalizeAtomBatch();
+        return true;
+    }
+
+    return false;
+}
+
+bool Simulation::randomSpawn(std::string_view speciesName, const SpawnOptions& options) {
+    const glm::vec3 regionMin = options.min;
+    const glm::vec3 regionMax = (options.max == glm::vec3(0.0f)) ? world().getWorldSize() : options.max;
+    const bool is3d = std::abs(regionMax.z - regionMin.z) > 1e-5f;
+    const std::string moleculeKey = lowercase(std::string(speciesName));
+    if (const MoleculeTemplate* molecule = findMoleculeTemplate(moleculeKey); molecule != nullptr) {
+        const AtomStorage& storage = atoms();
+        const float minDistanceSqr = options.minDistance * options.minDistance;
+        static thread_local std::mt19937 rng(std::random_device{}());
+
+        for (uint32_t attempt = 0; attempt < options.maxAttempts; ++attempt) {
+            const glm::mat3 rotation = options.randomRotation ? randomRotationMatrix(is3d) : glm::mat3(1.0f);
+            glm::vec3 minOffset(std::numeric_limits<float>::max());
+            glm::vec3 maxOffset(std::numeric_limits<float>::lowest());
+            for (const MoleculeAtom& atom : molecule->atoms) {
+                const glm::vec3 rotated = rotation * atom.localPos;
+                minOffset = glm::min(minOffset, rotated);
+                maxOffset = glm::max(maxOffset, rotated);
+            }
+
+            const auto sampleAxis = [&](float axisMin, float axisMax, float minAtomOffset, float maxAtomOffset) -> std::optional<float> {
+                const float lower = axisMin + options.margin - minAtomOffset;
+                const float upper = axisMax - options.margin - maxAtomOffset;
+
+                if (lower > upper) {
+                    return std::nullopt;
+                }
+
+                if (std::abs(upper - lower) <= 1e-5f) {
+                    return lower;
+                }
+
+                std::uniform_real_distribution<float> dist(lower, upper);
+                return dist(rng);
+            };
+
+            const std::optional<float> x = sampleAxis(regionMin.x, regionMax.x, minOffset.x, maxOffset.x);
+            const std::optional<float> y = sampleAxis(regionMin.y, regionMax.y, minOffset.y, maxOffset.y);
+            if (!x.has_value() || !y.has_value()) {
+                return false;
+            }
+
+            float z = (regionMin.z + regionMax.z) * 0.5f;
+            if (is3d) {
+                const std::optional<float> sampledZ = sampleAxis(regionMin.z, regionMax.z, minOffset.z, maxOffset.z);
+                if (!sampledZ.has_value()) {
+                    return false;
+                }
+                z = *sampledZ;
+            } else {
+                const float lower = regionMin.z + options.margin - minOffset.z;
+                const float upper = regionMax.z - options.margin - maxOffset.z;
+                if (lower > upper) {
+                    return false;
+                }
+                z = std::clamp((regionMin.z + regionMax.z) * 0.5f, lower, upper);
+            }
+
+            const glm::vec3 origin(*x, *y, z);
+
+            bool fits = true;
+            for (const MoleculeAtom& atom : molecule->atoms) {
+                const glm::vec3 pos = origin + rotation * atom.localPos;
+
+                if (pos.x < regionMin.x + options.margin || pos.y < regionMin.y + options.margin || pos.z < regionMin.z + options.margin ||
+                    pos.x > regionMax.x - options.margin || pos.y > regionMax.y - options.margin || pos.z > regionMax.z - options.margin) {
+                    fits = false;
+                    break;
+                }
+
+                for (size_t otherIndex = 0; otherIndex < storage.size(); ++otherIndex) {
+                    const glm::vec3 delta = pos - storage.pos(otherIndex);
+                    if (glm::dot(delta, delta) < minDistanceSqr) {
+                        fits = false;
+                        break;
+                    }
+                }
+
+                if (!fits) {
+                    break;
+                }
+            }
+
+            if (fits) {
+                return spawnMolecule(speciesName, origin, rotation, options.fixed);
+            }
+        }
+
+        return false;
+    }
+
+    const std::string atomSymbol = normalizeAtomSymbol(std::string(speciesName));
+    for (size_t i = 0; i < static_cast<size_t>(AtomData::Type::COUNT); ++i) {
+        const AtomData::Type type = static_cast<AtomData::Type>(i);
+        if (AtomData::symbol(type) != atomSymbol) {
+            continue;
+        }
+
+        const AtomStorage& storage = atoms();
+        const float minDistanceSqr = options.minDistance * options.minDistance;
+        static thread_local std::mt19937 rng(std::random_device{}());
+
+        auto sampleCoord = [&](float minValue, float maxValue) {
+            if (maxValue <= minValue) {
+                return minValue;
+            }
+            std::uniform_real_distribution<float> dist(minValue, maxValue);
+            return dist(rng);
+        };
+
+        for (uint32_t attempt = 0; attempt < options.maxAttempts; ++attempt) {
+            const float minX = regionMin.x + options.margin;
+            const float maxX = regionMax.x - options.margin;
+            const float minY = regionMin.y + options.margin;
+            const float maxY = regionMax.y - options.margin;
+            const float minZ = regionMin.z + options.margin;
+            const float maxZ = regionMax.z - options.margin;
+
+            const glm::vec3 pos(
+                sampleCoord(minX, maxX),
+                sampleCoord(minY, maxY),
+                is3d ? sampleCoord(minZ, maxZ) : ((regionMin.z + regionMax.z) * 0.5f)
+            );
+
+            bool fits = true;
+            for (size_t otherIndex = 0; otherIndex < storage.size(); ++otherIndex) {
+                const glm::vec3 delta = pos - storage.pos(otherIndex);
+                if (glm::dot(delta, delta) < minDistanceSqr) {
+                    fits = false;
+                    break;
+                }
+            }
+
+            if (fits) {
+                appendAtomFast(pos, options.velocity, type, options.fixed);
+                finalizeAtomBatch();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    return false;
+}
 
 void Simulation::clear() { world().reset(); }
 

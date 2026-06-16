@@ -29,8 +29,33 @@ unset(_saved_build_shared_libs)
 FetchContent_Declare(
     lua
     URL https://www.lua.org/ftp/lua-5.4.6.tar.gz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(lua)
+
+# --- Настройка sol2 ---
+FetchContent_Declare(
+    sol2
+    GIT_REPOSITORY https://github.com/ThePhD/sol2.git
+    GIT_TAG        v3.3.1
+    GIT_SHALLOW    ON
+)
+FetchContent_Populate(sol2)
+
+set(_sol2_optional_impl "${sol2_SOURCE_DIR}/include/sol/optional_implementation.hpp")
+if(EXISTS "${_sol2_optional_impl}")
+    file(READ "${_sol2_optional_impl}" _sol2_optional_impl_content)
+    string(REPLACE
+        "template <class... Args>\n\t\tT& emplace(Args&&... args) noexcept {\n\t\t\tstatic_assert(std::is_constructible<T, Args&&...>::value, \"T must be constructible with Args\");\n\n\t\t\t*this = nullopt;\n\t\t\tthis->construct(std::forward<Args>(args)...);\n\t\t}\n"
+        "template <class... Args>\n\t\tT& emplace(Args&&... args) noexcept {\n\t\t\tstatic_assert(sizeof...(Args) == 1, \"optional<T&>::emplace expects exactly one argument\");\n\t\t\tauto&& value = std::get<0>(std::forward_as_tuple(std::forward<Args>(args)...));\n\t\t\tm_value = std::addressof(value);\n\t\t\treturn *m_value;\n\t\t}\n"
+        _sol2_optional_impl_content
+        "${_sol2_optional_impl_content}"
+    )
+    file(WRITE "${_sol2_optional_impl}" "${_sol2_optional_impl_content}")
+endif()
+
+add_library(sol2 INTERFACE)
+target_include_directories(sol2 INTERFACE "${sol2_SOURCE_DIR}/include")
 
 add_library(lua_static STATIC
     ${lua_SOURCE_DIR}/src/lapi.c
