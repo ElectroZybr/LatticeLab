@@ -1,44 +1,50 @@
-local gas = {}
+--[[
+Базовый Lua-генератор газа.
+гибкая генерация газа из атомов или молекул через композитор
 
-local default_options = {
-    margin = 8.0,
-    box = { 120, 120, 50 },
+Ожидает composition = {
+    { name = atom.Ar,      count = 1000 },
+    { name = molecule.h2o, count = 500  },
 }
 
-local function make_options(overrides)
-    local options = {}
-    for key, value in pairs(default_options) do
-        options[key] = value
-    end
+Сам генератор не размещает частицы вручную:
+- загружает базовые шаблоны молекул один раз;
+- открывает batch в движке;
+- для каждого элемента composition вызывает random_spawn(...).
+]]
 
-    if overrides then
-        for key, value in pairs(overrides) do
-            options[key] = value
-        end
-    end
-
-    return options
-end
+local gas = {}
+local base_molecules_loaded = false
+-- выполнение базового скрипта генераторов
+local generator = dofile("Mods/Base/API/generator.lua")
 
 function gas.build(scene, opts)
-    local options = make_options(opts)
-    local name = assert(opts.name, "gas.build requires opts.name")
-    local count = assert(opts.count, "gas.build requires opts.count")
+    local options = opts or {}
+    local composition = generator.resolve_composition(opts, "gas.build")
 
-    scene:clear()
-    scene:set_box(options.box[1], options.box[2], options.box[3])
+    if not base_molecules_loaded then
+        local loaded_count = scene:load_molecules("Mods/Base/Molecules")
+        assert(loaded_count > 0, "no molecules were loaded from Mods/Base/Molecules")
+        base_molecules_loaded = true
+    end
 
     local batch = scene:begin_batch()
     local spawned = 0
 
-    for _ = 1, count do
-        if batch:random_spawn(name, options) then
-            spawned = spawned + 1
+    for _, entry in ipairs(composition) do
+        for _ = 1, entry.count do
+            if batch:random_spawn(entry.name, options) then
+                spawned = spawned + 1
+            end
         end
     end
 
     batch:finish()
-    assert(spawned > 0, "generator failed to spawn any species '" .. name .. "'")
+    assert(spawned > 0, "generator failed to spawn any gas composition entries")
+end
+
+if type(register_content) == "function" then
+    register_content("gas", gas.build)
 end
 
 return gas

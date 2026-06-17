@@ -34,7 +34,7 @@ namespace Generators {
 
                 for (int x = 0; x < count.x; ++x) {
                     const float xCoord = margin + x * lj_min + xOffset;
-                    sim.appendAtomFast(glm::vec3(xCoord, yCoord, zCoord), randomVelocity(start_force), type);
+                    (void)sim.appendAtomFast(glm::vec3(xCoord, yCoord, zCoord), randomVelocity(start_force), type);
                 }
             }
         }

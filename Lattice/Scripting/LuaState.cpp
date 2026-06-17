@@ -5,6 +5,7 @@
 
 #include <sol/sol.hpp>
 
+#include "Lattice/Engine/physics/Atom/AtomData.h"
 #include "Lattice/Scripting/ScriptAPI.hpp"
 
 namespace Lattice {
@@ -97,17 +98,44 @@ void LuaState::bindSimulation(Simulation& simulation) {
     impl_->api = std::make_unique<ScriptAPI>(simulation);
 
     impl_->lua.new_usertype<ScriptBatch>("ScriptBatch",
+        "spawn", &ScriptBatch::spawn,
         "random_spawn", &ScriptBatch::random_spawn,
         "finish", &ScriptBatch::finish
     );
 
     impl_->lua.new_usertype<ScriptAPI>("ScriptAPI",
         "clear", &ScriptAPI::clear,
+        "set_world_title", &ScriptAPI::set_world_title,
         "set_box", &ScriptAPI::set_box,
+        "world_size", &ScriptAPI::world_size,
         "load_molecules", &ScriptAPI::load_molecules,
-        "begin_batch", &ScriptAPI::begin_batch
+        "begin_batch", &ScriptAPI::begin_batch,
+        "lj_min", &ScriptAPI::lj_min
     );
 
+    sol::table atoms = impl_->lua.create_named_table("atoms");
+    for (size_t i = 0; i < static_cast<size_t>(AtomData::Type::COUNT); ++i) {
+        const AtomData::Type type = static_cast<AtomData::Type>(i);
+        const std::string_view symbol = AtomData::symbol(type);
+        if (!symbol.empty()) {
+            atoms[std::string(symbol)] = std::string(symbol);
+        }
+    }
+
+    sol::object moleculeObject = sol::make_object(impl_->lua, impl_->lua.create_table());
+    const std::filesystem::path moleculeModulePath = std::filesystem::path("Mods") / "Base" / "API" / "molecule.lua";
+    if (std::filesystem::exists(moleculeModulePath)) {
+        const sol::load_result loaded = impl_->lua.load_file(moleculeModulePath.string());
+        if (loaded.valid()) {
+            const sol::protected_function module = loaded;
+            const sol::protected_function_result result = module();
+            if (result.valid() && result.get_type() == sol::type::table) {
+                moleculeObject = sol::make_object(impl_->lua, result.get<sol::table>());
+            }
+        }
+    }
+
+    impl_->lua["molecule"] = moleculeObject;
     impl_->lua["scene"] = std::ref(*impl_->api);
 }
 

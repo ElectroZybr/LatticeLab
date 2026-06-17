@@ -20,6 +20,7 @@ struct SpawnOptions {
     glm::vec3 velocity = glm::vec3(0.0f);
     glm::vec3 min = glm::vec3(0.0f);
     glm::vec3 max = glm::vec3(0.0f);
+    float temperature = 0.0f;
     float margin = 2.0f;
     float minDistance = 4.0f;
     uint32_t maxAttempts = 32;
@@ -62,6 +63,7 @@ public:
     [[nodiscard]] const std::unordered_map<std::string, MoleculeTemplate>& moleculeTemplates() const noexcept { return moleculeTemplates_; }
     [[nodiscard]] bool spawnMolecule(std::string_view speciesName, glm::vec3 start_coords, const std::optional<glm::mat3>& rotation, bool fixed);
     [[nodiscard]] bool randomSpawn(std::string_view speciesName, const SpawnOptions& options = {});
+    float lj_min(AtomData::Type a, AtomData::Type b);
 
     void setDt(float dt) { world().setDt(dt); }
     float getDt() const { return world().getDt(); }
@@ -135,6 +137,7 @@ public:
 
 private:
     friend class SimulationStateIO;
+    [[nodiscard]] glm::vec3 temperatureVelocity(std::string_view speciesName, float temperature, bool is3d,glm::vec3 fallbackVelocity = glm::vec3(0.0f)) const;
     std::vector<World> worlds_;
     WorldId activeWorldIndex_ = 0;
     // загруженные шаблоны молекул

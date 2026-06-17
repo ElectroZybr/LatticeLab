@@ -30,7 +30,7 @@ void World::resizeBox(const glm::vec3& newSize, float cellSize) {
 }
 
 void World::addAtom(const glm::vec3& start_coords, const glm::vec3& start_speed, AtomData::Type type, bool fixed) {
-    atomStorage_.addAtom(start_coords, start_speed, type, fixed);
+    (void)atomStorage_.addAtom(start_coords, start_speed, type, fixed);
     grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
     invalidateMetrics();
     invalidateVectorField();

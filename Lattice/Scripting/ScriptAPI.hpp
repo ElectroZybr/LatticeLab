@@ -18,6 +18,7 @@ class ScriptBatch {
 public:
     explicit ScriptBatch(Simulation& simulation) : simulation_(simulation) {}
 
+    bool spawn(const std::string& speciesName, const sol::object& positionObject, const sol::object& optionsObject);
     bool random_spawn(const std::string& speciesName, const sol::object& optionsObject);
     void finish();
 
@@ -33,9 +34,12 @@ public:
     explicit ScriptAPI(Simulation& simulation) : simulation_(simulation) {}
 
     void clear();
+    void set_world_title(const std::string& title);
     void set_box(float x, float y, sol::variadic_args args);
+    std::tuple<float, float, float> world_size() const;
     std::tuple<int, std::vector<std::string>> load_molecules(const std::string& path);
     std::shared_ptr<ScriptBatch> begin_batch();
+    float lj_min(const std::string& speciesA, const std::string& speciesB) const;
 
 private:
     std::vector<std::string> loadMoleculesFrom(const std::filesystem::path& path);

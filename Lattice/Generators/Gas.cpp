@@ -158,7 +158,7 @@ namespace Generators {
         sim.reserveAtoms(oldSize + acceptedPositions.size());
         for (const glm::vec3& pos : acceptedPositions) {
             const glm::vec3 randomSpeed = detail::randomVelocity(speedScale);
-            sim.appendAtomFast(pos, is3d ? randomSpeed : glm::vec3(randomSpeed.x, randomSpeed.y, 0.0f), type);
+            (void)sim.appendAtomFast(pos, is3d ? randomSpeed : glm::vec3(randomSpeed.x, randomSpeed.y, 0.0f), type);
         }
 
         sim.finalizeAtomBatch();

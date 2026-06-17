@@ -228,8 +228,111 @@ static void testLuaSceneObjectLoadsMoleculesDirectory() {
         local count, names = scene:load_molecules("Mods/Base/Molecules")
         assert(count >= 2)
         assert(#names >= 2)
+        assert(atoms.H == "H")
+        assert(molecule.h2o == "h2o")
     )");
     expect(ok, luaState.lastError());
+}
+
+static void testLuaDslSimulationWorldGasBuildsScene() {
+    Lattice::Simulation simulation;
+    simulation.createWorld(glm::vec3(20.0f, 20.0f, 20.0f));
+
+    Lattice::LuaState luaState;
+    expect(luaState.valid(), "Lua state should be created");
+    luaState.bindSimulation(simulation);
+
+    const bool ok = luaState.runString(R"(
+        dofile("Mods/Base/API/base.lua")
+        dofile("Mods/Base/Generators/gas.lua")
+
+        simulation {
+            world {
+                name = "gas_mix",
+                size = { 40, 40, 40 },
+                content = {
+                    gas {
+                        composition = {
+                            { name = molecule.h2o, count = 4 },
+                        }
+                    }
+                }
+            }
+        }
+    )");
+    expect(ok, luaState.lastError());
+    expect(simulation.worldTitle() == "gas_mix", "DSL world name should become world title");
+    expect(simulation.atoms().size() > 0, "DSL gas world should spawn atoms");
+}
+
+static void testLuaDslSimulationWorldLatticeBuildsScene() {
+    Lattice::Simulation simulation;
+    simulation.createWorld(glm::vec3(60.0f, 60.0f, 60.0f));
+
+    Lattice::LuaState luaState;
+    expect(luaState.valid(), "Lua state should be created");
+    luaState.bindSimulation(simulation);
+
+    const bool ok = luaState.runString(R"(
+        dofile("Mods/Base/API/base.lua")
+        dofile("Mods/Base/Generators/lattice.lua")
+
+        simulation {
+            world {
+                name = "hex_lattice",
+                size = { 60, 60, 60 },
+                content = {
+                    lattice {
+                        structure = "bcc",
+                        cells = { 3, 3, 2 },
+                        spacing = 3.0,
+                        margin = 4.0,
+                        composition = {
+                            atom { element = atom.C, fraction = 1.0 },
+                        }
+                    }
+                }
+            }
+        }
+    )");
+    expect(ok, luaState.lastError());
+    expect(simulation.worldTitle() == "hex_lattice", "DSL lattice world name should become world title");
+    expect(simulation.atoms().size() == 36, "DSL BCC lattice world should spawn two atoms per cell");
+}
+
+static void testLuaDslSimulationWorldHexLatticeBuildsScene() {
+    Lattice::Simulation simulation;
+    simulation.createWorld(glm::vec3(60.0f, 60.0f, 60.0f));
+
+    Lattice::LuaState luaState;
+    expect(luaState.valid(), "Lua state should be created");
+    luaState.bindSimulation(simulation);
+
+    const bool ok = luaState.runString(R"(
+        dofile("Mods/Base/API/base.lua")
+        dofile("Mods/Base/Generators/lattice.lua")
+
+        simulation {
+            world {
+                name = "hex_packing",
+                size = { 60, 60, 60 },
+                content = {
+                    lattice {
+                        structure = "hex",
+                        cells = { 3, 3, 2 },
+                        spacing = 3.0,
+                        margin = 4.0,
+                        composition = {
+                            atom { element = atom.C, fraction = 1.0 },
+                        }
+                    }
+                }
+            }
+        }
+    )");
+    expect(ok, luaState.lastError());
+    expect(simulation.worldTitle() == "hex_packing", "DSL hex lattice world name should become world title");
+    expect(simulation.atoms().size() == 18, "DSL hex lattice world should spawn one atom per lattice site");
 }
 
 int main() {
@@ -238,6 +341,9 @@ int main() {
     testSpawnWaterMoleculeCreatesLocalAtoms();
     testWaterMoleculeBondsStayLocalAfterNeighborSort();
     testLuaSceneObjectLoadsMoleculesDirectory();
+    testLuaDslSimulationWorldGasBuildsScene();
+    testLuaDslSimulationWorldLatticeBuildsScene();
+    testLuaDslSimulationWorldHexLatticeBuildsScene();
     std::cout << "All Lattice octree/Coulomb tests passed." << std::endl;
     return 0;
 }

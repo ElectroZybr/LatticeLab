@@ -40,7 +40,7 @@ FetchContent_Declare(
     GIT_TAG        v3.3.1
     GIT_SHALLOW    ON
 )
-FetchContent_Populate(sol2)
+FetchContent_MakeAvailable(sol2)
 
 set(_sol2_optional_impl "${sol2_SOURCE_DIR}/include/sol/optional_implementation.hpp")
 if(EXISTS "${_sol2_optional_impl}")
@@ -54,8 +54,10 @@ if(EXISTS "${_sol2_optional_impl}")
     file(WRITE "${_sol2_optional_impl}" "${_sol2_optional_impl_content}")
 endif()
 
-add_library(sol2 INTERFACE)
-target_include_directories(sol2 INTERFACE "${sol2_SOURCE_DIR}/include")
+if(NOT TARGET sol2)
+    add_library(sol2 INTERFACE)
+    target_include_directories(sol2 INTERFACE "${sol2_SOURCE_DIR}/include")
+endif()
 
 add_library(lua_static STATIC
     ${lua_SOURCE_DIR}/src/lapi.c
@@ -152,7 +154,7 @@ FetchContent_Declare(
     GIT_TAG        v0.6.8
     GIT_SHALLOW    ON
 )
-FetchContent_Populate(ImGuiFileDialog)
+FetchContent_MakeAvailable(ImGuiFileDialog)
 add_library(ImGuiFileDialog_lib STATIC
     ${imguifiledialog_SOURCE_DIR}/ImGuiFileDialog.cpp
 )
@@ -161,6 +163,9 @@ target_include_directories(ImGuiFileDialog_lib PUBLIC
     ${imgui_SOURCE_DIR}
 )
 target_link_libraries(ImGuiFileDialog_lib PUBLIC imgui)
+target_compile_options(ImGuiFileDialog_lib PRIVATE
+    $<$<CXX_COMPILER_ID:GNU>:-Wno-stringop-overflow>
+)
 
 # --- Настройка GLM ---
 FetchContent_Declare(
@@ -179,9 +184,11 @@ FetchContent_Declare(
     GIT_SHALLOW    ON
 
 )
-FetchContent_Populate(zpp_bits)
-add_library(zpp_bits INTERFACE)
-target_include_directories(zpp_bits INTERFACE "${zpp_bits_SOURCE_DIR}")
+FetchContent_MakeAvailable(zpp_bits)
+if(NOT TARGET zpp_bits)
+    add_library(zpp_bits INTERFACE)
+    target_include_directories(zpp_bits INTERFACE "${zpp_bits_SOURCE_DIR}")
+endif()
 
 # --- Настройка zstd ---
 FetchContent_Declare(
@@ -207,3 +214,9 @@ set(BUILD_SHARED_LIBS OFF)
 FetchContent_MakeAvailable(zstd)
 set(BUILD_SHARED_LIBS "${_saved_build_shared_libs}")
 unset(_saved_build_shared_libs)
+
+if(TARGET libzstd_static)
+    target_compile_options(libzstd_static PRIVATE
+        $<$<C_COMPILER_ID:GNU>:-Wno-maybe-uninitialized>
+    )
+endif()

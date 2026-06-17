@@ -250,7 +250,7 @@ namespace {
         simulation.setWorldDescription(lastFrameComment);
         simulation.reserveAtoms(lastFrameAtoms.size());
         for (const LoadedAtomData& atom : lastFrameAtoms) {
-            simulation.appendAtomFast(atom.coords + translation, atom.speed, static_cast<AtomData::Type>(atom.type), atom.fixed);
+            (void)simulation.appendAtomFast(atom.coords + translation, atom.speed, static_cast<AtomData::Type>(atom.type), atom.fixed);
         }
         simulation.finalizeAtomBatch();
         for (size_t i = 0; i < lastFrameAtoms.size(); ++i) {
@@ -414,7 +414,7 @@ namespace {
 
         simulation.reserveAtoms(atoms.size());
         for (const LoadedAtomData& atom : atoms) {
-            simulation.appendAtomFast(atom.coords, atom.speed, static_cast<AtomData::Type>(atom.type), atom.fixed);
+            (void)simulation.appendAtomFast(atom.coords, atom.speed, static_cast<AtomData::Type>(atom.type), atom.fixed);
         }
         simulation.finalizeAtomBatch();
         simulation.restoreRuntimeState(loadedStep, loadedTimeNs);
@@ -561,7 +561,7 @@ namespace {
 
         simulation.reserveAtoms(atoms.size());
         for (const LoadedAtomData& atom : atoms) {
-            simulation.appendAtomFast(atom.coords, atom.speed, static_cast<AtomData::Type>(atom.type), atom.fixed);
+            (void)simulation.appendAtomFast(atom.coords, atom.speed, static_cast<AtomData::Type>(atom.type), atom.fixed);
         }
         simulation.finalizeAtomBatch();
         for (size_t i = 0; i < atoms.size(); ++i) {

@@ -10,6 +10,7 @@
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include "Engine/Consts.h"
 #include "Engine/io/SimulationStateIO.h"
 #include "Engine/io/MoleculePdb.h"
 #include "Engine/metrics/Profiler.h"
@@ -169,7 +170,44 @@ const MoleculeTemplate* Simulation::findMoleculeTemplate(std::string_view name) 
     return &it->second;
 }
 
+glm::vec3 Simulation::temperatureVelocity(std::string_view speciesName, float temperature, bool is3d, glm::vec3 fallbackVelocity) const {
+    if (temperature <= 0.0f) {
+        return fallbackVelocity;
+    }
+
+    float mass = 0.0f;
+    const std::string moleculeKey = lowercase(std::string(speciesName));
+    if (const MoleculeTemplate* molecule = findMoleculeTemplate(moleculeKey); molecule != nullptr) {
+        for (const MoleculeAtom& atom : molecule->atoms) {
+            mass += AtomData::getProps(atom.type).mass;
+        }
+    } else {
+        const std::string atomSymbol = normalizeAtomSymbol(std::string(speciesName));
+        for (size_t i = 0; i < static_cast<size_t>(AtomData::Type::COUNT); ++i) {
+            const AtomData::Type type = static_cast<AtomData::Type>(i);
+            if (AtomData::symbol(type) == atomSymbol) {
+                mass = AtomData::getProps(type).mass;
+                break;
+            }
+        }
+    }
+
+    if (mass <= 0.0f) {
+        return fallbackVelocity;
+    }
+
+    static thread_local std::mt19937 thermalRng(std::random_device{}());
+    const float sigma = std::sqrt(Units::kboltzmann * temperature / mass);
+    std::normal_distribution<float> maxwell(0.0f, sigma);
+    return glm::vec3(
+        maxwell(thermalRng),
+        maxwell(thermalRng),
+        is3d ? maxwell(thermalRng) : 0.0f
+    );
+}
+
 bool Simulation::spawnMolecule(std::string_view speciesName, glm::vec3 start_coords, const std::optional<glm::mat3>& rotation, bool fixed) {
+    const glm::vec3 velocity = temperatureVelocity(speciesName, 0.0f, true, glm::vec3(0.0f));
     const std::string moleculeKey = lowercase(std::string(speciesName));
     if (const MoleculeTemplate* molecule = findMoleculeTemplate(moleculeKey); molecule != nullptr) {
         if (molecule->atoms.empty()) {
@@ -184,7 +222,7 @@ bool Simulation::spawnMolecule(std::string_view speciesName, glm::vec3 start_coo
 
         for (const MoleculeAtom& atom : molecule->atoms) {
             const glm::vec3 worldPos = start_coords + actualRotation * atom.localPos;
-            createdIds.push_back(appendAtomFast(worldPos, glm::vec3(0.0f), atom.type, fixed));
+            createdIds.push_back(appendAtomFast(worldPos, velocity, atom.type, fixed));
         }
         finalizeAtomBatch();
 
@@ -215,7 +253,7 @@ bool Simulation::spawnMolecule(std::string_view speciesName, glm::vec3 start_coo
             continue;
         }
 
-        appendAtomFast(start_coords, glm::vec3(0.0f), type, fixed);
+        (void)appendAtomFast(start_coords, velocity, type, fixed);
         finalizeAtomBatch();
         return true;
     }
@@ -307,7 +345,35 @@ bool Simulation::randomSpawn(std::string_view speciesName, const SpawnOptions& o
             }
 
             if (fits) {
-                return spawnMolecule(speciesName, origin, rotation, options.fixed);
+                const glm::vec3 velocity = temperatureVelocity(speciesName, options.temperature, is3d, options.velocity);
+                std::vector<AtomStorage::AtomId> createdIds;
+                createdIds.reserve(molecule->atoms.size());
+                reserveAtoms(atoms().size() + molecule->atoms.size());
+
+                for (const MoleculeAtom& atom : molecule->atoms) {
+                    const glm::vec3 worldPos = origin + rotation * atom.localPos;
+                    createdIds.push_back(appendAtomFast(worldPos, velocity, atom.type, options.fixed));
+                }
+                finalizeAtomBatch();
+
+                const AtomStorage& createdStorage = atoms();
+                std::vector<size_t> createdIndices;
+                createdIndices.reserve(createdIds.size());
+                for (const AtomStorage::AtomId atomId : createdIds) {
+                    const size_t atomIndex = createdStorage.indexOf(atomId);
+                    if (atomIndex >= createdStorage.size()) {
+                        return false;
+                    }
+                    createdIndices.push_back(atomIndex);
+                }
+
+                for (const MoleculeBond& bond : molecule->bonds) {
+                    if (bond.atomA < createdIndices.size() && bond.atomB < createdIndices.size()) {
+                        addBond(createdIndices[bond.atomA], createdIndices[bond.atomB]);
+                    }
+                }
+
+                return true;
             }
         }
 
@@ -324,6 +390,7 @@ bool Simulation::randomSpawn(std::string_view speciesName, const SpawnOptions& o
         const AtomStorage& storage = atoms();
         const float minDistanceSqr = options.minDistance * options.minDistance;
         static thread_local std::mt19937 rng(std::random_device{}());
+        const glm::vec3 velocity = temperatureVelocity(speciesName, options.temperature, is3d, options.velocity);
 
         auto sampleCoord = [&](float minValue, float maxValue) {
             if (maxValue <= minValue) {
@@ -357,7 +424,7 @@ bool Simulation::randomSpawn(std::string_view speciesName, const SpawnOptions& o
             }
 
             if (fits) {
-                appendAtomFast(pos, options.velocity, type, options.fixed);
+                (void)appendAtomFast(pos, velocity, type, options.fixed);
                 finalizeAtomBatch();
                 return true;
             }
@@ -367,6 +434,11 @@ bool Simulation::randomSpawn(std::string_view speciesName, const SpawnOptions& o
     }
 
     return false;
+}
+
+float Simulation::lj_min(AtomData::Type a, AtomData::Type b) {
+    const float sigma = 0.5f * (AtomData::getProps(a).ljA0 + AtomData::getProps(b).ljA0);
+    return sigma * std::pow(2.0f, 1.0f / 6.0f);
 }
 
 void Simulation::clear() { world().reset(); }

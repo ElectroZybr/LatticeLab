@@ -55,7 +55,7 @@ namespace Generators {
         const glm::vec3 boxCenter = sim.world().getWorldSize() * 0.5f;
         sim.reserveAtoms(sim.atoms().size() + positions.size());
         for (const glm::vec3& position : positions) {
-            sim.appendAtomFast(position - pyramidCenter + boxCenter, glm::vec3(0.0f), type);
+            (void)sim.appendAtomFast(position - pyramidCenter + boxCenter, glm::vec3(0.0f), type);
         }
 
         sim.finalizeAtomBatch();

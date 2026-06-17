@@ -31,7 +31,7 @@ constexpr int FPS = 60;
 constexpr int LPS = 20;
 
 namespace {
-    const std::filesystem::path kBootstrapScriptPath = std::filesystem::path("Mods") / "Base" / "Generators" / "molecules.lua";
+    const std::filesystem::path kBootstrapScriptPath = std::filesystem::path("Mods") / "Base" / "scenes" / "waterGas.lua";
 
     uint32_t makeXYZStepInterval(float simulationStepsPerSecond, int captureFps) {
         const float sanitizedStepsPerSecond = std::max(simulationStepsPerSecond, 1.0f);
@@ -66,8 +66,12 @@ int Application::run() {
     Lattice::LuaState luaState;
     luaState.bindSimulation(simulation);
 
-    if (std::filesystem::exists(kBootstrapScriptPath) && !luaState.runFile(kBootstrapScriptPath)) {
-        std::cerr << "Failed to execute Lua bootstrap script '" << kBootstrapScriptPath.string() << "': " << luaState.lastError() << std::endl;
+    if (std::filesystem::exists(kBootstrapScriptPath)) {
+        if (!luaState.runFile(kBootstrapScriptPath)) {
+            std::cerr << "Failed to execute Lua script '" << kBootstrapScriptPath.string() << "': " << luaState.lastError() << std::endl;
+        }
+    } else {
+        std::cerr << "Lua script was not found: '" << kBootstrapScriptPath.string() << "'" << std::endl;
     }
 
     CaptureController captureController;

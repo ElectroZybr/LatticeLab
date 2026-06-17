@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.17)
 cmake_policy(SET CMP0069 NEW)
 
+# CMake 4.x: keep third-party dependencies on a supported policy floor.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.10)
+set(CMAKE_POLICY_DEFAULT_CMP0169 OLD)
+
 project(LatticeLab VERSION 0.1.3 LANGUAGES C CXX)
 
 set(APP_NAME "${PROJECT_NAME}")
@@ -53,11 +57,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FETCHCONTENT_BASE_DIR "${CMAKE_BINARY_DIR}/_deps" CACHE PATH "FetchContent base directory" FORCE)
-
-# CMake 4.x: keep third-party dependencies on a supported policy floor.
-if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
-    set(CMAKE_POLICY_VERSION_MINIMUM 3.10)
-endif()
 
 set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "Suppress developer warnings from third-party CMake projects")
 

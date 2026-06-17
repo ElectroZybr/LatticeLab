@@ -109,7 +109,7 @@ namespace Generators {
             for (int second = 1; second <= secondCount; ++second) {
                 for (int depth = 1; depth <= depthCount; ++depth) {
                     const glm::vec3 latticeCoords = detail::makeLayoutVector(layout, first, second, depth);
-                    sim.appendAtomFast(latticeCoords * static_cast<float>(padding) + vecMargin, detail::randomVelocity(0.5f), type);
+                    (void)sim.appendAtomFast(latticeCoords * static_cast<float>(padding) + vecMargin, detail::randomVelocity(0.5f), type);
                 }
             }
         }

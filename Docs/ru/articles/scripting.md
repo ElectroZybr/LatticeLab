@@ -241,10 +241,7 @@ return gas
 simulation {
     world {
         id = "gas_mix",
-
-        box = {
-            size = { 100, 100, 100 }
-        },
+        size = { 100, 100, 100 }
 
         settings = {
             dt = 0.001,
