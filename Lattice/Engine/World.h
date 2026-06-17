@@ -69,6 +69,7 @@ public:
     void addAtom(const glm::vec3& start_coords, const glm::vec3& start_speed, AtomData::Type type, bool fixed);
     void addBond(size_t aIndex, size_t bIndex);
     void removeAtom(size_t atomIndex);
+    void removeAtoms(std::vector<size_t> atomIndices);
     void remapAtomIndices(std::span<const uint32_t> oldToNew);
     void clearAtoms() {
         atomStorage_.clear();

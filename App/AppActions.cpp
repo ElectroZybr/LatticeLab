@@ -396,14 +396,18 @@ namespace AppActions {
             Generators::triangularBipyramidCrystal(simulation, axisCount, atomType);
         }));
         track(AppSignals::UI::CreateRandomFill.connect([&](const AppSignals::UI::RandomFillRequest& request) {
-            simulation.clear();
+            if (request.options.mode == Generators::SpawnMode::Reset) {
+                simulation.clear();
+            }
             ToolsManager::resetInteractionState();
             const std::unique_ptr<Lattice::Generators::Region> region = makeRegion(request.region);
             Generators::randomFill(simulation, *region, makeComposition(request.composition), request.options);
             renderer.syncScene(simulation);
         }));
         track(AppSignals::UI::CreateLatticeFill.connect([&](const AppSignals::UI::LatticeFillRequest& request) {
-            simulation.clear();
+            if (request.options.mode == Generators::SpawnMode::Reset) {
+                simulation.clear();
+            }
             ToolsManager::resetInteractionState();
             const std::unique_ptr<Lattice::Generators::Region> region = makeRegion(request.region);
             Generators::latticeFill(simulation, *region, makeComposition(request.composition), request.options);

@@ -75,6 +75,18 @@ namespace {
         return "BCC";
     }
 
+    const char* spawnModeLabel(Generators::SpawnMode mode) {
+        switch (mode) {
+        case Generators::SpawnMode::Reset:
+            return "Reset";
+        case Generators::SpawnMode::Add:
+            return "Add";
+        case Generators::SpawnMode::Replace:
+            return "Replace";
+        }
+        return "Replace";
+    }
+
     void syncMixedGasCountsFromPercents(std::vector<IOPanel::MixedGasEntry>& entries, int totalCount) {
         for (IOPanel::MixedGasEntry& entry : entries) {
             entry.concentrationPercent = std::clamp(entry.concentrationPercent, 0.0f, 100.0f);
@@ -702,6 +714,24 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
         AppSignals::UI::SetGeneratorPhantom.emit(randomFillRegion_);
         drawCompositionEditor("random_fill_composition", randomFillComposition_, scale, "Ar");
 
+        if (ImGui::BeginCombo("Mode##random_fill", spawnModeLabel(randomFillOptions_.mode))) {
+            constexpr Generators::SpawnMode spawnModes[] = {
+                Generators::SpawnMode::Reset,
+                Generators::SpawnMode::Add,
+                Generators::SpawnMode::Replace,
+            };
+            for (Generators::SpawnMode value : spawnModes) {
+                const bool selected = value == randomFillOptions_.mode;
+                if (ImGui::Selectable(spawnModeLabel(value), selected)) {
+                    randomFillOptions_.mode = value;
+                }
+                if (selected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+
         ImGui::SetNextItemWidth(120.0f * scale);
         ImGui::DragFloat("Density##random_fill", &randomFillOptions_.density, 0.001f, 0.0f, 10.0f, "%.4f");
         ImGui::SetNextItemWidth(120.0f * scale);
@@ -755,6 +785,24 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
         }
 
         drawCompositionEditor("lattice_fill_composition", latticeFillComposition_, scale, "Z");
+
+        if (ImGui::BeginCombo("Mode##lattice_fill", spawnModeLabel(latticeFillOptions_.mode))) {
+            constexpr Generators::SpawnMode spawnModes[] = {
+                Generators::SpawnMode::Reset,
+                Generators::SpawnMode::Add,
+                Generators::SpawnMode::Replace,
+            };
+            for (Generators::SpawnMode value : spawnModes) {
+                const bool selected = value == latticeFillOptions_.mode;
+                if (ImGui::Selectable(spawnModeLabel(value), selected)) {
+                    latticeFillOptions_.mode = value;
+                }
+                if (selected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
 
         int seed = static_cast<int>(latticeFillOptions_.seed);
         ImGui::SetNextItemWidth(120.0f * scale);

@@ -6,6 +6,7 @@
 #include <optional>
 #include <random>
 #include <string>
+#include <unordered_set>
 
 namespace Generators {
 namespace {
@@ -116,14 +117,62 @@ std::string chooseSpecies(const std::vector<Compose>& composition, float totalSh
     return composition.back().species;
 }
 
+void removeAtomIndicesDescending(Lattice::Simulation& sim, std::vector<size_t>& atomIndices) {
+    if (atomIndices.empty()) {
+        return;
+    }
+
+    std::sort(atomIndices.begin(), atomIndices.end());
+    atomIndices.erase(std::unique(atomIndices.begin(), atomIndices.end()), atomIndices.end());
+    sim.removeAtoms(std::move(atomIndices));
+}
+
+std::vector<size_t> collectCollidingAtoms(const Lattice::Simulation& sim, glm::vec3 position, float minDistance,
+                                          const std::unordered_set<AtomStorage::AtomId>& initialAtomIds) {
+    std::vector<size_t> collidingIndices;
+    if (initialAtomIds.empty()) {
+        return collidingIndices;
+    }
+
+    const World& world = sim.world();
+    const AtomStorage& storage = sim.atoms();
+    const SpatialGrid& grid = world.getGrid();
+    const float minDistanceSqr = minDistance * minDistance;
+    const int cellX = static_cast<int>(grid.worldToCellX(position.x));
+    const int cellY = static_cast<int>(grid.worldToCellY(position.y));
+    const int cellZ = static_cast<int>(grid.worldToCellZ(position.z));
+
+    grid.forEachNeighborCell(cellX, cellY, cellZ, [&](int nx, int ny, int nz) {
+        for (const uint32_t atomIndex : grid.atomsInCell(nx, ny, nz)) {
+            if (!initialAtomIds.contains(storage.atomId(atomIndex))) {
+                continue;
+            }
+
+            const glm::vec3 delta = position - storage.pos(atomIndex);
+            if (glm::dot(delta, delta) < minDistanceSqr) {
+                collidingIndices.push_back(atomIndex);
+            }
+        }
+    });
+
+    return collidingIndices;
+}
+
 bool spawnSite(Lattice::Simulation& sim, glm::vec3 position, const std::vector<Compose>& composition, float totalShare,
-               bool fixed, std::mt19937& rng) {
+               float minDistance, const std::unordered_set<AtomStorage::AtomId>& initialAtomIds, SpawnMode mode, bool fixed, std::mt19937& rng) {
     std::uniform_real_distribution<float> occupancyDist(0.0f, 1.0f);
     if (occupancyDist(rng) > totalShare) {
         return false;
     }
 
     const std::string species = chooseSpecies(composition, totalShare, rng);
+    std::vector<size_t> collidingIndices = collectCollidingAtoms(sim, position, minDistance, initialAtomIds);
+    if (mode == SpawnMode::Replace) {
+        removeAtomIndicesDescending(sim, collidingIndices);
+    } else if (!collidingIndices.empty()) {
+        return false;
+    }
+
     return sim.spawnMolecule(species, position, std::nullopt, fixed);
 }
 
@@ -164,6 +213,11 @@ int latticeFill(Lattice::Simulation& sim, const Lattice::Generators::Region& reg
     const Lattice::Generators::Bounds bounds = clampBoundsToWorld(region.bounds(), sim.world().getWorldSize(), margin);
     const glm::vec3 size = bounds.max - bounds.min;
     const size_t initialAtomCount = sim.atoms().size();
+    std::unordered_set<AtomStorage::AtomId> initialAtomIds;
+    initialAtomIds.reserve(initialAtomCount);
+    for (const AtomStorage::AtomId atomId : sim.atoms().atomIdDataSpan()) {
+        initialAtomIds.insert(atomId);
+    }
 
     int spawned = 0;
     sim.beginAtomBatch();
@@ -183,10 +237,12 @@ int latticeFill(Lattice::Simulation& sim, const Lattice::Generators::Region& reg
                     );
                     const glm::vec3 center = origin + glm::vec3(0.5f * spacing);
 
-                    if (region.contains(origin) && spawnSite(sim, origin, composition, shareTotal, options.fixed, rng)) {
+                    if (region.contains(origin) &&
+                        spawnSite(sim, origin, composition, shareTotal, spacing, initialAtomIds, options.mode, options.fixed, rng)) {
                         ++spawned;
                     }
-                    if (region.contains(center) && spawnSite(sim, center, composition, shareTotal, options.fixed, rng)) {
+                    if (region.contains(center) &&
+                        spawnSite(sim, center, composition, shareTotal, spacing, initialAtomIds, options.mode, options.fixed, rng)) {
                         ++spawned;
                     }
                 }
@@ -223,7 +279,8 @@ int latticeFill(Lattice::Simulation& sim, const Lattice::Generators::Region& reg
                     }
 
                     const glm::vec3 position(xCoord, yCoord, zCoord);
-                    if (region.contains(position) && spawnSite(sim, position, composition, shareTotal, options.fixed, rng)) {
+                    if (region.contains(position) &&
+                        spawnSite(sim, position, composition, shareTotal, spacing, initialAtomIds, options.mode, options.fixed, rng)) {
                         ++spawned;
                     }
                 }
@@ -233,6 +290,7 @@ int latticeFill(Lattice::Simulation& sim, const Lattice::Generators::Region& reg
 
     sim.finishAtomBatch();
     const glm::vec3 worldSize = sim.world().getWorldSize();
+    std::vector<size_t> atomIndicesToRemove;
     for (size_t atomIndex = sim.atoms().size(); atomIndex > initialAtomCount; --atomIndex) {
         const size_t currentIndex = atomIndex - 1;
         const glm::vec3 position = sim.atoms().pos(currentIndex);
@@ -242,9 +300,10 @@ int latticeFill(Lattice::Simulation& sim, const Lattice::Generators::Region& reg
             position.y <= worldSize.y - margin &&
             position.z <= worldSize.z - margin;
         if (!insideWorld || !containsWithMargin(region, position, margin)) {
-            sim.removeAtom(currentIndex);
+            atomIndicesToRemove.push_back(currentIndex);
         }
     }
+    sim.removeAtoms(std::move(atomIndicesToRemove));
 
     return static_cast<int>(sim.atoms().size() - initialAtomCount);
 }

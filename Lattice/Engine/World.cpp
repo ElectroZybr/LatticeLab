@@ -54,38 +54,53 @@ void World::remapAtomIndices(std::span<const uint32_t> oldToNew) {
 }
 
 void World::removeAtom(size_t atomIndex) {
-    if (atomIndex >= atomStorage_.size()) {
+    removeAtoms({atomIndex});
+}
+
+void World::removeAtoms(std::vector<size_t> atomIndices) {
+    if (atomIndices.empty()) {
         return;
     }
 
-    const size_t lastIndex = atomStorage_.size() - 1;
+    std::sort(atomIndices.begin(), atomIndices.end());
+    atomIndices.erase(std::unique(atomIndices.begin(), atomIndices.end()), atomIndices.end());
 
-    for (auto it = bonds_.begin(); it != bonds_.end();) {
-        if (it->aIndex == atomIndex || it->bIndex == atomIndex) {
-            if (it->aIndex == atomIndex && it->bIndex != atomIndex && it->bIndex < atomStorage_.size()) {
-                ++atomStorage_.valenceCount(it->bIndex);
-            }
-            if (it->bIndex == atomIndex && it->aIndex != atomIndex && it->aIndex < atomStorage_.size()) {
-                ++atomStorage_.valenceCount(it->aIndex);
-            }
-            it = bonds_.erase(it);
+    for (auto itIndex = atomIndices.rbegin(); itIndex != atomIndices.rend(); ++itIndex) {
+        const size_t atomIndex = *itIndex;
+        if (atomIndex >= atomStorage_.size()) {
             continue;
         }
 
-        if (atomIndex != lastIndex) {
-            if (it->aIndex == lastIndex) {
-                it->aIndex = atomIndex;
+        const size_t lastIndex = atomStorage_.size() - 1;
+
+        for (auto it = bonds_.begin(); it != bonds_.end();) {
+            if (it->aIndex == atomIndex || it->bIndex == atomIndex) {
+                if (it->aIndex == atomIndex && it->bIndex != atomIndex && it->bIndex < atomStorage_.size()) {
+                    ++atomStorage_.valenceCount(it->bIndex);
+                }
+                if (it->bIndex == atomIndex && it->aIndex != atomIndex && it->aIndex < atomStorage_.size()) {
+                    ++atomStorage_.valenceCount(it->aIndex);
+                }
+                it = bonds_.erase(it);
+                continue;
             }
-            if (it->bIndex == lastIndex) {
-                it->bIndex = atomIndex;
+
+            if (atomIndex != lastIndex) {
+                if (it->aIndex == lastIndex) {
+                    it->aIndex = atomIndex;
+                }
+                if (it->bIndex == lastIndex) {
+                    it->bIndex = atomIndex;
+                }
             }
+
+            ++it;
         }
 
-        ++it;
+        atomStorage_.removeAtom(atomIndex);
     }
-
-    atomStorage_.removeAtom(atomIndex);
     grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
+    neighborList_.clear();
     invalidateMetrics();
     invalidateVectorField();
 }

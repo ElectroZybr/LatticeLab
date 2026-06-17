@@ -149,6 +149,9 @@ int randomFill(Lattice::Simulation& sim, const Lattice::Generators::Region& regi
     spawnOptions.maxAttempts = std::max<uint32_t>(1, options.maxAttemptsPerSpawn);
     spawnOptions.randomRotation = options.randomRotation;
     spawnOptions.fixed = options.fixed;
+    spawnOptions.collisionMode =
+        options.mode == SpawnMode::Replace ? Lattice::SpawnCollisionMode::Replace : Lattice::SpawnCollisionMode::Add;
+    spawnOptions.replaceExistingCount = initialAtomCount;
 
     int spawned = 0;
     for (const std::string& species : speciesQueue) {
@@ -159,6 +162,7 @@ int randomFill(Lattice::Simulation& sim, const Lattice::Generators::Region& regi
     sim.finishAtomBatch();
 
     const glm::vec3 worldSize = sim.world().getWorldSize();
+    std::vector<size_t> atomIndicesToRemove;
     for (size_t atomIndex = sim.atoms().size(); atomIndex > initialAtomCount; --atomIndex) {
         const size_t currentIndex = atomIndex - 1;
         const glm::vec3 position = sim.atoms().pos(currentIndex);
@@ -168,9 +172,10 @@ int randomFill(Lattice::Simulation& sim, const Lattice::Generators::Region& regi
             position.y <= worldSize.y - margin &&
             position.z <= worldSize.z - margin;
         if (!insideWorld || !containsWithMargin(region, position, margin)) {
-            sim.removeAtom(currentIndex);
+            atomIndicesToRemove.push_back(currentIndex);
         }
     }
+    sim.removeAtoms(std::move(atomIndicesToRemove));
 
     return static_cast<int>(sim.atoms().size() - initialAtomCount);
 }

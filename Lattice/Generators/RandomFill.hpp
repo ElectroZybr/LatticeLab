@@ -9,7 +9,14 @@
 
 namespace Generators {
 
+enum class SpawnMode : uint8_t {
+    Reset,
+    Add,
+    Replace,
+};
+
 struct RandomFillOptions {
+    SpawnMode mode = SpawnMode::Replace;
     float density = 0.0f;
     float temperature = 0.0f;
     float margin = 2.0f;

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -16,6 +17,11 @@
 
 namespace Lattice {
 
+enum class SpawnCollisionMode : uint8_t {
+    Add,
+    Replace,
+};
+
 struct SpawnOptions {
     glm::vec3 velocity = glm::vec3(0.0f);
     glm::vec3 min = glm::vec3(0.0f);
@@ -26,6 +32,8 @@ struct SpawnOptions {
     uint32_t maxAttempts = 32;
     bool randomRotation = true;
     bool fixed = false;
+    SpawnCollisionMode collisionMode = SpawnCollisionMode::Add;
+    size_t replaceExistingCount = std::numeric_limits<size_t>::max();
 };
 
 class Simulation {
@@ -56,6 +64,7 @@ public:
 
     void createAtom(glm::vec3 start_coords, glm::vec3 start_speed, AtomData::Type type, bool fixed = false);
     void removeAtom(size_t atomIndex);
+    void removeAtoms(std::vector<size_t> atomIndices);
     void addBond(size_t aIndex, size_t bIndex);
     bool loadMoleculeTemplate(std::string name, const std::filesystem::path& pdbPath);
     bool hasMoleculeTemplate(std::string_view name) const;

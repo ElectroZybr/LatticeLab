@@ -18,6 +18,16 @@
 namespace Lattice {
 namespace {
 
+void removeAtomIndicesDescending(Simulation& simulation, std::vector<size_t>& atomIndices) {
+    if (atomIndices.empty()) {
+        return;
+    }
+
+    std::sort(atomIndices.begin(), atomIndices.end());
+    atomIndices.erase(std::unique(atomIndices.begin(), atomIndices.end()), atomIndices.end());
+    simulation.removeAtoms(std::move(atomIndices));
+}
+
 glm::mat3 randomRotationMatrix(bool is3d) {
     static thread_local std::mt19937 rng(std::random_device{}());
     std::uniform_real_distribution<float> angleDist(0.0f, glm::two_pi<float>());
@@ -158,6 +168,10 @@ void Simulation::createAtom(glm::vec3 start_coords, glm::vec3 start_speed, AtomD
 
 void Simulation::removeAtom(size_t atomIndex) {
     world().removeAtom(atomIndex);
+}
+
+void Simulation::removeAtoms(std::vector<size_t> atomIndices) {
+    world().removeAtoms(std::move(atomIndices));
 }
 
 void Simulation::addBond(size_t aIndex, size_t bIndex) { world().addBond(aIndex, bIndex); }
@@ -343,6 +357,7 @@ bool Simulation::randomSpawn(std::string_view speciesName, const SpawnOptions& o
             const glm::vec3 origin(*x, *y, z);
 
             bool fits = true;
+            std::vector<size_t> collidingIndices;
             for (const MoleculeAtom& atom : molecule->atoms) {
                 const glm::vec3 pos = origin + rotation * atom.localPos;
 
@@ -355,8 +370,17 @@ bool Simulation::randomSpawn(std::string_view speciesName, const SpawnOptions& o
                 for (size_t otherIndex = 0; otherIndex < storage.size(); ++otherIndex) {
                     const glm::vec3 delta = pos - storage.pos(otherIndex);
                     if (glm::dot(delta, delta) < minDistanceSqr) {
-                        fits = false;
-                        break;
+                        if (options.collisionMode == SpawnCollisionMode::Replace) {
+                            if (otherIndex < options.replaceExistingCount) {
+                                collidingIndices.push_back(otherIndex);
+                            } else {
+                                fits = false;
+                                break;
+                            }
+                        } else {
+                            fits = false;
+                            break;
+                        }
                     }
                 }
 
@@ -366,6 +390,9 @@ bool Simulation::randomSpawn(std::string_view speciesName, const SpawnOptions& o
             }
 
             if (fits) {
+                if (options.collisionMode == SpawnCollisionMode::Replace) {
+                    removeAtomIndicesDescending(*this, collidingIndices);
+                }
                 const glm::vec3 velocity = temperatureVelocity(speciesName, options.temperature, is3d, options.velocity);
                 std::vector<AtomStorage::AtomId> createdIds;
                 createdIds.reserve(molecule->atoms.size());
@@ -440,15 +467,28 @@ bool Simulation::randomSpawn(std::string_view speciesName, const SpawnOptions& o
             );
 
             bool fits = true;
+            std::vector<size_t> collidingIndices;
             for (size_t otherIndex = 0; otherIndex < storage.size(); ++otherIndex) {
                 const glm::vec3 delta = pos - storage.pos(otherIndex);
                 if (glm::dot(delta, delta) < minDistanceSqr) {
-                    fits = false;
-                    break;
+                    if (options.collisionMode == SpawnCollisionMode::Replace) {
+                        if (otherIndex < options.replaceExistingCount) {
+                            collidingIndices.push_back(otherIndex);
+                        } else {
+                            fits = false;
+                            break;
+                        }
+                    } else {
+                        fits = false;
+                        break;
+                    }
                 }
             }
 
             if (fits) {
+                if (options.collisionMode == SpawnCollisionMode::Replace) {
+                    removeAtomIndicesDescending(*this, collidingIndices);
+                }
                 (void)appendAtomFast(pos, velocity, type, options.fixed);
                 if (atomBatchActive_) {
                     atomBatchDirty_ = true;

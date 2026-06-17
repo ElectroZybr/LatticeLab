@@ -15,7 +15,8 @@ enum class LatticeStructure : uint8_t {
 };
 
 struct LatticeFillOptions {
-    LatticeStructure structure = LatticeStructure::Bcc;
+    SpawnMode mode = SpawnMode::Replace;
+    LatticeStructure structure = LatticeStructure::Hex;
     float margin = 0.0f;
     bool fixed = false;
     uint32_t seed = 0;
