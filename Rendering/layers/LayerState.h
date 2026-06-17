@@ -37,9 +37,11 @@ struct LineLayerState {
 
     wgpu::raii::Buffer bondVb;
     wgpu::raii::Buffer boxVb;
+    wgpu::raii::Buffer phantomVb;
     wgpu::raii::Buffer memoryOrderVb;
 
     size_t bondVbCapacity = 0;
+    size_t phantomVbCapacity = 0;
     size_t memoryOrderVbCapacity = 0;
 
     std::array<float, 24 * 3> boxVertices{};

@@ -50,8 +50,16 @@ public:
     void setScenesDirectory(std::filesystem::path scenesDirectory);
     [[nodiscard]] const std::filesystem::path& scenesDirectory() const { return scenesDirectory_; }
 
-    void toggle() { visible_ = !visible_; }
-    void close() { visible_ = false; }
+    void toggle() {
+        visible_ = !visible_;
+        if (!visible_) {
+            AppSignals::UI::ClearGeneratorPhantom.emit();
+        }
+    }
+    void close() {
+        visible_ = false;
+        AppSignals::UI::ClearGeneratorPhantom.emit();
+    }
     [[nodiscard]] bool isVisible() const { return visible_; }
     [[nodiscard]] int sceneAxisCount() const { return generatorAxisCounts_.x; }
     [[nodiscard]] bool sceneIs3D() const { return generatorIs3D_; }

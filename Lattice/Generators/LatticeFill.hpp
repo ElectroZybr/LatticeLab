@@ -16,6 +16,7 @@ enum class LatticeStructure : uint8_t {
 
 struct LatticeFillOptions {
     LatticeStructure structure = LatticeStructure::Bcc;
+    float margin = 0.0f;
     bool fixed = false;
     uint32_t seed = 0;
 };

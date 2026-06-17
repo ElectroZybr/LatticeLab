@@ -10,6 +10,34 @@
 namespace Generators {
 namespace {
 
+Lattice::Generators::Bounds clampBoundsToWorld(const Lattice::Generators::Bounds& bounds, glm::vec3 worldSize, float margin) {
+    const glm::vec3 safeMargin = glm::vec3(std::max(margin, 0.0f));
+    const glm::vec3 worldMin = glm::min(safeMargin, worldSize * 0.5f);
+    const glm::vec3 worldMax = glm::max(worldSize - safeMargin, worldMin);
+
+    return {
+        .min = glm::clamp(bounds.min, worldMin, worldMax),
+        .max = glm::clamp(bounds.max, worldMin, worldMax),
+    };
+}
+
+bool containsWithMargin(const Lattice::Generators::Region& region, glm::vec3 point, float margin) {
+    if (!region.contains(point)) {
+        return false;
+    }
+
+    if (margin <= 0.0f) {
+        return true;
+    }
+
+    return region.contains(point + glm::vec3( margin, 0.0f, 0.0f)) &&
+           region.contains(point + glm::vec3(-margin, 0.0f, 0.0f)) &&
+           region.contains(point + glm::vec3(0.0f,  margin, 0.0f)) &&
+           region.contains(point + glm::vec3(0.0f, -margin, 0.0f)) &&
+           region.contains(point + glm::vec3(0.0f, 0.0f,  margin)) &&
+           region.contains(point + glm::vec3(0.0f, 0.0f, -margin));
+}
+
 void loadBaseMoleculesOnce(Lattice::Simulation& sim) {
     static bool loaded = false;
     if (loaded) {
@@ -52,7 +80,8 @@ int randomFill(Lattice::Simulation& sim, const Lattice::Generators::Region& regi
     loadBaseMoleculesOnce(sim);
     const size_t initialAtomCount = sim.atoms().size();
 
-    const Lattice::Generators::Bounds bounds = region.bounds();
+    const float margin = std::max(options.margin, 0.0f);
+    const Lattice::Generators::Bounds bounds = clampBoundsToWorld(region.bounds(), sim.world().getWorldSize(), margin);
     const glm::vec3 span = bounds.max - bounds.min;
     const float boundsVolume = std::max(0.0f, span.x) * std::max(0.0f, span.y) * std::max(0.0f, span.z);
     const int totalAtomBudget = std::max(0, static_cast<int>(std::lround(boundsVolume * options.density)));
@@ -116,6 +145,7 @@ int randomFill(Lattice::Simulation& sim, const Lattice::Generators::Region& regi
     spawnOptions.min = bounds.min;
     spawnOptions.max = bounds.max;
     spawnOptions.temperature = options.temperature;
+    spawnOptions.margin = margin;
     spawnOptions.maxAttempts = std::max<uint32_t>(1, options.maxAttemptsPerSpawn);
     spawnOptions.randomRotation = options.randomRotation;
     spawnOptions.fixed = options.fixed;
@@ -128,9 +158,16 @@ int randomFill(Lattice::Simulation& sim, const Lattice::Generators::Region& regi
     }
     sim.finishAtomBatch();
 
+    const glm::vec3 worldSize = sim.world().getWorldSize();
     for (size_t atomIndex = sim.atoms().size(); atomIndex > initialAtomCount; --atomIndex) {
         const size_t currentIndex = atomIndex - 1;
-        if (!region.contains(sim.atoms().pos(currentIndex))) {
+        const glm::vec3 position = sim.atoms().pos(currentIndex);
+        const bool insideWorld =
+            position.x >= margin && position.y >= margin && position.z >= margin &&
+            position.x <= worldSize.x - margin &&
+            position.y <= worldSize.y - margin &&
+            position.z <= worldSize.z - margin;
+        if (!insideWorld || !containsWithMargin(region, position, margin)) {
             sim.removeAtom(currentIndex);
         }
     }

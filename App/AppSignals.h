@@ -71,6 +71,8 @@ namespace AppSignals {
         inline Signals::Signal<void(int axisCount, AtomData::Type atomType)> CreateTriangularBipyramidCrystal;
         inline Signals::Signal<void(const RandomFillRequest& request)> CreateRandomFill;
         inline Signals::Signal<void(const LatticeFillRequest& request)> CreateLatticeFill;
+        inline Signals::Signal<void(const GeneratorRegionSpec& region)> SetGeneratorPhantom;
+        inline Signals::Signal<void()> ClearGeneratorPhantom;
 
         inline Signals::Signal<void(RendererType type)> SetRender;
         inline Signals::Signal<void(Camera::Mode mode)> SetCameraMode;

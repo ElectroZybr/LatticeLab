@@ -1,8 +1,12 @@
 #include "AppActions.h"
 
+#include <array>
+#include <algorithm>
 #include <cmath>
 #include <memory>
+#include <vector>
 
+#include <glm/gtc/constants.hpp>
 #include "App/AppSignals.h"
 #include "Lattice/Generators/Generators.h"
 #include "App/capture/CaptureOutputPath.h"
@@ -138,6 +142,188 @@ namespace {
         }
         return result;
     }
+
+    void appendSegment(std::vector<glm::vec3>& lines, glm::vec3 start, glm::vec3 end) {
+        lines.push_back(start);
+        lines.push_back(end);
+    }
+
+    glm::vec3 pointOnCircleXY(glm::vec3 center, float radius, float angle) {
+        return glm::vec3(center.x + radius * std::cos(angle), center.y + radius * std::sin(angle), center.z);
+    }
+
+    glm::vec3 pointOnCircleXZ(glm::vec3 center, float radius, float angle) {
+        return glm::vec3(center.x + radius * std::cos(angle), center.y, center.z + radius * std::sin(angle));
+    }
+
+    glm::vec3 pointOnCircleYZ(glm::vec3 center, float radius, float angle) {
+        return glm::vec3(center.x, center.y + radius * std::cos(angle), center.z + radius * std::sin(angle));
+    }
+
+    template <typename PointFn>
+    void appendClosedCurve(std::vector<glm::vec3>& lines, int segments, PointFn pointFn) {
+        for (int i = 0; i < segments; ++i) {
+            const float a0 = glm::two_pi<float>() * static_cast<float>(i) / static_cast<float>(segments);
+            const float a1 = glm::two_pi<float>() * static_cast<float>(i + 1) / static_cast<float>(segments);
+            appendSegment(lines, pointFn(a0), pointFn(a1));
+        }
+    }
+
+    std::vector<glm::vec3> buildPhantomLines(const AppSignals::UI::GeneratorRegionSpec& spec, const glm::vec3&, float inset = 0.0f) {
+        using AppSignals::UI::GeneratorRegionKind;
+        constexpr int kCircleSegments = 48;
+        constexpr int kTorusMajorSegments = 48;
+        constexpr int kTorusMinorSegments = 18;
+        std::vector<glm::vec3> lines;
+        const float clampedInset = std::max(inset, 0.0f);
+
+        switch (spec.kind) {
+        case GeneratorRegionKind::Box: {
+            const glm::vec3 effectiveSize = glm::max(spec.boxSize - glm::vec3(2.0f * clampedInset), glm::vec3(0.0f));
+            const glm::vec3 half = 0.5f * effectiveSize;
+            const std::array<glm::vec3, 8> corners = {
+                spec.center + glm::vec3(-half.x, -half.y, -half.z),
+                spec.center + glm::vec3( half.x, -half.y, -half.z),
+                spec.center + glm::vec3( half.x,  half.y, -half.z),
+                spec.center + glm::vec3(-half.x,  half.y, -half.z),
+                spec.center + glm::vec3(-half.x, -half.y,  half.z),
+                spec.center + glm::vec3( half.x, -half.y,  half.z),
+                spec.center + glm::vec3( half.x,  half.y,  half.z),
+                spec.center + glm::vec3(-half.x,  half.y,  half.z),
+            };
+            constexpr std::array<std::pair<int, int>, 12> edges = {{
+                {0, 1}, {1, 2}, {2, 3}, {3, 0},
+                {4, 5}, {5, 6}, {6, 7}, {7, 4},
+                {0, 4}, {1, 5}, {2, 6}, {3, 7},
+            }};
+            lines.reserve(edges.size() * 2);
+            for (const auto& [a, b] : edges) {
+                appendSegment(lines, corners[a], corners[b]);
+            }
+            break;
+        }
+        case GeneratorRegionKind::Sphere:
+            lines.reserve(kCircleSegments * 3 * 2);
+            appendClosedCurve(lines, kCircleSegments,
+                              [&](float angle) { return pointOnCircleXY(spec.center, std::max(0.0f, spec.sphereRadius - clampedInset), angle); });
+            appendClosedCurve(lines, kCircleSegments,
+                              [&](float angle) { return pointOnCircleXZ(spec.center, std::max(0.0f, spec.sphereRadius - clampedInset), angle); });
+            appendClosedCurve(lines, kCircleSegments,
+                              [&](float angle) { return pointOnCircleYZ(spec.center, std::max(0.0f, spec.sphereRadius - clampedInset), angle); });
+            break;
+        case GeneratorRegionKind::Cylinder: {
+            const float effectiveRadius = std::max(0.0f, spec.cylinderRadius - clampedInset);
+            const float effectiveHeight = std::max(0.0f, spec.cylinderHeight - 2.0f * clampedInset);
+            const float halfHeight = 0.5f * effectiveHeight;
+            const glm::vec3 bottomCenter = spec.center + glm::vec3(0.0f, 0.0f, -halfHeight);
+            const glm::vec3 topCenter = spec.center + glm::vec3(0.0f, 0.0f, halfHeight);
+            appendClosedCurve(lines, kCircleSegments,
+                              [&](float angle) { return pointOnCircleXY(bottomCenter, effectiveRadius, angle); });
+            appendClosedCurve(lines, kCircleSegments,
+                              [&](float angle) { return pointOnCircleXY(topCenter, effectiveRadius, angle); });
+            for (int i = 0; i < 4; ++i) {
+                const float angle = glm::half_pi<float>() * static_cast<float>(i);
+                appendSegment(lines, pointOnCircleXY(bottomCenter, effectiveRadius, angle),
+                              pointOnCircleXY(topCenter, effectiveRadius, angle));
+            }
+            break;
+        }
+        case GeneratorRegionKind::Capsule: {
+            const float halfHeight = 0.5f * spec.capsuleHeight;
+            const glm::vec3 bottomCenter = spec.center + glm::vec3(0.0f, 0.0f, -halfHeight);
+            const glm::vec3 topCenter = spec.center + glm::vec3(0.0f, 0.0f, halfHeight);
+            appendClosedCurve(lines, kCircleSegments,
+                              [&](float angle) { return pointOnCircleXY(bottomCenter, spec.capsuleRadius, angle); });
+            appendClosedCurve(lines, kCircleSegments,
+                              [&](float angle) { return pointOnCircleXY(topCenter, spec.capsuleRadius, angle); });
+            for (int i = 0; i < 4; ++i) {
+                const float angle = glm::half_pi<float>() * static_cast<float>(i);
+                appendSegment(lines, pointOnCircleXY(bottomCenter, spec.capsuleRadius, angle),
+                              pointOnCircleXY(topCenter, spec.capsuleRadius, angle));
+            }
+            for (int i = 0; i < kCircleSegments; ++i) {
+                const float a0 = glm::pi<float>() * static_cast<float>(i) / static_cast<float>(kCircleSegments);
+                const float a1 = glm::pi<float>() * static_cast<float>(i + 1) / static_cast<float>(kCircleSegments);
+                appendSegment(lines, pointOnCircleXZ(topCenter, spec.capsuleRadius, a0),
+                              pointOnCircleXZ(topCenter, spec.capsuleRadius, a1));
+                appendSegment(lines, pointOnCircleXZ(bottomCenter, spec.capsuleRadius, a0 + glm::pi<float>()),
+                              pointOnCircleXZ(bottomCenter, spec.capsuleRadius, a1 + glm::pi<float>()));
+                appendSegment(lines, pointOnCircleYZ(topCenter, spec.capsuleRadius, a0),
+                              pointOnCircleYZ(topCenter, spec.capsuleRadius, a1));
+                appendSegment(lines, pointOnCircleYZ(bottomCenter, spec.capsuleRadius, a0 + glm::pi<float>()),
+                              pointOnCircleYZ(bottomCenter, spec.capsuleRadius, a1 + glm::pi<float>()));
+            }
+            break;
+        }
+        case GeneratorRegionKind::Torus:
+            for (int minorIndex = 0; minorIndex < 4; ++minorIndex) {
+                const float minorAngle = glm::half_pi<float>() * static_cast<float>(minorIndex);
+                appendClosedCurve(lines, kTorusMajorSegments, [&](float majorAngle) {
+                    const float effectiveTubeRadius = std::max(0.0f, spec.torusTubeRadius - clampedInset);
+                    const float ringRadius = spec.torusMajorRadius + effectiveTubeRadius * std::cos(minorAngle);
+                    return glm::vec3(
+                        spec.center.x + ringRadius * std::cos(majorAngle),
+                        spec.center.y + ringRadius * std::sin(majorAngle),
+                        spec.center.z + effectiveTubeRadius * std::sin(minorAngle)
+                    );
+                });
+            }
+            for (int majorIndex = 0; majorIndex < 8; ++majorIndex) {
+                const float majorAngle = glm::two_pi<float>() * static_cast<float>(majorIndex) / 8.0f;
+                appendClosedCurve(lines, kTorusMinorSegments, [&](float minorAngle) {
+                    const float effectiveTubeRadius = std::max(0.0f, spec.torusTubeRadius - clampedInset);
+                    const float radial = spec.torusMajorRadius + effectiveTubeRadius * std::cos(minorAngle);
+                    return glm::vec3(
+                        spec.center.x + radial * std::cos(majorAngle),
+                        spec.center.y + radial * std::sin(majorAngle),
+                        spec.center.z + effectiveTubeRadius * std::sin(minorAngle)
+                    );
+                });
+            }
+            break;
+        case GeneratorRegionKind::TrianglePyramid: {
+            const float halfHeight = 0.5f * spec.pyramidHeight;
+            const float r = spec.pyramidBaseCircumradius;
+            const float sqrt3 = std::sqrt(3.0f);
+            const glm::vec3 baseCenter = spec.center + glm::vec3(0.0f, 0.0f, -halfHeight);
+            const glm::vec3 apex = spec.center + glm::vec3(0.0f, 0.0f, halfHeight);
+            const std::array<glm::vec3, 3> base = {
+                baseCenter + glm::vec3(0.0f, r, 0.0f),
+                baseCenter + glm::vec3(-0.5f * sqrt3 * r, -0.5f * r, 0.0f),
+                baseCenter + glm::vec3(0.5f * sqrt3 * r, -0.5f * r, 0.0f),
+            };
+            appendSegment(lines, base[0], base[1]);
+            appendSegment(lines, base[1], base[2]);
+            appendSegment(lines, base[2], base[0]);
+            for (const glm::vec3& point : base) {
+                appendSegment(lines, point, apex);
+            }
+            break;
+        }
+        case GeneratorRegionKind::TriangleBiPyramid: {
+            const float halfHeight = 0.5f * spec.bipyramidHeight;
+            const float r = spec.bipyramidBaseCircumradius;
+            const float sqrt3 = std::sqrt(3.0f);
+            const glm::vec3 topApex = spec.center + glm::vec3(0.0f, 0.0f, halfHeight);
+            const glm::vec3 bottomApex = spec.center + glm::vec3(0.0f, 0.0f, -halfHeight);
+            const std::array<glm::vec3, 3> base = {
+                spec.center + glm::vec3(0.0f, r, 0.0f),
+                spec.center + glm::vec3(-0.5f * sqrt3 * r, -0.5f * r, 0.0f),
+                spec.center + glm::vec3(0.5f * sqrt3 * r, -0.5f * r, 0.0f),
+            };
+            appendSegment(lines, base[0], base[1]);
+            appendSegment(lines, base[1], base[2]);
+            appendSegment(lines, base[2], base[0]);
+            for (const glm::vec3& point : base) {
+                appendSegment(lines, point, topApex);
+                appendSegment(lines, point, bottomApex);
+            }
+            break;
+        }
+        }
+
+        return lines;
+    }
 }
 
 namespace AppActions {
@@ -222,6 +408,22 @@ namespace AppActions {
             const std::unique_ptr<Lattice::Generators::Region> region = makeRegion(request.region);
             Generators::latticeFill(simulation, *region, makeComposition(request.composition), request.options);
             renderer.syncScene(simulation);
+        }));
+        track(AppSignals::UI::SetGeneratorPhantom.connect([&](const AppSignals::UI::GeneratorRegionSpec& region) {
+            if (renderer.renderer().getRenderDataCount() <= simulation.activeWorldId()) {
+                return;
+            }
+            RenderData& renderData = renderer.renderer().getRenderData(simulation.activeWorldId());
+            renderData.phantomLines = buildPhantomLines(region, simulation.world().getWorldSize());
+            renderData.drawPhantom = !renderData.phantomLines.empty();
+        }));
+        track(AppSignals::UI::ClearGeneratorPhantom.connect([&]() {
+            if (renderer.renderer().getRenderDataCount() <= simulation.activeWorldId()) {
+                return;
+            }
+            RenderData& renderData = renderer.renderer().getRenderData(simulation.activeWorldId());
+            renderData.phantomLines.clear();
+            renderData.drawPhantom = false;
         }));
         track(AppSignals::Capture::ToggleXYZRecording.connect([&]() { toggleXYZRecording(captureController, simulation); }));
     }

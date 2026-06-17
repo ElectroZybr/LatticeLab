@@ -12,6 +12,7 @@ namespace Generators {
 struct RandomFillOptions {
     float density = 0.0f;
     float temperature = 0.0f;
+    float margin = 2.0f;
     uint32_t maxAttemptsPerSpawn = 32;
     bool randomRotation = true;
     bool fixed = false;

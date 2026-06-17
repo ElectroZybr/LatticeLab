@@ -137,9 +137,11 @@ public:
 
     View::RenderRectGridView grid{};
     View::RenderRectGridView barnesHutTree{};
+    std::vector<glm::vec3> phantomLines;
 
     glm::vec3 worldSize{0.0f, 0.0f, 0.0f};
     glm::vec3 renderOffset{0.0f, 0.0f, 0.0f};
+    glm::vec4 phantomColor{0.55f, 0.92f, 0.92f, 0.28f};
 
     bool isActiveWorld = false;
     bool hasBox = false;
@@ -150,6 +152,7 @@ public:
     bool drawFieldContours = false;
     bool drawBonds = false;
     bool drawBox = true;
+    bool drawPhantom = false;
     bool drawMemoryOrder = false;
     bool drawBHtree = false;
 

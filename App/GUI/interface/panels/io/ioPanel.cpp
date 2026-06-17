@@ -699,6 +699,7 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
         break;
     case GeneratorKind::RandomFill: {
         drawRegionEditor("random_fill_region", randomFillRegion_, scale);
+        AppSignals::UI::SetGeneratorPhantom.emit(randomFillRegion_);
         drawCompositionEditor("random_fill_composition", randomFillComposition_, scale, "Ar");
 
         ImGui::SetNextItemWidth(120.0f * scale);
@@ -734,6 +735,7 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
     }
     case GeneratorKind::LatticeFill: {
         drawRegionEditor("lattice_fill_region", latticeFillRegion_, scale);
+        AppSignals::UI::SetGeneratorPhantom.emit(latticeFillRegion_);
 
         if (ImGui::BeginCombo("Structure##lattice_fill", latticeStructureLabel(latticeFillOptions_.structure))) {
             constexpr Generators::LatticeStructure structures[] = {
@@ -771,6 +773,9 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
         }
         break;
     }
+    default:
+        AppSignals::UI::ClearGeneratorPhantom.emit();
+        break;
     }
 
     ImGui::SeparatorText("Сцены");

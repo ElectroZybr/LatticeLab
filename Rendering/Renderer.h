@@ -96,6 +96,7 @@ private:
     void drawAtomsImpl(const View::RenderAtomsView& atoms, const RenderData& renderData, bool applySelection);
     void drawBondsImpl(const View::RenderAtomsView& atoms, const View::RenderBondsView& bonds);
     void drawBoxImpl(const glm::vec3& worldSize);
+    void drawPhantomImpl(const std::vector<glm::vec3>& lines, bool dashed);
     void drawGridImpl(const View::RenderRectGridView& grid);
     void drawVectorFieldImpl(const RenderData& renderData);
     void drawFieldArrowsImpl(const RenderData& renderData);

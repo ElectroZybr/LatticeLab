@@ -97,6 +97,13 @@ void RendererWGPU::drawWorldPass(wgpu::TextureView targetView, wgpu::TextureView
         setLineColor(applySelection ? glm::vec4(0.5f, 0.78f, 1.0f, 0.55f) : glm::vec4(0.35f, 0.52f, 0.9f, 0.3f));
         drawBoxImpl(renderData.worldSize);
     }
+    if (renderData.drawPhantom && !renderData.phantomLines.empty()) {
+        const glm::vec4 softColor(renderData.phantomColor.r, renderData.phantomColor.g, renderData.phantomColor.b, renderData.phantomColor.a * 0.45f);
+        setLineColor(softColor);
+        drawPhantomImpl(renderData.phantomLines, false);
+        setLineColor(renderData.phantomColor);
+        drawPhantomImpl(renderData.phantomLines, true);
+    }
     if (renderData.drawMemoryOrder) {
         setLineColor(glm::vec4(0.35f, 0.52f, 0.9f, 0.3f));
         drawMemoryOrderImpl(renderData.atoms);
