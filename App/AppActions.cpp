@@ -1,6 +1,7 @@
 #include "AppActions.h"
 
 #include <cmath>
+#include <memory>
 
 #include "App/AppSignals.h"
 #include "Lattice/Generators/Generators.h"
@@ -64,6 +65,78 @@ namespace {
         }
 
         simulation.startXYZRecording(capture_utils::makeDatedCaptureOutputPath(outputDirectory, ".xyz").string());
+    }
+
+    std::unique_ptr<Lattice::Generators::Region> makeRegion(const AppSignals::UI::GeneratorRegionSpec& spec) {
+        using AppSignals::UI::GeneratorRegionKind;
+        using namespace Lattice::Generators;
+
+        switch (spec.kind) {
+        case GeneratorRegionKind::Box: {
+            auto region = std::make_unique<Rectangle>();
+            region->center = spec.center;
+            region->boxSize = spec.boxSize;
+            return region;
+        }
+        case GeneratorRegionKind::Sphere: {
+            auto region = std::make_unique<Sphere>();
+            region->center = spec.center;
+            region->sphereRadius = spec.sphereRadius;
+            return region;
+        }
+        case GeneratorRegionKind::Cylinder: {
+            auto region = std::make_unique<Cylinder>();
+            region->center = spec.center;
+            region->baseRadius = spec.cylinderRadius;
+            region->cylinderHeight = spec.cylinderHeight;
+            return region;
+        }
+        case GeneratorRegionKind::Capsule: {
+            auto region = std::make_unique<Capsule>();
+            region->center = spec.center;
+            region->capsuleRadius = spec.capsuleRadius;
+            region->capsuleHeight = spec.capsuleHeight;
+            return region;
+        }
+        case GeneratorRegionKind::Torus: {
+            auto region = std::make_unique<Torus>();
+            region->center = spec.center;
+            region->majorRadius = spec.torusMajorRadius;
+            region->tubeRadius = spec.torusTubeRadius;
+            return region;
+        }
+        case GeneratorRegionKind::TrianglePyramid: {
+            auto region = std::make_unique<TrianglePyramid>();
+            region->center = spec.center;
+            region->baseCircumradius = spec.pyramidBaseCircumradius;
+            region->pyramidHeight = spec.pyramidHeight;
+            return region;
+        }
+        case GeneratorRegionKind::TriangleBiPyramid: {
+            auto region = std::make_unique<TriangleBiPyramid>();
+            region->center = spec.center;
+            region->baseCircumradius = spec.bipyramidBaseCircumradius;
+            region->bipyramidHeight = spec.bipyramidHeight;
+            return region;
+        }
+        }
+
+        auto region = std::make_unique<Rectangle>();
+        region->center = spec.center;
+        region->boxSize = spec.boxSize;
+        return region;
+    }
+
+    std::vector<Generators::Compose> makeComposition(const std::vector<AppSignals::UI::GeneratorComposeSpec>& composition) {
+        std::vector<Generators::Compose> result;
+        result.reserve(composition.size());
+        for (const AppSignals::UI::GeneratorComposeSpec& entry : composition) {
+            result.push_back({
+                .species = entry.species,
+                .fraction = entry.fraction,
+            });
+        }
+        return result;
     }
 }
 
@@ -135,6 +208,20 @@ namespace AppActions {
             simulation.clear();
             ToolsManager::resetInteractionState();
             Generators::triangularBipyramidCrystal(simulation, axisCount, atomType);
+        }));
+        track(AppSignals::UI::CreateRandomFill.connect([&](const AppSignals::UI::RandomFillRequest& request) {
+            simulation.clear();
+            ToolsManager::resetInteractionState();
+            const std::unique_ptr<Lattice::Generators::Region> region = makeRegion(request.region);
+            Generators::randomFill(simulation, *region, makeComposition(request.composition), request.options);
+            renderer.syncScene(simulation);
+        }));
+        track(AppSignals::UI::CreateLatticeFill.connect([&](const AppSignals::UI::LatticeFillRequest& request) {
+            simulation.clear();
+            ToolsManager::resetInteractionState();
+            const std::unique_ptr<Lattice::Generators::Region> region = makeRegion(request.region);
+            Generators::latticeFill(simulation, *region, makeComposition(request.composition), request.options);
+            renderer.syncScene(simulation);
         }));
         track(AppSignals::Capture::ToggleXYZRecording.connect([&]() { toggleXYZRecording(captureController, simulation); }));
     }

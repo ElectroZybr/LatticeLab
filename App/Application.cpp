@@ -31,7 +31,7 @@ constexpr int FPS = 60;
 constexpr int LPS = 20;
 
 namespace {
-    const std::filesystem::path kBootstrapScriptPath = std::filesystem::path("Mods") / "Base" / "scenes" / "waterGas.lua";
+    const std::filesystem::path kBootstrapScriptPath = std::filesystem::path("Mods") / "Base" / "scenes" / "hexzerium.lua";
 
     uint32_t makeXYZStepInterval(float simulationStepsPerSecond, int captureFps) {
         const float sanitizedStepsPerSecond = std::max(simulationStepsPerSecond, 1.0f);
@@ -65,14 +65,6 @@ int Application::run() {
     simulation.createWorld(glm::vec3(120.0f, 120.0f, 120.0f));
     Lattice::LuaState luaState;
     luaState.bindSimulation(simulation);
-
-    if (std::filesystem::exists(kBootstrapScriptPath)) {
-        if (!luaState.runFile(kBootstrapScriptPath)) {
-            std::cerr << "Failed to execute Lua script '" << kBootstrapScriptPath.string() << "': " << luaState.lastError() << std::endl;
-        }
-    } else {
-        std::cerr << "Lua script was not found: '" << kBootstrapScriptPath.string() << "'" << std::endl;
-    }
 
     CaptureController captureController;
     const SceneViewport::RendererType initialRendererType =
@@ -137,6 +129,7 @@ int Application::run() {
     // Generators::randomGasMixed(simulation, 500, gasSpecs, false, 6.0, 6.0, 1.0f, 5.0f, 0);
     // simulation.createAtom(glm::vec3(20, 25, 3), glm::vec3(0, 0, 0), AtomData::Type::Na);
     // simulation.createAtom(glm::vec3(30, 25, 3), glm::vec3(0, 0, 0), AtomData::Type::Cl);
+
     renderer.syncScene(simulation);
 
     auto startTime = Clock::now();

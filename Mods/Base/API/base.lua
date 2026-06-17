@@ -73,6 +73,16 @@ function world(def)
     return def
 end
 
+function box(def)
+    def.__region = "box"
+    return def
+end
+
+function sphere(def)
+    def.__region = "sphere"
+    return def
+end
+
 function register_content(kind, builder)
     assert(type(kind) == "string" and kind ~= "", "register_content requires non-empty kind")
     assert(type(builder) == "function", "register_content requires builder function")
@@ -123,6 +133,8 @@ return {
     center = center,
     fullworld = fullworld,
     molecule = molecule,
+    box = box,
+    sphere = sphere,
     register_content = register_content,
     simulation = simulation,
     world = world,

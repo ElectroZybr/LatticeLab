@@ -68,7 +68,7 @@ void ScriptBatch::finish() {
     if (finished_) {
         return;
     }
-    simulation_.finalizeAtomBatch();
+    simulation_.finishAtomBatch();
     finished_ = true;
 }
 
@@ -118,6 +118,7 @@ std::tuple<int, std::vector<std::string>> ScriptAPI::load_molecules(const std::s
 }
 
 std::shared_ptr<ScriptBatch> ScriptAPI::begin_batch() {
+    simulation_.beginAtomBatch();
     return std::make_shared<ScriptBatch>(simulation_);
 }
 

@@ -38,6 +38,6 @@ namespace Generators {
                 }
             }
         }
-        sim.finalizeAtomBatch();
+        sim.finishAtomBatch();
     }
 }

@@ -252,7 +252,7 @@ namespace {
         for (const LoadedAtomData& atom : lastFrameAtoms) {
             (void)simulation.appendAtomFast(atom.coords + translation, atom.speed, static_cast<AtomData::Type>(atom.type), atom.fixed);
         }
-        simulation.finalizeAtomBatch();
+        simulation.finishAtomBatch();
         for (size_t i = 0; i < lastFrameAtoms.size(); ++i) {
             simulation.atoms().charge(i) = lastFrameAtoms[i].charge;
         }
@@ -416,7 +416,7 @@ namespace {
         for (const LoadedAtomData& atom : atoms) {
             (void)simulation.appendAtomFast(atom.coords, atom.speed, static_cast<AtomData::Type>(atom.type), atom.fixed);
         }
-        simulation.finalizeAtomBatch();
+        simulation.finishAtomBatch();
         simulation.restoreRuntimeState(loadedStep, loadedTimeNs);
     }
 
@@ -563,7 +563,7 @@ namespace {
         for (const LoadedAtomData& atom : atoms) {
             (void)simulation.appendAtomFast(atom.coords, atom.speed, static_cast<AtomData::Type>(atom.type), atom.fixed);
         }
-        simulation.finalizeAtomBatch();
+        simulation.finishAtomBatch();
         for (size_t i = 0; i < atoms.size(); ++i) {
             simulation.atoms().charge(i) = atoms[i].charge;
         }

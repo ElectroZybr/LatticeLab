@@ -461,7 +461,7 @@ void AppStateIO::loadBinary(Lattice::Simulation& simulation, BaseRenderer& rende
     simulation.reserveAtoms(atomCount);
     atoms.init(atomCount, atomMobileCount, simState.x, simState.y, simState.z, simState.vx, simState.vy, simState.vz, simState.atomType,
                simState.atomCharge);
-    simulation.finalizeAtomBatch();
+    simulation.finishAtomBatch();
 
     for (const auto& [aIndex, bIndex] : simState.bonds) {
         simulation.addBond(aIndex, bIndex);

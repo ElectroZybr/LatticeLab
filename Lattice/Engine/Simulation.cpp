@@ -50,6 +50,19 @@ std::string normalizeAtomSymbol(std::string value) {
 
 Simulation::Simulation() = default;
 
+void Simulation::finishAtomBatch() {
+    if (!atomBatchActive_) {
+        world().finalizeAtomBatch();
+        return;
+    }
+
+    atomBatchActive_ = false;
+    if (atomBatchDirty_) {
+        world().finalizeAtomBatch();
+        atomBatchDirty_ = false;
+    }
+}
+
 Simulation::WorldId Simulation::createWorld(glm::vec3 size, glm::vec3 renderOffset) {
     worlds_.emplace_back(size, renderOffset);
     const WorldId worldId = worlds_.size() - 1;
@@ -224,7 +237,11 @@ bool Simulation::spawnMolecule(std::string_view speciesName, glm::vec3 start_coo
             const glm::vec3 worldPos = start_coords + actualRotation * atom.localPos;
             createdIds.push_back(appendAtomFast(worldPos, velocity, atom.type, fixed));
         }
-        finalizeAtomBatch();
+        if (atomBatchActive_) {
+            atomBatchDirty_ = true;
+        } else {
+            world().finalizeAtomBatch();
+        }
 
         const AtomStorage& storage = atoms();
         std::vector<size_t> createdIndices;
@@ -254,7 +271,11 @@ bool Simulation::spawnMolecule(std::string_view speciesName, glm::vec3 start_coo
         }
 
         (void)appendAtomFast(start_coords, velocity, type, fixed);
-        finalizeAtomBatch();
+        if (atomBatchActive_) {
+            atomBatchDirty_ = true;
+        } else {
+            world().finalizeAtomBatch();
+        }
         return true;
     }
 
@@ -354,7 +375,11 @@ bool Simulation::randomSpawn(std::string_view speciesName, const SpawnOptions& o
                     const glm::vec3 worldPos = origin + rotation * atom.localPos;
                     createdIds.push_back(appendAtomFast(worldPos, velocity, atom.type, options.fixed));
                 }
-                finalizeAtomBatch();
+                if (atomBatchActive_) {
+                    atomBatchDirty_ = true;
+                } else {
+                    world().finalizeAtomBatch();
+                }
 
                 const AtomStorage& createdStorage = atoms();
                 std::vector<size_t> createdIndices;
@@ -425,7 +450,11 @@ bool Simulation::randomSpawn(std::string_view speciesName, const SpawnOptions& o
 
             if (fits) {
                 (void)appendAtomFast(pos, velocity, type, options.fixed);
-                finalizeAtomBatch();
+                if (atomBatchActive_) {
+                    atomBatchDirty_ = true;
+                } else {
+                    world().finalizeAtomBatch();
+                }
                 return true;
             }
         }

@@ -22,6 +22,19 @@ function gas.build(scene, opts)
     local options = opts or {}
     local composition = generator.resolve_composition(opts, "gas.build")
 
+    if opts.region ~= nil then
+        local region = generator.resolve_region(scene, opts.region, "gas.build")
+        assert(region.kind == "box", "gas.build currently supports only box { ... } region")
+        options.region = {
+            min = region.min,
+            max = {
+                region.min[1] + region.size[1],
+                region.min[2] + region.size[2],
+                region.min[3] + region.size[3],
+            }
+        }
+    end
+
     if not base_molecules_loaded then
         local loaded_count = scene:load_molecules("Mods/Base/Molecules")
         assert(loaded_count > 0, "no molecules were loaded from Mods/Base/Molecules")

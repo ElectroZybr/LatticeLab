@@ -123,7 +123,11 @@ public:
     [[nodiscard]] AtomStorage::AtomId appendAtomFast(glm::vec3 startCoords, glm::vec3 startSpeed, AtomData::Type type, bool fixed = false) {
         return world().appendAtomFast(startCoords, startSpeed, type, fixed);
     }
-    void finalizeAtomBatch() { world().finalizeAtomBatch(); }
+    void beginAtomBatch() {
+        atomBatchActive_ = true;
+        atomBatchDirty_ = false;
+    }
+    void finishAtomBatch();
 
     void setSizeBox(glm::vec3 newSize, int cellSize = -1);
     void clear();
@@ -143,5 +147,7 @@ private:
     // загруженные шаблоны молекул
     std::unordered_map<std::string, MoleculeTemplate> moleculeTemplates_;
     XYZRecordingSession xyzRecording_;
+    bool atomBatchActive_ = false;
+    bool atomBatchDirty_ = false;
 };
 }

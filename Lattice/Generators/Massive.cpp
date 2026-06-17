@@ -114,7 +114,7 @@ namespace Generators {
             }
         }
 
-        sim.finalizeAtomBatch();
+        sim.finishAtomBatch();
     }
 
     void AngularVelocity(Lattice::Simulation& sim, glm::vec3 angularVelocity) {

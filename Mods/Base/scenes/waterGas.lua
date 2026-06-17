@@ -12,12 +12,14 @@ simulation {
 
         content = {
             lattice {
-                structure = "hex",
-                size = fullworld - 10,
-                pos = center,
+                structure = "bcc",
+
+                region = sphere {
+                    center = center,
+                    radius = 10
+                }
                 composition = {
-                    { name = atom.Z, fraction = 0.5 },
-                    { name = atom.C, fraction = 0.5 },
+                    { name = atom.Z, fraction = 1.0 },
                 }
             }
         }

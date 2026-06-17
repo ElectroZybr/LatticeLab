@@ -58,6 +58,6 @@ namespace Generators {
             (void)sim.appendAtomFast(position - pyramidCenter + boxCenter, glm::vec3(0.0f), type);
         }
 
-        sim.finalizeAtomBatch();
+        sim.finishAtomBatch();
     }
 }

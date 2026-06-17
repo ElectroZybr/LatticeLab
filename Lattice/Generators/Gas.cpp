@@ -161,7 +161,7 @@ namespace Generators {
             (void)sim.appendAtomFast(pos, is3d ? randomSpeed : glm::vec3(randomSpeed.x, randomSpeed.y, 0.0f), type);
         }
 
-        sim.finalizeAtomBatch();
+        sim.finishAtomBatch();
         return static_cast<int>(acceptedPositions.size());
     }
 

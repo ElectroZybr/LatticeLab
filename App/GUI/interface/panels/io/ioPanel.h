@@ -8,6 +8,7 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include "App/AppPaths.h"
+#include "App/AppSignals.h"
 
 #include "Lattice/Engine/physics/Atom/AtomData.h"
 #include "GUI/interface/panels/io/ioPanelSceneCatalog.h"
@@ -37,10 +38,13 @@ public:
         MixedGas,
         HexLattice,
         TriangularBipyramid,
+        RandomFill,
+        LatticeFill,
     };
 
     static constexpr ImGuiWindowFlags PANEL_FLAGS =
-        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
+        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_AlwaysVerticalScrollbar;
 
     void draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState);
     void setScenesDirectory(std::filesystem::path scenesDirectory);
@@ -84,6 +88,16 @@ private:
         {.type = AtomData::Type::Z, .concentrationPercent = 50.0f, .absoluteCount = 500},
         {.type = AtomData::Type::H, .concentrationPercent = 50.0f, .absoluteCount = 500},
     };
+    AppSignals::UI::GeneratorRegionSpec randomFillRegion_{};
+    AppSignals::UI::GeneratorRegionSpec latticeFillRegion_{};
+    std::vector<AppSignals::UI::GeneratorComposeSpec> randomFillComposition_ = {
+        {.species = "Ar", .fraction = 1.0f},
+    };
+    std::vector<AppSignals::UI::GeneratorComposeSpec> latticeFillComposition_ = {
+        {.species = "Z", .fraction = 1.0f},
+    };
+    Generators::RandomFillOptions randomFillOptions_{.density = 0.01f};
+    Generators::LatticeFillOptions latticeFillOptions_{};
     RecordingFormat recordingFormat_ = RecordingFormat::MP4;
     std::filesystem::path scenesDirectory_ = AppPaths::kDefaultScenesDirectory;
     std::vector<IOPanelSceneTile> sceneTiles_;
