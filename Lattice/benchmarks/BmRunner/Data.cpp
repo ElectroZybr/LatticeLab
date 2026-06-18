@@ -1,6 +1,7 @@
 #include "BmRunner/Data.h"
 
 #include <fstream>
+#include <array>
 #include <regex>
 #include <sstream>
 #include <string_view>
@@ -221,31 +222,52 @@ namespace Benchmarks::BmRunner {
         output << serializeBenchmarkJson(data);
     }
 
-    std::unordered_map<std::string, BenchmarkMeta> loadBenchMetadata(const fs::path& benchmarksRoot) {
+    std::unordered_map<std::string, BenchmarkMeta> loadBenchMetadata(const fs::path& repoRoot) {
         std::unordered_map<std::string, BenchmarkMeta> meta;
-        const std::regex linePattern(R"meta(@bench_meta\s+\{.*"id":"([^"]+)".*"label":"([^"]+)".*"group":"([^"]+)".*\})meta");
+        const std::regex idPattern(R"meta("id":"([^"]+)")meta");
+        const std::regex labelPattern(R"meta("label":"([^"]+)")meta");
+        const std::regex groupPattern(R"meta("group":"([^"]+)")meta");
 
-        for (const auto& entry : fs::recursive_directory_iterator(benchmarksRoot)) {
-            if (!entry.is_regular_file() || entry.path().extension() != ".cpp") {
+        const std::array benchmarkRoots{
+            repoRoot / "Lattice" / "benchmarks",
+            repoRoot / "Rendering" / "benchmarks",
+        };
+
+        for (const auto& benchmarkRoot : benchmarkRoots) {
+            if (!fs::exists(benchmarkRoot)) {
                 continue;
             }
 
-            std::ifstream input(entry.path());
-            if (!input) {
-                continue;
-            }
-
-            std::string line;
-            while (std::getline(input, line)) {
-                std::smatch match;
-                if (!std::regex_search(line, match, linePattern)) {
+            for (const auto& entry : fs::recursive_directory_iterator(benchmarkRoot)) {
+                if (!entry.is_regular_file() || entry.path().extension() != ".cpp") {
                     continue;
                 }
 
-                meta[match[1].str()] = BenchmarkMeta{
-                    .label = match[2].str(),
-                    .group = match[3].str(),
-                };
+                std::ifstream input(entry.path());
+                if (!input) {
+                    continue;
+                }
+
+                std::string line;
+                while (std::getline(input, line)) {
+                    if (line.find("@bench_meta") == std::string::npos) {
+                        continue;
+                    }
+
+                    std::smatch idMatch;
+                    std::smatch labelMatch;
+                    if (!std::regex_search(line, idMatch, idPattern) || !std::regex_search(line, labelMatch, labelPattern)) {
+                        continue;
+                    }
+
+                    std::smatch groupMatch;
+                    const fs::path relativePath = fs::relative(entry.path(), repoRoot);
+                    meta[idMatch[1].str()] = BenchmarkMeta{
+                        .label = labelMatch[1].str(),
+                        .group = std::regex_search(line, groupMatch, groupPattern) ? groupMatch[1].str() : "",
+                        .sourcePath = relativePath.generic_string(),
+                    };
+                }
             }
         }
 

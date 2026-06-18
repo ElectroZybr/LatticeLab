@@ -12,11 +12,14 @@
 
 struct OverlayState {
     bool boxVisible = false;
+    bool circleVisible = false;
     bool lassoVisible = false;
     bool rulerVisible = false;
 
     glm::ivec2 boxStart;
     glm::ivec2 boxEnd;
+    glm::ivec2 circleCenter;
+    float circleRadius = 0.0f;
     glm::ivec2 rulerStart;
     glm::ivec2 rulerEnd;
     std::string rulerLabel;
@@ -25,14 +28,16 @@ struct OverlayState {
 
     void reset() {
         boxVisible = false;
+        circleVisible = false;
         lassoVisible = false;
         rulerVisible = false;
+        circleRadius = 0.0f;
         rulerLabel.clear();
         lassoPoints.clear();
     }
 
     void draw() const {
-        if (!boxVisible && !lassoVisible && !rulerVisible) {
+        if (!boxVisible && !circleVisible && !lassoVisible && !rulerVisible) {
             return;
         }
 
@@ -42,6 +47,10 @@ struct OverlayState {
 
         if (boxVisible) {
             dl->AddRect(ImVec2(boxStart.x, boxStart.y), ImVec2(boxEnd.x, boxEnd.y), red);
+        }
+
+        if (circleVisible && circleRadius > 0.0f) {
+            dl->AddCircle(ImVec2(circleCenter.x, circleCenter.y), circleRadius, red, 64, 1.5f);
         }
 
         if (lassoVisible && lassoPoints.size() >= 2) {

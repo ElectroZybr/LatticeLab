@@ -42,5 +42,6 @@ namespace Benchmarks::BmRunner {
     struct BenchmarkMeta {
         std::string label;
         std::string group;
+        std::string sourcePath;
     };
 }

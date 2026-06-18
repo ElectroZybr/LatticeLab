@@ -7,7 +7,7 @@
 
 class SideToolsPanel {
 public:
-    enum class Tool : uint8_t { Cursor, Frame, Lasso, Ruler, AddAtom, RemoveAtom };
+    enum class Tool : uint8_t { Cursor, Frame, Lasso, Ruler, AddAtom, RemoveAtom, SpawnBox, SpawnCircle };
 
     static constexpr ImGuiWindowFlags PANEL_FLAGS = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse |
                                                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;

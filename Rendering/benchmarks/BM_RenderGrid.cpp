@@ -3,7 +3,7 @@
 #include "Rendering/benchmarks/Fixture.h"
 #include "Rendering/benchmarks/SceneBuilders.h"
 
-// @bench_meta {"id":"RenderFixture/RenderGridPrepare","label":"Render Grid Prepare","group":"Rendering/Grid"}
+// @bench_meta {"id":"RenderFixture/RenderGridPrepare","label":"Render Grid Prepare","group":"Rendering/Grid/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderGridPrepare)(benchmark::State& state) {
     RenderBenchScenes::buildGrid(scene(), sceneArg());
     syncRenderer();
@@ -15,7 +15,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderGridPrepare)(benchmark::State& state) {
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderGridCopy","label":"Render Grid CPU->GPU Copy","group":"Rendering/Grid"}
+// @bench_meta {"id":"RenderFixture/RenderGridCopy","label":"Render Grid CPU->GPU Copy","group":"Rendering/Grid/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderGridCopy)(benchmark::State& state) {
     RenderBenchScenes::buildGrid(scene(), sceneArg());
     syncRenderer();
@@ -28,7 +28,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderGridCopy)(benchmark::State& state) {
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderGridDraw","label":"Render Grid GPU Draw","group":"Rendering/Grid"}
+// @bench_meta {"id":"RenderFixture/RenderGridDraw","label":"Render Grid GPU Draw","group":"Rendering/Grid/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderGridDraw)(benchmark::State& state) {
     RenderBenchScenes::buildGrid(scene(), sceneArg());
     syncRenderer();
@@ -40,13 +40,14 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderGridDraw)(benchmark::State& state) {
         renderer_->drawPreparedGridGpu(renderData());
         renderer_->endFrame();
         WGPUContext::instance().waitIdle();
+        WGPUContext::instance().processEvents();
         benchmark::ClobberMemory();
     }
 
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderGridFull","label":"Render Grid Full","group":"Rendering/Grid"}
+// @bench_meta {"id":"RenderFixture/RenderGridFull","label":"Render Grid Frame","group":"Rendering/Grid/Frame"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderGridFull)(benchmark::State& state) {
     RenderBenchScenes::buildGrid(scene(), sceneArg());
     for (auto _ : state) {

@@ -265,23 +265,79 @@ namespace Benchmarks::BmRunner {
             return slash == std::string::npos ? filterName : filterName.substr(slash + 1);
         }
 
-        std::pair<std::string, std::string> classifyByMetadata(
-            const std::string& filterName,
-            const std::unordered_map<std::string, BenchmarkMeta>& metadata) {
+        const BenchmarkMeta* findMetadata(const std::string& filterName,
+                                          const std::unordered_map<std::string, BenchmarkMeta>& metadata) {
             auto it = metadata.find(filterName);
             if (it == metadata.end()) {
                 it = metadata.find(metaLookupId(filterName));
             }
-            if (it == metadata.end()) {
-                return {"Other", ""};
-            }
+            return it != metadata.end() ? &it->second : nullptr;
+        }
 
-            const std::string& group = it->second.group;
-            const auto slash = group.find('/');
-            if (slash == std::string::npos) {
-                return {group.empty() ? "Other" : group, ""};
+        std::string capitalizeWords(std::string text) {
+            bool capitalizeNext = true;
+            for (char& ch : text) {
+                if (std::isalnum(static_cast<unsigned char>(ch)) == 0) {
+                    capitalizeNext = true;
+                    continue;
+                }
+                if (capitalizeNext) {
+                    ch = static_cast<char>(std::toupper(static_cast<unsigned char>(ch)));
+                    capitalizeNext = false;
+                } else {
+                    ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+                }
             }
-            return {group.substr(0, slash), group.substr(slash + 1)};
+            return text;
+        }
+
+        std::string splitCamelCase(std::string_view text) {
+            std::string out;
+            out.reserve(text.size() * 2);
+            for (std::size_t i = 0; i < text.size(); ++i) {
+                const unsigned char ch = static_cast<unsigned char>(text[i]);
+                const unsigned char prev = i > 0 ? static_cast<unsigned char>(text[i - 1]) : 0;
+                const unsigned char next = i + 1 < text.size() ? static_cast<unsigned char>(text[i + 1]) : 0;
+
+                const bool boundaryBeforeUpper =
+                    i > 0 && std::isupper(ch) != 0 &&
+                    ((std::islower(prev) != 0) || (std::isupper(prev) != 0 && std::islower(next) != 0));
+                const bool boundaryBeforeDigit = i > 0 && std::isdigit(ch) != 0 && std::isdigit(prev) == 0;
+                const bool boundaryAfterDigit = i > 0 && std::isdigit(ch) == 0 && std::isdigit(prev) != 0;
+                if ((boundaryBeforeUpper || boundaryBeforeDigit || boundaryAfterDigit) && !out.empty() && out.back() != ' ') {
+                    out += ' ';
+                }
+
+                if (ch == '_' || ch == '-') {
+                    if (!out.empty() && out.back() != ' ') {
+                        out += ' ';
+                    }
+                    continue;
+                }
+                out += static_cast<char>(ch);
+            }
+            return out;
+        }
+
+        std::string prettifySegment(std::string_view text) {
+            return capitalizeWords(splitCamelCase(text));
+        }
+
+        std::vector<std::string> splitGroupPath(std::string_view group) {
+            std::vector<std::string> path;
+            std::size_t start = 0;
+            while (start < group.size()) {
+                const std::size_t slash = group.find('/', start);
+                const std::size_t end = slash == std::string_view::npos ? group.size() : slash;
+                if (end > start) {
+                    path.push_back(std::string(group.substr(start, end - start)));
+                }
+                if (slash == std::string_view::npos) {
+                    break;
+                }
+                start = slash + 1;
+            }
+            return path;
         }
 
         std::size_t visibleWidth(std::string_view text) {
@@ -306,61 +362,6 @@ namespace Benchmarks::BmRunner {
                 }
             }
             return 120;
-        }
-
-        void printMenuEntriesColumns(const std::vector<std::pair<std::string, std::string>>& entries,
-                                     int& menuIndex,
-                                     std::vector<std::string>& menuFilters) {
-            if (entries.empty()) {
-                return;
-            }
-
-            std::vector<std::string> plainCells;
-            plainCells.reserve(entries.size());
-
-            std::size_t maxCellWidth = 0;
-            int previewIndex = menuIndex;
-            for (const auto& [_, pretty] : entries) {
-                std::string cell = std::to_string(previewIndex) + ") " + pretty;
-                maxCellWidth = std::max(maxCellWidth, visibleWidth(cell));
-                plainCells.push_back(std::move(cell));
-                ++previewIndex;
-            }
-
-            const std::size_t gutter = 4;
-            const std::size_t columnWidth = maxCellWidth + gutter;
-            const int width = terminalWidth();
-            int columns = static_cast<int>(std::max<std::size_t>(1, static_cast<std::size_t>(width - 2) / std::max<std::size_t>(columnWidth, 1)));
-            columns = std::min(columns, 2);
-            columns = std::min(columns, static_cast<int>(entries.size()));
-            const int rows = static_cast<int>((entries.size() + static_cast<std::size_t>(columns) - 1) / static_cast<std::size_t>(columns));
-
-            for (int row = 0; row < rows; ++row) {
-                std::cout << "  ";
-                for (int col = 0; col < columns; ++col) {
-                    const std::size_t idx = static_cast<std::size_t>(row + col * rows);
-                    if (idx >= entries.size()) {
-                        continue;
-                    }
-
-                    const int currentIndex = menuIndex + static_cast<int>(idx);
-                    const std::string indexText = std::to_string(currentIndex) + ")";
-                    std::string cell = paint(indexText, kColorIndex) + " " + entries[idx].second;
-                    std::cout << cell;
-
-                    if (col + 1 < columns) {
-                        const std::size_t cellWidth = visibleWidth(plainCells[idx]);
-                        const std::size_t padding = columnWidth > cellWidth ? columnWidth - cellWidth : gutter;
-                        std::cout << std::string(padding, ' ');
-                    }
-                }
-                std::cout << '\n';
-            }
-
-            for (const auto& [raw, _] : entries) {
-                menuFilters.push_back(raw);
-            }
-            menuIndex += static_cast<int>(entries.size());
         }
 
         std::string paddedCell(const std::string& text, std::size_t width) {
@@ -395,125 +396,106 @@ namespace Benchmarks::BmRunner {
             return label;
         }
 
-        std::string renderColoredHeader(const std::string& name, const std::string& label, std::size_t width) {
-            const std::string plain = centeredCell(name + " [" + label + "]", width);
-            const std::string bracketed = "[" + label + "]";
-            const std::size_t labelPos = plain.rfind(bracketed);
-            if (labelPos == std::string::npos) {
-                return paint(plain, kColorMenuCategory);
-            }
+        struct MenuDescriptor {
+            std::string filter;
+            std::string label;
+            std::vector<std::string> path;
+        };
 
-            const std::string before = plain.substr(0, labelPos);
-            const std::string after = plain.substr(labelPos + bracketed.size());
-            return paint(before, kColorMenuCategory) + paint(bracketed, kColorMenuCategoryLabel) + paint(after, kColorMenuCategory);
+        struct MenuTreeNode {
+            std::string label;
+            std::vector<std::string> filters;
+            std::vector<MenuTreeNode> children;
+        };
+
+        MenuTreeNode& ensureMenuChild(MenuTreeNode& node, const std::string& label) {
+            auto it = std::find_if(node.children.begin(), node.children.end(), [&](const MenuTreeNode& child) { return child.label == label; });
+            if (it != node.children.end()) {
+                return *it;
+            }
+            node.children.push_back(MenuTreeNode{.label = label});
+            return node.children.back();
         }
 
-        void printSubgroupTable(
-            const std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>>& subgroups,
-            int& menuIndex,
-            std::vector<std::string>& menuFilters,
-            std::unordered_map<std::string, std::vector<std::string>>& subgroupSelections) {
-            if (subgroups.empty()) {
-                return;
-            }
+        std::vector<MenuDescriptor> buildMenuDescriptors(const std::vector<std::string>& filters,
+                                                         const std::unordered_map<std::string, BenchmarkMeta>& metadata) {
+            std::vector<MenuDescriptor> descriptors;
+            descriptors.reserve(filters.size());
 
-            std::vector<std::string> names;
-            names.reserve(subgroups.size());
-            for (const auto& [name, _] : subgroups) {
-                names.push_back(name);
-            }
-            std::sort(names.begin(), names.end());
+            for (const auto& filter : filters) {
+                const BenchmarkMeta* meta = findMetadata(filter, metadata);
+                MenuDescriptor item{
+                    .filter = filter,
+                    .label = prettyFilterName(filter, metadata),
+                };
 
-            std::vector<std::vector<std::string>> plainColumns;
-            std::vector<std::vector<std::string>> colorColumns;
-            std::vector<std::size_t> widths;
-            std::vector<std::pair<std::string, std::string>> headers;
-            plainColumns.reserve(names.size());
-            colorColumns.reserve(names.size());
-            widths.reserve(names.size());
-            headers.reserve(names.size());
-
-            int nextIndex = menuIndex;
-            std::size_t maxRows = 0;
-
-            for (std::size_t subgroupIdx = 0; subgroupIdx < names.size(); ++subgroupIdx) {
-                const auto& name = names[subgroupIdx];
-                const auto& entries = subgroups.at(name);
-                std::vector<std::string> plainCells;
-                std::vector<std::string> colorCells;
-                const std::string label = subgroupLabel(subgroupIdx);
-                const std::string header = name + " [" + label + "]";
-                std::size_t width = visibleWidth(header);
-                std::vector<std::string> subgroupFilters;
-
-                for (const auto& [raw, pretty] : entries) {
-                    const std::string indexText = std::to_string(nextIndex) + ")";
-                    const std::string plain = indexText + " " + pretty;
-                    const std::string color = paint(indexText, kColorIndex) + " " + pretty;
-                    width = std::max(width, visibleWidth(plain));
-                    plainCells.push_back(plain);
-                    colorCells.push_back(color);
-                    menuFilters.push_back(raw);
-                    subgroupFilters.push_back(raw);
-                    ++nextIndex;
+                if (meta && !meta->group.empty()) {
+                    item.path = splitGroupPath(meta->group);
+                } else {
+                    item.path.push_back(filter.rfind("RenderFixture/", 0) == 0 ? "Rendering" : "Simulation");
                 }
 
-                subgroupSelections[label] = std::move(subgroupFilters);
-                maxRows = std::max(maxRows, plainCells.size());
-                plainColumns.push_back(std::move(plainCells));
-                colorColumns.push_back(std::move(colorCells));
-                widths.push_back(width);
-                headers.push_back({name, label});
+                descriptors.push_back(std::move(item));
             }
 
-            std::size_t uniformWidth = 0;
-            for (const auto width : widths) {
-                uniformWidth = std::max(uniformWidth, width);
+            std::sort(descriptors.begin(), descriptors.end(), [](const MenuDescriptor& lhs, const MenuDescriptor& rhs) {
+                if (lhs.path != rhs.path) {
+                    return lhs.path < rhs.path;
+                }
+                return lhs.label < rhs.label;
+            });
+            return descriptors;
+        }
+
+        MenuTreeNode buildMenuTree(const std::vector<MenuDescriptor>& descriptors) {
+            MenuTreeNode root{.label = "Benchmarks"};
+            for (const auto& item : descriptors) {
+                MenuTreeNode* current = &root;
+                current->filters.push_back(item.filter);
+                for (const auto& segment : item.path) {
+                    current = &ensureMenuChild(*current, segment);
+                    current->filters.push_back(item.filter);
+                }
+                MenuTreeNode& leaf = ensureMenuChild(*current, item.label);
+                leaf.filters.push_back(item.filter);
+            }
+            return root;
+        }
+
+        struct MenuPrintState {
+            int nextIndex = 1;
+            std::size_t nextGroup = 0;
+            std::vector<std::string> menuFilters;
+            std::unordered_map<std::string, std::vector<std::string>> groupSelections;
+        };
+
+        void printMenuTree(const MenuTreeNode& node,
+                           const std::string& prefix,
+                           bool isLast,
+                           bool isRoot,
+                           MenuPrintState& state) {
+            const bool isLeaf = node.children.empty();
+            const std::string branch = isRoot ? "" : (isLast ? "└─ " : "├─ ");
+            const std::string childPrefix = isRoot ? "" : prefix + (isLast ? "   " : "│  ");
+
+            if (!isRoot) {
+                std::cout << "  " << prefix << branch;
+                if (isLeaf) {
+                    const std::string indexText = std::to_string(state.nextIndex) + ")";
+                    std::cout << paint(indexText, kColorIndex) << " " << node.label << '\n';
+                    state.menuFilters.push_back(node.filters.front());
+                    ++state.nextIndex;
+                } else {
+                    const std::string groupCode = subgroupLabel(state.nextGroup++);
+                    state.groupSelections[groupCode] = node.filters;
+                    std::cout << paint("[" + groupCode + "]", kColorMenuCategoryLabel) << " "
+                              << paint(node.label, kColorMenuCategory) << '\n';
+                }
             }
 
-            auto printBorder = [&](std::size_t columnsInRow) {
-                std::cout << paint("  +", kColorMenuGrid);
-                for (std::size_t col = 0; col < columnsInRow; ++col) {
-                    std::cout << paint(std::string(uniformWidth + 2, '-') + "+", kColorMenuGrid);
-                }
-                std::cout << '\n';
-            };
-
-            constexpr std::size_t kMaxColumnsPerRow = 2;
-            for (std::size_t startCol = 0; startCol < names.size(); startCol += kMaxColumnsPerRow) {
-                const std::size_t endCol = std::min(startCol + kMaxColumnsPerRow, names.size());
-                std::size_t blockRows = 0;
-                for (std::size_t col = startCol; col < endCol; ++col) {
-                    blockRows = std::max(blockRows, colorColumns[col].size());
-                }
-
-                printBorder(endCol - startCol);
-                std::cout << paint("  |", kColorMenuGrid);
-                for (std::size_t col = startCol; col < endCol; ++col) {
-                    std::cout << " " << renderColoredHeader(headers[col].first, headers[col].second, uniformWidth) << " " << paint("|", kColorMenuGrid);
-                }
-                std::cout << '\n';
-                printBorder(endCol - startCol);
-
-                for (std::size_t row = 0; row < blockRows; ++row) {
-                    std::cout << paint("  |", kColorMenuGrid);
-                    for (std::size_t col = startCol; col < endCol; ++col) {
-                        if (row < colorColumns[col].size()) {
-                            std::cout << " " << colorColumns[col][row];
-                            const std::size_t pad =
-                                uniformWidth > visibleWidth(plainColumns[col][row]) ? uniformWidth - visibleWidth(plainColumns[col][row]) : 0;
-                            std::cout << std::string(pad, ' ') << " " << paint("|", kColorMenuGrid);
-                        } else {
-                            std::cout << " " << std::string(uniformWidth, ' ') << " " << paint("|", kColorMenuGrid);
-                        }
-                    }
-                    std::cout << '\n';
-                }
-
-                printBorder(endCol - startCol);
+            for (std::size_t i = 0; i < node.children.size(); ++i) {
+                printMenuTree(node.children[i], childPrefix, i + 1 == node.children.size(), false, state);
             }
-
-            menuIndex = nextIndex;
         }
 
         Config completeConfigInteractive(Config config,
@@ -536,52 +518,18 @@ namespace Benchmarks::BmRunner {
             }
             std::sort(filters.begin(), filters.end());
 
-            std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>> grouped;
-            std::unordered_map<std::string, std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>>> subgrouped;
-            for (const auto& filter : filters) {
-                const auto [mainGroup, subGroup] = classifyByMetadata(filter, metadata);
-                const std::string pretty = prettyFilterName(filter, metadata);
-                if (!subGroup.empty()) {
-                    subgrouped[mainGroup][subGroup].push_back({filter, pretty});
-                } else {
-                    grouped[mainGroup].push_back({filter, pretty});
-                }
-            }
-
             std::cout << kBannerIndent
                       << paint(centeredCell("welcome to LATTICE benchmarks runner", kBannerWidth), kColorTitle) << "\n";
 
-            std::vector<std::string> menuFilters;
-            std::unordered_map<std::string, std::vector<std::string>> subgroupSelections;
-            std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>> allSubgroups;
-            std::vector<std::pair<std::string, std::string>> plainEntries;
-
-            for (const auto& [_, plainGroupEntries] : grouped) {
-                plainEntries.insert(plainEntries.end(), plainGroupEntries.begin(), plainGroupEntries.end());
-            }
-            for (const auto& [_, subgroupMap] : subgrouped) {
-                for (const auto& [subgroupName, entries] : subgroupMap) {
-                    auto& target = allSubgroups[subgroupName];
-                    target.insert(target.end(), entries.begin(), entries.end());
-                }
-            }
-
-            std::sort(plainEntries.begin(), plainEntries.end(), [](const auto& lhs, const auto& rhs) {
-                return lhs.second < rhs.second;
-            });
-
-            int menuIndex = 1;
-            if (!allSubgroups.empty()) {
-                std::cout << '\n';
-                printSubgroupTable(allSubgroups, menuIndex, menuFilters, subgroupSelections);
-            }
-            if (!plainEntries.empty()) {
-                std::cout << '\n';
-                printMenuEntriesColumns(plainEntries, menuIndex, menuFilters);
-            }
+            const auto descriptors = buildMenuDescriptors(filters, metadata);
+            const MenuTreeNode menuTree = buildMenuTree(descriptors);
+            MenuPrintState menuState;
 
             std::cout << '\n';
-            std::cout << "Choose test (Enter = all): ";
+            printMenuTree(menuTree, "", true, true, menuState);
+
+            std::cout << '\n';
+            std::cout << "Choose test or group (Enter = all): ";
             std::string choice;
             std::getline(std::cin, choice);
 
@@ -594,20 +542,20 @@ namespace Benchmarks::BmRunner {
 
                     if (std::all_of(token.begin(), token.end(), [](unsigned char ch) { return std::isdigit(ch) != 0; })) {
                         const int idx = std::stoi(token) - 1;
-                        if (idx < 0 || idx >= static_cast<int>(menuFilters.size())) {
+                        if (idx < 0 || idx >= static_cast<int>(menuState.menuFilters.size())) {
                             die("Invalid benchmark number.");
                         }
-                        selected.push_back(menuFilters[static_cast<std::size_t>(idx)]);
+                        selected.push_back(menuState.menuFilters[static_cast<std::size_t>(idx)]);
                         continue;
                     }
 
-                    const auto groupIt = subgroupSelections.find(token);
-                    if (groupIt != subgroupSelections.end()) {
+                    const auto groupIt = menuState.groupSelections.find(token);
+                    if (groupIt != menuState.groupSelections.end()) {
                         selected.insert(selected.end(), groupIt->second.begin(), groupIt->second.end());
                         continue;
                     }
 
-                    die("Use benchmark numbers or group letters separated by spaces.");
+                    die("Use benchmark numbers or group codes separated by spaces.");
                 }
 
                 std::unordered_set<std::string> uniq;
@@ -879,7 +827,7 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    const auto metadata = Benchmarks::BmRunner::loadBenchMetadata(benchmarksRoot);
+    const auto metadata = Benchmarks::BmRunner::loadBenchMetadata(repoRoot);
     if (config.filter.empty()) {
         config = Benchmarks::BmRunner::completeConfigInteractive(std::move(config), repoRoot, benchmarksRoot, metadata);
     }

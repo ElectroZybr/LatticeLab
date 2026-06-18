@@ -10,6 +10,8 @@
 #include "App/interaction/tools/LassoTool.h"
 #include "App/interaction/tools/RemoveAtomTool.h"
 #include "App/interaction/tools/RulerTool.h"
+#include "App/interaction/tools/SpawnBoxTool.h"
+#include "App/interaction/tools/SpawnCircleTool.h"
 #include "GUI/interface/interface.h"
 #include "GUI/interface/panels/tools/SideToolsPanel.h"
 
@@ -57,6 +59,10 @@ namespace {
             return ToolsManager::Mode::AddAtom;
         case SideToolsPanel::Tool::RemoveAtom:
             return ToolsManager::Mode::RemoveAtom;
+        case SideToolsPanel::Tool::SpawnBox:
+            return ToolsManager::Mode::SpawnBox;
+        case SideToolsPanel::Tool::SpawnCircle:
+            return ToolsManager::Mode::SpawnCircle;
         }
         return ToolsManager::Mode::Cursor;
     }
@@ -93,6 +99,7 @@ void ToolsManager::init(GLFWwindow* w, Lattice::Simulation& sim, std::unique_ptr
     toolContext.renderer = &rend;
     toolContext.pickingSystem = pickingSystem;
     toolContext.uiState = &appInterface.state();
+    toolContext.ioPanel = &appInterface.ioPanel;
 
     for (auto& tool : toolInstances) {
         tool.reset();
@@ -103,6 +110,8 @@ void ToolsManager::init(GLFWwindow* w, Lattice::Simulation& sim, std::unique_ptr
     toolInstances[toIndex(Mode::Ruler)] = std::make_unique<RulerTool>(toolContext);
     toolInstances[toIndex(Mode::AddAtom)] = std::make_unique<AddAtomTool>(toolContext);
     toolInstances[toIndex(Mode::RemoveAtom)] = std::make_unique<RemoveAtomTool>(toolContext);
+    toolInstances[toIndex(Mode::SpawnBox)] = std::make_unique<SpawnBoxTool>(toolContext);
+    toolInstances[toIndex(Mode::SpawnCircle)] = std::make_unique<SpawnCircleTool>(toolContext);
     syncedMode = currentMode();
     isInteracting = false;
     lastSceneMousePos = {};

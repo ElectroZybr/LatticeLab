@@ -3,7 +3,7 @@
 #include "Rendering/benchmarks/Fixture.h"
 #include "Rendering/benchmarks/SceneBuilders.h"
 
-// @bench_meta {"id":"RenderFixture/RenderBHtreePrepare","label":"Render BHtree Prepare","group":"Rendering/BHtree"}
+// @bench_meta {"id":"RenderFixture/RenderBHtreePrepare","label":"Render BHtree Prepare","group":"Rendering/BHtree/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderBHtreePrepare)(benchmark::State& state) {
     RenderBenchScenes::buildGrid(scene(), sceneArg());
     scene().data.barnesHutTree = scene().data.grid;
@@ -18,7 +18,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderBHtreePrepare)(benchmark::State& state) 
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderBHtreeCopy","label":"Render BHtree CPU->GPU Copy","group":"Rendering/BHtree"}
+// @bench_meta {"id":"RenderFixture/RenderBHtreeCopy","label":"Render BHtree CPU->GPU Copy","group":"Rendering/BHtree/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderBHtreeCopy)(benchmark::State& state) {
     RenderBenchScenes::buildGrid(scene(), sceneArg());
     scene().data.barnesHutTree = scene().data.grid;
@@ -34,7 +34,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderBHtreeCopy)(benchmark::State& state) {
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderBHtreeDraw","label":"Render BHtree GPU Draw","group":"Rendering/BHtree"}
+// @bench_meta {"id":"RenderFixture/RenderBHtreeDraw","label":"Render BHtree GPU Draw","group":"Rendering/BHtree/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderBHtreeDraw)(benchmark::State& state) {
     RenderBenchScenes::buildGrid(scene(), sceneArg());
     scene().data.barnesHutTree = scene().data.grid;
@@ -55,7 +55,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderBHtreeDraw)(benchmark::State& state) {
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderBHtreeFull","label":"Render BHtree Full","group":"Rendering/BHtree"}
+// @bench_meta {"id":"RenderFixture/RenderBHtreeFull","label":"Render BHtree Frame","group":"Rendering/BHtree/Frame"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderBHtreeFull)(benchmark::State& state) {
     RenderBenchScenes::buildGrid(scene(), sceneArg());
     scene().data.barnesHutTree = scene().data.grid;

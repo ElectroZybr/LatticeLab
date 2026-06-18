@@ -68,6 +68,8 @@ public:
     [[nodiscard]] AtomData::Type atomType() const { return atomType_; }
     [[nodiscard]] AtomData::Type gasAtomType() const { return gasAtomType_; }
     [[nodiscard]] float gasDensity() const { return generatorDensity_; }
+    [[nodiscard]] bool canSpawnFromRegionTool() const;
+    bool emitSpawnFromRegion(const AppSignals::UI::GeneratorRegionSpec& region) const;
 
 private:
     void ensureSceneCatalogLoaded();
@@ -77,6 +79,7 @@ private:
     uint8_t pendingReloadFrames_ = 0;
     bool visible_ = false;
     bool sceneCatalogLoaded_ = false;
+    bool generatorsExpanded_ = true;
     float animProgress_ = 0.f;
     glm::ivec3 generatorAxisCounts_ = glm::ivec3(25, 25, 25);
     int generatorAxisCount_ = 25;

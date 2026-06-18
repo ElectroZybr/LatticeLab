@@ -3,7 +3,7 @@
 #include "Rendering/benchmarks/Fixture.h"
 #include "Rendering/benchmarks/SceneBuilders.h"
 
-// @bench_meta {"id":"RenderFixture/RenderFieldPotentialPrepare","label":"Render Field Potential Prepare","group":"Rendering/Field"}
+// @bench_meta {"id":"RenderFixture/RenderFieldPotentialPrepare","label":"Render Field Potential Prepare","group":"Rendering/Field/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderFieldPotentialPrepare)(benchmark::State& state) {
     RenderBenchScenes::buildField(scene(), sceneArg(), true, false, false);
     syncRenderer();
@@ -14,7 +14,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderFieldPotentialPrepare)(benchmark::State&
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderFieldPotentialCopy","label":"Render Field Potential CPU->GPU Copy","group":"Rendering/Field"}
+// @bench_meta {"id":"RenderFixture/RenderFieldPotentialCopy","label":"Render Field Potential CPU->GPU Copy","group":"Rendering/Field/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderFieldPotentialCopy)(benchmark::State& state) {
     RenderBenchScenes::buildField(scene(), sceneArg(), true, false, false);
     syncRenderer();
@@ -26,7 +26,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderFieldPotentialCopy)(benchmark::State& st
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderFieldPotentialDraw","label":"Render Field Potential GPU Draw","group":"Rendering/Field"}
+// @bench_meta {"id":"RenderFixture/RenderFieldPotentialDraw","label":"Render Field Potential GPU Draw","group":"Rendering/Field/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderFieldPotentialDraw)(benchmark::State& state) {
     RenderBenchScenes::buildField(scene(), sceneArg(), true, false, false);
     syncRenderer();
@@ -38,12 +38,13 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderFieldPotentialDraw)(benchmark::State& st
         renderer_->drawPreparedFieldPotentialGpu();
         renderer_->endFrame();
         WGPUContext::instance().waitIdle();
+        WGPUContext::instance().processEvents();
         benchmark::ClobberMemory();
     }
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderFieldPotentialFull","label":"Render Field Potential Full","group":"Rendering/Field"}
+// @bench_meta {"id":"RenderFixture/RenderFieldPotentialFull","label":"Render Field Potential Frame","group":"Rendering/Field/Frame"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderFieldPotentialFull)(benchmark::State& state) {
     RenderBenchScenes::buildField(scene(), sceneArg(), true, false, false);
     for (auto _ : state) {
@@ -54,7 +55,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderFieldPotentialFull)(benchmark::State& st
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderFieldArrowsPrepare","label":"Render Field Arrows Prepare","group":"Rendering/Field"}
+// @bench_meta {"id":"RenderFixture/RenderFieldArrowsPrepare","label":"Render Field Arrows Prepare","group":"Rendering/Field/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderFieldArrowsPrepare)(benchmark::State& state) {
     RenderBenchScenes::buildField(scene(), sceneArg(), false, true, false);
     syncRenderer();
@@ -65,7 +66,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderFieldArrowsPrepare)(benchmark::State& st
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderFieldArrowsCopy","label":"Render Field Arrows CPU->GPU Copy","group":"Rendering/Field"}
+// @bench_meta {"id":"RenderFixture/RenderFieldArrowsCopy","label":"Render Field Arrows CPU->GPU Copy","group":"Rendering/Field/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderFieldArrowsCopy)(benchmark::State& state) {
     RenderBenchScenes::buildField(scene(), sceneArg(), false, true, false);
     syncRenderer();
@@ -77,7 +78,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderFieldArrowsCopy)(benchmark::State& state
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderFieldArrowsDraw","label":"Render Field Arrows GPU Draw","group":"Rendering/Field"}
+// @bench_meta {"id":"RenderFixture/RenderFieldArrowsDraw","label":"Render Field Arrows GPU Draw","group":"Rendering/Field/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderFieldArrowsDraw)(benchmark::State& state) {
     RenderBenchScenes::buildField(scene(), sceneArg(), false, true, false);
     syncRenderer();
@@ -89,12 +90,13 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderFieldArrowsDraw)(benchmark::State& state
         renderer_->drawPreparedFieldArrowsGpu(renderData());
         renderer_->endFrame();
         WGPUContext::instance().waitIdle();
+        WGPUContext::instance().processEvents();
         benchmark::ClobberMemory();
     }
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderFieldArrowsFull","label":"Render Field Arrows Full","group":"Rendering/Field"}
+// @bench_meta {"id":"RenderFixture/RenderFieldArrowsFull","label":"Render Field Arrows Frame","group":"Rendering/Field/Frame"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderFieldArrowsFull)(benchmark::State& state) {
     RenderBenchScenes::buildField(scene(), sceneArg(), false, true, false);
     for (auto _ : state) {
@@ -105,7 +107,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderFieldArrowsFull)(benchmark::State& state
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderFieldContoursPrepare","label":"Render Field Contours Prepare","group":"Rendering/Field"}
+// @bench_meta {"id":"RenderFixture/RenderFieldContoursPrepare","label":"Render Field Contours Prepare","group":"Rendering/Field/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderFieldContoursPrepare)(benchmark::State& state) {
     RenderBenchScenes::buildField(scene(), sceneArg(), false, false, true);
     syncRenderer();
@@ -116,7 +118,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderFieldContoursPrepare)(benchmark::State& 
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderFieldContoursCopy","label":"Render Field Contours CPU->GPU Copy","group":"Rendering/Field"}
+// @bench_meta {"id":"RenderFixture/RenderFieldContoursCopy","label":"Render Field Contours CPU->GPU Copy","group":"Rendering/Field/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderFieldContoursCopy)(benchmark::State& state) {
     RenderBenchScenes::buildField(scene(), sceneArg(), false, false, true);
     syncRenderer();
@@ -128,7 +130,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderFieldContoursCopy)(benchmark::State& sta
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderFieldContoursDraw","label":"Render Field Contours GPU Draw","group":"Rendering/Field"}
+// @bench_meta {"id":"RenderFixture/RenderFieldContoursDraw","label":"Render Field Contours GPU Draw","group":"Rendering/Field/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderFieldContoursDraw)(benchmark::State& state) {
     RenderBenchScenes::buildField(scene(), sceneArg(), false, false, true);
     syncRenderer();
@@ -140,12 +142,13 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderFieldContoursDraw)(benchmark::State& sta
         renderer_->drawPreparedFieldContoursGpu();
         renderer_->endFrame();
         WGPUContext::instance().waitIdle();
+        WGPUContext::instance().processEvents();
         benchmark::ClobberMemory();
     }
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderFieldContoursFull","label":"Render Field Contours Full","group":"Rendering/Field"}
+// @bench_meta {"id":"RenderFixture/RenderFieldContoursFull","label":"Render Field Contours Frame","group":"Rendering/Field/Frame"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderFieldContoursFull)(benchmark::State& state) {
     RenderBenchScenes::buildField(scene(), sceneArg(), false, false, true);
     for (auto _ : state) {

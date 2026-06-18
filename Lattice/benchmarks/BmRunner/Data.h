@@ -13,5 +13,5 @@ namespace Benchmarks::BmRunner {
     std::optional<BenchmarkData> loadBenchmarkDataIfExists(const std::filesystem::path& path);
     std::string serializeBenchmarkJson(const BenchmarkData& data);
     void writeBenchmarkJson(const std::filesystem::path& path, const BenchmarkData& data);
-    std::unordered_map<std::string, BenchmarkMeta> loadBenchMetadata(const std::filesystem::path& benchmarksRoot);
+    std::unordered_map<std::string, BenchmarkMeta> loadBenchMetadata(const std::filesystem::path& repoRoot);
 }

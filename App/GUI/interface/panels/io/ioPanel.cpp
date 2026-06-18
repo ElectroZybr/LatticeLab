@@ -540,35 +540,41 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
     else if (xyzSelected) {
         drawIOPanelRecordingStatusLine(xyzRecording, uiState.xyzFps, uiState.xyzFrameCount);
     }
-    ImGui::SeparatorText("Генератор");
-    if (ImGui::BeginCombo("##generator_kind", generatorLabel(generatorKind_))) {
-        constexpr IOPanel::GeneratorKind generators[] = {
-            IOPanel::GeneratorKind::Massive,
-            IOPanel::GeneratorKind::Gas,
-            IOPanel::GeneratorKind::MixedGas,
-            IOPanel::GeneratorKind::HexLattice,
-            IOPanel::GeneratorKind::TriangularBipyramid,
-            IOPanel::GeneratorKind::RandomFill,
-            IOPanel::GeneratorKind::LatticeFill,
-        };
-        for (IOPanel::GeneratorKind kind : generators) {
-            const bool selected = kind == generatorKind_;
-            if (ImGui::Selectable(generatorLabel(kind), selected)) {
-                generatorKind_ = kind;
+    ImGuiTreeNodeFlags generatorHeaderFlags = generatorsExpanded_ ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None;
+    const bool generatorsOpen = ImGui::CollapsingHeader("Генераторы", generatorHeaderFlags);
+    generatorsExpanded_ = generatorsOpen;
+    if (!generatorsOpen) {
+        AppSignals::UI::ClearGeneratorPhantom.emit();
+    }
+    else {
+        if (ImGui::BeginCombo("##generator_kind", generatorLabel(generatorKind_))) {
+            constexpr IOPanel::GeneratorKind generators[] = {
+                IOPanel::GeneratorKind::Massive,
+                IOPanel::GeneratorKind::Gas,
+                IOPanel::GeneratorKind::MixedGas,
+                IOPanel::GeneratorKind::HexLattice,
+                IOPanel::GeneratorKind::TriangularBipyramid,
+                IOPanel::GeneratorKind::RandomFill,
+                IOPanel::GeneratorKind::LatticeFill,
+            };
+            for (IOPanel::GeneratorKind kind : generators) {
+                const bool selected = kind == generatorKind_;
+                if (ImGui::Selectable(generatorLabel(kind), selected)) {
+                    generatorKind_ = kind;
+                }
+                if (selected) {
+                    ImGui::SetItemDefaultFocus();
+                }
             }
-            if (selected) {
-                ImGui::SetItemDefaultFocus();
-            }
+            ImGui::EndCombo();
         }
-        ImGui::EndCombo();
-    }
 
-    bool createRequested = false;
-    if (generatorAtomCount_ != mixedGasLastTotalCount_) {
-        normalizeMixedGasToTotal(mixedGasEntries_, generatorAtomCount_);
-        mixedGasLastTotalCount_ = generatorAtomCount_;
-    }
-    switch (generatorKind_) {
+        bool createRequested = false;
+        if (generatorAtomCount_ != mixedGasLastTotalCount_) {
+            normalizeMixedGasToTotal(mixedGasEntries_, generatorAtomCount_);
+            mixedGasLastTotalCount_ = generatorAtomCount_;
+        }
+        switch (generatorKind_) {
     case GeneratorKind::Massive:
         if (!massiveSeparateAxes_) {
             drawAxisCountControls("massive_axis", generatorAxisCounts_, scale, 2, 200, generatorIs3D_);
@@ -825,6 +831,7 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
         AppSignals::UI::ClearGeneratorPhantom.emit();
         break;
     }
+    }
 
     ImGui::SeparatorText("Сцены");
     std::array<char, 512> scenesDirBuffer{};
@@ -1008,4 +1015,30 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
     }
 
     ImGui::End();
+}
+
+bool IOPanel::canSpawnFromRegionTool() const {
+    return generatorKind_ == GeneratorKind::RandomFill || generatorKind_ == GeneratorKind::LatticeFill;
+}
+
+bool IOPanel::emitSpawnFromRegion(const AppSignals::UI::GeneratorRegionSpec& region) const {
+    if (generatorKind_ == GeneratorKind::RandomFill) {
+        AppSignals::UI::RandomFillRequest request;
+        request.region = region;
+        request.composition = randomFillComposition_;
+        request.options = randomFillOptions_;
+        AppSignals::UI::CreateRandomFill.emit(request);
+        return true;
+    }
+
+    if (generatorKind_ == GeneratorKind::LatticeFill) {
+        AppSignals::UI::LatticeFillRequest request;
+        request.region = region;
+        request.composition = latticeFillComposition_;
+        request.options = latticeFillOptions_;
+        AppSignals::UI::CreateLatticeFill.emit(request);
+        return true;
+    }
+
+    return false;
 }

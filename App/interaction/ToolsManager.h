@@ -34,6 +34,8 @@ public:
         Ruler,
         AddAtom,
         RemoveAtom,
+        SpawnBox,
+        SpawnCircle,
     };
 
     static void init(GLFWwindow* window, Lattice::Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer, Interface& appInterface);
@@ -56,7 +58,7 @@ public:
     static PickingSystem* pickingSystem;
 
 private:
-    static constexpr size_t kModeCount = 6;
+    static constexpr size_t kModeCount = 8;
 
     static ITool* activeTool() noexcept;
     static void syncToolMode() noexcept;

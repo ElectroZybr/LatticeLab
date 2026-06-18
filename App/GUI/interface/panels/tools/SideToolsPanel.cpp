@@ -9,6 +9,8 @@
 #define ICON_FA_RULER "\uf545"
 #define ICON_FA_PLUS "\uf067"
 #define ICON_FA_MINUS "\uf068"
+#define ICON_FA_SQUARE "\uf0c8"
+#define ICON_FA_CIRCLE "\uf111"
 
 namespace {
     constexpr ImVec4 ACTIVE_COLOR = ImVec4(0.06f, 0.53f, 0.98f, 1.00f);
@@ -19,13 +21,15 @@ namespace {
         const char* tooltip;
     };
 
-    constexpr std::array<ToolItem, 6> TOOL_ITEMS{{
+    constexpr std::array<ToolItem, 8> TOOL_ITEMS{{
         {SideToolsPanel::Tool::Cursor, ICON_FA_MOUSE_POINTER, "Cursor"},
         {SideToolsPanel::Tool::Frame, ICON_FA_VECTOR_SQUARE, "Frame select"},
         {SideToolsPanel::Tool::Lasso, ICON_FA_DRAW_POLYGON, "Lasso select"},
         {SideToolsPanel::Tool::Ruler, ICON_FA_RULER, "Ruler"},
         {SideToolsPanel::Tool::AddAtom, ICON_FA_PLUS, "Add atom"},
         {SideToolsPanel::Tool::RemoveAtom, ICON_FA_MINUS, "Remove atom"},
+        {SideToolsPanel::Tool::SpawnBox, ICON_FA_SQUARE, "Spawn by box"},
+        {SideToolsPanel::Tool::SpawnCircle, ICON_FA_CIRCLE, "Spawn by circle"},
     }};
 
     bool drawToolButton(const char* icon, const char* tooltip, bool selected, float buttonSize, ImFont* textFont) {

@@ -3,7 +3,7 @@
 #include "Rendering/benchmarks/Fixture.h"
 #include "Rendering/benchmarks/SceneBuilders.h"
 
-// @bench_meta {"id":"RenderFixture/RenderAtomsCpuPrepare","label":"Render Atoms CPU Prepare","group":"Rendering/Atoms"}
+// @bench_meta {"id":"RenderFixture/RenderAtomsCpuPrepare","label":"Render Atoms CPU Prepare","group":"Rendering/Atoms/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderAtomsCpuPrepare)(benchmark::State& state) {
     RenderBenchScenes::buildAtoms(scene(), sceneArg());
     syncRenderer();
@@ -15,7 +15,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderAtomsCpuPrepare)(benchmark::State& state
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderAtomsCpuToGpuCopy","label":"Render Atoms CPU->GPU Copy","group":"Rendering/Atoms"}
+// @bench_meta {"id":"RenderFixture/RenderAtomsCpuToGpuCopy","label":"Render Atoms CPU->GPU Copy","group":"Rendering/Atoms/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderAtomsCpuToGpuCopy)(benchmark::State& state) {
     RenderBenchScenes::buildAtoms(scene(), sceneArg());
     syncRenderer();
@@ -29,7 +29,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderAtomsCpuToGpuCopy)(benchmark::State& sta
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderAtomsGpuDraw","label":"Render Atoms GPU Draw","group":"Rendering/Atoms"}
+// @bench_meta {"id":"RenderFixture/RenderAtomsGpuDraw","label":"Render Atoms GPU Draw","group":"Rendering/Atoms/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderAtomsGpuDraw)(benchmark::State& state) {
     RenderBenchScenes::buildAtoms(scene(), sceneArg());
     syncRenderer();
@@ -48,7 +48,7 @@ BENCHMARK_DEFINE_F(RenderFixture, RenderAtomsGpuDraw)(benchmark::State& state) {
     setCounters(state);
 }
 
-// @bench_meta {"id":"RenderFixture/RenderAtomsFull","label":"Render Atoms Full","group":"Rendering/Atoms"}
+// @bench_meta {"id":"RenderFixture/RenderAtomsFull","label":"Render Atoms Frame","group":"Rendering/Atoms/Frame"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderAtomsFull)(benchmark::State& state) {
     RenderBenchScenes::buildAtoms(scene(), sceneArg());
     for (auto _ : state) {

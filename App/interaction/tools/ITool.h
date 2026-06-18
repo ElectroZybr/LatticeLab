@@ -10,6 +10,7 @@
 class AtomStorage;
 class BaseRenderer;
 class PickingSystem;
+class IOPanel;
 namespace Lattice {
     class Simulation;
 }
@@ -21,6 +22,7 @@ struct ToolContext {
     std::unique_ptr<BaseRenderer>* renderer = nullptr;
     PickingSystem* pickingSystem = nullptr;
     UiState* uiState = nullptr;
+    IOPanel* ioPanel = nullptr;
 
     [[nodiscard]] bool isValid() const noexcept { return window != nullptr && simulation != nullptr && renderer != nullptr; }
 
