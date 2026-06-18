@@ -2,8 +2,8 @@
 
 #include <cstdint>
 
-#include "Engine/physics/Atom/AtomStorage.h"
-#include "Engine/physics/Bond.h"
+#include "Lattice/Engine/physics/Atom/AtomStorage.h"
+#include "Lattice/Engine/physics/Bond.h"
 
 class NeighborList;
 

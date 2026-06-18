@@ -79,31 +79,8 @@ namespace {
         return RenderData::SpeedColorMode::AtomColor;
     }
 
-    const char* integratorToString(Integrator::Scheme scheme) {
-        switch (scheme) {
-        case Integrator::Scheme::Verlet:
-            return "verlet";
-        case Integrator::Scheme::KDK:
-            return "kdk";
-        case Integrator::Scheme::RK4:
-            return "rk4";
-        case Integrator::Scheme::Langevin:
-            return "langevin";
-        }
-        return "verlet";
-    }
-
-    Integrator::Scheme integratorFromString(const std::string& value) {
-        if (value == "kdk") {
-            return Integrator::Scheme::KDK;
-        }
-        if (value == "rk4") {
-            return Integrator::Scheme::RK4;
-        }
-        if (value == "langevin") {
-            return Integrator::Scheme::Langevin;
-        }
-        return Integrator::Scheme::Verlet;
+    std::string integratorFromString(const std::string& value) {
+        return globalIntegratorRegistry().find(value) != nullptr ? value : "verlet";
     }
 }
 
@@ -303,7 +280,7 @@ void UserSettingsIO::save(const UserSettings& settings, const std::filesystem::p
     file << "interface_scale " << settings.interfaceScale << "\n";
     file << "renderer_speed_color_mode " << speedColorModeToString(settings.rendererSpeedColorMode) << "\n";
     file << "renderer_speed_gradient_max " << settings.rendererSpeedGradientMax << "\n";
-    file << "simulation_integrator " << integratorToString(settings.simulationIntegrator) << "\n";
+    file << "simulation_integrator " << settings.simulationIntegrator << "\n";
     file << "simulation_bond_formation " << static_cast<int>(settings.simulationBondFormationEnabled) << "\n";
     file << "simulation_lj_enabled " << static_cast<int>(settings.simulationLJEnabled) << "\n";
     file << "simulation_coulomb_enabled " << static_cast<int>(settings.simulationCoulombEnabled) << "\n";

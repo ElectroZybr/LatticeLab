@@ -1,6 +1,6 @@
 #include "NeighborListStats.h"
 
-#include "Engine/NeighborSearch/NeighborList.h"
+#include "Lattice/Engine/NeighborSearch/NeighborList.h"
 
 [[nodiscard]] float NeighborListStats::avgNeighborsPerAtom(const NeighborList& neighborList) const {
     return neighborList.atomCount() > 0

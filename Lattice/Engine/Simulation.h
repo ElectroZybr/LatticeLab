@@ -11,9 +11,9 @@
 
 #include <glm/glm.hpp>
 
-#include "Engine/World.h"
-#include "Engine/io/MoleculeTemplate.h"
-#include "Engine/io/XYZRecordingSession.h"
+#include "Lattice/Engine/World.h"
+#include "Lattice/Engine/io/MoleculeTemplate.h"
+#include "Lattice/Engine/io/XYZRecordingSession.h"
 
 namespace Lattice {
 
@@ -76,8 +76,8 @@ public:
 
     void setDt(float dt) { world().setDt(dt); }
     float getDt() const { return world().getDt(); }
-    void setIntegrator(Integrator::Scheme scheme) { world().getIntegrator().setScheme(scheme); }
-    Integrator::Scheme getIntegrator() const { return world().getIntegrator().getScheme(); }
+    bool setIntegrator(std::string_view id) { return world().getIntegrator().setIntegrator(id); }
+    std::string_view getIntegrator() const { return world().getIntegrator().getIntegrator(); }
     void setMaxParticleSpeed(float maxSpeed) { world().getIntegrator().setMaxParticleSpeed(maxSpeed); }
     float getMaxParticleSpeed() const { return world().getIntegrator().maxParticleSpeed(); }
     void setAccelDamping(float accelDamping) { world().getIntegrator().setAccelDamping(accelDamping); }

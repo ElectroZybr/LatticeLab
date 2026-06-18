@@ -3,10 +3,10 @@
 #include <algorithm>
 #include <cmath>
 
-#include "Engine/NeighborSearch/BarnesHut/Octree.h"
-#include "Engine/NeighborSearch/SpatialGrid.h"
-#include "Engine/Consts.h"
-#include "Engine/metrics/Profiler.h"
+#include "Lattice/Engine/NeighborSearch/BarnesHut/Octree.h"
+#include "Lattice/Engine/NeighborSearch/SpatialGrid.h"
+#include "Lattice/Engine/Consts.h"
+#include "Lattice/Engine/metrics/Profiler.h"
 
 void CoulombForceField::computeLongRange(AtomStorage& atoms, const SpatialGrid& grid) const {
     PROFILE_SCOPE("CoulombForceField::compute");

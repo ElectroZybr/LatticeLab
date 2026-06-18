@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <vector>
 
-#include "Engine/NeighborSearch/NeighborList.h"
-#include "Engine/metrics/Profiler.h"
+#include "Lattice/Engine/NeighborSearch/NeighborList.h"
+#include "Lattice/Engine/metrics/Profiler.h"
 
 bool BondForceField::compute(AtomStorage& atoms, Bond::List& bonds, const NeighborList& neighborList, bool allowBondFormation, float dt) const {
     PROFILE_SCOPE("ForceField::Bonded");

@@ -1,7 +1,7 @@
 #include "World.h"
 
-#include "Engine/metrics/EnergyMetrics.h"
-#include "Engine/physics/Integrator.h"
+#include "Lattice/Engine/metrics/EnergyMetrics.h"
+#include "Lattice/Engine/physics/Integrator.h"
 
 World::World(glm::vec3 size, glm::vec3 renderOffset) : size(size), renderOffset(renderOffset), grid(size), vectorField_(glm::ivec3(size), 0) {
     atomStorage_.reserve(250000);

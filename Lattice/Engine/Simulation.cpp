@@ -10,10 +10,10 @@
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "Engine/Consts.h"
-#include "Engine/io/SimulationStateIO.h"
-#include "Engine/io/MoleculePdb.h"
-#include "Engine/metrics/Profiler.h"
+#include "Lattice/Engine/Consts.h"
+#include "Lattice/Engine/io/SimulationStateIO.h"
+#include "Lattice/Engine/io/MoleculePdb.h"
+#include "Lattice/Engine/metrics/Profiler.h"
 
 namespace Lattice {
 namespace {

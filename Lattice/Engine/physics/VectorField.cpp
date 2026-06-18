@@ -1,8 +1,8 @@
 #include "VectorField.h"
 
-#include "Engine/NeighborSearch/SpatialGrid.h"
-#include "Engine/physics/Atom/AtomStorage.h"
-#include "Engine/physics/ForceField.h"
+#include "Lattice/Engine/NeighborSearch/SpatialGrid.h"
+#include "Lattice/Engine/physics/Atom/AtomStorage.h"
+#include "Lattice/Engine/physics/ForceField.h"
 
 #include <algorithm>
 #include <cmath>

@@ -7,12 +7,18 @@ file(GLOB_RECURSE LATTICE_PUBLIC_HEADERS CONFIGURE_DEPENDS
 )
 
 foreach(lattice_file_list IN ITEMS LATTICE_SOURCES LATTICE_PUBLIC_HEADERS)
-    list(FILTER ${lattice_file_list} EXCLUDE REGEX ".*/(CLI|benchmarks|build|tests|_deps)/.*")
+    list(FILTER ${lattice_file_list} EXCLUDE REGEX ".*/(CLI|benchmarks|build|tests|_deps|Plugins)/.*")
 endforeach()
 
 add_library(Lattice STATIC
     ${LATTICE_SOURCES}
     ${LATTICE_PUBLIC_HEADERS}
+)
+
+add_subdirectory(Plugins/ClassicMD)
+
+target_sources(Lattice PRIVATE
+    $<TARGET_OBJECTS:LatticeClassicMD>
 )
 
 add_library(LatticeLab::Lattice ALIAS Lattice)

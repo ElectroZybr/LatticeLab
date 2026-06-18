@@ -298,7 +298,7 @@ void AppStateIO::saveBinary(CaptureController& captureController, const PreviewF
     simState.dt = simulation.world().getDt();
     simState.time_ns = simulation.world().getSimTimeNs();
     simState.step = simulation.world().getSimStep();
-    simState.integrator = simulation.world().getIntegrator().getScheme();
+    simState.integrator = std::string(simulation.getIntegrator());
     simState.gravity = simulation.getGravity();
     simState.bondFormationEnabled = simulation.world().isBondFormationEnabled(),
     simState.LJEnabled = simulation.isLJEnabled();

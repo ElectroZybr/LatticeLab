@@ -4,23 +4,16 @@
 
 #include "App/debug/CreateDebugPanels.h"
 #include "App/debug/UpdateDebugData.h"
+#include "App/localization/i18n.h"
 #include "Lattice/Engine/Simulation.h"
 #include "Lattice/Engine/physics/Integrator.h"
 
-inline std::string_view integratorSchemeName(Integrator::Scheme scheme) {
-    switch (scheme) {
-    case Integrator::Scheme::Verlet:
-        return "Velocity Verlet";
-    case Integrator::Scheme::KDK:
-        return "KDK (Kick-Drift-Kick)";
-    case Integrator::Scheme::RK4:
-        return "Runge-Kutta 4";
-    case Integrator::Scheme::Langevin:
-        return "Langevin";
-    case Integrator::Scheme::Andersen:
-        return "Andersen";
+inline std::string_view integratorSchemeName(std::string_view id) {
+    const IntegratorMeta* meta = globalIntegratorRegistry().find(id);
+    if (meta != nullptr && !meta->description.empty()) {
+        return i18n::tr(meta->description);
     }
-    return "Unknown";
+    return id;
 }
 
 inline void refreshAtomDebugViews(const DebugViews& debugViews, const Lattice::Simulation& simulation) {

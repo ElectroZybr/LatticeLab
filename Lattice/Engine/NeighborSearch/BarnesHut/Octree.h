@@ -8,8 +8,8 @@
 
 #include <glm/vec3.hpp>
 
-#include "Engine/NeighborSearch/SpatialGrid.h"
-#include "Engine/physics/Atom/AtomStorage.h"
+#include "Lattice/Engine/NeighborSearch/SpatialGrid.h"
+#include "Lattice/Engine/physics/Atom/AtomStorage.h"
 
 class OctreeNode {
 public:

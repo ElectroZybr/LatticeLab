@@ -2,8 +2,8 @@
 
 #include <cmath>
 
-#include "Engine/Consts.h"
-#include "Engine/physics/ForceFields/CoulombForceField.h"
+#include "Lattice/Engine/Consts.h"
+#include "Lattice/Engine/physics/ForceFields/CoulombForceField.h"
 
 void OctreeNode::build(const AtomStorage& atoms, const SpatialGrid& grid){
     const auto maxSide = std::max(grid.size.x, std::max(grid.size.y, grid.size.z));

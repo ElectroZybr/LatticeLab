@@ -3,9 +3,9 @@
 #include <glm/geometric.hpp>
 #include <glm/glm.hpp>
 
-#include "Engine/Consts.h"
-#include "Engine/physics/Atom/AtomData.h"
-#include "Engine/physics/Atom/AtomStorage.h"
+#include "Lattice/Engine/Consts.h"
+#include "Lattice/Engine/physics/Atom/AtomData.h"
+#include "Lattice/Engine/physics/Atom/AtomStorage.h"
 
 namespace EnergyMetrics {
     using glm::dot;

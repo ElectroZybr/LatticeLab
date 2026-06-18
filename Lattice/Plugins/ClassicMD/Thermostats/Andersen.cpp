@@ -1,16 +1,16 @@
 #include "Andersen.h"
 
-#include "Engine/metrics/Profiler.h"
-#include "Engine/physics/integrators/StepOps.h"
-#include "Engine/physics/integrators/VerletScheme.h"
+#include "Lattice/Engine/metrics/Profiler.h"
+#include "Lattice/Plugins/ClassicMD/Integrators/StepOps.h"
+#include "Lattice/Plugins/ClassicMD/Integrators/Verlet.h"
 
 void Andersen::pipeline(StepData& stepData)
 {
     PROFILE_SCOPE("Andersen::pipeline");
     
-    StepOps::predictAndSync(stepData, &VerletScheme::predict);
+    StepOps::predictAndSync(stepData, &Verlet::predict);
     StepOps::computeForces(stepData);
-    VerletScheme::correct(stepData.world.getAtomStorage(), 1.0f, stepData.dt);
+    Verlet::correct(stepData.world.getAtomStorage(), 1.0f, stepData.dt);
     mkMove(stepData);
 }
 

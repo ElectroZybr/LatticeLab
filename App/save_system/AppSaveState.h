@@ -13,7 +13,7 @@ struct SimulationSaveState {
     float dt;
     float time_ns;
     uint64_t step;
-    Integrator::Scheme integrator;
+    std::string integrator;
 
     // Силы
     glm::vec3 gravity{0.0f};

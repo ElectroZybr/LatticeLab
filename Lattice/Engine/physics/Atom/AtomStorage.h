@@ -10,9 +10,9 @@
 #include <utility>
 #include <vector>
 
-#include "Engine/NeighborSearch/SpatialGrid.h"
-#include "Engine/physics/Atom/AtomData.h"
-#include "Engine/physics/Atom/AtomSort.h"
+#include "Lattice/Engine/NeighborSearch/SpatialGrid.h"
+#include "Lattice/Engine/physics/Atom/AtomData.h"
+#include "Lattice/Engine/physics/Atom/AtomSort.h"
 
 class AtomStorage {
 public:

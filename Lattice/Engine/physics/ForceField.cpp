@@ -3,10 +3,10 @@
 #include <algorithm>
 #include <vector>
 
-#include "Engine/World.h"
-#include "Engine/NeighborSearch/NeighborList.h"
-#include "Engine/metrics/Profiler.h"
-#include "Engine/physics/Atom/AtomStorage.h"
+#include "Lattice/Engine/World.h"
+#include "Lattice/Engine/NeighborSearch/NeighborList.h"
+#include "Lattice/Engine/metrics/Profiler.h"
+#include "Lattice/Engine/physics/Atom/AtomStorage.h"
 
 namespace {
     using ExclusionList = std::vector<std::vector<uint32_t>>;

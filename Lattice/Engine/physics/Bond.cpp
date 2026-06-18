@@ -5,8 +5,8 @@
 #include <cmath>
 #include <numbers>
 
-#include "Engine/physics/Atom/AtomData.h"
-#include "Engine/physics/Atom/AtomStorage.h"
+#include "Lattice/Engine/physics/Atom/AtomData.h"
+#include "Lattice/Engine/physics/Atom/AtomStorage.h"
 
 namespace {
     constexpr double kBondBreakDistance = 3.0;

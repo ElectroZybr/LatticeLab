@@ -5,11 +5,11 @@
 #include <limits>
 #include <vector>
 
-#include "Engine/NeighborSearch/SpatialGrid.h"
-#include "Engine/World.h"
-#include "Engine/metrics/Profiler.h"
-#include "Engine/physics/Atom/AtomStorage.h"
-#include "Engine/restrict.h"
+#include "Lattice/Engine/NeighborSearch/SpatialGrid.h"
+#include "Lattice/Engine/World.h"
+#include "Lattice/Engine/metrics/Profiler.h"
+#include "Lattice/Engine/physics/Atom/AtomStorage.h"
+#include "Lattice/Engine/restrict.h"
 
 void NeighborList::setCutoff(float cutoff) {
     cutoff_ = cutoff;

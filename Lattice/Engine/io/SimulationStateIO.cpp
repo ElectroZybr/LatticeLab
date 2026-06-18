@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include "Engine/Simulation.h"
+#include "Lattice/Engine/Simulation.h"
 
 using Lattice::Simulation;
 
@@ -277,7 +277,7 @@ namespace {
         file << kBlockIndent << "step " << simulation.world().getSimStep() << "\n";
         file << kBlockIndent << "time_ns " << simulation.world().getSimTimeNs() << "\n";
         file << kBlockIndent << "dt " << simulation.world().getDt() << "\n";
-        file << kBlockIndent << "integrator " << static_cast<int>(simulation.world().getIntegrator().getScheme()) << "\n";
+        file << kBlockIndent << "integrator " << simulation.getIntegrator() << "\n";
         const glm::vec3 gravity = simulation.getGravity();
         file << kBlockIndent << "gravity " << gravity.x << " " << gravity.y << " " << gravity.z << "\n";
         file << kBlockIndent << "bond_formation " << static_cast<int>(simulation.world().isBondFormationEnabled()) << "\n";
@@ -325,7 +325,7 @@ namespace {
         std::string loadedTitle;
         std::string loadedDescription;
         float loadedDt = simulation.world().getDt();
-        int loadedIntegrator = static_cast<int>(simulation.world().getIntegrator().getScheme());
+        std::string loadedIntegrator = std::string(simulation.getIntegrator());
         glm::vec3 loadedGravity = simulation.world().getGravity();
         bool loadedBondFormationEnabled = simulation.world().isBondFormationEnabled();
         float loadedMaxSpeed = simulation.world().getIntegrator().maxParticleSpeed();
@@ -404,7 +404,7 @@ namespace {
 
         simulation.setSizeBox(boxSize, cellSize);
         simulation.setDt(loadedDt);
-        simulation.setIntegrator(static_cast<Integrator::Scheme>(loadedIntegrator));
+        simulation.setIntegrator(loadedIntegrator);
         simulation.setGravity(loadedGravity);
         simulation.setBondFormationEnabled(loadedBondFormationEnabled);
         simulation.setMaxParticleSpeed(loadedMaxSpeed);
@@ -435,7 +435,7 @@ namespace {
         std::string loadedTitle;
         std::string loadedDescription;
         float loadedDt = simulation.world().getDt();
-        int loadedIntegrator = static_cast<int>(simulation.world().getIntegrator().getScheme());
+        std::string loadedIntegrator = std::string(simulation.getIntegrator());
         glm::vec3 loadedGravity = simulation.world().getGravity();
         bool loadedBondFormationEnabled = simulation.world().isBondFormationEnabled();
         bool loadedLJEnabled = simulation.world().isLJEnabled();
@@ -549,7 +549,7 @@ namespace {
 
         simulation.setSizeBox(worldSize, cellSize);
         simulation.setDt(loadedDt);
-        simulation.setIntegrator(static_cast<Integrator::Scheme>(loadedIntegrator));
+        simulation.setIntegrator(loadedIntegrator);
         simulation.setGravity(loadedGravity);
         simulation.setBondFormationEnabled(loadedBondFormationEnabled);
         simulation.setLJEnabled(loadedLJEnabled);

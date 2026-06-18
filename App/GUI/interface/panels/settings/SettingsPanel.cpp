@@ -46,22 +46,12 @@ namespace {
         return std::sqrt(std::max(1e-6f, maxSpeedSqr));
     }
 
-    std::string_view integratorName(Integrator::Scheme scheme) {
-        switch (scheme) {
-        case Integrator::Scheme::Verlet:
-            return "integrator_velocity_verlet"_tr;
-        case Integrator::Scheme::KDK:
-            return "integrator_kdk"_tr;
-        case Integrator::Scheme::RK4:
-            return "integrator_runge_kutta_4"_tr;
-        case Integrator::Scheme::Langevin:
-            return "integrator_langevin"_tr;
-        case Integrator::Scheme::Andersen:
-            return "integrator_andersen"_tr;;
-        default:
-            return "integrator_unknown"_tr;
-        
+    std::string_view integratorName(std::string_view id) {
+        const IntegratorMeta* meta = globalIntegratorRegistry().find(id);
+        if (meta != nullptr && !meta->description.empty()) {
+            return i18n::tr(meta->description);
         }
+        return id;
     }
 
     std::string_view speedColorModeName(RenderData::SpeedColorMode mode) {
@@ -160,21 +150,13 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         simulation.setGravity(glm::vec3(gx, gy, gz));
     }
 
-    Integrator::Scheme currentIntegrator = simulation.world().getIntegrator().getScheme();
+    std::string_view currentIntegrator = simulation.getIntegrator();
     if (ComboStyle::beginCombo("imgui_integrator"_tr.data(), integratorName(currentIntegrator).data(), 0.0f, uiScale)) {
-        const Integrator::Scheme schemes[] = {
-            Integrator::Scheme::Verlet,
-            Integrator::Scheme::KDK,
-            Integrator::Scheme::RK4,
-            Integrator::Scheme::Langevin,
-            Integrator::Scheme::Andersen
-        };
-
-        for (Integrator::Scheme scheme : schemes) {
-            const bool isSelected = (scheme == currentIntegrator);
-            if (ImGui::Selectable(integratorName(scheme).data(), isSelected)) {
-                simulation.world().getIntegrator().setScheme(scheme);
-                currentIntegrator = scheme;
+        for (const IntegratorMeta& meta : globalIntegratorRegistry().items()) {
+            const bool isSelected = (meta.id == currentIntegrator);
+            if (ImGui::Selectable(integratorName(meta.id).data(), isSelected)) {
+                simulation.setIntegrator(meta.id);
+                currentIntegrator = simulation.getIntegrator();
             }
             if (isSelected) {
                 ImGui::SetItemDefaultFocus();
@@ -183,7 +165,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         ImGui::EndCombo();
     }
 
-    if (currentIntegrator == Integrator::Scheme::RK4 || currentIntegrator == Integrator::Scheme::Langevin) {
+    if (currentIntegrator == "rk4" || currentIntegrator == "langevin") {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.00f, 0.75f, 0.25f, 1.00f));
         ImGui::TextWrapped("imgui_warning_not_implemented_used_as_velocity_verlet"_tr.data(),
                            integratorName(currentIntegrator).data());
@@ -199,7 +181,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     ImGui::PopItemWidth();
 
     ImGui::PushItemWidth(150.0f * uiScale);
-    if (currentIntegrator == Integrator::Scheme::Andersen) {
+    if (currentIntegrator == "andersen") {
         float andersenTemperature = simulation.getAndersenTemperature();
         if (ImGui::SliderFloat("Andersen T (K)", &andersenTemperature, 1.0f, 5000.0f, "%.1f",
                                ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_Logarithmic)) {
@@ -585,7 +567,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         activeRenderData.speedColorMode = defaults.rendererSpeedColorMode;
         activeRenderData.speedGradientMax = defaults.rendererSpeedGradientMax;
 
-        simulation.world().getIntegrator().setScheme(defaults.simulationIntegrator);
+        simulation.setIntegrator(defaults.simulationIntegrator);
         simulation.setBondFormationEnabled(defaults.simulationBondFormationEnabled);
         simulation.setLJEnabled(defaults.simulationLJEnabled);
         simulation.setCoulombEnabled(defaults.simulationCoulombEnabled);

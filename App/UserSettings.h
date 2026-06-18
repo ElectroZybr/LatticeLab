@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <string>
 
 #include "App/AppPaths.h"
 #include "App/capture/CaptureSettings.h"
@@ -42,7 +43,7 @@ struct UserSettings {
     float rendererFieldSmoothing = 1.0f;
     float rendererFieldContourStep = 0.2f;
 
-    Integrator::Scheme simulationIntegrator = Integrator::Scheme::Verlet;
+    std::string simulationIntegrator = "verlet";
     bool simulationBondFormationEnabled = true;
     bool simulationLJEnabled = true;
     bool simulationCoulombEnabled = true;

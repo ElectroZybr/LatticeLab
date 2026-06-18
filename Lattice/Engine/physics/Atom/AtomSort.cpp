@@ -7,9 +7,9 @@
 #include <utility>
 #include <vector>
 
-#include "Engine/NeighborSearch/SpatialGrid.h"
-#include "Engine/physics/Atom/AtomStorage.h"
-#include "Engine/math/Morton3D.h"
+#include "Lattice/Engine/NeighborSearch/SpatialGrid.h"
+#include "Lattice/Engine/physics/Atom/AtomStorage.h"
+#include "Lattice/Engine/math/Morton3D.h"
 
 struct AtomSort::AtomView {
     // Локальный снимок atom-record, чтобы безопасно крутить циклическую перестановку.

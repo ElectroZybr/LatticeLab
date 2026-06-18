@@ -105,7 +105,7 @@ int Application::run() {
     renderer.renderer().getRenderData(0).drawMemoryOrder = userSettings.rendererDrawMemoryOrder;
     renderer.renderer().getRenderData(0).speedColorMode = userSettings.rendererSpeedColorMode;
     renderer.renderer().getRenderData(0).speedGradientMax = userSettings.rendererSpeedGradientMax;
-    simulation.world().getIntegrator().setScheme(userSettings.simulationIntegrator);
+    simulation.setIntegrator(userSettings.simulationIntegrator);
     simulation.world().setBondFormationEnabled(userSettings.simulationBondFormationEnabled);
     simulation.world().setLJEnabled(userSettings.simulationLJEnabled);
     simulation.world().setCoulombEnabled(userSettings.simulationCoulombEnabled);
@@ -216,7 +216,7 @@ int Application::run() {
         .rendererFieldCellSize = renderer.renderer().getRenderData(0).fieldCellSize,
         .rendererFieldSmoothing = renderer.renderer().getRenderData(0).fieldSmoothing,
         .rendererFieldContourStep = renderer.renderer().getRenderData(0).fieldContourStep,
-        .simulationIntegrator = simulation.world().getIntegrator().getScheme(),
+        .simulationIntegrator = std::string(simulation.getIntegrator()),
         .simulationBondFormationEnabled = simulation.world().isBondFormationEnabled(),
         .simulationLJEnabled = simulation.isLJEnabled(),
         .simulationCoulombEnabled = simulation.isCoulombEnabled(),

@@ -8,7 +8,8 @@ typedef unsigned int uint;
 #include <vector>
 
 #include <glm/glm.hpp>
-#include "Engine/metrics/SpatialGridStats.h"
+
+#include "Lattice/Engine/metrics/SpatialGridStats.h"
 
 class SpatialGrid {
 public:
