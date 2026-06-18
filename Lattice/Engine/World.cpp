@@ -129,10 +129,11 @@ void World::update() {
     }
 
     // Создать данные для шага
-    StepData stepData{
+    StepContext stepContext{
         .world = *this,
         .forceField = state_.forceField_,
         .neighborList = neighborList_,
+        .thermostat = state_.thermostat.activeThermostat(),
         .allowBondFormation = state_.bondFormationEnabled_,
         .bondsChanged = false,
         .accelDamping = state_.integrator.accelDamping(),
@@ -140,7 +141,7 @@ void World::update() {
     };
 
     // Выполнить шаг интеграции
-    state_.integrator.step(stepData);
+    state_.integrator.step(stepContext);
 
     // Обновить счётчики и время
     state_.metricsCacheValid_ = false;

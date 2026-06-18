@@ -5,14 +5,15 @@
 
 REGISTER_INTEGRATOR(Verlet)
 
-void Verlet::pipeline(StepData& stepData) const {
+void Verlet::pipeline(StepContext& stepContext) const {
     PROFILE_SCOPE("Verlet::pipeline");
     // Расчет новых позиций
-    StepOps::predictAndSync(stepData, &Verlet::predict);
+    StepOps::predictAndSync(stepContext, &Verlet::predict);
     // Расчет сил
-    StepOps::computeForces(stepData);
+    StepOps::computeForces(stepContext);
     // Корректировка скоростей
-    Verlet::correct(stepData.world.getAtomStorage(), stepData.accelDamping, stepData.dt);
+    Verlet::correct(stepContext.world.getAtomStorage(), stepContext.accelDamping, stepContext.dt);
+    StepOps::applyThermostat(stepContext);
 }
 
 void Verlet::predict(AtomStorage& atomStorage, float dt) {

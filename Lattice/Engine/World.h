@@ -15,6 +15,7 @@
 #include "Lattice/Engine/physics/Bond.h"
 #include "Lattice/Engine/physics/ForceField.h"
 #include "Lattice/Engine/physics/Integrator.h"
+#include "Lattice/Engine/physics/Thermostat.h"
 #include "Lattice/Engine/physics/VectorField.h"
 
 class World {
@@ -98,6 +99,7 @@ public:
 
     struct WorldState {
         Integrator integrator;
+        Thermostat thermostat;
         ForceField forceField_;
         float Dt = 0.01f;
         size_t sim_step = 0;
@@ -119,6 +121,8 @@ public:
     
     Integrator& getIntegrator() noexcept { return state_.integrator; }
     const Integrator& getIntegrator() const noexcept { return state_.integrator; }
+    Thermostat& getThermostat() noexcept { return state_.thermostat; }
+    const Thermostat& getThermostat() const noexcept { return state_.thermostat; }
     
     ForceField& getForceField() noexcept { return state_.forceField_; }
     const ForceField& getForceField() const noexcept { return state_.forceField_; }

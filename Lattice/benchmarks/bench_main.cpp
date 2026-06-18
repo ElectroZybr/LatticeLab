@@ -4,8 +4,11 @@
 #include <vector>
 
 #include "Fixture.h"
+#include "Lattice/Plugins/ClassicMD/ClassicMDPlugin.h"
 
 int main(int argc, char** argv) {
+    registerClassicMDPlugin();
+
     std::vector<char*> filteredArgs;
     filteredArgs.reserve(static_cast<std::size_t>(argc));
     filteredArgs.push_back(argv[0]);

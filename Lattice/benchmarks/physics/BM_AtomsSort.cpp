@@ -6,7 +6,7 @@ BENCHMARK_DEFINE_F(Fixture, AtomsSort)(benchmark::State& state) {
     rebuildScene();
     warmupScene();
     prepareNeighborList();
-    StepData stepData = makeStepData();
+    StepContext stepData = makeStepData();
 
     for (auto _ : state) {
         simulation_->atoms().sort(simulation_->world().getGrid());

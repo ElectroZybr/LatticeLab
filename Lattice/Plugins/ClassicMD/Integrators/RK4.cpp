@@ -1,9 +1,9 @@
 #include "RK4.h"
 
-#include "Lattice/Engine/physics/integrators/RK4Scheme.h"
+#include "Lattice/Plugins/ClassicMD/Integrators/Verlet.h"
 
 REGISTER_INTEGRATOR(RK4)
 
-void RK4::pipeline(StepData& stepData) const {
-    RK4Scheme{}.pipeline(stepData);
+void RK4::pipeline(StepContext& stepContext) const {
+    Verlet{}.pipeline(stepContext);
 }

@@ -1,23 +1,27 @@
 #include "Andersen.h"
 
-#include "Lattice/Engine/metrics/Profiler.h"
-#include "Lattice/Plugins/ClassicMD/Integrators/StepOps.h"
-#include "Lattice/Plugins/ClassicMD/Integrators/Verlet.h"
+#include <algorithm>
+#include <cmath>
 
-void Andersen::pipeline(StepData& stepData)
+#include "Lattice/Engine/Consts.h"
+#include "Lattice/Engine/World.h"
+#include "Lattice/Engine/metrics/Profiler.h"
+#include "Lattice/Engine/physics/Atom/AtomData.h"
+#include "Lattice/Engine/physics/Atom/AtomStorage.h"
+#include "Lattice/Engine/physics/Integrator.h"
+
+REGISTER_THERMOSTAT(Andersen)
+
+void Andersen::apply(StepContext& stepContext)
 {
-    PROFILE_SCOPE("Andersen::pipeline");
-    
-    StepOps::predictAndSync(stepData, &Verlet::predict);
-    StepOps::computeForces(stepData);
-    Verlet::correct(stepData.world.getAtomStorage(), 1.0f, stepData.dt);
-    mkMove(stepData);
+    PROFILE_SCOPE("Andersen::apply");
+    mkMove(stepContext);
 }
 
-void Andersen::mkMove(StepData& stepData)
+void Andersen::mkMove(StepContext& stepContext)
 {
-    AtomStorage& atomStorage = stepData.world.getAtomStorage();
-    const double probability = std::clamp(stepData.dt * nu, 0.0, 1.0);
+    AtomStorage& atomStorage = stepContext.world.getAtomStorage();
+    const double probability = std::clamp(stepContext.dt * nu, 0.0, 1.0);
     std::uniform_real_distribution<double> uniDist(0.0, 1.0);
     const size_t mobileCount = atomStorage.mobileCount();
 

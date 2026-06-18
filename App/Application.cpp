@@ -16,6 +16,7 @@
 #include "App/interaction/ToolsManager.h"
 #include "Lattice/Engine/Simulation.h"
 #include "Lattice/Engine/metrics/Profiler.h"
+#include "Lattice/Plugins/ClassicMD/ClassicMDPlugin.h"
 #include "GUI/interface/interface.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
@@ -48,6 +49,7 @@ namespace {
 }
 
 int Application::run() {
+    registerClassicMDPlugin();
     const UserSettings userSettings = UserSettingsIO::load();
     GLFWwindow* window = createWindow(userSettings.windowState);
     if (!window) {

@@ -82,8 +82,12 @@ public:
     float getMaxParticleSpeed() const { return world().getIntegrator().maxParticleSpeed(); }
     void setAccelDamping(float accelDamping) { world().getIntegrator().setAccelDamping(accelDamping); }
     float getAccelDamping() const { return world().getIntegrator().accelDamping(); }
-    void setAndersenTemperature(float temperature) { world().getIntegrator().setAndersenTemperature(temperature); }
-    float getAndersenTemperature() const { return world().getIntegrator().andersenTemperature(); }
+    bool setThermostat(std::string_view id) { return world().getThermostat().setThermostat(id); }
+    std::string_view getThermostat() const { return world().getThermostat().getThermostat(); }
+    void setThermostatTemperature(float temperature) { world().getThermostat().setTemperature(temperature); }
+    float getThermostatTemperature() const { return world().getThermostat().temperature(); }
+    void setAndersenTemperature(float temperature) { setThermostatTemperature(temperature); }
+    float getAndersenTemperature() const { return getThermostatTemperature(); }
 
     size_t getSimStep() const { return world().getSimStep(); }
     float simTimeNs() const { return world().getSimTimeNs(); }

@@ -5,12 +5,13 @@
 
 REGISTER_INTEGRATOR(KDK)
 
-void KDK::pipeline(StepData& stepData) const {
+void KDK::pipeline(StepContext& stepContext) const {
     PROFILE_SCOPE("KDK::pipeline");
-    halfKick(stepData.world.getAtomStorage(), stepData.accelDamping, stepData.dt);
-    StepOps::predictAndSync(stepData, &KDK::drift);
-    StepOps::computeForces(stepData);
-    halfKick(stepData.world.getAtomStorage(), stepData.accelDamping, stepData.dt);
+    halfKick(stepContext.world.getAtomStorage(), stepContext.accelDamping, stepContext.dt);
+    StepOps::predictAndSync(stepContext, &KDK::drift);
+    StepOps::computeForces(stepContext);
+    halfKick(stepContext.world.getAtomStorage(), stepContext.accelDamping, stepContext.dt);
+    StepOps::applyThermostat(stepContext);
 }
 
 void KDK::halfKick(AtomStorage& atomStorage, float accelDamping, float dt) {

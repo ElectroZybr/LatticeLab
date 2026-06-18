@@ -54,6 +54,14 @@ namespace {
         return id;
     }
 
+    std::string_view thermostatName(std::string_view id) {
+        const ThermostatMeta* meta = globalThermostatRegistry().find(id);
+        if (meta != nullptr && !meta->description.empty()) {
+            return i18n::tr(meta->description);
+        }
+        return id.empty() ? "None" : id;
+    }
+
     std::string_view speedColorModeName(RenderData::SpeedColorMode mode) {
         switch (mode) {
         case RenderData::SpeedColorMode::AtomColor:
@@ -165,6 +173,30 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         ImGui::EndCombo();
     }
 
+    std::string_view currentThermostat = simulation.getThermostat();
+    if (ComboStyle::beginCombo("Thermostat", thermostatName(currentThermostat).data(), 0.0f, uiScale)) {
+        const bool noThermostatSelected = currentThermostat.empty();
+        if (ImGui::Selectable("None", noThermostatSelected)) {
+            simulation.setThermostat({});
+            currentThermostat = simulation.getThermostat();
+        }
+        if (noThermostatSelected) {
+            ImGui::SetItemDefaultFocus();
+        }
+
+        for (const ThermostatMeta& meta : globalThermostatRegistry().items()) {
+            const bool isSelected = (meta.id == currentThermostat);
+            if (ImGui::Selectable(thermostatName(meta.id).data(), isSelected)) {
+                simulation.setThermostat(meta.id);
+                currentThermostat = simulation.getThermostat();
+            }
+            if (isSelected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
     if (currentIntegrator == "rk4" || currentIntegrator == "langevin") {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.00f, 0.75f, 0.25f, 1.00f));
         ImGui::TextWrapped("imgui_warning_not_implemented_used_as_velocity_verlet"_tr.data(),
@@ -181,11 +213,11 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     ImGui::PopItemWidth();
 
     ImGui::PushItemWidth(150.0f * uiScale);
-    if (currentIntegrator == "andersen") {
-        float andersenTemperature = simulation.getAndersenTemperature();
-        if (ImGui::SliderFloat("Andersen T (K)", &andersenTemperature, 1.0f, 5000.0f, "%.1f",
+    if (currentThermostat == "andersen") {
+        float thermostatTemperature = simulation.getThermostatTemperature();
+        if (ImGui::SliderFloat("Andersen T (K)", &thermostatTemperature, 1.0f, 5000.0f, "%.1f",
                                ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_Logarithmic)) {
-            simulation.setAndersenTemperature(andersenTemperature);
+            simulation.setThermostatTemperature(thermostatTemperature);
         }
     }
     else {

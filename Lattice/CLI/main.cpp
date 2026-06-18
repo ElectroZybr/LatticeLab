@@ -8,6 +8,7 @@
 
 #include "Engine/Simulation.h"
 #include "Engine/physics/Atom/AtomData.h"
+#include "Lattice/Plugins/ClassicMD/ClassicMDPlugin.h"
 
 using namespace Lattice;
 
@@ -68,6 +69,8 @@ static void createInitialSimulation(Simulation& simulation, glm::vec3 worldSize,
 }
 
 int main(int argc, char** argv) {
+    registerClassicMDPlugin();
+
     int defaultSteps = 100;
     float dt = 0.01f;
     glm::vec3 gravity{0.0f, 0.0f, 0.0f};

@@ -13,6 +13,7 @@
 #include "Engine/physics/Atom/AtomSort.h"
 #include "Engine/physics/Atom/AtomStorage.h"
 #include "Engine/physics/ForceFields/CoulombForceField.h"
+#include "Lattice/Plugins/ClassicMD/ClassicMDPlugin.h"
 #include "Scripting/LuaState.h"
 
 struct OctreeTestSupport {
@@ -336,6 +337,7 @@ static void testLuaDslSimulationWorldHexLatticeBuildsScene() {
 }
 
 int main() {
+    registerClassicMDPlugin();
     testOctreeBuildChargeAndChildren();
     testCoulombFarFieldApproximation();
     testSpawnWaterMoleculeCreatesLocalAtoms();

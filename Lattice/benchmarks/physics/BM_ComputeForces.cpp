@@ -6,7 +6,7 @@ BENCHMARK_DEFINE_F(Fixture, ComputeForces)(benchmark::State& state) {
     rebuildScene();
     warmupScene();
     prepareNeighborList();
-    StepData stepData = makeStepData();
+    StepContext stepData = makeStepData();
 
     for (auto _ : state) {
         StepOps::computeForces(stepData);

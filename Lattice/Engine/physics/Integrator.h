@@ -5,26 +5,23 @@
 #include <string_view>
 #include <vector>
 
+#include "Lattice/Engine/physics/StepContext.h"
+
 class AtomStorage;
 class ForceField;
 class NeighborList;
 class World;
-
-struct StepData {
-    World& world;
-    ForceField& forceField;
-    NeighborList& neighborList;
-    bool allowBondFormation;
-    bool bondsChanged = false;
-    float accelDamping;
-    float dt;
-};
 
 class IIntegrator;
 
 class Integrator {
 public:
     Integrator();
+    ~Integrator();
+    Integrator(const Integrator&) = delete;
+    Integrator& operator=(const Integrator&) = delete;
+    Integrator(Integrator&&) noexcept;
+    Integrator& operator=(Integrator&&) noexcept;
 
     bool setIntegrator(std::string_view id);
     std::string_view getIntegrator() const { return currentId_; }
@@ -32,10 +29,7 @@ public:
     float maxParticleSpeed() const { return maxParticleSpeed_; }
     void setAccelDamping(float accelDamping);
     float accelDamping() const { return accelDamping_; }
-
-    void setAndersenTemperature(float temperature);
-    float andersenTemperature() const;
-    void step(StepData& stepData);
+    void step(StepContext& stepContext);
 
 private:
     std::string currentId_ = "verlet";
@@ -43,14 +37,13 @@ private:
 
     float maxParticleSpeed_ = 0.0f;
     float accelDamping_ = 0.9f;
-    float andersenTemperature_ = 300.0f;
 };
 
 /// абстрактный интегратор
 class IIntegrator {
 public:
     virtual ~IIntegrator() = default;
-    virtual void step(StepData& stepData) = 0;
+    virtual void step(StepContext& stepContext) = 0;
 };
 
 using IntegratorFactory = std::unique_ptr<IIntegrator> (*)();

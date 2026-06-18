@@ -1,54 +1,16 @@
 #include "Integrator.h"
 
 #include <algorithm>
-#include <cmath>
 
-#include "Lattice/Engine/World.h"
-#include "Lattice/Engine/physics/Atom/AtomStorage.h"
-#include "Lattice/Engine/restrict.h"
-#include "Lattice/Plugins/ClassicMD/ClassicMDPlugin.h"
-
-namespace {
-void ensureBuiltInPluginsRegistered() {
-    static const bool registered = [] {
-        registerClassicMDPlugin(globalIntegratorRegistry());
-        return true;
-    }();
-    (void)registered;
-}
-
-void postProcessVelocities(AtomStorage& atomStorage, float maxSpeed) {
-    const float maxSpeedSqr = maxSpeed * maxSpeed;
-    float* RESTRICT vx = atomStorage.vxData();
-    float* RESTRICT vy = atomStorage.vyData();
-    float* RESTRICT vz = atomStorage.vzData();
-
-    const size_t mobileCount = atomStorage.mobileCount();
-#pragma GCC ivdep
-    for (size_t atomIndex = 0; atomIndex < mobileCount; ++atomIndex) {
-        float vxValue = vx[atomIndex];
-        float vyValue = vy[atomIndex];
-        float vzValue = vz[atomIndex];
-
-        const float speedSqr = vxValue * vxValue + vyValue * vyValue + vzValue * vzValue;
-        if (speedSqr > maxSpeedSqr) {
-            const float scale = maxSpeed / std::sqrt(speedSqr);
-            vxValue *= scale;
-            vyValue *= scale;
-            vzValue *= scale;
-        }
-
-        vx[atomIndex] = vxValue;
-        vy[atomIndex] = vyValue;
-        vz[atomIndex] = vzValue;
-    }
-}
-} // namespace
+#include "Lattice/Plugins/ClassicMD/Integrators/StepOps.h"
 
 Integrator::Integrator() {
-    ensureBuiltInPluginsRegistered();
     setIntegrator("verlet");
 }
+
+Integrator::~Integrator() = default;
+Integrator::Integrator(Integrator&&) noexcept = default;
+Integrator& Integrator::operator=(Integrator&&) noexcept = default;
 
 bool Integrator::setIntegrator(std::string_view id) {
     const IntegratorMeta* meta = globalIntegratorRegistry().find(id);
@@ -70,18 +32,14 @@ void Integrator::setMaxParticleSpeed(float maxSpeed) { maxParticleSpeed_ = std::
 
 void Integrator::setAccelDamping(float accelDamping) { accelDamping_ = std::clamp(accelDamping, 0.0f, 1.0f); }
 
-void Integrator::setAndersenTemperature(float temperature) { andersenTemperature_ = std::max(0.0f, temperature); }
-
-float Integrator::andersenTemperature() const { return andersenTemperature_; }
-
-void Integrator::step(StepData& stepData) {
+void Integrator::step(StepContext& stepContext) {
     if (!impl_) {
         return;
     }
 
-    impl_->step(stepData);
+    impl_->step(stepContext);
 
     if (maxParticleSpeed_ > 0.0f) {
-        postProcessVelocities(stepData.world.getAtomStorage(), maxParticleSpeed_);
+        StepOps::postProcessVelocities(stepContext.world.getAtomStorage(), maxParticleSpeed_);
     }
 }

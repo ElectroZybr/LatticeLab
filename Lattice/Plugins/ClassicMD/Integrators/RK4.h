@@ -7,7 +7,7 @@ public:
     static constexpr std::string_view id = "rk4";
     static constexpr std::string_view description = "integrator_runge_kutta_4";
 
-    void step(StepData& stepData) override { pipeline(stepData); }
+    void step(StepContext& stepContext) override { pipeline(stepContext); }
 
-    void pipeline(StepData& stepData) const;
+    void pipeline(StepContext& stepContext) const;
 };

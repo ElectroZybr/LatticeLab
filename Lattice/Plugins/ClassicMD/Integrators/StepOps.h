@@ -9,6 +9,7 @@
 #include "Lattice/Engine/physics/Atom/AtomStorage.h"
 #include "Lattice/Engine/physics/ForceField.h"
 #include "Lattice/Engine/physics/Integrator.h"
+#include "Lattice/Engine/physics/Thermostat.h"
 #include "Lattice/Engine/restrict.h"
 
 namespace StepOps {
@@ -72,18 +73,24 @@ namespace StepOps {
         }
     }
 
-    inline void computeForces(StepData& stepData) {
+    inline void computeForces(StepContext& stepContext) {
         PROFILE_SCOPE("StepOps::computeForces");
-        stepData.bondsChanged = stepData.forceField.compute(stepData.world, stepData.allowBondFormation, stepData.dt) || stepData.bondsChanged;
+        stepContext.bondsChanged = stepContext.forceField.compute(stepContext.world, stepContext.allowBondFormation, stepContext.dt) || stepContext.bondsChanged;
+    }
+
+    inline void applyThermostat(StepContext& stepContext) {
+        if (stepContext.thermostat != nullptr) {
+            stepContext.thermostat->apply(stepContext);
+        }
     }
 
     template <typename StepFn>
         requires AtomStepFunc<StepFn>
-    inline void predictAndSync(StepData& stepData, StepFn predictFn) {
-        AtomStorage& atomStorage = stepData.world.getAtomStorage();
+    inline void predictAndSync(StepContext& stepContext, StepFn predictFn) {
+        AtomStorage& atomStorage = stepContext.world.getAtomStorage();
 
-        predictFn(stepData.world.getAtomStorage(), stepData.dt);
-        confineToBox(stepData.world);
+        predictFn(stepContext.world.getAtomStorage(), stepContext.dt);
+        confineToBox(stepContext.world);
 
         atomStorage.swapPrevCurrentForces();
         std::fill_n(atomStorage.fxData(), atomStorage.size(), 0.0f);

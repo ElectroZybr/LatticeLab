@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Engine/physics/Integrator.h"
+#include "Lattice/Engine/physics/Integrator.h"
 
 namespace Lattice {
     class Simulation;

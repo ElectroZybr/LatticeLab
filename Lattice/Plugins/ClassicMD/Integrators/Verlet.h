@@ -6,9 +6,9 @@ class Verlet final : public IIntegrator {
 public:
     static constexpr std::string_view id = "verlet";
     static constexpr std::string_view description = "integrator_velocity_verlet";
-    void step(StepData& stepData) override { pipeline(stepData); }
+    void step(StepContext& stepContext) override { pipeline(stepContext); }
 
-    void pipeline(StepData& stepData) const;
+    void pipeline(StepContext& stepContext) const;
     static void predict(AtomStorage& atomStorage, float dt);
     static void correct(AtomStorage& atomStorage, float accelDamping, float dt);
 };

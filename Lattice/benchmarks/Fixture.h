@@ -7,9 +7,9 @@
 #include <benchmark/benchmark.h>
 
 #include "BenchmarkScenes.h"
-#include "Engine/Simulation.h"
-#include "Engine/physics/integrators/StepOps.h"
-#include "Engine/physics/integrators/VerletScheme.h"
+#include "Lattice/Engine/Simulation.h"
+#include "Lattice/Plugins/ClassicMD/Integrators/StepOps.h"
+#include "Lattice/Plugins/ClassicMD/Integrators/Verlet.h"
 
 namespace Benchmarks {
     constexpr double kDt = 0.01;
@@ -116,11 +116,12 @@ public:
     void TearDown(benchmark::State&) override { simulation_.reset(); }
 
 protected:
-    StepData makeStepData(float accelDamping = 0.9f) {
-        return StepData{
+    StepContext makeStepData(float accelDamping = 0.9f) {
+        return StepContext{
             .world = simulation_->world(),
             .forceField = simulation_->forceField(),
             .neighborList = simulation_->neighborList(),
+            .thermostat = simulation_->world().getThermostat().activeThermostat(),
             .allowBondFormation = simulation_->isBondFormationEnabled(),
             .accelDamping = accelDamping,
             .dt = static_cast<float>(Benchmarks::kDt),
@@ -159,7 +160,7 @@ protected:
         rebuildScene();
         warmupScene();
         prepareNeighborList();
-        StepData stepData = makeStepData();
+        StepContext stepData = makeStepData();
         StepOps::computeForces(stepData);
     }
 
@@ -167,8 +168,8 @@ protected:
 
     void prepareForCorrect() {
         prepareForPredict();
-        StepData stepData = makeStepData();
-        StepOps::predictAndSync(stepData, &VerletScheme::predict);
+        StepContext stepData = makeStepData();
+        StepOps::predictAndSync(stepData, &Verlet::predict);
         StepOps::computeForces(stepData);
     }
 

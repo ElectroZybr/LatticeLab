@@ -1,8 +1,8 @@
 #include <benchmark/benchmark.h>
 
 #include "Fixture.h"
-#include "Engine/NeighborSearch/BarnesHut/Octree.h"
-#include "Engine/physics/ForceFields/CoulombForceField.h"
+#include "Lattice/Engine/NeighborSearch/BarnesHut/Octree.h"
+#include "Lattice/Engine/physics/ForceFields/CoulombForceField.h"
 
 namespace {
     void assignAlternatingCharges(AtomStorage& atoms) {

@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "Engine/Simulation.h"
+#include "Lattice/Engine/Simulation.h"
 #include "Lattice/Generators/Generators.h"
 
 namespace Benchmarks {

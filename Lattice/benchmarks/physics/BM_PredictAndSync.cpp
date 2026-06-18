@@ -4,11 +4,11 @@
 // @bench_meta {"id":"Fixture/PredictAndSync","label":"Predict + Sync","group":"Simulation/Integrator"}
 BENCHMARK_DEFINE_F(Fixture, PredictAndSync)(benchmark::State& state) {
     prepareForPredict();
-    StepData stepData = makeStepData();
+    StepContext stepData = makeStepData();
 
     for (auto _ : state) {
-        StepData stepData = makeStepData();
-        StepOps::predictAndSync(stepData, &VerletScheme::predict);
+        StepContext stepData = makeStepData();
+        StepOps::predictAndSync(stepData, &Verlet::predict);
         benchmark::DoNotOptimize(simulation_->atoms().size());
         benchmark::ClobberMemory();
     }
