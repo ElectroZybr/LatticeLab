@@ -136,6 +136,7 @@ add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_wgpu.cpp
 )
+set_target_properties(imgui PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(imgui PUBLIC
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
@@ -155,6 +156,16 @@ FetchContent_Declare(
     GIT_SHALLOW    ON
 )
 FetchContent_MakeAvailable(ImGuiFileDialog)
+
+if(TARGET ImGuiFileDialog)
+    target_include_directories(ImGuiFileDialog PUBLIC
+        ${imguifiledialog_SOURCE_DIR}
+        ${imgui_SOURCE_DIR}
+        ${imgui_SOURCE_DIR}/backends
+    )
+    target_link_libraries(ImGuiFileDialog PUBLIC imgui)
+endif()
+
 add_library(ImGuiFileDialog_lib STATIC
     ${imguifiledialog_SOURCE_DIR}/ImGuiFileDialog.cpp
 )

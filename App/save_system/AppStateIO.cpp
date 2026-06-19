@@ -308,7 +308,6 @@ void AppStateIO::saveBinary(CaptureController& captureController, const PreviewF
     simState.neighborListCutoff = simulation.getNeighborListCutoff();
     simState.neighborListSkin = simulation.getNeighborListSkin();
     simState.maxParticleSpeed = simulation.getMaxParticleSpeed();
-    simState.accelDamping = simulation.getAccelDamping();
     simState.atomMobileCount = simulation.atoms().mobileCount();
     simState.x.assign(simulation.atoms().xDataSpan().begin(), simulation.atoms().xDataSpan().end());
     simState.y.assign(simulation.atoms().yDataSpan().begin(), simulation.atoms().yDataSpan().end());
@@ -445,7 +444,6 @@ void AppStateIO::loadBinary(Lattice::Simulation& simulation, BaseRenderer& rende
     simulation.setLJEnabled(simState.LJEnabled);
     simulation.setCoulombEnabled(simState.coulombEnabled);
     simulation.setMaxParticleSpeed(simState.maxParticleSpeed);
-    simulation.setAccelDamping(simState.accelDamping);
 
     const uint64_t atomMobileCount = simState.atomMobileCount;
     const uint64_t atomCount = simState.x.size();

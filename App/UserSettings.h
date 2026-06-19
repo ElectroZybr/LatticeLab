@@ -6,7 +6,7 @@
 #include "App/AppPaths.h"
 #include "App/capture/CaptureSettings.h"
 #include "GUI/interface/style/StyleManager.h"
-#include "Lattice/Engine/physics/Integrator.h"
+#include "Lattice/Engine/physics/IIntegrator.h"
 #include "Rendering/RenderData.h"
 
 struct UserSettings {

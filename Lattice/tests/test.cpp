@@ -12,7 +12,7 @@
 #include "Engine/NeighborSearch/SpatialGrid.h"
 #include "Engine/physics/Atom/AtomSort.h"
 #include "Engine/physics/Atom/AtomStorage.h"
-#include "Engine/physics/ForceFields/CoulombForceField.h"
+#include "Lattice/Plugins/ClassicMD/ForceFields/CoulombForceField.h"
 #include "Lattice/Plugins/ClassicMD/ClassicMDPlugin.h"
 #include "Scripting/LuaState.h"
 

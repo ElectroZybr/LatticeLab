@@ -80,7 +80,7 @@ namespace {
     }
 
     std::string integratorFromString(const std::string& value) {
-        return globalIntegratorRegistry().find(value) != nullptr ? value : "verlet";
+        return Integrator::registry().find(value) != nullptr ? value : "verlet";
     }
 }
 

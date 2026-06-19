@@ -7,9 +7,9 @@
 #include "Lattice/Engine/World.h"
 #include "Lattice/Engine/metrics/Profiler.h"
 #include "Lattice/Engine/physics/Atom/AtomStorage.h"
-#include "Lattice/Engine/physics/ForceField.h"
-#include "Lattice/Engine/physics/Integrator.h"
-#include "Lattice/Engine/physics/Thermostat.h"
+#include "Lattice/Engine/physics/IForceField.h"
+#include "Lattice/Engine/physics/IIntegrator.h"
+#include "Lattice/Engine/physics/IThermostat.h"
 #include "Lattice/Engine/restrict.h"
 
 namespace StepOps {
@@ -70,6 +70,13 @@ namespace StepOps {
             vx[atomIndex] = vxValue;
             vy[atomIndex] = vyValue;
             vz[atomIndex] = vzValue;
+        }
+    }
+
+    inline void postProcessVelocities(StepContext& stepContext) {
+        const float maxSpeed = stepContext.world.getIntegrator().maxParticleSpeed();
+        if (maxSpeed > 0.0f) {
+            postProcessVelocities(stepContext.world.getAtomStorage(), maxSpeed);
         }
     }
 

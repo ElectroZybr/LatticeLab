@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Lattice/Engine/physics/Integrator.h"
+#include "Lattice/Engine/physics/IIntegrator.h"
 
 class KDK final : public IIntegrator {
 public:
@@ -10,6 +10,6 @@ public:
     void step(StepContext& stepContext) override { pipeline(stepContext); }
 
     void pipeline(StepContext& stepContext) const;
-    static void halfKick(AtomStorage& atomStorage, float accelDamping, float dt);
+    static void halfKick(AtomStorage& atomStorage, float dt);
     static void drift(AtomStorage& atomStorage, float dt);
 };

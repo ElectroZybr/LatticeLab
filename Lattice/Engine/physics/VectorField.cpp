@@ -2,7 +2,7 @@
 
 #include "Lattice/Engine/NeighborSearch/SpatialGrid.h"
 #include "Lattice/Engine/physics/Atom/AtomStorage.h"
-#include "Lattice/Engine/physics/ForceField.h"
+#include "Lattice/Engine/physics/IForceField.h"
 
 #include <algorithm>
 #include <cmath>
@@ -32,13 +32,19 @@ void VectorField::setSliceZ(int newSliceZ) {
     sliceZ = std::clamp(newSliceZ, 0, std::max(0, domain.z));
 }
 
-void VectorField::compute(ForceField& forceField, AtomStorage& atoms, SpatialGrid& grid) {
+void VectorField::compute(const IForceField* forceField, AtomStorage& atoms, SpatialGrid& grid) {
+    if (forceField == nullptr) {
+        std::fill(field.begin(), field.end(), 0.0f);
+        std::fill(vectorField.begin(), vectorField.end(), glm::vec2(0.0f));
+        return;
+    }
+
     const float z = static_cast<float>(sliceZ);
     for (int y = 0; y < size.y; ++y) {
         for (int x = 0; x < size.x; ++x) {
             const float sampleX = std::min(static_cast<float>(x) * scale, static_cast<float>(domain.x));
             const float sampleY = std::min(static_cast<float>(y) * scale, static_cast<float>(domain.y));
-            const auto sample = forceField.coulombForceField_.fieldAtPoint(atoms, grid, sampleX, sampleY, z);
+            const auto sample = forceField->fieldAtPoint(atoms, grid, sampleX, sampleY, z);
             const int index = x + size.x * y;
             field[index] = sample.potential;
             vectorField[index] = glm::vec2(sample.field.x, sample.field.y);

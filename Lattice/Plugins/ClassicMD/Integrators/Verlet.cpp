@@ -12,8 +12,9 @@ void Verlet::pipeline(StepContext& stepContext) const {
     // Расчет сил
     StepOps::computeForces(stepContext);
     // Корректировка скоростей
-    Verlet::correct(stepContext.world.getAtomStorage(), stepContext.accelDamping, stepContext.dt);
+    Verlet::correct(stepContext.world.getAtomStorage(), stepContext.dt);
     StepOps::applyThermostat(stepContext);
+    StepOps::postProcessVelocities(stepContext);
 }
 
 void Verlet::predict(AtomStorage& atomStorage, float dt) {
@@ -41,7 +42,7 @@ void Verlet::predict(AtomStorage& atomStorage, float dt) {
     }
 }
 
-void Verlet::correct(AtomStorage& atomStorage, float accelDamping, float dt) {
+void Verlet::correct(AtomStorage& atomStorage, float dt) {
     PROFILE_SCOPE("Verlet::correct");
     const size_t n = atomStorage.mobileCount();
 
@@ -61,7 +62,7 @@ void Verlet::correct(AtomStorage& atomStorage, float accelDamping, float dt) {
 
     #pragma GCC ivdep
     for (size_t i = 0; i < n; ++i) {
-        const float halfDtInvMass = 0.5f * accelDamping * dt * invMass[i];
+        const float halfDtInvMass = 0.5f * dt * invMass[i];
 
         vx[i] += (pfx[i] + fx[i]) * halfDtInvMass;
         vy[i] += (pfy[i] + fy[i]) * halfDtInvMass;

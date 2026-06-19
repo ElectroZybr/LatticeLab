@@ -3,7 +3,7 @@
 
 #include <glm/vec3.hpp>
 #include "Lattice/Engine/physics/Atom/AtomData.h"
-#include "Lattice/Engine/physics/Integrator.h"
+#include "Lattice/Engine/physics/IIntegrator.h"
 #include "Rendering/RenderData.h"
 
 struct SimulationSaveState {
@@ -27,7 +27,6 @@ struct SimulationSaveState {
     float neighborListCutoff;
     float neighborListSkin;
     float maxParticleSpeed;
-    float accelDamping;
 
     // Атомы
     uint64_t atomMobileCount = 0;
@@ -52,7 +51,7 @@ struct SimulationSaveState {
         if (auto err = archive(self.dt, self.time_ns, self.step, self.integrator, self.gravity.x, self.gravity.y, self.gravity.z,
                                self.bondFormationEnabled, self.LJEnabled, self.coulombEnabled, self.boxSize.x, self.boxSize.y, self.boxSize.z,
                                self.gridCellSize, self.neighborListCutoff, self.neighborListSkin,
-                               self.maxParticleSpeed, self.accelDamping, self.atomMobileCount, self.x, self.y, self.z, self.vx, self.vy,
+                               self.maxParticleSpeed, self.atomMobileCount, self.x, self.y, self.z, self.vx, self.vy,
                                self.vz, self.atomType, self.atomCharge, self.bonds);
             zpp::bits::failure(err.code)) {
             return err;

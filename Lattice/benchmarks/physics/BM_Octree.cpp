@@ -2,7 +2,7 @@
 
 #include "Fixture.h"
 #include "Lattice/Engine/NeighborSearch/BarnesHut/Octree.h"
-#include "Lattice/Engine/physics/ForceFields/CoulombForceField.h"
+#include "Lattice/Plugins/ClassicMD/ForceFields/CoulombForceField.h"
 
 namespace {
     void assignAlternatingCharges(AtomStorage& atoms) {

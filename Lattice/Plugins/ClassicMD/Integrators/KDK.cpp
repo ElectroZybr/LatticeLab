@@ -7,14 +7,15 @@ REGISTER_INTEGRATOR(KDK)
 
 void KDK::pipeline(StepContext& stepContext) const {
     PROFILE_SCOPE("KDK::pipeline");
-    halfKick(stepContext.world.getAtomStorage(), stepContext.accelDamping, stepContext.dt);
+    halfKick(stepContext.world.getAtomStorage(), stepContext.dt);
     StepOps::predictAndSync(stepContext, &KDK::drift);
     StepOps::computeForces(stepContext);
-    halfKick(stepContext.world.getAtomStorage(), stepContext.accelDamping, stepContext.dt);
+    halfKick(stepContext.world.getAtomStorage(), stepContext.dt);
     StepOps::applyThermostat(stepContext);
+    StepOps::postProcessVelocities(stepContext);
 }
 
-void KDK::halfKick(AtomStorage& atomStorage, float accelDamping, float dt) {
+void KDK::halfKick(AtomStorage& atomStorage, float dt) {
     PROFILE_SCOPE("KDK::halfKick");
     const float* RESTRICT fx = atomStorage.fxData();
     const float* RESTRICT fy = atomStorage.fyData();
@@ -28,9 +29,9 @@ void KDK::halfKick(AtomStorage& atomStorage, float accelDamping, float dt) {
     const size_t mobileCount = atomStorage.mobileCount();
 
     for (size_t i = 0; i < mobileCount; ++i) {
-        vx[i] += 0.5f * fx[i] * invMass[i] * accelDamping * dt;
-        vy[i] += 0.5f * fy[i] * invMass[i] * accelDamping * dt;
-        vz[i] += 0.5f * fz[i] * invMass[i] * accelDamping * dt;
+        vx[i] += 0.5f * fx[i] * invMass[i] * dt;
+        vy[i] += 0.5f * fy[i] * invMass[i] * dt;
+        vz[i] += 0.5f * fz[i] * invMass[i] * dt;
     }
 }
 

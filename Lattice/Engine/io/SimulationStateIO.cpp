@@ -286,8 +286,7 @@ namespace {
         file << kBlockIndent << "cell_size " << simulation.world().getGridCellSize() << "\n";
         file << kBlockIndent << "cutoff_nl " << simulation.getNeighborListCutoff() << "\n";
         file << kBlockIndent << "skin_nl " << simulation.getNeighborListSkin() << "\n";
-        file << kBlockIndent << "max_speed " << simulation.getMaxParticleSpeed() << "\n";
-        file << kBlockIndent << "accel_damping " << simulation.getAccelDamping() << "\n\n";
+        file << kBlockIndent << "max_speed " << simulation.getMaxParticleSpeed() << "\n\n";
 
         const AtomStorage& atoms = simulation.atoms();
         file << "[atoms]\n";
@@ -329,7 +328,6 @@ namespace {
         glm::vec3 loadedGravity = simulation.world().getGravity();
         bool loadedBondFormationEnabled = simulation.world().isBondFormationEnabled();
         float loadedMaxSpeed = simulation.world().getIntegrator().maxParticleSpeed();
-        float loadedAccelDamping = simulation.world().getIntegrator().accelDamping();
 
         std::string tag;
         while (file >> tag) {
@@ -383,7 +381,8 @@ namespace {
                 file >> loadedMaxSpeed;
             }
             else if (tag == "accel_damping") {
-                file >> loadedAccelDamping;
+                float ignored = 0.0f;
+                file >> ignored;
             }
             else if (tag == "atom") {
                 LoadedAtomData atom;
@@ -408,7 +407,6 @@ namespace {
         simulation.setGravity(loadedGravity);
         simulation.setBondFormationEnabled(loadedBondFormationEnabled);
         simulation.setMaxParticleSpeed(loadedMaxSpeed);
-        simulation.setAccelDamping(loadedAccelDamping);
         simulation.setWorldTitle(loadedTitle);
         simulation.setWorldDescription(loadedDescription);
 
@@ -441,7 +439,6 @@ namespace {
         bool loadedLJEnabled = simulation.world().isLJEnabled();
         bool loadedCoulombEnabled = simulation.world().isCoulombEnabled();
         float loadedMaxSpeed = simulation.world().getIntegrator().maxParticleSpeed();
-        float loadedAccelDamping = simulation.world().getIntegrator().accelDamping();
 
         std::vector<LoadedAtomData> atoms;
         std::vector<std::pair<size_t, size_t>> bonds;
@@ -523,7 +520,8 @@ namespace {
                 stream >> loadedMaxSpeed;
             }
             else if (tag == "accel_damping") {
-                stream >> loadedAccelDamping;
+                float ignored = 0.0f;
+                stream >> ignored;
             }
             else if (tag == "atom") {
                 LoadedAtomData atom;
@@ -555,7 +553,6 @@ namespace {
         simulation.setLJEnabled(loadedLJEnabled);
         simulation.setCoulombEnabled(loadedCoulombEnabled);
         simulation.setMaxParticleSpeed(loadedMaxSpeed);
-        simulation.setAccelDamping(loadedAccelDamping);
         simulation.setWorldTitle(loadedTitle);
         simulation.setWorldDescription(loadedDescription);
 

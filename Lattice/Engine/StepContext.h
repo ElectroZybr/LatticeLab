@@ -12,6 +12,5 @@ struct StepContext {
     IThermostat* thermostat = nullptr;
     bool allowBondFormation;
     bool bondsChanged = false;
-    float accelDamping;
     float dt;
 };

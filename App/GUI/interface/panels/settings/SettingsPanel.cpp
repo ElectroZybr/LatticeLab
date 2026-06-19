@@ -47,7 +47,7 @@ namespace {
     }
 
     std::string_view integratorName(std::string_view id) {
-        const IntegratorMeta* meta = globalIntegratorRegistry().find(id);
+        const ModuleMeta<IIntegrator>* meta = Integrator::registry().find(id);
         if (meta != nullptr && !meta->description.empty()) {
             return i18n::tr(meta->description);
         }
@@ -55,7 +55,7 @@ namespace {
     }
 
     std::string_view thermostatName(std::string_view id) {
-        const ThermostatMeta* meta = globalThermostatRegistry().find(id);
+        const ModuleMeta<IThermostat>* meta = Thermostat::registry().find(id);
         if (meta != nullptr && !meta->description.empty()) {
             return i18n::tr(meta->description);
         }
@@ -160,7 +160,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
 
     std::string_view currentIntegrator = simulation.getIntegrator();
     if (ComboStyle::beginCombo("imgui_integrator"_tr.data(), integratorName(currentIntegrator).data(), 0.0f, uiScale)) {
-        for (const IntegratorMeta& meta : globalIntegratorRegistry().items()) {
+        for (const ModuleMeta<IIntegrator>& meta : Integrator::registry().items()) {
             const bool isSelected = (meta.id == currentIntegrator);
             if (ImGui::Selectable(integratorName(meta.id).data(), isSelected)) {
                 simulation.setIntegrator(meta.id);
@@ -184,7 +184,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
             ImGui::SetItemDefaultFocus();
         }
 
-        for (const ThermostatMeta& meta : globalThermostatRegistry().items()) {
+        for (const ModuleMeta<IThermostat>& meta : Thermostat::registry().items()) {
             const bool isSelected = (meta.id == currentThermostat);
             if (ImGui::Selectable(thermostatName(meta.id).data(), isSelected)) {
                 simulation.setThermostat(meta.id);
@@ -218,12 +218,6 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         if (ImGui::SliderFloat("Andersen T (K)", &thermostatTemperature, 1.0f, 5000.0f, "%.1f",
                                ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_Logarithmic)) {
             simulation.setThermostatTemperature(thermostatTemperature);
-        }
-    }
-    else {
-        float accelDamping = simulation.getAccelDamping();
-        if (ImGui::SliderFloat("imgui_accel_damping"_tr.data(), &accelDamping, 0.0f, 1.0f, "%.3f")) {
-            simulation.setAccelDamping(accelDamping);
         }
     }
     ImGui::PopItemWidth();

@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 
 class AtomStorage;
-class ForceField;
+class IForceField;
 class SpatialGrid;
 
 class VectorField {
@@ -13,7 +13,7 @@ public:
     void resize(glm::ivec3 newDomainSize, int newSliceZ = 0, float newScale = 1.0f);
     void setCellScale(float newScale);
     void setSliceZ(int newSliceZ);
-    void compute(ForceField& forceField, AtomStorage& atoms, SpatialGrid& grid);
+    void compute(const IForceField* forceField, AtomStorage& atoms, SpatialGrid& grid);
     [[nodiscard]] glm::ivec3 gridSize() const noexcept { return size; }
     [[nodiscard]] glm::ivec3 domainSize() const noexcept { return domain; }
     [[nodiscard]] int zSlice() const noexcept { return sliceZ; }

@@ -80,8 +80,6 @@ public:
     std::string_view getIntegrator() const { return world().getIntegrator().getIntegrator(); }
     void setMaxParticleSpeed(float maxSpeed) { world().getIntegrator().setMaxParticleSpeed(maxSpeed); }
     float getMaxParticleSpeed() const { return world().getIntegrator().maxParticleSpeed(); }
-    void setAccelDamping(float accelDamping) { world().getIntegrator().setAccelDamping(accelDamping); }
-    float getAccelDamping() const { return world().getIntegrator().accelDamping(); }
     bool setThermostat(std::string_view id) { return world().getThermostat().setThermostat(id); }
     std::string_view getThermostat() const { return world().getThermostat().getThermostat(); }
     void setThermostatTemperature(float temperature) { world().getThermostat().setTemperature(temperature); }

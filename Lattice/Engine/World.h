@@ -12,10 +12,9 @@
 #include "Lattice/Engine/metrics/EnergyMetrics.h"
 #include "Lattice/Engine/physics/Atom/AtomData.h"
 #include "Lattice/Engine/physics/Atom/AtomStorage.h"
-#include "Lattice/Engine/physics/Bond.h"
-#include "Lattice/Engine/physics/ForceField.h"
-#include "Lattice/Engine/physics/Integrator.h"
-#include "Lattice/Engine/physics/Thermostat.h"
+#include "Lattice/Engine/physics/IForceField.h"
+#include "Lattice/Engine/physics/IIntegrator.h"
+#include "Lattice/Engine/physics/IThermostat.h"
 #include "Lattice/Engine/physics/VectorField.h"
 
 class World {
@@ -174,7 +173,7 @@ private:
     VectorField vectorField_;
     bool vectorFieldDirty_ = true;
     Bond::List bonds_;
-    std::string title_;
+    std::string title_ = "default";
     std::string description_;
     WorldState state_;
 };

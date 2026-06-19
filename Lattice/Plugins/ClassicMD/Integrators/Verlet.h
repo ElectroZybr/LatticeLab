@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Lattice/Engine/physics/Integrator.h"
+#include "Lattice/Engine/physics/IIntegrator.h"
 
 class Verlet final : public IIntegrator {
 public:
@@ -10,5 +10,5 @@ public:
 
     void pipeline(StepContext& stepContext) const;
     static void predict(AtomStorage& atomStorage, float dt);
-    static void correct(AtomStorage& atomStorage, float accelDamping, float dt);
+    static void correct(AtomStorage& atomStorage, float dt);
 };

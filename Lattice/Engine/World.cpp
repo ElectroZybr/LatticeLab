@@ -1,11 +1,13 @@
 #include "World.h"
 
 #include "Lattice/Engine/metrics/EnergyMetrics.h"
-#include "Lattice/Engine/physics/Integrator.h"
+#include "Lattice/Engine/physics/BondOps.h"
+#include "Lattice/Engine/physics/IIntegrator.h"
 
 World::World(glm::vec3 size, glm::vec3 renderOffset) : size(size), renderOffset(renderOffset), grid(size), vectorField_(glm::ivec3(size), 0) {
     atomStorage_.reserve(250000);
     neighborList_.setParams(5.f, 1.f);
+    state_.forceField_.setForceField("classic_md");
 }
 
 void World::clear() {
@@ -36,7 +38,7 @@ void World::addAtom(const glm::vec3& start_coords, const glm::vec3& start_speed,
     invalidateVectorField();
 }
 
-void World::addBond(size_t aIndex, size_t bIndex) { Bond::CreateBond(bonds_, aIndex, bIndex, atomStorage_); }
+void World::addBond(size_t aIndex, size_t bIndex) { BondOps::create(bonds_, aIndex, bIndex, atomStorage_); }
 
 void World::remapAtomIndices(std::span<const uint32_t> oldToNew) {
     if (oldToNew.empty()) {
@@ -136,7 +138,6 @@ void World::update() {
         .thermostat = state_.thermostat.activeThermostat(),
         .allowBondFormation = state_.bondFormationEnabled_,
         .bondsChanged = false,
-        .accelDamping = state_.integrator.accelDamping(),
         .dt = state_.Dt,
     };
 
@@ -155,6 +156,6 @@ void World::updateVectorField() {
         return;
     }
 
-    vectorField_.compute(state_.forceField_, atomStorage_, grid);
+    vectorField_.compute(state_.forceField_.activeForceField(), atomStorage_, grid);
     vectorFieldDirty_ = false;
 }

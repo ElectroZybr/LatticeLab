@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Lattice/Engine/physics/Integrator.h"
+#include "Lattice/Engine/physics/IIntegrator.h"
 
 class Langevin final : public IIntegrator {
 public:

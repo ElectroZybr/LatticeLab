@@ -116,14 +116,13 @@ public:
     void TearDown(benchmark::State&) override { simulation_.reset(); }
 
 protected:
-    StepContext makeStepData(float accelDamping = 0.9f) {
+    StepContext makeStepData() {
         return StepContext{
             .world = simulation_->world(),
             .forceField = simulation_->forceField(),
             .neighborList = simulation_->neighborList(),
             .thermostat = simulation_->world().getThermostat().activeThermostat(),
             .allowBondFormation = simulation_->isBondFormationEnabled(),
-            .accelDamping = accelDamping,
             .dt = static_cast<float>(Benchmarks::kDt),
         };
     }

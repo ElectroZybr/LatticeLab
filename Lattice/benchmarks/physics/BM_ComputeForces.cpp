@@ -1,5 +1,6 @@
 #include <benchmark/benchmark.h>
 #include "Fixture.h"
+#include "Lattice/Plugins/ClassicMD/ForceFields/ClassicMDForceField.h"
 
 // @bench_meta {"id":"Fixture/ComputeForces","label":"Force Computation","group":"Simulation/Forces"}
 BENCHMARK_DEFINE_F(Fixture, ComputeForces)(benchmark::State& state) {
@@ -28,9 +29,14 @@ BENCHMARK_DEFINE_F(Fixture, ComputePairInteractions)(benchmark::State& state) {
     rebuildScene();
     warmupScene();
     prepareNeighborList();
+    auto* forceField = dynamic_cast<ClassicMDForceField*>(simulation_->world().getForceField().activeForceField());
+    if (forceField == nullptr) {
+        state.SkipWithError("ClassicMDForceField is not active");
+        return;
+    }
 
     for (auto _ : state) {
-        simulation_->forceField().computePairInteractions(simulation_->world());
+        forceField->computePairInteractions(simulation_->world());
         benchmark::DoNotOptimize(simulation_->atoms().size());
         benchmark::ClobberMemory();
     }
