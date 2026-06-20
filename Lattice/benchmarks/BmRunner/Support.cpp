@@ -17,15 +17,13 @@ namespace Benchmarks::BmRunner {
         };
 
         constexpr std::array kScenes{
-            SceneOption{"ideal_crystal3d", "Ideal Crystal 3D"},
-            SceneOption{"crystal3d", "Crystal 3D"},
-            SceneOption{"crystal2d", "Crystal 2D"},
-            SceneOption{"random_gas2d", "Random Gas 2D"},
+            SceneOption{"crystal", "Crystal"},
+            SceneOption{"gas", "Gas"},
         };
 
         bool isBenchmarksDir(const fs::path& dir) {
-            return fs::exists(dir / "CMakeLists.txt") && fs::exists(dir / "bench_main.cpp") && fs::exists(dir / "BmRunner")
-                && fs::exists(dir / "BenchmarkScenes.cpp");
+            return fs::exists(dir / "CMakeLists.txt") && fs::exists(dir / "BmRunner" / "BenchmarkMain.cpp") && fs::exists(dir / "BmRunner")
+                && fs::exists(dir / "SceneBuilder.cpp");
         }
     }
 
@@ -271,11 +269,8 @@ namespace Benchmarks::BmRunner {
     }
 
     std::int64_t atomCountForSceneKey(std::string_view key, std::int64_t sceneExtent) {
-        if (key == "ideal_crystal3d" || key == "crystal3d") {
+        if (key == "crystal" || key == "gas") {
             return sceneExtent * sceneExtent * sceneExtent;
-        }
-        if (key == "crystal2d" || key == "random_gas2d") {
-            return sceneExtent * sceneExtent;
         }
         return sceneExtent;
     }

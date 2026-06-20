@@ -27,7 +27,7 @@ struct LatticeFillOptions {
 /// - сумма fraction задает общую заполненность решетки
 /// - вид внутри занятого site выбирается пропорционально нормализованным fraction
 /// - molecules are not supported
-int latticeFill(Lattice::Simulation& sim, const Lattice::Generators::Region& region, const std::vector<Compose>& composition,
+int latticeFill(Lattice::Simulation& sim, const Generators::Region& region, const std::vector<Compose>& composition,
                 const LatticeFillOptions& options = {});
 
 } // namespace Generators

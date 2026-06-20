@@ -25,7 +25,7 @@ Benchmark-слой нужен для двух задач:
 - [Lattice/benchmarks/CMakeLists.txt](../../../Lattice/benchmarks/CMakeLists.txt)
 - [Lattice/benchmarks/bench_main.cpp](../../../Lattice/benchmarks/bench_main.cpp)
 - [Lattice/benchmarks/Fixture.h](../../../Lattice/benchmarks/Fixture.h)
-- [Lattice/benchmarks/BenchmarkScenes.h](../../../Lattice/benchmarks/BenchmarkScenes.h)
+- [Lattice/benchmarks/SceneBuilders.h](../../../Lattice/benchmarks/SceneBuilders.h)
 - [Rendering/benchmarks/CMakeLists.txt](../../../Rendering/benchmarks/CMakeLists.txt)
 - [Rendering/benchmarks/Fixture.h](../../../Rendering/benchmarks/Fixture.h)
 - [Rendering/benchmarks/SceneBuilders.h](../../../Rendering/benchmarks/SceneBuilders.h)
@@ -154,7 +154,7 @@ BmRunner`отвечает за:
 
 1. Создать новый файл `BM_*.cpp` в `Lattice/benchmarks/physics/`.
 2. Подключить `benchmark/benchmark.h` и нужные заголовки движка.
-3. Использовать существующие `Fixture`, `BenchmarkScenes` или локальную подготовку сцены.
+3. Использовать существующие `Fixture`, `SceneBuilders` или локальную подготовку сцены.
 4. Зарегистрировать benchmark через стандартные макросы Google Benchmark.
 5. Пересобрать preset `bench`.
 
@@ -236,7 +236,7 @@ Fixture и scene builders выполняют разные роли:
 
 На практике это разделение выглядит так:
 
-- в движке используется `BenchmarkScenes`
+- в движке используется `SceneBuilders`
 - в рендере используются `SceneBuilders`
 
 Это удобно, потому что позволяет переиспользовать один и тот же setup, меняя только входную сцену.

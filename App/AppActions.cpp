@@ -8,7 +8,10 @@
 
 #include <glm/gtc/constants.hpp>
 #include "App/AppSignals.h"
-#include "Lattice/Generators/Generators.h"
+#include "Lattice/Generators/HexTriangleBipyramid.h"
+#include "Lattice/Generators/LatticeFill.hpp"
+#include "Lattice/Generators/RandomFill.hpp"
+#include "Lattice/Generators/Region.hpp"
 #include "App/capture/CaptureOutputPath.h"
 #include "App/capture/CaptureController.h"
 #include "App/interaction/ToolsManager.h"
@@ -71,9 +74,9 @@ namespace {
         simulation.startXYZRecording(capture_utils::makeDatedCaptureOutputPath(outputDirectory, ".xyz").string());
     }
 
-    std::unique_ptr<Lattice::Generators::Region> makeRegion(const AppSignals::UI::GeneratorRegionSpec& spec) {
+    std::unique_ptr<Generators::Region> makeRegion(const AppSignals::UI::GeneratorRegionSpec& spec) {
         using AppSignals::UI::GeneratorRegionKind;
-        using namespace Lattice::Generators;
+        using namespace Generators;
 
         switch (spec.kind) {
         case GeneratorRegionKind::Box: {
@@ -370,26 +373,6 @@ namespace AppActions {
             ToolsManager::resetInteractionState();
             smoothResizeActive_ = false;
         }));
-        track(AppSignals::UI::CreateGas.connect([&](int atomCount, AtomData::Type atomType, bool is3D, float density) {
-            simulation.clear();
-            ToolsManager::resetInteractionState();
-            Generators::randomGas(simulation, atomCount, atomType, is3D, 6.0f, 6.0f, density);
-        }));
-        track(AppSignals::UI::CreateMixedGas.connect([&](int atomCount, std::vector<Generators::AtomTypeSpec> atomSpecs, bool is3D, float density) {
-            simulation.clear();
-            ToolsManager::resetInteractionState();
-            Generators::randomGasMixed(simulation, atomCount, atomSpecs, is3D, 6.0f, 6.0f, density);
-        }));
-        track(AppSignals::UI::CreateMassive.connect([&](glm::ivec3 axisCounts, AtomData::Type atomType, bool is3D) {
-            simulation.clear();
-            ToolsManager::resetInteractionState();
-            Generators::massive(simulation, axisCounts, atomType, is3D);
-        }));
-        track(AppSignals::UI::CreateHexLattice.connect([&](glm::ivec3 axisCounts, AtomData::Type atomType) {
-            simulation.clear();
-            ToolsManager::resetInteractionState();
-            Generators::hexLattice(simulation, axisCounts, atomType);
-        }));
         track(AppSignals::UI::CreateTriangularBipyramidCrystal.connect([&](int axisCount, AtomData::Type atomType) {
             simulation.clear();
             ToolsManager::resetInteractionState();
@@ -400,7 +383,7 @@ namespace AppActions {
                 simulation.clear();
             }
             ToolsManager::resetInteractionState();
-            const std::unique_ptr<Lattice::Generators::Region> region = makeRegion(request.region);
+            const std::unique_ptr<Generators::Region> region = makeRegion(request.region);
             Generators::randomFill(simulation, *region, makeComposition(request.composition), request.options);
             renderer.syncScene(simulation);
         }));
@@ -409,7 +392,7 @@ namespace AppActions {
                 simulation.clear();
             }
             ToolsManager::resetInteractionState();
-            const std::unique_ptr<Lattice::Generators::Region> region = makeRegion(request.region);
+            const std::unique_ptr<Generators::Region> region = makeRegion(request.region);
             Generators::latticeFill(simulation, *region, makeComposition(request.composition), request.options);
             renderer.syncScene(simulation);
         }));

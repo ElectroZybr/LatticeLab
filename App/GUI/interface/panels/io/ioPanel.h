@@ -21,22 +21,12 @@ struct UiState;
 
 class IOPanel {
 public:
-    struct MixedGasEntry {
-        AtomData::Type type = AtomData::Type::Z;
-        float concentrationPercent = 50.0f;
-        int absoluteCount = 500;
-    };
-
     enum class RecordingFormat : uint8_t {
         MP4,
         XYZ,
     };
 
     enum class GeneratorKind : uint8_t {
-        Massive,
-        Gas,
-        MixedGas,
-        HexLattice,
         TriangularBipyramid,
         RandomFill,
         LatticeFill,
@@ -61,13 +51,6 @@ public:
         AppSignals::UI::ClearGeneratorPhantom.emit();
     }
     [[nodiscard]] bool isVisible() const { return visible_; }
-    [[nodiscard]] int sceneAxisCount() const { return generatorAxisCounts_.x; }
-    [[nodiscard]] bool sceneIs3D() const { return generatorIs3D_; }
-    [[nodiscard]] int gasAtomCount() const { return generatorAtomCount_; }
-    [[nodiscard]] bool gasIs3D() const { return generatorIs3D_; }
-    [[nodiscard]] AtomData::Type atomType() const { return atomType_; }
-    [[nodiscard]] AtomData::Type gasAtomType() const { return gasAtomType_; }
-    [[nodiscard]] float gasDensity() const { return generatorDensity_; }
     [[nodiscard]] bool canSpawnFromRegionTool() const;
     bool emitSpawnFromRegion(const AppSignals::UI::GeneratorRegionSpec& region) const;
 
@@ -81,24 +64,10 @@ private:
     bool sceneCatalogLoaded_ = false;
     bool generatorsExpanded_ = true;
     float animProgress_ = 0.f;
-    glm::ivec3 generatorAxisCounts_ = glm::ivec3(25, 25, 25);
     int generatorAxisCount_ = 25;
-    bool massiveSeparateAxes_ = true;
-    bool hexSeparateAxes_ = true;
-    int generatorAtomCount_ = 1000;
-    bool generatorIs3D_ = true;
-    float generatorDensity_ = 0.01f;
-    int mixedGasLastTotalCount_ = 1000;
-    GeneratorKind generatorKind_ = GeneratorKind::Massive;
+    GeneratorKind generatorKind_ = GeneratorKind::TriangularBipyramid;
 
-    AtomData::Type atomType_ = AtomData::Type::Z;
-    AtomData::Type gasAtomType_ = AtomData::Type::Z;
-    AtomData::Type icAtomType_ = AtomData::Type::Z;
     AtomData::Type tbpAtomType_ = AtomData::Type::Z;
-    std::vector<MixedGasEntry> mixedGasEntries_ = {
-        {.type = AtomData::Type::Z, .concentrationPercent = 50.0f, .absoluteCount = 500},
-        {.type = AtomData::Type::H, .concentrationPercent = 50.0f, .absoluteCount = 500},
-    };
     AppSignals::UI::GeneratorRegionSpec randomFillRegion_{};
     AppSignals::UI::GeneratorRegionSpec latticeFillRegion_{};
     std::vector<AppSignals::UI::GeneratorComposeSpec> randomFillComposition_ = {

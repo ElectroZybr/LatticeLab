@@ -1,5 +1,4 @@
 dofile("Mods/Base/API/base.lua")
-dofile("Mods/Base/Generators/gas.lua")
 
 simulation {
     world {
@@ -7,11 +6,18 @@ simulation {
         size = { 100, 100, 100 },
 
         content = {
-            gas {
-                temperature = 300,
+            load_molecules {
+                path = "Mods/Base/Molecules",
+            },
+            random_fill {
+                density = 0.01,
+                region = box {
+                    size = fullworld - 4,
+                    center = center,
+                },
                 composition = {
-                    { name = molecule.h2o, count = 1000 },
-                    { name = molecule.h2,  count = 1000 },
+                    { name = molecule.h2o, fraction = 0.5 },
+                    { name = molecule.h2,  fraction = 0.5 },
                 }
             }
         }

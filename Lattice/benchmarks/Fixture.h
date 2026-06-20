@@ -6,7 +6,7 @@
 
 #include <benchmark/benchmark.h>
 
-#include "BenchmarkScenes.h"
+#include "SceneBuilder.h"
 #include "Lattice/Engine/Simulation.h"
 #include "Lattice/Plugins/ClassicMD/Integrators/StepOps.h"
 #include "Lattice/Plugins/ClassicMD/Integrators/Verlet.h"
@@ -21,20 +21,14 @@ namespace Benchmarks {
     };
 
     inline SceneKind sceneFromString(std::string_view value) {
-        if (value == "ideal_crystal3d") {
-            return SceneKind::IdealCrystal3D;
+        if (value == "gas") {
+            return SceneKind::Gas;
         }
-        if (value == "crystal2d") {
-            return SceneKind::Crystal2D;
-        }
-        if (value == "random_gas2d") {
-            return SceneKind::RandomGas2D;
-        }
-        return SceneKind::Crystal3D;
+        return SceneKind::Crystal;
     }
 
     inline SceneKind& selectedScene() {
-        static SceneKind scene = SceneKind::Crystal3D;
+        static SceneKind scene = SceneKind::Crystal;
         return scene;
     }
 
@@ -86,12 +80,9 @@ namespace Benchmarks {
 
     inline int atomCountFromExtent(SceneKind scene, int sceneExtent) {
         switch (scene) {
-        case SceneKind::IdealCrystal3D:
-        case SceneKind::Crystal3D:
+        case SceneKind::Gas:
+        case SceneKind::Crystal:
             return sceneExtent * sceneExtent * sceneExtent;
-        case SceneKind::Crystal2D:
-        case SceneKind::RandomGas2D:
-            return sceneExtent * sceneExtent;
         }
 
         return sceneExtent;

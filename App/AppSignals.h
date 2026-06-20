@@ -7,7 +7,6 @@
 
 #include <glm/vec3.hpp>
 #include "Lattice/Engine/physics/Atom/AtomData.h"
-#include "Lattice/Generators/Gas.h"
 #include "Lattice/Generators/LatticeFill.hpp"
 #include "Lattice/Generators/RandomFill.hpp"
 #include "GUI/interface/panels/tools/ToolsPanel.h"
@@ -64,10 +63,6 @@ namespace AppSignals {
         inline Signals::Signal<void(const glm::vec3& newSize, float maxSpeed)> SmoothResizeBox;
 
         inline Signals::Signal<void()> ClearSimulation;
-        inline Signals::Signal<void(int atomCount, AtomData::Type atomType, bool is3D, float density)> CreateGas;
-        inline Signals::Signal<void(int atomCount, std::vector<Generators::AtomTypeSpec> atomSpecs, bool is3D, float density)> CreateMixedGas;
-        inline Signals::Signal<void(glm::ivec3 axisCounts, AtomData::Type atomType, bool is3D)> CreateMassive;
-        inline Signals::Signal<void(glm::ivec3 axisCounts, AtomData::Type atomType)> CreateHexLattice;
         inline Signals::Signal<void(int axisCount, AtomData::Type atomType)> CreateTriangularBipyramidCrystal;
         inline Signals::Signal<void(const RandomFillRequest& request)> CreateRandomFill;
         inline Signals::Signal<void(const LatticeFillRequest& request)> CreateLatticeFill;

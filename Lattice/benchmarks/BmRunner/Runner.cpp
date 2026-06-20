@@ -582,10 +582,8 @@ namespace Benchmarks::BmRunner {
             }
 
             std::vector<std::pair<std::string, std::string>> scenes{
-                {"crystal3d", sceneLabel("crystal3d")},
-                {"ideal_crystal3d", sceneLabel("ideal_crystal3d")},
-                {"crystal2d", sceneLabel("crystal2d")},
-                {"random_gas2d", sceneLabel("random_gas2d")},
+                {"crystal", sceneLabel("crystal")},
+                {"gas", sceneLabel("gas")},
             };
 
             std::cout << '\n' << paint("Scene Selection (for SimulationFixture):", kColorTitle) << '\n';

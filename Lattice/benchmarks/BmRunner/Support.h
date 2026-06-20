@@ -24,7 +24,6 @@ namespace Benchmarks::BmRunner {
     std::string formatTimestamp(const std::filesystem::path& path);
 
     Config parseArgs(int argc, char** argv);
-
     std::string shortBenchId(std::string_view fullName);
     std::string metaLookupId(std::string_view runName);
     std::string benchArg(std::string_view fullName);

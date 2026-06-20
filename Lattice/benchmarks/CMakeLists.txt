@@ -8,8 +8,8 @@ endif()
 file(GLOB_RECURSE BENCHMARK_SOURCES CONFIGURE_DEPENDS
     "physics/*.cpp"
     "rendering/*.cpp"
-    "BenchmarkScenes.cpp"
-    "bench_main.cpp"
+    "SceneBuilder.cpp"
+    "BmRunner/BenchmarkMain.cpp"
 )
 
 list(APPEND BENCHMARK_SOURCES ${RENDERING_BENCHMARK_SOURCES})

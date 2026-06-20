@@ -110,7 +110,9 @@ void LuaState::bindSimulation(Simulation& simulation) {
         "world_size", &ScriptAPI::world_size,
         "load_molecules", &ScriptAPI::load_molecules,
         "begin_batch", &ScriptAPI::begin_batch,
-        "lj_min", &ScriptAPI::lj_min
+        "lj_min", &ScriptAPI::lj_min,
+        "random_fill", &ScriptAPI::random_fill,
+        "lattice_fill", &ScriptAPI::lattice_fill
     );
 
     sol::table atoms = impl_->lua.create_named_table("atoms");

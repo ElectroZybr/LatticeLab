@@ -11,6 +11,8 @@
 #include <sol/forward.hpp>
 
 #include "Lattice/Engine/Simulation.h"
+#include "Lattice/Generators/LatticeFill.hpp"
+#include "Lattice/Generators/RandomFill.hpp"
 
 namespace Lattice {
 
@@ -40,8 +42,14 @@ public:
     std::tuple<int, std::vector<std::string>> load_molecules(const std::string& path);
     std::shared_ptr<ScriptBatch> begin_batch();
     float lj_min(const std::string& speciesA, const std::string& speciesB) const;
+    int random_fill(const sol::object& regionObject, const sol::object& compositionObject, const sol::object& optionsObject);
+    int lattice_fill(const sol::object& regionObject, const sol::object& compositionObject, const sol::object& optionsObject);
 
 private:
+    [[nodiscard]] std::vector<::Generators::Compose> parseComposition(const sol::object& object, bool requireFraction) const;
+    [[nodiscard]] std::unique_ptr<Generators::Region> parseRegion(const sol::object& object) const;
+    [[nodiscard]] ::Generators::RandomFillOptions parseRandomFillOptions(const sol::object& object) const;
+    [[nodiscard]] ::Generators::LatticeFillOptions parseLatticeFillOptions(const sol::object& object) const;
     std::vector<std::string> loadMoleculesFrom(const std::filesystem::path& path);
 
     Simulation& simulation_;

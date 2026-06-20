@@ -5,8 +5,8 @@
 #include <glm/glm.hpp>
 
 #include "Lattice/Engine/NeighborSearch/SpatialGrid.h"
-#include "Lattice/Engine/Consts.h"
 #include "Lattice/Engine/physics/Atom/AtomStorage.h"
+#include "Lattice/Engine/Consts.h"
 
 class NeighborList;
 class OctreeNode;

@@ -10,7 +10,7 @@
 namespace Generators {
 namespace {
 
-Lattice::Generators::Bounds clampBoundsToWorld(const Lattice::Generators::Bounds& bounds, glm::vec3 worldSize, float margin) {
+Generators::Bounds clampBoundsToWorld(const Generators::Bounds& bounds, glm::vec3 worldSize, float margin) {
     const glm::vec3 safeMargin = glm::vec3(std::max(margin, 0.0f));
     const glm::vec3 worldMin = glm::min(safeMargin, worldSize * 0.5f);
     const glm::vec3 worldMax = glm::max(worldSize - safeMargin, worldMin);
@@ -21,7 +21,7 @@ Lattice::Generators::Bounds clampBoundsToWorld(const Lattice::Generators::Bounds
     };
 }
 
-bool containsWithMargin(const Lattice::Generators::Region& region, glm::vec3 point, float margin) {
+bool containsWithMargin(const Generators::Region& region, glm::vec3 point, float margin) {
     if (!region.contains(point)) {
         return false;
     }
@@ -71,7 +71,7 @@ void loadBaseMoleculesOnce(Lattice::Simulation& sim) {
 
 } // namespace
 
-int randomFill(Lattice::Simulation& sim, const Lattice::Generators::Region& region, const std::vector<Compose>& composition,
+int randomFill(Lattice::Simulation& sim, const Generators::Region& region, const std::vector<Compose>& composition,
                const RandomFillOptions& options) {
     if (composition.empty() || options.density <= 0.0f) {
         return 0;
@@ -81,7 +81,7 @@ int randomFill(Lattice::Simulation& sim, const Lattice::Generators::Region& regi
     const size_t initialAtomCount = sim.atoms().size();
 
     const float margin = std::max(options.margin, 0.0f);
-    const Lattice::Generators::Bounds bounds = clampBoundsToWorld(region.bounds(), sim.world().getWorldSize(), margin);
+    const Generators::Bounds bounds = clampBoundsToWorld(region.bounds(), sim.world().getWorldSize(), margin);
     const glm::vec3 span = bounds.max - bounds.min;
     const float boundsVolume = std::max(0.0f, span.x) * std::max(0.0f, span.y) * std::max(0.0f, span.z);
     const int totalAtomBudget = std::max(0, static_cast<int>(std::lround(boundsVolume * options.density)));

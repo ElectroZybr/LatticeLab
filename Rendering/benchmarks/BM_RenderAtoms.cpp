@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
 
 #include "Rendering/benchmarks/Fixture.h"
-#include "Rendering/benchmarks/SceneBuilders.h"
+#include "Rendering/benchmarks/SceneBuilder.h"
 
 // @bench_meta {"id":"RenderFixture/RenderAtomsCpuPrepare","label":"Render Atoms CPU Prepare","group":"Rendering/Atoms/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderAtomsCpuPrepare)(benchmark::State& state) {

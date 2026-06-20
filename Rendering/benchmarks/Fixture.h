@@ -6,7 +6,7 @@
 #include <benchmark/benchmark.h>
 
 #include "Rendering/backend/WGPUContext.h"
-#include "Rendering/benchmarks/SceneBuilders.h"
+#include "Rendering/benchmarks/SceneBuilder.h"
 #include "Rendering/Renderer3D.h"
 
 class RenderFixture : public benchmark::Fixture {

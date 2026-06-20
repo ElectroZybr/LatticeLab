@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
 
 #include "Rendering/benchmarks/Fixture.h"
-#include "Rendering/benchmarks/SceneBuilders.h"
+#include "Rendering/benchmarks/SceneBuilder.h"
 
 // @bench_meta {"id":"RenderFixture/RenderFieldPotentialPrepare","label":"Render Field Potential Prepare","group":"Rendering/Field/Stages"}
 BENCHMARK_DEFINE_F(RenderFixture, RenderFieldPotentialPrepare)(benchmark::State& state) {

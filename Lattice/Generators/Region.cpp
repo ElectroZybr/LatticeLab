@@ -5,7 +5,7 @@
 
 #include <glm/geometric.hpp>
 
-namespace Lattice::Generators {
+namespace Generators {
 namespace {
 
 bool pointInEquilateralTriangle(float x, float y, float circumradius) {
@@ -152,4 +152,4 @@ Bounds TriangleBiPyramid::bounds() const {
     };
 }
 
-} // namespace Lattice::Generators
+} // namespace Generators

@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 
-namespace Lattice::Generators {
+namespace Generators {
 
 struct Bounds {
     glm::vec3 min = glm::vec3(0.0f);
@@ -80,4 +80,4 @@ public:
     [[nodiscard]] Bounds bounds() const override;
 };
 
-} // namespace Lattice::Generators
+} // namespace Generators
