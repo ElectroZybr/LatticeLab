@@ -110,6 +110,49 @@ Bounds Torus::bounds() const {
     };
 }
 
+bool PolygonPrism::contains(glm::vec3 point) const {
+    if (polygonPoints.size() < 3) {
+        return false;
+    }
+    if (point.z < minZ || point.z > maxZ) {
+        return false;
+    }
+
+    bool inside = false;
+    for (size_t i = 0, j = polygonPoints.size() - 1; i < polygonPoints.size(); j = i++) {
+        const glm::vec2& a = polygonPoints[i];
+        const glm::vec2& b = polygonPoints[j];
+        const bool intersects = ((a.y > point.y) != (b.y > point.y)) &&
+                                (point.x < (b.x - a.x) * (point.y - a.y) / ((b.y - a.y) + 1e-6f) + a.x);
+        if (intersects) {
+            inside = !inside;
+        }
+    }
+
+    return inside;
+}
+
+Bounds PolygonPrism::bounds() const {
+    if (polygonPoints.empty()) {
+        return {
+            .min = glm::vec3(0.0f),
+            .max = glm::vec3(0.0f),
+        };
+    }
+
+    glm::vec2 minXY = polygonPoints.front();
+    glm::vec2 maxXY = polygonPoints.front();
+    for (const glm::vec2& point : polygonPoints) {
+        minXY = glm::min(minXY, point);
+        maxXY = glm::max(maxXY, point);
+    }
+
+    return {
+        .min = glm::vec3(minXY.x, minXY.y, std::min(minZ, maxZ)),
+        .max = glm::vec3(maxXY.x, maxXY.y, std::max(minZ, maxZ)),
+    };
+}
+
 bool TrianglePyramid::contains(glm::vec3 point) const {
     const glm::vec3 delta = point - center;
     const float halfPyramidHeight = 0.5f * pyramidHeight;

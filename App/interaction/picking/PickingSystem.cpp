@@ -78,6 +78,26 @@ void PickingSystem::processLasso(std::span<glm::ivec2> points, bool cumulative) 
     }
 }
 
+void PickingSystem::processCircle(glm::ivec2 center, float radius, bool cumulative) {
+    if (radius <= 0.0f) {
+        return;
+    }
+    if (!cumulative) {
+        clearSelection();
+    }
+
+    BaseRenderer* rend = renderer->get();
+    const float radiusSqr = radius * radius;
+    for (size_t i = 0; i < atomStorage->size(); ++i) {
+        const glm::vec3 worldPos = displayAtomPos(i);
+        const glm::ivec2 atomScreen{rend->camera.worldToScreen(worldPos)};
+        const glm::vec2 diff = glm::vec2(atomScreen - center);
+        if ((diff.x * diff.x + diff.y * diff.y) <= radiusSqr) {
+            selectedAtomIds.insert(atomStorage->atomId(i));
+        }
+    }
+}
+
 bool PickingSystem::pickAtom(glm::ivec2 screenPos, float tolerance, AtomHit& hit) const {
     BaseRenderer* rend = renderer->get();
     switch (rend->camera.getMode()) {

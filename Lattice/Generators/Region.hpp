@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include <glm/glm.hpp>
 
 namespace Generators {
@@ -57,6 +59,16 @@ class Torus final : public Region {
 public:
     float majorRadius = 0.0f;
     float tubeRadius = 0.0f;
+
+    [[nodiscard]] bool contains(glm::vec3 point) const override;
+    [[nodiscard]] Bounds bounds() const override;
+};
+
+class PolygonPrism final : public Region {
+public:
+    std::vector<glm::vec2> polygonPoints;
+    float minZ = 0.0f;
+    float maxZ = 0.0f;
 
     [[nodiscard]] bool contains(glm::vec3 point) const override;
     [[nodiscard]] Bounds bounds() const override;

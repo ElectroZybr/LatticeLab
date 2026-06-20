@@ -21,6 +21,8 @@ namespace {
     constexpr float kSceneTileRounding = 10.0f;
     constexpr int kRecordingFormatVideo = static_cast<int>(IOPanel::RecordingFormat::MP4);
     constexpr int kRecordingFormatXYZ = static_cast<int>(IOPanel::RecordingFormat::XYZ);
+    constexpr float kCompactPopupWidth = 224.0f;
+    constexpr float kCompactFieldWidth = 126.0f;
     const std::filesystem::path kBaseMoleculesDirectory = std::filesystem::path("Mods") / "Base" / "Molecules";
 
     const char* generatorLabel(IOPanel::GeneratorKind kind) {
@@ -139,6 +141,45 @@ namespace {
 
             ImGui::EndCombo();
         }
+    }
+
+    bool compactComboRow(const char* label, const char* id, const char* preview, float scale) {
+        ImGui::SetNextItemWidth(kCompactFieldWidth * scale);
+        const bool open = ComboStyle::beginCombo(id, preview, 0.0f, scale);
+        ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(label);
+        return open;
+    }
+
+    bool compactSliderFloatRow(const char* label, const char* id, float& value, float minValue, float maxValue, const char* format,
+                               ImGuiSliderFlags flags, float scale) {
+        ImGui::SetNextItemWidth(kCompactFieldWidth * scale);
+        const bool changed = ImGui::SliderFloat(id, &value, minValue, maxValue, format, flags);
+        ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(label);
+        return changed;
+    }
+
+    bool compactDragFloatRow(const char* label, const char* id, float& value, float speed, float minValue, float maxValue, const char* format,
+                             float scale) {
+        ImGui::SetNextItemWidth(kCompactFieldWidth * scale);
+        const bool changed = ImGui::DragFloat(id, &value, speed, minValue, maxValue, format);
+        ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(label);
+        return changed;
+    }
+
+    bool compactDragIntRow(const char* label, const char* id, int& value, float speed, int minValue, int maxValue, const char* format,
+                           float scale) {
+        ImGui::SetNextItemWidth(kCompactFieldWidth * scale);
+        const bool changed = ImGui::DragInt(id, &value, speed, minValue, maxValue, format);
+        ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(label);
+        return changed;
     }
 
     void drawAxisCountControls(const char* prefix, glm::ivec3& counts, float scale, int minValue, int maxValue, bool enableZ) {
@@ -273,13 +314,11 @@ namespace {
     }
 
     void drawCompositionEditor(const char* prefix, std::vector<AppSignals::UI::GeneratorComposeSpec>& composition, float scale,
-                               const char* defaultSpecies, const std::vector<std::string>& moleculeNames, bool allowMolecules) {
-        constexpr float kSpeciesWidth = 100.0f;
-        constexpr float kFractionWidth = 72.0f;
-        constexpr float kRemoveWidth = 22.0f;
-        const float speciesWidth = std::floor(kSpeciesWidth * scale);
-        const float fractionWidth = std::floor(kFractionWidth * scale);
-        const float removeWidth = std::floor(kRemoveWidth * scale);
+                               const char* defaultSpecies, const std::vector<std::string>& moleculeNames, bool allowMolecules,
+                               bool compact = false) {
+        const float speciesWidth = std::floor((compact ? 72.0f : 100.0f) * scale);
+        const float fractionWidth = std::floor((compact ? 54.0f : 72.0f) * scale);
+        const float removeWidth = std::floor((compact ? 18.0f : 22.0f) * scale);
         float totalFraction = 0.0f;
         for (size_t i = 0; i < composition.size(); ++i) {
             AppSignals::UI::GeneratorComposeSpec& entry = composition[i];
@@ -308,7 +347,7 @@ namespace {
             }
         }
 
-        if (ImGui::Button((std::string("Add type##") + prefix).c_str(), ImVec2(140 * scale, 0.0f))) {
+        if (ImGui::Button((std::string("Add type##") + prefix).c_str(), ImVec2((compact ? 86.0f : 140.0f) * scale, 0.0f))) {
             composition.push_back({
                 .species = defaultSpecies,
                 .fraction = 0.0f,
@@ -361,16 +400,21 @@ void IOPanel::removeSceneTileByPath(std::string_view path) {
 void IOPanel::drawRandomFillGeneratorEditor(float scale, const std::vector<std::string>& availableMolecules,
                                             AppSignals::UI::GeneratorRegionSpec* regionOverride,
                                             std::vector<AppSignals::UI::GeneratorComposeSpec>& composition,
-                                            Generators::RandomFillOptions& options, bool showRegionEditor, bool showCreateButton) {
+                                            Generators::RandomFillOptions& options, bool showRegionEditor, bool showCreateButton,
+                                            bool compact) {
     AppSignals::UI::GeneratorRegionSpec& region = regionOverride != nullptr ? *regionOverride : randomFillRegion_;
     if (showRegionEditor) {
         drawRegionEditor(regionOverride != nullptr ? "region_tool_random_fill" : "random_fill_region", region, scale);
         AppSignals::UI::SetGeneratorPhantom.emit(region);
     }
     drawCompositionEditor(regionOverride != nullptr ? "region_tool_random_fill_composition" : "random_fill_composition", composition, scale, "Z",
-                          availableMolecules, true);
+                          availableMolecules, true, compact);
 
-    if (ImGui::BeginCombo(regionOverride != nullptr ? "Mode##region_tool_random_fill" : "Mode##random_fill", spawnModeLabel(options.mode))) {
+    const char* modeId = regionOverride != nullptr ? "##region_tool_random_fill_mode" : "##random_fill_mode";
+    const bool modeOpen = compact ? compactComboRow("Mode", modeId, spawnModeLabel(options.mode), scale)
+                                  : ComboStyle::beginCombo(regionOverride != nullptr ? "Mode##region_tool_random_fill" : "Mode##random_fill",
+                                                           spawnModeLabel(options.mode), 0.0f, scale);
+    if (modeOpen) {
         constexpr Generators::SpawnMode spawnModes[] = {
             Generators::SpawnMode::Reset,
             Generators::SpawnMode::Add,
@@ -388,24 +432,33 @@ void IOPanel::drawRandomFillGeneratorEditor(float scale, const std::vector<std::
         ImGui::EndCombo();
     }
 
-    ImGui::SetNextItemWidth(120.0f * scale);
-    ImGui::DragFloat(regionOverride != nullptr ? "Density##region_tool_random_fill" : "Density##random_fill", &options.density, 0.001f, 0.0f, 10.0f,
-                     "%.4f");
-    ImGui::SetNextItemWidth(120.0f * scale);
-    ImGui::DragFloat(regionOverride != nullptr ? "Temperature##region_tool_random_fill" : "Temperature##random_fill", &options.temperature, 1.0f,
-                     0.0f, 100000.0f, "%.1f");
-
-    int maxAttemptsPerSpawn = static_cast<int>(options.maxAttemptsPerSpawn);
-    ImGui::SetNextItemWidth(120.0f * scale);
-    if (ImGui::DragInt(regionOverride != nullptr ? "Attempts##region_tool_random_fill" : "Attempts##random_fill", &maxAttemptsPerSpawn, 1.0f, 1,
-                       INT_MAX, "%d")) {
-        options.maxAttemptsPerSpawn = static_cast<uint32_t>(std::max(maxAttemptsPerSpawn, 1));
+    if (compact) {
+        compactDragFloatRow("Density", "##region_tool_random_fill_density_compact", options.density, 0.001f, 0.0f, 10.0f, "%.4f", scale);
+        compactDragFloatRow("Temp", "##region_tool_random_fill_temperature_compact", options.temperature, 1.0f, 0.0f, 100000.0f, "%.1f",
+                            scale);
+    }
+    else {
+        ImGui::SetNextItemWidth(120.0f * scale);
+        ImGui::DragFloat(regionOverride != nullptr ? "Density##region_tool_random_fill" : "Density##random_fill", &options.density, 0.001f, 0.0f,
+                         10.0f, "%.4f");
+        ImGui::SetNextItemWidth(120.0f * scale);
+        ImGui::DragFloat(regionOverride != nullptr ? "Temperature##region_tool_random_fill" : "Temperature##random_fill", &options.temperature,
+                         1.0f, 0.0f, 100000.0f, "%.1f");
     }
 
-    int seed = static_cast<int>(options.seed);
-    ImGui::SetNextItemWidth(120.0f * scale);
-    if (ImGui::DragInt(regionOverride != nullptr ? "Seed##region_tool_random_fill" : "Seed##random_fill", &seed, 1.0f, 0, INT_MAX, "%d")) {
-        options.seed = static_cast<uint32_t>(std::max(seed, 0));
+    if (!compact) {
+        int maxAttemptsPerSpawn = static_cast<int>(options.maxAttemptsPerSpawn);
+        if ((ImGui::SetNextItemWidth(120.0f * scale),
+             ImGui::DragInt(regionOverride != nullptr ? "Attempts##region_tool_random_fill" : "Attempts##random_fill", &maxAttemptsPerSpawn,
+                            1.0f, 1, INT_MAX, "%d"))) {
+            options.maxAttemptsPerSpawn = static_cast<uint32_t>(std::max(maxAttemptsPerSpawn, 1));
+        }
+
+        int seed = static_cast<int>(options.seed);
+        if ((ImGui::SetNextItemWidth(120.0f * scale),
+             ImGui::DragInt(regionOverride != nullptr ? "Seed##region_tool_random_fill" : "Seed##random_fill", &seed, 1.0f, 0, INT_MAX, "%d"))) {
+            options.seed = static_cast<uint32_t>(std::max(seed, 0));
+        }
     }
 
     ImGui::Checkbox(regionOverride != nullptr ? "Random rotation##region_tool_random_fill" : "Random rotation##random_fill", &options.randomRotation);
@@ -426,15 +479,20 @@ void IOPanel::drawRandomFillGeneratorEditor(float scale, const std::vector<std::
 void IOPanel::drawLatticeFillGeneratorEditor(float scale, const std::vector<std::string>& availableMolecules,
                                              AppSignals::UI::GeneratorRegionSpec* regionOverride,
                                              std::vector<AppSignals::UI::GeneratorComposeSpec>& composition,
-                                             Generators::LatticeFillOptions& options, bool showRegionEditor, bool showCreateButton) {
+                                             Generators::LatticeFillOptions& options, bool showRegionEditor, bool showCreateButton,
+                                             bool compact) {
     AppSignals::UI::GeneratorRegionSpec& region = regionOverride != nullptr ? *regionOverride : latticeFillRegion_;
     if (showRegionEditor) {
         drawRegionEditor(regionOverride != nullptr ? "region_tool_lattice_fill" : "lattice_fill_region", region, scale);
         AppSignals::UI::SetGeneratorPhantom.emit(region);
     }
 
-    if (ImGui::BeginCombo(regionOverride != nullptr ? "Structure##region_tool_lattice_fill" : "Structure##lattice_fill",
-                          latticeStructureLabel(options.structure))) {
+    const char* structureId = regionOverride != nullptr ? "##region_tool_lattice_fill_structure" : "##lattice_fill_structure";
+    const bool structureOpen = compact ? compactComboRow("Type", structureId, latticeStructureLabel(options.structure), scale)
+                                       : ComboStyle::beginCombo(regionOverride != nullptr ? "Structure##region_tool_lattice_fill"
+                                                                                          : "Structure##lattice_fill",
+                                                                latticeStructureLabel(options.structure), 0.0f, scale);
+    if (structureOpen) {
         constexpr Generators::LatticeStructure structures[] = {
             Generators::LatticeStructure::Bcc,
             Generators::LatticeStructure::Hex,
@@ -452,10 +510,14 @@ void IOPanel::drawLatticeFillGeneratorEditor(float scale, const std::vector<std:
     }
 
     drawCompositionEditor(regionOverride != nullptr ? "region_tool_lattice_fill_composition" : "lattice_fill_composition", composition, scale, "Z",
-                          availableMolecules, false);
+                          availableMolecules, false, compact);
 
-    if (ImGui::BeginCombo(regionOverride != nullptr ? "Mode##region_tool_lattice_fill" : "Mode##lattice_fill",
-                          spawnModeLabel(options.mode))) {
+    const char* modeId = regionOverride != nullptr ? "##region_tool_lattice_fill_mode" : "##lattice_fill_mode";
+    const bool modeOpen = compact ? compactComboRow("Mode", modeId, spawnModeLabel(options.mode), scale)
+                                  : ComboStyle::beginCombo(regionOverride != nullptr ? "Mode##region_tool_lattice_fill"
+                                                                                     : "Mode##lattice_fill",
+                                                           spawnModeLabel(options.mode), 0.0f, scale);
+    if (modeOpen) {
         constexpr Generators::SpawnMode spawnModes[] = {
             Generators::SpawnMode::Reset,
             Generators::SpawnMode::Add,
@@ -473,10 +535,13 @@ void IOPanel::drawLatticeFillGeneratorEditor(float scale, const std::vector<std:
         ImGui::EndCombo();
     }
 
-    int seed = static_cast<int>(options.seed);
-    ImGui::SetNextItemWidth(120.0f * scale);
-    if (ImGui::DragInt(regionOverride != nullptr ? "Seed##region_tool_lattice_fill" : "Seed##lattice_fill", &seed, 1.0f, 0, INT_MAX, "%d")) {
-        options.seed = static_cast<uint32_t>(std::max(seed, 0));
+    if (!compact) {
+        int seed = static_cast<int>(options.seed);
+        if ((ImGui::SetNextItemWidth(120.0f * scale),
+             ImGui::DragInt(regionOverride != nullptr ? "Seed##region_tool_lattice_fill" : "Seed##lattice_fill", &seed, 1.0f, 0, INT_MAX,
+                            "%d"))) {
+            options.seed = static_cast<uint32_t>(std::max(seed, 0));
+        }
     }
     ImGui::Checkbox(regionOverride != nullptr ? "Fixed##region_tool_lattice_fill" : "Fixed##lattice_fill", &options.fixed);
 
@@ -608,10 +673,10 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
             }
             break;
         case GeneratorKind::RandomFill:
-            drawRandomFillGeneratorEditor(scale, availableMolecules, nullptr, randomFillComposition_, randomFillOptions_, true, true);
+            drawRandomFillGeneratorEditor(scale, availableMolecules, nullptr, randomFillComposition_, randomFillOptions_, true, true, false);
             break;
         case GeneratorKind::LatticeFill:
-            drawLatticeFillGeneratorEditor(scale, availableMolecules, nullptr, latticeFillComposition_, latticeFillOptions_, true, true);
+            drawLatticeFillGeneratorEditor(scale, availableMolecules, nullptr, latticeFillComposition_, latticeFillOptions_, true, true, false);
             break;
         default:
             AppSignals::UI::ClearGeneratorPhantom.emit();
@@ -804,8 +869,7 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
 }
 
 void IOPanel::drawRegionSpawnPopup(float scale, ImVec2 anchorPos, std::string_view popupId) {
-    const std::vector<std::string> availableMolecules = listAvailableMolecules();
-    const float popupWidth = 320.0f * scale;
+    const float popupWidth = kCompactPopupWidth * scale;
     const float popupHeight = 0.0f;
 
     ImGui::SetNextWindowPos(anchorPos, ImGuiCond_Always);
@@ -819,44 +883,51 @@ void IOPanel::drawRegionSpawnPopup(float scale, ImVec2 anchorPos, std::string_vi
     if (ImGui::Begin(popupId.data(), nullptr,
                      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::TextUnformatted("Spawn region");
-
-        if (ImGui::BeginCombo("##region_tool_generator_kind", generatorLabel(regionToolGeneratorKind_))) {
-            constexpr GeneratorKind generators[] = {
-                GeneratorKind::RandomFill,
-                GeneratorKind::LatticeFill,
-            };
-            for (GeneratorKind kind : generators) {
-                const bool selected = kind == regionToolGeneratorKind_;
-                if (ImGui::Selectable(generatorLabel(kind), selected)) {
-                    regionToolGeneratorKind_ = kind;
-                }
-                if (selected) {
-                    ImGui::SetItemDefaultFocus();
-                }
-            }
-            ImGui::EndCombo();
-        }
-
-        switch (regionToolGeneratorKind_) {
-        case GeneratorKind::RandomFill:
-            drawRandomFillGeneratorEditor(scale, availableMolecules, nullptr, regionToolRandomFillComposition_, regionToolRandomFillOptions_, false,
-                                          false);
-            break;
-        case GeneratorKind::LatticeFill:
-            drawLatticeFillGeneratorEditor(scale, availableMolecules, nullptr, regionToolLatticeFillComposition_, regionToolLatticeFillOptions_, false,
-                                           false);
-            break;
-        default:
-            regionToolGeneratorKind_ = GeneratorKind::RandomFill;
-            drawRandomFillGeneratorEditor(scale, availableMolecules, nullptr, regionToolRandomFillComposition_, regionToolRandomFillOptions_, false,
-                                          false);
-            break;
-        }
+        drawRegionSpawnSettings(scale, true);
     }
     ImGui::End();
 
     ImGui::PopStyleColor(2);
     ImGui::PopStyleVar(3);
+}
+
+void IOPanel::drawRegionSpawnSettings(float scale, bool compact) {
+    const std::vector<std::string> availableMolecules = listAvailableMolecules();
+    const bool generatorOpen = compact ? compactComboRow("Spawn", "##region_tool_generator_kind", generatorLabel(regionToolGeneratorKind_), scale)
+                                       : ComboStyle::beginCombo("##region_tool_generator_kind", generatorLabel(regionToolGeneratorKind_), 0.0f,
+                                                                scale);
+    if (generatorOpen) {
+        constexpr GeneratorKind generators[] = {
+            GeneratorKind::RandomFill,
+            GeneratorKind::LatticeFill,
+        };
+        for (GeneratorKind kind : generators) {
+            const bool selected = kind == regionToolGeneratorKind_;
+            if (ImGui::Selectable(generatorLabel(kind), selected)) {
+                regionToolGeneratorKind_ = kind;
+            }
+            if (selected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    switch (regionToolGeneratorKind_) {
+    case GeneratorKind::RandomFill:
+        drawRandomFillGeneratorEditor(scale, availableMolecules, nullptr, regionToolRandomFillComposition_, regionToolRandomFillOptions_, false,
+                                      false, compact);
+        break;
+    case GeneratorKind::LatticeFill:
+        drawLatticeFillGeneratorEditor(scale, availableMolecules, nullptr, regionToolLatticeFillComposition_, regionToolLatticeFillOptions_, false,
+                                       false, compact);
+        break;
+    default:
+        regionToolGeneratorKind_ = GeneratorKind::RandomFill;
+        drawRandomFillGeneratorEditor(scale, availableMolecules, nullptr, regionToolRandomFillComposition_, regionToolRandomFillOptions_, false,
+                                      false, compact);
+        break;
+    }
 }
 
 bool IOPanel::canSpawnFromRegionTool() const {

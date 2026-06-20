@@ -29,13 +29,10 @@ public:
 
     enum class Mode : uint8_t {
         Cursor,
-        Frame,
-        Lasso,
+        Area,
         Ruler,
         AddAtom,
         RemoveAtom,
-        SpawnBox,
-        SpawnCircle,
     };
 
     static void init(GLFWwindow* window, Lattice::Simulation& simulation, std::unique_ptr<BaseRenderer>& renderer, Interface& appInterface);
@@ -58,7 +55,7 @@ public:
     static PickingSystem* pickingSystem;
 
 private:
-    static constexpr size_t kModeCount = 8;
+    static constexpr size_t kModeCount = 6;
 
     static ITool* activeTool() noexcept;
     static void syncToolMode() noexcept;
@@ -74,6 +71,7 @@ private:
     static ToolContext toolContext;
     static std::array<std::unique_ptr<ITool>, kModeCount> toolInstances;
     static Mode syncedMode;
+    static uint8_t syncedPanelToolKey;
     static Lattice::Simulation::WorldId pickingWorldId;
 
     static glm::ivec2 startMousePos;

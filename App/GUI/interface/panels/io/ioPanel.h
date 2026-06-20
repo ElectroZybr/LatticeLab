@@ -38,6 +38,7 @@ public:
 
     void draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState);
     void drawRegionSpawnPopup(float scale, ImVec2 anchorPos, std::string_view popupId = "##region_spawn_tool_popup");
+    void drawRegionSpawnSettings(float scale, bool compact = false);
     void setScenesDirectory(std::filesystem::path scenesDirectory);
     [[nodiscard]] const std::filesystem::path& scenesDirectory() const { return scenesDirectory_; }
 
@@ -60,11 +61,13 @@ private:
     void drawRandomFillGeneratorEditor(float scale, const std::vector<std::string>& availableMolecules,
                                        AppSignals::UI::GeneratorRegionSpec* regionOverride,
                                        std::vector<AppSignals::UI::GeneratorComposeSpec>& composition,
-                                       Generators::RandomFillOptions& options, bool showRegionEditor, bool showCreateButton);
+                                       Generators::RandomFillOptions& options, bool showRegionEditor, bool showCreateButton,
+                                       bool compact = false);
     void drawLatticeFillGeneratorEditor(float scale, const std::vector<std::string>& availableMolecules,
                                         AppSignals::UI::GeneratorRegionSpec* regionOverride,
                                         std::vector<AppSignals::UI::GeneratorComposeSpec>& composition,
-                                        Generators::LatticeFillOptions& options, bool showRegionEditor, bool showCreateButton);
+                                        Generators::LatticeFillOptions& options, bool showRegionEditor, bool showCreateButton,
+                                        bool compact = false);
     void ensureSceneCatalogLoaded();
     void clearPendingDeleteState();
     void removeSceneTileByPath(std::string_view path);

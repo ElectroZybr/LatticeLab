@@ -5,6 +5,7 @@
 #include <string_view>
 #include <vector>
 
+#include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include "Lattice/Engine/physics/Atom/AtomData.h"
 #include "Lattice/Generators/LatticeFill.hpp"
@@ -21,6 +22,7 @@ namespace AppSignals {
             Cylinder,
             Capsule,
             Torus,
+            PolygonPrism,
             TrianglePyramid,
             TriangleBiPyramid,
         };
@@ -41,6 +43,9 @@ namespace AppSignals {
             float capsuleHeight = 40.0f;
             float torusMajorRadius = 20.0f;
             float torusTubeRadius = 8.0f;
+            std::vector<glm::vec2> polygonPoints;
+            float prismMinZ = 0.0f;
+            float prismMaxZ = 10.0f;
             float pyramidBaseCircumradius = 20.0f;
             float pyramidHeight = 40.0f;
             float bipyramidBaseCircumradius = 20.0f;

@@ -30,6 +30,7 @@ public:
     void processClick(glm::ivec2 screenPos, bool cumulative = false);
     void processRect(glm::ivec2 start, glm::ivec2 end, bool cumulative = false);
     void processLasso(std::span<glm::ivec2> points, bool cumulative = false);
+    void processCircle(glm::ivec2 center, float radius, bool cumulative = false);
 
     const std::unordered_set<AtomStorage::AtomId>& getSelectedAtomIds() const;
     const OverlayState& getOverlay() const { return overlay; }

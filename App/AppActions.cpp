@@ -112,6 +112,13 @@ namespace {
             region->tubeRadius = spec.torusTubeRadius;
             return region;
         }
+        case GeneratorRegionKind::PolygonPrism: {
+            auto region = std::make_unique<PolygonPrism>();
+            region->polygonPoints = spec.polygonPoints;
+            region->minZ = spec.prismMinZ;
+            region->maxZ = spec.prismMaxZ;
+            return region;
+        }
         case GeneratorRegionKind::TrianglePyramid: {
             auto region = std::make_unique<TrianglePyramid>();
             region->center = spec.center;
@@ -284,6 +291,24 @@ namespace {
                 });
             }
             break;
+        case GeneratorRegionKind::PolygonPrism: {
+            if (spec.polygonPoints.size() < 2) {
+                break;
+            }
+            const float minZ = spec.prismMinZ + clampedInset;
+            const float maxZ = spec.prismMaxZ - clampedInset;
+            if (minZ > maxZ) {
+                break;
+            }
+            for (size_t i = 0; i < spec.polygonPoints.size(); ++i) {
+                const glm::vec2& a = spec.polygonPoints[i];
+                const glm::vec2& b = spec.polygonPoints[(i + 1) % spec.polygonPoints.size()];
+                appendSegment(lines, glm::vec3(a.x, a.y, minZ), glm::vec3(b.x, b.y, minZ));
+                appendSegment(lines, glm::vec3(a.x, a.y, maxZ), glm::vec3(b.x, b.y, maxZ));
+                appendSegment(lines, glm::vec3(a.x, a.y, minZ), glm::vec3(a.x, a.y, maxZ));
+            }
+            break;
+        }
         case GeneratorRegionKind::TrianglePyramid: {
             const float halfHeight = 0.5f * spec.pyramidHeight;
             const float r = spec.pyramidBaseCircumradius;
