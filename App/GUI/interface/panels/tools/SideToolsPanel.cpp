@@ -3,6 +3,8 @@
 #include <array>
 #include <cmath>
 
+#include "GUI/interface/panels/io/ioPanel.h"
+
 #define ICON_FA_MOUSE_POINTER "\uf245"
 #define ICON_FA_VECTOR_SQUARE "\uf5cb"
 #define ICON_FA_DRAW_POLYGON "\uf5ee"
@@ -32,7 +34,8 @@ namespace {
         {SideToolsPanel::Tool::SpawnCircle, ICON_FA_CIRCLE, "Spawn by circle"},
     }};
 
-    bool drawToolButton(const char* icon, const char* tooltip, bool selected, float buttonSize, ImFont* textFont) {
+    bool drawToolButton(const char* icon, const char* tooltip, bool selected, bool suppressTooltip, float buttonSize, float scale,
+                        ImFont* textFont) {
         if (selected) {
             ImGui::PushStyleColor(ImGuiCol_Button, ACTIVE_COLOR);
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ACTIVE_COLOR);
@@ -45,23 +48,47 @@ namespace {
             ImGui::PopStyleColor(3);
         }
 
-        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+        if (!suppressTooltip && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+            const ImVec2 itemMin = ImGui::GetItemRectMin();
+            const ImVec2 itemMax = ImGui::GetItemRectMax();
+            const float tooltipOffset = 10.0f * scale;
+            ImGui::SetNextWindowPos(ImVec2(itemMin.x - tooltipOffset, (itemMin.y + itemMax.y) * 0.5f), ImGuiCond_Always, ImVec2(1.0f, 0.5f));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f * scale, 8.0f * scale));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
             ImGui::BeginTooltip();
             if (textFont) {
                 ImGui::PushFont(textFont);
             }
+            ImGui::SetWindowFontScale(1.12f);
             ImGui::TextUnformatted(tooltip);
             if (textFont) {
                 ImGui::PopFont();
             }
             ImGui::EndTooltip();
+            ImGui::PopStyleVar(2);
         }
 
         return pressed;
     }
 }
 
-void SideToolsPanel::draw(float scale, glm::ivec2 windowSize, ImFont* iconFont, ImFont* textFont) {
+bool SideToolsPanel::isRegionSpawnTool(Tool tool) {
+    return tool == Tool::SpawnBox || tool == Tool::SpawnCircle;
+}
+
+void SideToolsPanel::setSelectedTool(Tool tool) {
+    if (selectedTool == tool) {
+        if (isRegionSpawnTool(tool)) {
+            regionSpawnPopupVisible_ = !regionSpawnPopupVisible_;
+        }
+        return;
+    }
+
+    selectedTool = tool;
+    regionSpawnPopupVisible_ = isRegionSpawnTool(tool);
+}
+
+void SideToolsPanel::draw(float scale, glm::ivec2 windowSize, IOPanel& ioPanel, ImFont* iconFont, ImFont* textFont) {
     constexpr float baseTopOffset = 114.0f;
     constexpr float baseRightOffset = 0.0f;
     constexpr float baseSpacing = 4.0f;
@@ -96,9 +123,16 @@ void SideToolsPanel::draw(float scale, glm::ivec2 windowSize, ImFont* iconFont, 
         ImGui::PushFont(iconFont);
     }
 
+    ImVec2 selectedToolMin(0.0f, 0.0f);
+    bool selectedToolVisible = false;
+    const bool suppressTooltips = regionSpawnPopupVisible_ && isRegionSpawnTool(selectedTool);
     for (const ToolItem& item : TOOL_ITEMS) {
-        if (drawToolButton(item.icon, item.tooltip, selectedTool == item.tool, buttonSize, textFont)) {
-            selectedTool = item.tool;
+        if (drawToolButton(item.icon, item.tooltip, selectedTool == item.tool, suppressTooltips, buttonSize, scale, textFont)) {
+            setSelectedTool(item.tool);
+        }
+        if (selectedTool == item.tool) {
+            selectedToolMin = ImGui::GetItemRectMin();
+            selectedToolVisible = true;
         }
     }
 
@@ -108,4 +142,17 @@ void SideToolsPanel::draw(float scale, glm::ivec2 windowSize, ImFont* iconFont, 
 
     ImGui::End();
     ImGui::PopStyleVar(2);
+
+    if (regionSpawnPopupVisible_ && selectedToolVisible && isRegionSpawnTool(selectedTool) && ioPanel.canSpawnFromRegionTool()) {
+        constexpr float kPopupWidth = 320.0f;
+        constexpr float kPopupGap = 12.0f;
+        const ImVec2 popupPos(selectedToolMin.x - (kPopupWidth + kPopupGap) * scale, selectedToolMin.y);
+        if (textFont) {
+            ImGui::PushFont(textFont);
+        }
+        ioPanel.drawRegionSpawnPopup(scale, popupPos);
+        if (textFont) {
+            ImGui::PopFont();
+        }
+    }
 }

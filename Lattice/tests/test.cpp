@@ -184,6 +184,23 @@ static void testSpawnWaterMoleculeCreatesLocalAtoms() {
     }
 }
 
+static void testCheckedMoleculeSpawnRejectsBlockedPoint() {
+    Lattice::Simulation simulation;
+    simulation.createWorld(glm::vec3(20.0f, 20.0f, 20.0f));
+
+    const std::filesystem::path waterPath = std::filesystem::path("Mods") / "Base" / "Molecules" / "h2o.pdb";
+    expect(simulation.loadMoleculeTemplate("h2o", waterPath), "Water template should load");
+
+    simulation.createAtom(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f), AtomData::Type::O, false);
+    const size_t atomCountBefore = simulation.atoms().size();
+
+    expect(!simulation.canSpawnMolecule("h2o", glm::vec3(10.0f, 10.0f, 10.0f), glm::mat3(1.0f)),
+           "Water molecule should not fit into an occupied spawn point");
+    expect(!simulation.spawnMoleculeChecked("h2o", glm::vec3(10.0f, 10.0f, 10.0f), glm::mat3(1.0f), false),
+           "Checked water spawn should fail for an occupied point");
+    expect(simulation.atoms().size() == atomCountBefore, "Failed checked spawn should not add atoms");
+}
+
 static void testWaterMoleculeBondsStayLocalAfterNeighborSort() {
     Lattice::Simulation simulation;
     simulation.createWorld(glm::vec3(40.0f, 40.0f, 40.0f));
@@ -352,6 +369,7 @@ int main() {
     testOctreeBuildChargeAndChildren();
     testCoulombFarFieldApproximation();
     testSpawnWaterMoleculeCreatesLocalAtoms();
+    testCheckedMoleculeSpawnRejectsBlockedPoint();
     testWaterMoleculeBondsStayLocalAfterNeighborSort();
     testLuaSceneObjectLoadsMoleculesDirectory();
     testLuaDslSimulationWorldGasBuildsScene();

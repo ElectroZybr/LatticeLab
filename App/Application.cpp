@@ -32,6 +32,7 @@ constexpr int LPS = 20;
 
 namespace {
     const std::filesystem::path kBootstrapScriptPath = std::filesystem::path("Mods") / "Base" / "scenes" / "hexzerium.lua";
+    const std::filesystem::path kBaseMoleculesPath = std::filesystem::path("Mods") / "Base" / "Molecules";
 
     uint32_t makeXYZStepInterval(float simulationStepsPerSecond, int captureFps) {
         const float sanitizedStepsPerSecond = std::max(simulationStepsPerSecond, 1.0f);
@@ -44,6 +45,30 @@ namespace {
         renderer.renderFrame(simulation, appInterface, debugViews);
         glfwShowWindow(window);
         glfwFocusWindow(window);
+    }
+
+    void loadBaseMoleculeTemplates(Lattice::Simulation& simulation) {
+        if (!std::filesystem::exists(kBaseMoleculesPath) || !std::filesystem::is_directory(kBaseMoleculesPath)) {
+            return;
+        }
+
+        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(kBaseMoleculesPath)) {
+            if (!entry.is_regular_file() || entry.path().extension() != ".pdb") {
+                continue;
+            }
+
+            const std::string moleculeName = entry.path().stem().string();
+            if (moleculeName.empty()) {
+                continue;
+            }
+
+            try {
+                simulation.loadMoleculeTemplate(moleculeName, entry.path());
+            }
+            catch (const std::exception& e) {
+                std::cerr << "Failed to load molecule template '" << entry.path().string() << "': " << e.what() << "\n";
+            }
+        }
     }
 }
 
@@ -62,8 +87,9 @@ int Application::run() {
 
     // инициализация систем
     Lattice::Simulation simulation;
+    loadBaseMoleculeTemplates(simulation);
 
-    simulation.createWorld(glm::vec3(120.0f, 120.0f, 120.0f));
+    simulation.createWorld(glm::vec3(120.0f, 120.0f, 10.0f));
     Lattice::LuaState luaState;
     luaState.bindSimulation(simulation);
 

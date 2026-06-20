@@ -45,7 +45,12 @@ void SpawnBoxTool::onLeftReleased(glm::ivec2 mousePos) {
     );
 
     if (region.boxSize.x > 1e-3f && region.boxSize.y > 1e-3f) {
-        ctx.ioPanel->emitSpawnFromRegion(region);
+        if (ctx.uiState != nullptr) {
+            ctx.ioPanel->emitSpawnFromRegion(region, ctx.uiState->spawnSpecies);
+        }
+        else {
+            ctx.ioPanel->emitSpawnFromRegion(region);
+        }
     }
 
     reset();

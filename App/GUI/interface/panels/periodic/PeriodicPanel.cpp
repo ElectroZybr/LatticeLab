@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <array>
 #include <cfloat>
+#include <vector>
 #include <string_view>
 
+#include "Lattice/Engine/Simulation.h"
 #include "Lattice/Engine/physics/Atom/AtomData.h"
 
 namespace {
@@ -61,6 +63,8 @@ constexpr int kColumnCount = 18;
 constexpr int kMainRowCount = 7;
 constexpr int kRowCount = 9;
 constexpr const char* kZeriumLabel = "Ze";
+constexpr float kMoleculePanelGap = 0.0f;
+constexpr int kMoleculeColumnCount = 2;
 
 std::string_view atomLabel(AtomData::Type type) {
     if (type == AtomData::Type::Z) {
@@ -133,6 +137,7 @@ void drawCellLabel(const ImVec2& min, const ImVec2& max, std::string_view label,
     );
     drawList->AddText(font, fontSize, textPos, ImGui::GetColorU32(kTextColor), label.data(), label.data() + label.size());
 }
+
 }
 
 int PeriodicPanel::decodeAtom(int index) {
@@ -142,7 +147,7 @@ int PeriodicPanel::decodeAtom(int index) {
     return index;
 }
 
-void PeriodicPanel::draw(float scale, glm::ivec2 windowSize, int& selectedAtom) {
+void PeriodicPanel::draw(float scale, glm::ivec2 windowSize, const Lattice::Simulation& simulation, int& selectedAtom, std::string& spawnSpecies) {
     const float cellSize = 31.0f * scale;
     const float cellGap = 3.0f * scale;
     const float leftPadding = 10.0f * scale;
@@ -153,7 +158,22 @@ void PeriodicPanel::draw(float scale, glm::ivec2 windowSize, int& selectedAtom) 
 
     const float gridWidth = kColumnCount * cellSize + (kColumnCount - 1) * cellGap;
     const float gridHeight = kRowCount * cellSize + (kRowCount - 1) * cellGap + rowGapBonus;
-    const float panelW = gridWidth + leftPadding * 2.0f;
+    const bool hasMolecules = !simulation.moleculeTemplates().empty();
+    float moleculesPanelW = 0.0f;
+    float moleculeItemWidth = 0.0f;
+    if (hasMolecules) {
+        float maxLabelWidth = 0.0f;
+        for (const auto& [moleculeName, molecule] : simulation.moleculeTemplates()) {
+            (void)molecule;
+            maxLabelWidth = std::max(maxLabelWidth, ImGui::CalcTextSize(moleculeName.c_str()).x);
+        }
+        const float moleculeItemMinWidth = 25.0f * scale;
+        const float moleculeItemPadding = 10.0f * scale;
+        moleculeItemWidth = std::max(moleculeItemMinWidth, maxLabelWidth + moleculeItemPadding);
+        moleculesPanelW = moleculeItemWidth * kMoleculeColumnCount + cellGap * (kMoleculeColumnCount - 1) + ImGui::GetStyle().ScrollbarSize;
+    }
+    const float moleculesPanelGap = hasMolecules ? kMoleculePanelGap * scale : 0.0f;
+    const float panelW = gridWidth + leftPadding * 2.0f + moleculesPanelGap + moleculesPanelW;
     const float panelH = gridHeight + topPadding + bottomPadding;
     const float panelX = windowSize.x * 0.5f - panelW * 0.5f;
 
@@ -176,10 +196,14 @@ void PeriodicPanel::draw(float scale, glm::ivec2 windowSize, int& selectedAtom) 
     ImGui::SetNextWindowSize(ImVec2(panelW, panelH));
     ImGui::Begin("Periodic", nullptr, PANEL_FLAGS);
 
-    const float startX = leftPadding;
-    const float startY = topPadding;
+    const float startX = 0.0f;
+    const float startY = 0.0f;
     const float fontSize = std::max(12.0f, cellSize * 0.60f);
+    const float tableWidth = gridWidth;
+    const float tableChildWidth = tableWidth + leftPadding * 2.0f;
 
+    ImGui::SetCursorPos(ImVec2(0.0f, 0.0f));
+    ImGui::BeginChild("##periodic_table", ImVec2(tableChildWidth, gridHeight + topPadding + bottomPadding), false, ImGuiWindowFlags_NoMove);
     std::array<std::array<bool, kColumnCount>, kRowCount> occupied{};
     for (const PeriodicElementSlot& slot : kPeriodicSlots) {
         occupied[static_cast<size_t>(slot.row)][static_cast<size_t>(slot.column)] = true;
@@ -193,8 +217,8 @@ void PeriodicPanel::draw(float scale, glm::ivec2 windowSize, int& selectedAtom) 
 
             const float extraRowOffset = row >= kMainRowCount ? rowGapBonus : 0.0f;
             const ImVec2 min(
-                startX + column * (cellSize + cellGap),
-                startY + row * (cellSize + cellGap) + extraRowOffset
+                leftPadding + startX + column * (cellSize + cellGap),
+                topPadding + startY + row * (cellSize + cellGap) + extraRowOffset
             );
             const ImVec2 max(min.x + cellSize, min.y + cellSize);
             ImGui::GetWindowDrawList()->AddRectFilled(min, max, ImGui::GetColorU32(kEmptyCellColor), 5.0f * scale);
@@ -205,8 +229,8 @@ void PeriodicPanel::draw(float scale, glm::ivec2 windowSize, int& selectedAtom) 
         const AtomData::Type type = static_cast<AtomData::Type>(i);
         const PeriodicElementSlot& slot = slotForType(type);
         const float extraRowOffset = slot.row >= kMainRowCount ? rowGapBonus : 0.0f;
-        const float x = startX + slot.column * (cellSize + cellGap);
-        const float y = startY + slot.row * (cellSize + cellGap) + extraRowOffset;
+        const float x = leftPadding + startX + slot.column * (cellSize + cellGap);
+        const float y = topPadding + startY + slot.row * (cellSize + cellGap) + extraRowOffset;
 
         ImGui::SetCursorPos(ImVec2(x, y));
         const std::string_view label = atomLabel(type);
@@ -240,8 +264,62 @@ void PeriodicPanel::draw(float scale, glm::ivec2 windowSize, int& selectedAtom) 
 
         if (ImGui::IsItemClicked()) {
             selectedAtom = (selectedAtom == i) ? static_cast<int>(AtomData::Type::Z) : i;
+            spawnSpecies = std::string(AtomData::symbol(static_cast<AtomData::Type>(decodeAtom(selectedAtom))));
         }
     }
+    ImGui::EndChild();
 
+    if (!hasMolecules) {
+        ImGui::End();
+        return;
+    }
+
+    std::vector<std::string_view> moleculeNames;
+    moleculeNames.reserve(simulation.moleculeTemplates().size());
+    for (const auto& [moleculeName, molecule] : simulation.moleculeTemplates()) {
+        (void)molecule;
+        moleculeNames.push_back(moleculeName);
+    }
+    std::sort(moleculeNames.begin(), moleculeNames.end());
+
+    ImGui::SameLine(0.0f, moleculesPanelGap);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::BeginChild("##periodic_molecules_panel", ImVec2(moleculesPanelW, gridHeight + topPadding + bottomPadding), false, ImGuiWindowFlags_NoMove);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(cellGap, cellGap));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::SetCursorPosX(0.0f);
+    ImGui::SetCursorPosY(topPadding);
+    ImGui::BeginChild("##molecule_list", ImVec2(moleculesPanelW, gridHeight), false, ImGuiWindowFlags_NoMove);
+
+    const float itemHeight = cellSize;
+    const float moleculeFontSize = fontSize * 0.9f;
+    for (size_t i = 0; i < moleculeNames.size(); ++i) {
+        const std::string_view moleculeName = moleculeNames[i];
+        const bool selected = spawnSpecies == moleculeName;
+        ImGui::InvisibleButton(std::string(moleculeName).c_str(), ImVec2(moleculeItemWidth, itemHeight));
+        const bool hovered = ImGui::IsItemHovered();
+        const ImVec2 min = ImGui::GetItemRectMin();
+        const ImVec2 max = ImGui::GetItemRectMax();
+        const ImVec4 baseColor = ImVec4(0.22f, 0.27f, 0.33f, 1.00f);
+        const ImVec4 hoverColor = ImVec4(0.26f, 0.31f, 0.37f, 1.00f);
+        const ImVec4 selectedColor = ImVec4(0.30f, 0.41f, 0.58f, 1.00f);
+        ImGui::GetWindowDrawList()->AddRectFilled(min, max, ImGui::GetColorU32(selected ? selectedColor : (hovered ? hoverColor : baseColor)),
+                                                  5.0f * scale);
+        drawCellLabel(min, max, moleculeName, moleculeFontSize);
+
+        if (ImGui::IsItemClicked()) {
+            spawnSpecies = std::string(moleculeName);
+        }
+
+        const bool isLastColumn = (i % kMoleculeColumnCount) == (kMoleculeColumnCount - 1);
+        const bool hasNextItem = (i + 1) < moleculeNames.size();
+        if (!isLastColumn && hasNextItem) {
+            ImGui::SameLine();
+        }
+    }
+    ImGui::EndChild();
+    ImGui::PopStyleVar(2);
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
     ImGui::End();
 }

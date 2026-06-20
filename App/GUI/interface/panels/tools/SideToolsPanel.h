@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-
 #include <imgui.h>
 #include <glm/vec2.hpp>
 
@@ -12,11 +11,14 @@ public:
     static constexpr ImGuiWindowFlags PANEL_FLAGS = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse |
                                                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
 
-    void draw(float scale, glm::ivec2 windowSize, ImFont* iconFont, ImFont* textFont = nullptr);
+    void draw(float scale, glm::ivec2 windowSize, class IOPanel& ioPanel, ImFont* iconFont, ImFont* textFont = nullptr);
 
     Tool getSelectedTool() const { return selectedTool; }
-    void setSelectedTool(Tool tool) { selectedTool = tool; }
+    void setSelectedTool(Tool tool);
 
 private:
+    static bool isRegionSpawnTool(Tool tool);
+
     Tool selectedTool = Tool::Cursor;
+    bool regionSpawnPopupVisible_ = true;
 };

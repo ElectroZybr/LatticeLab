@@ -159,9 +159,9 @@ public:
     void resetRuntimeState() noexcept { restoreRuntimeState(0, 0.0f); }
 
 private:
-    glm::vec3 size;
-    glm::vec3 renderOffset;
-    glm::vec3 gravity;
+    glm::vec3 size{0.0f};
+    glm::vec3 renderOffset{0.0f};
+    glm::vec3 gravity{0.0f};
 
     bool ljEnabled = true;
     bool coulombEnabled = true;

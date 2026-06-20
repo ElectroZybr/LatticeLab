@@ -39,7 +39,12 @@ void SpawnCircleTool::onLeftReleased(glm::ivec2 mousePos) {
         region.center = glm::vec3(centerLocalWorld_.x, centerLocalWorld_.y, 0.5f * worldSize.z);
         region.cylinderRadius = radius;
         region.cylinderHeight = worldSize.z;
-        ctx.ioPanel->emitSpawnFromRegion(region);
+        if (ctx.uiState != nullptr) {
+            ctx.ioPanel->emitSpawnFromRegion(region, ctx.uiState->spawnSpecies);
+        }
+        else {
+            ctx.ioPanel->emitSpawnFromRegion(region);
+        }
     }
 
     reset();

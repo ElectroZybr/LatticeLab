@@ -70,8 +70,13 @@ public:
     bool hasMoleculeTemplate(std::string_view name) const;
     [[nodiscard]] const MoleculeTemplate* findMoleculeTemplate(std::string_view name) const;
     [[nodiscard]] const std::unordered_map<std::string, MoleculeTemplate>& moleculeTemplates() const noexcept { return moleculeTemplates_; }
+    [[nodiscard]] bool canSpawnMolecule(std::string_view speciesName, glm::vec3 start_coords,
+                                        const std::optional<glm::mat3>& rotation = std::nullopt) const;
+    [[nodiscard]] bool spawnMoleculeChecked(std::string_view speciesName, glm::vec3 start_coords, const std::optional<glm::mat3>& rotation,
+                                            bool fixed);
     [[nodiscard]] bool spawnMolecule(std::string_view speciesName, glm::vec3 start_coords, const std::optional<glm::mat3>& rotation, bool fixed);
     [[nodiscard]] bool randomSpawn(std::string_view speciesName, const SpawnOptions& options = {});
+    [[nodiscard]] static glm::mat3 randomRotationMatrix();
     float lj_min(AtomData::Type a, AtomData::Type b);
 
     void setDt(float dt) { world().setDt(dt); }

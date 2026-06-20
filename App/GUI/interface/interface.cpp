@@ -166,10 +166,10 @@ int Interface::update() {
 
     ImGui::PushFont(fontManager.main);
     toolsPanel.draw(styleManager.getScale(), debugPanel, settingsPanel, ioPanel);
-    periodicPanel.draw(styleManager.getScale(), glm::ivec2(width, height), uiState_.selectedAtom);
+    periodicPanel.draw(styleManager.getScale(), glm::ivec2(width, height), *simulation_, uiState_.selectedAtom, uiState_.spawnSpecies);
     simControlPanel.draw(styleManager.getScale(), glm::ivec2(width, height), uiState_.pause, uiState_.simulationSpeed, uiState_.simStep,
                          deltaTime);
-    sideToolsPanel.draw(styleManager.getScale(), glm::ivec2(width, height), fontManager.icons, fontManager.dialog);
+    sideToolsPanel.draw(styleManager.getScale(), glm::ivec2(width, height), ioPanel, fontManager.icons, fontManager.dialog);
     statsPanel.draw(styleManager.getScale(), glm::ivec2(width, height));
     if (uiState_.drawToolTrip) {
         const ImVec2 mouse = ImGui::GetMousePos();

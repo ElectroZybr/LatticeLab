@@ -37,6 +37,7 @@ public:
         ImGuiWindowFlags_AlwaysVerticalScrollbar;
 
     void draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simulation, FileDialogManager& fileDialog, UiState& uiState);
+    void drawRegionSpawnPopup(float scale, ImVec2 anchorPos, std::string_view popupId = "##region_spawn_tool_popup");
     void setScenesDirectory(std::filesystem::path scenesDirectory);
     [[nodiscard]] const std::filesystem::path& scenesDirectory() const { return scenesDirectory_; }
 
@@ -53,8 +54,17 @@ public:
     [[nodiscard]] bool isVisible() const { return visible_; }
     [[nodiscard]] bool canSpawnFromRegionTool() const;
     bool emitSpawnFromRegion(const AppSignals::UI::GeneratorRegionSpec& region) const;
+    bool emitSpawnFromRegion(const AppSignals::UI::GeneratorRegionSpec& region, std::string_view species) const;
 
 private:
+    void drawRandomFillGeneratorEditor(float scale, const std::vector<std::string>& availableMolecules,
+                                       AppSignals::UI::GeneratorRegionSpec* regionOverride,
+                                       std::vector<AppSignals::UI::GeneratorComposeSpec>& composition,
+                                       Generators::RandomFillOptions& options, bool showRegionEditor, bool showCreateButton);
+    void drawLatticeFillGeneratorEditor(float scale, const std::vector<std::string>& availableMolecules,
+                                        AppSignals::UI::GeneratorRegionSpec* regionOverride,
+                                        std::vector<AppSignals::UI::GeneratorComposeSpec>& composition,
+                                        Generators::LatticeFillOptions& options, bool showRegionEditor, bool showCreateButton);
     void ensureSceneCatalogLoaded();
     void clearPendingDeleteState();
     void removeSceneTileByPath(std::string_view path);
@@ -71,13 +81,40 @@ private:
     AppSignals::UI::GeneratorRegionSpec randomFillRegion_{};
     AppSignals::UI::GeneratorRegionSpec latticeFillRegion_{};
     std::vector<AppSignals::UI::GeneratorComposeSpec> randomFillComposition_ = {
-        {.species = "Ar", .fraction = 1.0f},
+        {.species = "Z", .fraction = 1.0f},
     };
     std::vector<AppSignals::UI::GeneratorComposeSpec> latticeFillComposition_ = {
         {.species = "Z", .fraction = 1.0f},
     };
-    Generators::RandomFillOptions randomFillOptions_{.density = 0.01f};
+    Generators::RandomFillOptions randomFillOptions_{
+        .mode = Generators::SpawnMode::Replace,
+        .density = 0.01f,
+        .temperature = 0.0f,
+        .margin = 2.0f,
+        .maxAttemptsPerSpawn = 32,
+        .randomRotation = true,
+        .fixed = false,
+        .seed = 0,
+    };
     Generators::LatticeFillOptions latticeFillOptions_{};
+    GeneratorKind regionToolGeneratorKind_ = GeneratorKind::RandomFill;
+    std::vector<AppSignals::UI::GeneratorComposeSpec> regionToolRandomFillComposition_ = {
+        {.species = "Z", .fraction = 1.0f},
+    };
+    std::vector<AppSignals::UI::GeneratorComposeSpec> regionToolLatticeFillComposition_ = {
+        {.species = "Z", .fraction = 1.0f},
+    };
+    Generators::RandomFillOptions regionToolRandomFillOptions_{
+        .mode = Generators::SpawnMode::Replace,
+        .density = 0.01f,
+        .temperature = 0.0f,
+        .margin = 2.0f,
+        .maxAttemptsPerSpawn = 32,
+        .randomRotation = true,
+        .fixed = false,
+        .seed = 0,
+    };
+    Generators::LatticeFillOptions regionToolLatticeFillOptions_{};
     RecordingFormat recordingFormat_ = RecordingFormat::MP4;
     std::filesystem::path scenesDirectory_ = AppPaths::kDefaultScenesDirectory;
     std::vector<IOPanelSceneTile> sceneTiles_;

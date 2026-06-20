@@ -15,6 +15,7 @@ struct UiState {
     bool cursorHovered = false;
 
     int selectedAtom = 0;
+    std::string spawnSpecies = "Z";
     int selectedAtomCount = 0;
     float simulationSpeed = 100.0f;
     double averageEnergy = 0.0;
