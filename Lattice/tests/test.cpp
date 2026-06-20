@@ -184,6 +184,49 @@ static void testSpawnWaterMoleculeCreatesLocalAtoms() {
     }
 }
 
+static void testSpawnNitrogenMoleculeCreatesStableBond() {
+    Lattice::Simulation simulation;
+    simulation.createWorld(glm::vec3(20.0f, 20.0f, 20.0f));
+
+    const std::filesystem::path nitrogenPath = std::filesystem::path("Mods") / "Base" / "Molecules" / "n2.pdb";
+    expect(simulation.loadMoleculeTemplate("n2", nitrogenPath), "Nitrogen template should load");
+
+    expect(simulation.spawnMolecule("n2", glm::vec3(10.0f, 10.0f, 10.0f), glm::mat3(1.0f), false), "Direct nitrogen spawn should succeed");
+    expect(std::ranges::distance(simulation.bonds()) == 1, "Direct nitrogen spawn should create one bond");
+
+    for (const Bond& bond : simulation.bonds()) {
+        expect(bondDistance(simulation, bond) < 1.5f, "Directly spawned nitrogen bond should stay short");
+    }
+}
+
+static void testSpawnAdditionalDiatomicMoleculesCreateStableBond() {
+    constexpr std::array<std::string_view, 7> kMolecules = {
+        "cl2",
+        "f2",
+        "br2",
+        "hf",
+        "hcl",
+        "co",
+        "no",
+    };
+
+    for (std::string_view moleculeName : kMolecules) {
+        Lattice::Simulation simulation;
+        simulation.createWorld(glm::vec3(20.0f, 20.0f, 20.0f));
+
+        const std::filesystem::path moleculePath = std::filesystem::path("Mods") / "Base" / "Molecules" / (std::string(moleculeName) + ".pdb");
+        expect(simulation.loadMoleculeTemplate(std::string(moleculeName), moleculePath), "Molecule template should load");
+
+        expect(simulation.spawnMolecule(std::string(moleculeName), glm::vec3(10.0f, 10.0f, 10.0f), glm::mat3(1.0f), false),
+               "Direct diatomic spawn should succeed");
+        expect(std::ranges::distance(simulation.bonds()) == 1, "Direct diatomic spawn should create one bond");
+
+        for (const Bond& bond : simulation.bonds()) {
+            expect(bondDistance(simulation, bond) < 3.0f, "Directly spawned diatomic bond should stay short");
+        }
+    }
+}
+
 static void testCheckedMoleculeSpawnRejectsBlockedPoint() {
     Lattice::Simulation simulation;
     simulation.createWorld(glm::vec3(20.0f, 20.0f, 20.0f));
@@ -369,6 +412,8 @@ int main() {
     testOctreeBuildChargeAndChildren();
     testCoulombFarFieldApproximation();
     testSpawnWaterMoleculeCreatesLocalAtoms();
+    testSpawnNitrogenMoleculeCreatesStableBond();
+    testSpawnAdditionalDiatomicMoleculesCreateStableBond();
     testCheckedMoleculeSpawnRejectsBlockedPoint();
     testWaterMoleculeBondsStayLocalAfterNeighborSort();
     testLuaSceneObjectLoadsMoleculesDirectory();

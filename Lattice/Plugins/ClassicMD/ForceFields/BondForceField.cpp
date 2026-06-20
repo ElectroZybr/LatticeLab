@@ -197,7 +197,7 @@ void BondForceField::applyAngleForce(AtomStorage& atomStorage, size_t aIndex, si
 
     double sin_theta = std::sqrt(sin_theta_sqr);
 
-    constexpr double k = 50;
+    constexpr double k = 100;
     const double force_scale = -k * angle_loss / sin_theta;
     const double force_b_x = -((oc_hat_x - ob_hat_x * cos_theta) / len_ob) * force_scale;
     const double force_b_y = -((oc_hat_y - ob_hat_y * cos_theta) / len_ob) * force_scale;
