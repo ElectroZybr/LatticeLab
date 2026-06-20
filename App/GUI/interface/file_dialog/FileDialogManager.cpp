@@ -36,7 +36,7 @@ void FileDialogManager::openLoad() {
     IGFD::FileDialogConfig config;
     config.path = defaultSimulationPath(simulationDirectory_);
     config.countSelectionMax = 1;
-    ImGuiFileDialog::Instance()->OpenDialog("LoadDlg", "Load scene", ".latbin,.lat,.sim,.xyz", config);
+    ImGuiFileDialog::Instance()->OpenDialog("LoadDlg", "Load scene", ".latbin,.lat,.sim,.xyz,.lua", config);
 }
 
 void FileDialogManager::openCaptureDirectory(const std::string& currentPath) {

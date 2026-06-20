@@ -1,9 +1,9 @@
 key;en;ru
-integrator_velocity_verlet;Velocity Verlet;Интегратор Верле
+integrator_velocity_verlet;Velocity Verlet;Velocity Verlet
 integrator_kdk;KDK;KDK
 integrator_runge_kutta_4;Runge-Kutta 4;Runge-Kutta 4
 integrator_langevin;Langevin;Langevin
-integrator_andersen;Andersen;Андерсен
+integrator_andersen;Andersen;Andersen
 integrator_unknown;Unknown;Unknown
 speed_color_normal_coloring;Normal coloring;Обычная раскраска
 speed_color_gradient_coloring;Speed gradient;Градиент скорости
@@ -26,8 +26,8 @@ imgui_gravity_y;Gravity Y##gravity_y;Гравитация Y##gravity_y
 imgui_gravity_z;Gravity Z##gravity_z;Гравитация Z##gravity_z
 imgui_integrator;Integrator;Интегратор
 imgui_warning_not_implemented_used_as_velocity_verlet;Warning: %s is not yet implemented and temporarily works as Velocity Verlet;Внимание: %s пока не реализован и временно работает как Velocity Verlet
-imgui_speed_of_light;Speed of light;Скорость света
-imgui_speed_of_light_unlimited;unlimited;не ограничена
+imgui_max_particle_speed;Speed limit;Лимит скорости
+imgui_max_particle_speed_unlimited;unlimited;не ограничен
 imgui_accel_damping;Accel damping;Accel damping
 imgui_time_step;Time step (Dt);Time step (Dt)
 imgui_worlds;Worlds;Миры
@@ -59,7 +59,7 @@ imgui_skin_nl;Skin NL;Skin NL
 imgui_write;Record;Запись
 imgui_video_saving_folder;Video save folder;Папка сохранения видео
 imgui_capture_dir;##capture_dir;##capture_dir
-imgui_capture_dir_browse;...#capture_dir_browse;...#capture_dir_browse
+imgui_capture_dir_browse;...##capture_dir_browse;...##capture_dir_browse
 imgui_capture_settings_table;##capture_settings_table;##capture_settings_table
 imgui_fps_capture;FPS##capture_fps;FPS##capture_fps
 imgui_crf_capture;CRF##capture_crf;CRF##capture_crf

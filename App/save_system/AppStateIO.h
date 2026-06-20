@@ -25,4 +25,5 @@ private:
 
     static void loadText(Lattice::Simulation& simulation, BaseRenderer& renderer, std::string_view path);
     static void loadBinary(Lattice::Simulation& simulation, BaseRenderer& renderer, std::string_view path);
+    static void loadLuaScene(Lattice::Simulation& simulation, std::string_view path);
 };

@@ -134,7 +134,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     ImGui::TextUnformatted("imgui_gravity"_tr.data());
     ImGui::SameLine();
     glm::vec3 gravity = simulation.world().getGravity();
-    if (ImGui::Button("imgui_reset_gravity"_tr.data(), ImVec2(50.f * uiScale, 0.f))) {
+    if (ImGui::Button("imgui_reset_gravity"_tr.data(), ImVec2(80.f * uiScale, 0.f))) {
         simulation.world().setGravity(glm::vec3(0.0f));
         gravity = simulation.world().getGravity();
     }
@@ -158,6 +158,8 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         simulation.setGravity(glm::vec3(gx, gy, gz));
     }
 
+    ImGui::SeparatorText("Integrator"_tr.data());
+    ImGui::PushItemWidth(150.0f * uiScale);
     std::string_view currentIntegrator = simulation.getIntegrator();
     if (ComboStyle::beginCombo("imgui_integrator"_tr.data(), integratorName(currentIntegrator).data(), 0.0f, uiScale)) {
         for (const ModuleMeta<IIntegrator>& meta : Integrator::registry().items()) {
@@ -173,6 +175,23 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         ImGui::EndCombo();
     }
 
+    float dt = simulation.getDt();
+    ImGui::PushItemWidth(150.0f * uiScale);
+    if (ImGui::SliderFloat("imgui_time_step"_tr.data(), &dt, 0.0001f, 0.05f, "%.4f",
+                           ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_Logarithmic)) {
+        simulation.setDt(dt);
+    }
+    ImGui::PopItemWidth();
+
+    float maxParticleSpeed = simulation.getMaxParticleSpeed();
+    ImGui::PushItemWidth(150.0f * uiScale);
+    if (ImGui::SliderFloat("imgui_max_particle_speed"_tr.data(), &maxParticleSpeed, 0.0f, 100.0f,
+                           maxParticleSpeed <= 0.0f ? "imgui_max_particle_speed_unlimited"_tr.data() : "%.2f")) {
+        simulation.setMaxParticleSpeed(maxParticleSpeed);
+    }
+    ImGui::PopItemWidth();
+
+    ImGui::SeparatorText("Thermostat"_tr.data());
     std::string_view currentThermostat = simulation.getThermostat();
     if (ComboStyle::beginCombo("Thermostat", thermostatName(currentThermostat).data(), 0.0f, uiScale)) {
         const bool noThermostatSelected = currentThermostat.empty();
@@ -197,36 +216,13 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         ImGui::EndCombo();
     }
 
-    if (currentIntegrator == "rk4" || currentIntegrator == "langevin") {
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.00f, 0.75f, 0.25f, 1.00f));
-        ImGui::TextWrapped("imgui_warning_not_implemented_used_as_velocity_verlet"_tr.data(),
-                           integratorName(currentIntegrator).data());
-        ImGui::PopStyleColor();
-    }
-
-    float maxParticleSpeed = simulation.getMaxParticleSpeed();
-    ImGui::PushItemWidth(150.0f * uiScale);
-    if (ImGui::SliderFloat("imgui_speed_of_light"_tr.data(), &maxParticleSpeed, 0.0f, 100.0f,
-                           maxParticleSpeed <= 0.0f ? "imgui_speed_of_light_unlimited"_tr.data() : "%.2f")) {
-        simulation.setMaxParticleSpeed(maxParticleSpeed);
-    }
-    ImGui::PopItemWidth();
-
     ImGui::PushItemWidth(150.0f * uiScale);
     if (currentThermostat == "andersen") {
         float thermostatTemperature = simulation.getThermostatTemperature();
-        if (ImGui::SliderFloat("Andersen T (K)", &thermostatTemperature, 1.0f, 5000.0f, "%.1f",
+        if (ImGui::SliderFloat("Temp (K)", &thermostatTemperature, 1.0f, 10000.0f, "%.1f",
                                ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_Logarithmic)) {
             simulation.setThermostatTemperature(thermostatTemperature);
         }
-    }
-    ImGui::PopItemWidth();
-
-    float dt = simulation.getDt();
-    ImGui::PushItemWidth(150.0f * uiScale);
-    if (ImGui::SliderFloat("imgui_time_step"_tr.data(), &dt, 0.0001f, 0.05f, "%.4f",
-                           ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_Logarithmic)) {
-        simulation.setDt(dt);
     }
     ImGui::PopItemWidth();
 
@@ -358,27 +354,20 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     ImGui::Checkbox("Field arrows", &activeRenderData.drawFieldArrows);
     ImGui::Checkbox("Field isolines", &activeRenderData.drawFieldContours);
     const bool hasFieldVisualization = activeRenderData.drawVectorField || activeRenderData.drawFieldArrows || activeRenderData.drawFieldContours;
-    ImGui::BeginDisabled(!hasFieldVisualization || activeRenderData.fieldAutoScale);
-    ImGui::PushItemWidth(180.0f * uiScale);
-    ImGui::SliderFloat("Field scale", &activeRenderData.fieldPotentialScale, 0.1f, 500.0f, "%.1f", ImGuiSliderFlags_Logarithmic);
-    ImGui::PopItemWidth();
-    ImGui::EndDisabled();
-    ImGui::SameLine();
-    ImGui::BeginDisabled(!hasFieldVisualization);
-    ImGui::Checkbox("Auto field", &activeRenderData.fieldAutoScale);
-    ImGui::EndDisabled();
-    ImGui::BeginDisabled(!hasFieldVisualization);
-    ImGui::PushItemWidth(180.0f * uiScale);
-    if (ImGui::SliderFloat("Field cell", &activeRenderData.fieldCellSize, 0.25f, 8.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp)) {
-        simulation.world().setVectorFieldCellSize(activeRenderData.fieldCellSize);
+    if (hasFieldVisualization) {
+        ImGui::Checkbox("Auto field", &activeRenderData.fieldAutoScale);
+        ImGui::PushItemWidth(180.0f * uiScale);
+        ImGui::SliderFloat("Field scale", &activeRenderData.fieldPotentialScale, 0.1f, 500.0f, "%.1f", ImGuiSliderFlags_Logarithmic);
+        if (ImGui::SliderFloat("Field cell", &activeRenderData.fieldCellSize, 0.25f, 8.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp)) {
+            simulation.world().setVectorFieldCellSize(activeRenderData.fieldCellSize);
+        }
+        activeRenderData.fieldCellSize = std::max(activeRenderData.fieldCellSize, 0.25f);
+        ImGui::SliderFloat("Field smooth", &activeRenderData.fieldSmoothing, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        activeRenderData.fieldSmoothing = std::clamp(activeRenderData.fieldSmoothing, 0.0f, 1.0f);
+        ImGui::SliderFloat("Isoline step", &activeRenderData.fieldContourStep, 0.01f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        activeRenderData.fieldContourStep = std::clamp(activeRenderData.fieldContourStep, 0.01f, 1.0f);
+        ImGui::PopItemWidth();
     }
-    activeRenderData.fieldCellSize = std::max(activeRenderData.fieldCellSize, 0.25f);
-    ImGui::SliderFloat("Field smooth", &activeRenderData.fieldSmoothing, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    activeRenderData.fieldSmoothing = std::clamp(activeRenderData.fieldSmoothing, 0.0f, 1.0f);
-    ImGui::SliderFloat("Isoline step", &activeRenderData.fieldContourStep, 0.01f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    activeRenderData.fieldContourStep = std::clamp(activeRenderData.fieldContourStep, 0.01f, 1.0f);
-    ImGui::PopItemWidth();
-    ImGui::EndDisabled();
     ImGui::Checkbox("imgui_connections"_tr.data(), &activeRenderData.drawBonds);
     ImGui::Checkbox("imgui_box"_tr.data(), &activeRenderData.drawBox);
     ImGui::Checkbox("imgui_memory_order"_tr.data(), &activeRenderData.drawMemoryOrder);
@@ -435,28 +424,6 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     }
     ImGui::EndDisabled();
     ImGui::PopItemWidth();
-
-    ImGui::SeparatorText("Interface");
-    const float currentInterfaceScale = std::round(appInterface.uiScaleMultiplier() * 10.0f) / 10.0f;
-    if (!interfaceScaleEditing_) {
-        pendingInterfaceScale_ = currentInterfaceScale;
-    }
-
-    ImGui::PushItemWidth(180.0f * uiScale);
-    if (ImGui::SliderFloat("Interface scale", &pendingInterfaceScale_, StyleManager::kMinUiScale, StyleManager::kMaxUiScale, "%.1f",
-                           ImGuiSliderFlags_AlwaysClamp)) {
-        pendingInterfaceScale_ = std::round(pendingInterfaceScale_ * 10.0f) / 10.0f;
-        interfaceScaleEditing_ = true;
-    }
-    ImGui::PopItemWidth();
-    if (interfaceScaleEditing_ && ImGui::IsItemDeactivatedAfterEdit()) {
-        appInterface.setUiScaleMultiplier(pendingInterfaceScale_);
-        interfaceScaleEditing_ = false;
-    }
-    else if (interfaceScaleEditing_ && !ImGui::IsItemActive()) {
-        pendingInterfaceScale_ = currentInterfaceScale;
-        interfaceScaleEditing_ = false;
-    }
 
     ImGui::SeparatorText("imgui_neighbour_list"_tr.data());
     int cellSize = simulation.world().getGridCellSize();
@@ -567,14 +534,37 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     }
 
     ImGui::SeparatorText("imgui_misc"_tr.data());
+    const float currentInterfaceScale = std::round(appInterface.uiScaleMultiplier() * 10.0f) / 10.0f;
+    if (!interfaceScaleEditing_) {
+        pendingInterfaceScale_ = currentInterfaceScale;
+    }
+
+    ImGui::PushItemWidth(180.0f * uiScale);
+    if (ImGui::SliderFloat("Interface scale", &pendingInterfaceScale_, StyleManager::kMinUiScale, StyleManager::kMaxUiScale, "%.1f",
+                           ImGuiSliderFlags_AlwaysClamp)) {
+        pendingInterfaceScale_ = std::round(pendingInterfaceScale_ * 10.0f) / 10.0f;
+        interfaceScaleEditing_ = true;
+    }
+    ImGui::PopItemWidth();
+    if (interfaceScaleEditing_ && ImGui::IsItemDeactivatedAfterEdit()) {
+        appInterface.setUiScaleMultiplier(pendingInterfaceScale_);
+        interfaceScaleEditing_ = false;
+    }
+    else if (interfaceScaleEditing_ && !ImGui::IsItemActive()) {
+        pendingInterfaceScale_ = currentInterfaceScale;
+        interfaceScaleEditing_ = false;
+    }
+
     const bool isFullscreen = WindowController::snapshot().fullscreen;
     const char* fullscreenButtonLabel = isFullscreen ? "imgui_windowed"_tr.data() : "imgui_fullscreen"_tr.data();
-    if (ImGui::Button(fullscreenButtonLabel, ImVec2(190.0f * uiScale, 0.0f))) {
+    const float miscRowWidth = ImGui::GetContentRegionAvail().x;
+    const float miscSpacing = ImGui::GetStyle().ItemSpacing.x;
+    const float miscButtonWidth = (miscRowWidth - miscSpacing) * 0.5f;
+    if (ImGui::Button(fullscreenButtonLabel, ImVec2(miscButtonWidth, 0.0f))) {
         WindowController::toggleFullscreen();
     }
     ImGui::SameLine();
-    const float languageButtonWidth = 86.0f * uiScale;
-    if (ImGui::Button("imgui_language_toggle"_tr.data(), ImVec2(languageButtonWidth, 0.0f))) {
+    if (ImGui::Button("imgui_language_toggle"_tr.data(), ImVec2(miscButtonWidth, 0.0f))) {
         i18n::toggle();
     }
 

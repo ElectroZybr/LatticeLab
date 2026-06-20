@@ -60,7 +60,6 @@ void registerClassicMDPlugin(ModuleRegistry<IIntegrator>& registry) {
     registry.add(makeIntegratorMeta<Verlet>());
     registry.add(makeIntegratorMeta<KDK>());
     registry.add(makeIntegratorMeta<RK4>());
-    registry.add(makeIntegratorMeta<Langevin>());
 }
 
 void registerClassicMDPlugin(ModuleRegistry<IThermostat>& registry) {

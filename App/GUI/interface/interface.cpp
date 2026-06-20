@@ -23,6 +23,8 @@
 #define ICON_FA_BUG "\uf188"
 
 namespace {
+    constexpr float kUiScaleWheelStep = 0.1f;
+
     PreviewFrameRect computeScenePreviewRect(const ImVec2& displaySize, float uiScale) {
         const float frameAspect = 1.282f;
         const float horizontalMargin = 36.0f * uiScale;
@@ -152,6 +154,12 @@ int Interface::update() {
     const float deltaTime = std::chrono::duration<float>(currentTime - lastTime_).count();
     io.DeltaTime = deltaTime;
     lastTime_ = currentTime;
+
+    if (io.KeyCtrl && io.MouseWheel != 0.0f && !io.WantTextInput) {
+        const float direction = io.MouseWheel > 0.0f ? 1.0f : -1.0f;
+        const float nextScale = std::round((uiScaleMultiplier() + direction * kUiScaleWheelStep) * 10.0f) / 10.0f;
+        setUiScaleMultiplier(nextScale);
+    }
 
     int width, height;
     glfwGetWindowSize(window_, &width, &height);

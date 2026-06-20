@@ -31,7 +31,7 @@ private:
     bool boxSizeTargetInitialized_ = false;
     glm::vec3 pendingBoxSize_{1.0f};
     bool smoothBoxResizeEnabled_ = false;
-    float boxResizeMaxSpeed_ = 60.0f;
+    float boxResizeMaxSpeed_ = 10.0f;
     bool interfaceScaleEditing_ = false;
     float pendingInterfaceScale_ = 1.0f;
 };

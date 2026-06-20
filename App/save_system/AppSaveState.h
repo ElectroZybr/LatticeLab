@@ -7,7 +7,7 @@
 #include "Rendering/RenderData.h"
 
 struct SimulationSaveState {
-    uint32_t version = 1;
+    uint32_t version = 2;
 
     // Симуляция
     float dt;
@@ -42,22 +42,53 @@ struct SimulationSaveState {
     // Связи
     std::vector<std::pair<uint64_t, uint64_t>> bonds;
 
+    static std::string integratorFromLegacyScheme(uint8_t scheme) {
+        switch (scheme) {
+        case 1:
+            return "kdk";
+        case 2:
+            return "rk4";
+        case 3:
+            return "langevin";
+        case 4:
+            return "andersen";
+        default:
+            return "verlet";
+        }
+    }
+
     constexpr static zpp::bits::errc serialize(auto& archive, auto& self) {
         if (auto err = archive(self.version); zpp::bits::failure(err.code)) {
             return err;
         }
 
         // v1
-        if (auto err = archive(self.dt, self.time_ns, self.step, self.integrator, self.gravity.x, self.gravity.y, self.gravity.z,
-                               self.bondFormationEnabled, self.LJEnabled, self.coulombEnabled, self.boxSize.x, self.boxSize.y, self.boxSize.z,
-                               self.gridCellSize, self.neighborListCutoff, self.neighborListSkin,
-                               self.maxParticleSpeed, self.atomMobileCount, self.x, self.y, self.z, self.vx, self.vy,
-                               self.vz, self.atomType, self.atomCharge, self.bonds);
-            zpp::bits::failure(err.code)) {
-            return err;
+        if (self.version == 1) {
+            uint8_t legacyIntegrator = 0;
+            float legacyAccelDamping = 0.0f;
+            if (auto err = archive(self.dt, self.time_ns, self.step, legacyIntegrator, self.gravity.x, self.gravity.y, self.gravity.z,
+                                   self.bondFormationEnabled, self.LJEnabled, self.coulombEnabled, self.boxSize.x, self.boxSize.y, self.boxSize.z,
+                                   self.gridCellSize, self.neighborListCutoff, self.neighborListSkin,
+                                   self.maxParticleSpeed, legacyAccelDamping, self.atomMobileCount, self.x, self.y, self.z, self.vx, self.vy,
+                                   self.vz, self.atomType, self.atomCharge, self.bonds);
+                zpp::bits::failure(err.code)) {
+                return err;
+            }
+            self.integrator = integratorFromLegacyScheme(legacyIntegrator);
+            return zpp::bits::errc{};
         }
 
-        // v2: if (self.version >= 2) { ... }
+        // v2
+        if (self.version >= 2) {
+            if (auto err = archive(self.dt, self.time_ns, self.step, self.integrator, self.gravity.x, self.gravity.y, self.gravity.z,
+                                   self.bondFormationEnabled, self.LJEnabled, self.coulombEnabled, self.boxSize.x, self.boxSize.y, self.boxSize.z,
+                                   self.gridCellSize, self.neighborListCutoff, self.neighborListSkin,
+                                   self.maxParticleSpeed, self.atomMobileCount, self.x, self.y, self.z, self.vx, self.vy,
+                                   self.vz, self.atomType, self.atomCharge, self.bonds);
+                zpp::bits::failure(err.code)) {
+                return err;
+            }
+        }
 
         return zpp::bits::errc{};
     }
@@ -107,7 +138,7 @@ struct AppSaveHeader {
     std::string description;
     uint32_t previewWidth = 0;
     uint32_t previewHeight = 0;
-    WGPUTextureFormat previewFormat;
+    uint32_t previewFormat = 0;
     std::vector<std::byte> previewPixels;
 
     constexpr static zpp::bits::errc serialize(auto& archive, auto& self) {

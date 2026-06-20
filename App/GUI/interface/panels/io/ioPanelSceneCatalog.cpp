@@ -209,7 +209,7 @@ namespace {
         info.description = header.description;
         info.imageWidth = header.previewWidth;
         info.imageHeight = header.previewHeight;
-        info.imageFormat = header.previewFormat;
+        info.imageFormat = wgpu::TextureFormat(static_cast<WGPUTextureFormat>(header.previewFormat));
         info.imageBytes = header.previewPixels;
         info.hasEmbeddedPreview = true;
 
@@ -222,6 +222,11 @@ namespace {
         }
         else if (path.extension() == ".latbin") {
             return parseBinSceneInfo(path);
+        }
+        else if (path.extension() == ".lua") {
+            ParsedSceneInfo info;
+            info.title = path.stem().string();
+            return info;
         }
         return {};
     }
@@ -245,7 +250,7 @@ std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirec
         if (!entry.is_regular_file(fsError) || fsError) {
             continue;
         }
-        if (entry.path().extension() == ".lat" || entry.path().extension() == ".latbin") {
+        if (entry.path().extension() == ".lat" || entry.path().extension() == ".latbin" || entry.path().extension() == ".lua") {
             scenePaths.emplace_back(entry.path());
         }
     }
