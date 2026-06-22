@@ -1,5 +1,6 @@
 #pragma once 
 
+#include <algorithm>
 #include <random>
 
 #include "Lattice/Engine/physics/IThermostat.h"
@@ -13,8 +14,9 @@ public:
         t(temperature), nu(param), randomGenerator(seed) {}
 
     float temperature() const override { return static_cast<float>(t); }
-    double getParam() const { return nu; }
     void setTemperature(float temperature) override { t = temperature; }
+    void setParam(float param) override { nu = std::max(0.0f, param); }
+    float param() const override { return static_cast<float>(nu); }
     void apply(StepContext& stepContext) override;
 
     void mkMove(StepContext& stepContext);

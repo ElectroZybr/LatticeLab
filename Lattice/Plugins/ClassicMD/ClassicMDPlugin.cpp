@@ -4,7 +4,9 @@
 #include "Lattice/Plugins/ClassicMD/Integrators/KDK.h"
 #include "Lattice/Plugins/ClassicMD/Integrators/RK4.h"
 #include "Lattice/Plugins/ClassicMD/Integrators/Verlet.h"
+#include "Lattice/Plugins/ClassicMD/Thermostats/AccelDamp.hpp"
 #include "Lattice/Plugins/ClassicMD/Thermostats/Andersen.h"
+#include "Lattice/Plugins/ClassicMD/Thermostats/Barendsen.hpp"
 #include "Lattice/Plugins/ClassicMD/Thermostats/Langevin.h"
 
 namespace {
@@ -63,5 +65,7 @@ void registerClassicMDPlugin(ModuleRegistry<IIntegrator>& registry) {
 }
 
 void registerClassicMDPlugin(ModuleRegistry<IThermostat>& registry) {
+    registry.add(makeThermostatMeta<AccelDamp>());
     registry.add(makeThermostatMeta<Andersen>());
+    registry.add(makeThermostatMeta<Barendsen>());
 }

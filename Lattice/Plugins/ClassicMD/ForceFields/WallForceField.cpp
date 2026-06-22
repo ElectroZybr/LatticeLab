@@ -14,11 +14,13 @@ void WallForceField::compute(World& world) const {
         float forceX = atoms.forceX(atomIndex);
         float forceY = atoms.forceY(atomIndex);
         float forceZ = atoms.forceZ(atomIndex);
+        const float invMass = atoms.invMass(atomIndex);
+        const float mass = invMass > 0.0f ? 1.0f / invMass : 0.0f;
 
         // мягкие стены
         softWalls(atoms.posX(atomIndex), atoms.posY(atomIndex), atoms.posZ(atomIndex), forceX, forceY, forceZ, wallMax);
         // постоянная сила
-        applyGravityForce(forceX, forceY, forceZ, gravity);
+        applyGravityForce(forceX, forceY, forceZ, gravity, mass);
 
         atoms.forceX(atomIndex) = forceX;
         atoms.forceY(atomIndex) = forceY;
@@ -46,8 +48,8 @@ void WallForceField::softWalls(float coordX, float coordY, float coordZ, float& 
     applyWall(coordZ, forceZ, wallMax.z);
 }
 
-void WallForceField::applyGravityForce(float& forceX, float& forceY, float& forceZ, const vec3& gravity) {
-    forceX += gravity.x;
-    forceY += gravity.y;
-    forceZ += gravity.z;
+void WallForceField::applyGravityForce(float& forceX, float& forceY, float& forceZ, const vec3& gravity, float mass) {
+    forceX += gravity.x * mass;
+    forceY += gravity.y * mass;
+    forceZ += gravity.z * mass;
 }

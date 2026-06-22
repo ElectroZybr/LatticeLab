@@ -89,8 +89,8 @@ public:
     std::string_view getThermostat() const { return world().getThermostat().getThermostat(); }
     void setThermostatTemperature(float temperature) { world().getThermostat().setTemperature(temperature); }
     float getThermostatTemperature() const { return world().getThermostat().temperature(); }
-    void setAndersenTemperature(float temperature) { setThermostatTemperature(temperature); }
-    float getAndersenTemperature() const { return getThermostatTemperature(); }
+    void setThermostatParam(float param) { world().getThermostat().setParam(param); }
+    float getThermostatParam() const { return world().getThermostat().param(); }
 
     size_t getSimStep() const { return world().getSimStep(); }
     float simTimeNs() const { return world().getSimTimeNs(); }

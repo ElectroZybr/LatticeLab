@@ -13,6 +13,8 @@ public:
     virtual ~IThermostat() = default;
     virtual void setTemperature(float temperature) { (void)temperature; }
     virtual float temperature() const { return 0.0f; }
+    virtual void setParam(float param) { (void)param; }
+    virtual float param() const { return 0.0f; }
     virtual void apply(StepContext& stepContext) = 0;
 };
 
@@ -43,10 +45,22 @@ public:
     }
     float temperature() const { return temperature_; }
 
-    void onModuleSet(IThermostat& thermostat) { thermostat.setTemperature(temperature_); }
+    void setParam(float param) {
+        param_ = std::max(0.0f, param);
+        if (impl_) {
+            impl_->setParam(param_);
+        }
+    }
+    float param() const { return param_; }
+
+    void onModuleSet(IThermostat& thermostat) {
+        thermostat.setTemperature(temperature_);
+        thermostat.setParam(param_);
+    }
 
 private:
     float temperature_ = 300.0f;
+    float param_ = 1.0f;
 };
 
 #define REGISTER_THERMOSTAT(Type) REGISTER_MODULE(Type, IThermostat, Thermostat::registry, autoRegThermostat_)

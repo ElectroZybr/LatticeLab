@@ -217,11 +217,17 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     }
 
     ImGui::PushItemWidth(150.0f * uiScale);
-    if (currentThermostat == "andersen") {
+    if (!currentThermostat.empty()) {
         float thermostatTemperature = simulation.getThermostatTemperature();
         if (ImGui::SliderFloat("Temp (K)", &thermostatTemperature, 1.0f, 10000.0f, "%.1f",
                                ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_Logarithmic)) {
             simulation.setThermostatTemperature(thermostatTemperature);
+        }
+
+        float thermostatParam = simulation.getThermostatParam();
+        if (ImGui::SliderFloat("Param", &thermostatParam, 0.001f, 100.0f, "%.3f",
+                               ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_Logarithmic)) {
+            simulation.setThermostatParam(thermostatParam);
         }
     }
     ImGui::PopItemWidth();
