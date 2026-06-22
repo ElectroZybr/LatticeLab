@@ -144,7 +144,7 @@ void Interface::applyPendingUiScaleRefresh() {
 void Interface::syncWindowMetrics() {
     int width = 0;
     int height = 0;
-    glfwGetWindowSize(window_, &width, &height);
+    glfwGetFramebufferSize(window_, &width, &height);
 
     if (width <= 0 || height <= 0) {
         return;
@@ -189,8 +189,13 @@ int Interface::update() {
         setUiScaleMultiplier(nextScale);
     }
 
-    int width, height;
-    glfwGetWindowSize(window_, &width, &height);
+    int width = 0;
+    int height = 0;
+    glfwGetFramebufferSize(window_, &width, &height);
+    if (width > 0 && height > 0) {
+        io.DisplaySize = ImVec2(static_cast<float>(width), static_cast<float>(height));
+        io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+    }
 
     ImGui::PushFont(fontManager.main);
     toolsPanel.draw(styleManager.getScale(), debugPanel, settingsPanel, ioPanel);
@@ -237,9 +242,36 @@ int Interface::update() {
 
 void Interface::draw(BaseRenderer& renderer) {
     ImGui::Render();
+    ImDrawData* drawData = ImGui::GetDrawData();
+    if (drawData != nullptr) {
+        uint32_t renderWidth = 0;
+        uint32_t renderHeight = 0;
+        if (captureController_ != nullptr) {
+            renderWidth = captureController_->renderWidth();
+            renderHeight = captureController_->renderHeight();
+        }
+        if (renderWidth == 0 || renderHeight == 0) {
+            renderWidth = WGPUContext::instance().width();
+            renderHeight = WGPUContext::instance().height();
+        }
+
+        if (renderWidth > 0 && renderHeight > 0) {
+            const ImVec2 actualDisplaySize(static_cast<float>(renderWidth), static_cast<float>(renderHeight));
+            if (drawData->DisplaySize.x != actualDisplaySize.x || drawData->DisplaySize.y != actualDisplaySize.y ||
+                drawData->FramebufferScale.x != 1.0f || drawData->FramebufferScale.y != 1.0f) {
+                drawData->DisplayPos = ImVec2(0.0f, 0.0f);
+                drawData->DisplaySize = actualDisplaySize;
+                drawData->FramebufferScale = ImVec2(1.0f, 1.0f);
+            }
+        }
+    }
+
+    if (drawData == nullptr) {
+        return;
+    }
 
     if (wgpu::raii::RenderPassEncoder* currentPass = renderer.currentRenderPass(); currentPass != nullptr) {
-        ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), **currentPass);
+        ImGui_ImplWGPU_RenderDrawData(drawData, **currentPass);
     }
 }
 

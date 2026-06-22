@@ -6,6 +6,8 @@
 #include <iostream>
 #include <string>
 
+#include <glm/vec2.hpp>
+
 #include "Lattice/Engine/metrics/Profiler.h"
 #include "GUI/interface/UiState.h"
 #include "GUI/io/keyboard/Keyboard.h"
@@ -121,6 +123,17 @@ void CaptureController::renderFrame(BaseRenderer& renderer, const std::function<
     wgpu::SurfaceTexture surfaceTex;
     ctx.surface()->getCurrentTexture(&surfaceTex);
     wgpu::raii::Texture surfaceTexture(surfaceTex.texture);
+    activeFormat_ = surfaceTexture->getFormat();
+    activeWidth_ = surfaceTexture->getWidth();
+    activeHeight_ = surfaceTexture->getHeight();
+
+    const uint32_t targetWidth = activeWidth_;
+    const uint32_t targetHeight = activeHeight_;
+    const glm::vec2 currentScreenSize = renderer.camera.getScreenSize();
+    if (targetWidth > 0 && targetHeight > 0 &&
+        (currentScreenSize.x != static_cast<float>(targetWidth) || currentScreenSize.y != static_cast<float>(targetHeight))) {
+        renderer.camera.setScreenSize(glm::vec2(static_cast<float>(targetWidth), static_cast<float>(targetHeight)));
+    }
     wgpu::raii::TextureView surfaceView = surfaceTexture->createView();
 
     const wgpu::TextureView renderTarget = acquireRenderTarget(*surfaceTexture, *surfaceView);

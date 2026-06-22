@@ -5,7 +5,9 @@
 class StatsPanel {
 public:
     static constexpr ImGuiWindowFlags PANEL_FLAGS = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse |
-                                                    ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
+                                                    ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar |
+                                                    ImGuiWindowFlags_NoBackground |
+                                                    ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize;
 
     void draw(float scale, glm::ivec2 windowSize);
 };

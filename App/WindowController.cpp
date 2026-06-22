@@ -31,6 +31,15 @@ void logWindowState(const char* label, GLFWwindow* window, bool isFullscreen, bo
         << " size=(" << width << "x" << height << ")"
         << std::endl;
 }
+
+bool monitorWorkArea(GLFWmonitor* monitor, int& x, int& y, int& width, int& height) {
+    if (!monitor) {
+        return false;
+    }
+
+    glfwGetMonitorWorkarea(monitor, &x, &y, &width, &height);
+    return width > 0 && height > 0;
+}
 } // namespace
 
 GLFWwindow* WindowController::window = nullptr;
@@ -162,11 +171,20 @@ void WindowController::syncWindowedStateFromWindow() {
     }
 
     windowedWasMaximized = glfwGetWindowAttrib(window, GLFW_MAXIMIZED) == GLFW_TRUE;
-    windowedMonitorIndex = monitorIndex(currentMonitor());
+    GLFWmonitor* monitor = currentMonitor();
+    windowedMonitorIndex = monitorIndex(monitor);
     if (!windowedWasMaximized) {
         glfwGetWindowPos(window, &windowedX, &windowedY);
         glfwGetWindowSize(window, &windowedWidth, &windowedHeight);
+        return;
     }
+
+    if (monitor && monitorWorkArea(monitor, windowedX, windowedY, windowedWidth, windowedHeight)) {
+        return;
+    }
+
+    glfwGetWindowPos(window, &windowedX, &windowedY);
+    glfwGetWindowSize(window, &windowedWidth, &windowedHeight);
 }
 
 void WindowController::applyWindowedState() {
@@ -174,7 +192,17 @@ void WindowController::applyWindowedState() {
         return;
     }
 
-    glfwSetWindowMonitor(window, nullptr, windowedX, windowedY, windowedWidth, windowedHeight, GLFW_DONT_CARE);
+    int targetX = windowedX;
+    int targetY = windowedY;
+    int targetWidth = windowedWidth;
+    int targetHeight = windowedHeight;
+    if (windowedWasMaximized) {
+        if (GLFWmonitor* monitor = monitorByIndex(windowedMonitorIndex)) {
+            monitorWorkArea(monitor, targetX, targetY, targetWidth, targetHeight);
+        }
+    }
+
+    glfwSetWindowMonitor(window, nullptr, targetX, targetY, targetWidth, targetHeight, GLFW_DONT_CARE);
     if (windowedWasMaximized) {
         glfwMaximizeWindow(window);
     }
@@ -230,13 +258,14 @@ void WindowController::toggleFullscreen() {
     }
 
     syncWindowedStateFromWindow();
-    GLFWmonitor* monitor = monitorByIndex(windowedMonitorIndex);
+    GLFWmonitor* monitor = currentMonitor();
     if (!monitor) {
-        monitor = currentMonitor();
+        monitor = monitorByIndex(windowedMonitorIndex);
     }
     if (!monitor) {
         return;
     }
+    windowedMonitorIndex = monitorIndex(monitor);
     applyFullscreen(monitor);
     isFullscreen = true;
     logWindowState("after-toggle", window, isFullscreen, windowedWasMaximized);
@@ -255,9 +284,18 @@ UserSettings::WindowState WindowController::snapshot() {
     if (!state.fullscreen && window) {
         syncWindowedStateFromWindow();
         state.maximized = glfwGetWindowAttrib(window, GLFW_MAXIMIZED) == GLFW_TRUE;
-        glfwGetWindowPos(window, &state.x, &state.y);
-        glfwGetWindowSize(window, &state.width, &state.height);
         state.monitorIndex = monitorIndex(currentMonitor());
+        if (state.maximized) {
+            GLFWmonitor* monitor = monitorByIndex(state.monitorIndex);
+            if (!monitorWorkArea(monitor, state.x, state.y, state.width, state.height)) {
+                glfwGetWindowPos(window, &state.x, &state.y);
+                glfwGetWindowSize(window, &state.width, &state.height);
+            }
+        }
+        else {
+            glfwGetWindowPos(window, &state.x, &state.y);
+            glfwGetWindowSize(window, &state.width, &state.height);
+        }
     }
 
     return state;

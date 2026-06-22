@@ -44,6 +44,8 @@ public:
     [[nodiscard]] uint64_t savedFrameCount() const noexcept { return producer_.capturedFrameCount(); }
     [[nodiscard]] float captureFps() const noexcept { return captureFps_; }
     [[nodiscard]] double blinkElapsed() const noexcept { return blinkElapsed_; }
+    [[nodiscard]] uint32_t renderWidth() const noexcept { return activeWidth_; }
+    [[nodiscard]] uint32_t renderHeight() const noexcept { return activeHeight_; }
 
 private:
     [[nodiscard]] std::filesystem::path makeCaptureOutputPath() const;

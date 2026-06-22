@@ -34,7 +34,7 @@ private:
     AreaAction areaAction_ = AreaAction::Select;
     float brushRadius_ = 12.0f;
     float cursorDragStrength_ = 5.0f;
-    bool toolPopupVisible_ = true;
+    bool toolPopupVisible_ = false;
     bool popupBoundsValid_ = false;
     ImVec2 popupMin_ = ImVec2(0.0f, 0.0f);
     ImVec2 popupMax_ = ImVec2(0.0f, 0.0f);
