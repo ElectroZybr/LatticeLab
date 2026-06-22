@@ -95,6 +95,10 @@ void Mouse::onScroll(GLFWwindow*, double xoffset, double yoffset) {
         imgui_scroll_callback(window, xoffset, yoffset);
     }
 
+    if (ImGui::GetIO().KeyCtrl) {
+        return;
+    }
+
     std::unique_ptr<BaseRenderer>& rend = *renderer;
     constexpr float kFreeWheelMoveScale = 0.008f;
 

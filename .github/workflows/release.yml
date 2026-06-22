@@ -80,12 +80,12 @@ jobs:
         shell: bash
         run: |
           archive_name="LatticeLab-${VERSION}-${{ matrix.archive_suffix }}.${{ matrix.archive_ext }}"
-          mkdir -p release_dist/assets release_dist/demo
+          mkdir -p release_dist/assets
           cp LatticeLab.exe release_dist/
           find . -maxdepth 1 -type f -name "*.dll" -exec cp {} release_dist/ \;
           cp -r assets/* release_dist/assets/
-          if [ -d demo/scenes ]; then
-            cp -r demo/scenes release_dist/demo/
+          if [ -d Mods ]; then
+            cp -r Mods release_dist/
           fi
           cd release_dist
           7z a "../${archive_name}" *
@@ -95,12 +95,12 @@ jobs:
         shell: bash
         run: |
           archive_name="LatticeLab-${VERSION}-${{ matrix.archive_suffix }}.${{ matrix.archive_ext }}"
-          mkdir -p release_dist/assets release_dist/demo
+          mkdir -p release_dist/assets
           cp LatticeLab release_dist/
           find . -maxdepth 1 -type f \( -name "${{ matrix.package_glob }}" \) -exec cp {} release_dist/ \; || true
           cp -r assets/* release_dist/assets/
-          if [ -d demo/scenes ]; then
-            cp -r demo/scenes release_dist/demo/
+          if [ -d Mods ]; then
+            cp -r Mods release_dist/
           fi
           tar -czf "${archive_name}" -C release_dist .
 
