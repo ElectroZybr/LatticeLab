@@ -47,6 +47,8 @@ public:
     void drawRegionSpawnSettings(float scale, bool compact = false);
     void setScenesDirectory(std::filesystem::path scenesDirectory);
     [[nodiscard]] const std::filesystem::path& scenesDirectory() const { return scenesDirectory_; }
+    void setSceneCatalogView(SceneCatalogView view) { sceneCatalogView_ = view; sceneCatalogLoaded_ = false; }
+    [[nodiscard]] SceneCatalogView sceneCatalogView() const { return sceneCatalogView_; }
 
     void toggle() {
         visible_ = !visible_;

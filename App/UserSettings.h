@@ -10,6 +10,12 @@
 #include "Rendering/RenderData.h"
 
 struct UserSettings {
+    enum class SceneCatalogView : uint8_t {
+        Demo,
+        User,
+        All,
+    };
+
     struct WindowState {
         bool fullscreen = false;
         bool maximized = true;
@@ -22,6 +28,7 @@ struct UserSettings {
 
     std::filesystem::path captureOutputDirectory = std::filesystem::path(AppPaths::kDefaultCaptureDirectory);
     std::filesystem::path scenesDirectory = std::filesystem::path(AppPaths::kUserScenesDirectory);
+    SceneCatalogView sceneCatalogView = SceneCatalogView::All;
     CaptureSettings captureSettings{};
     WindowState windowState{};
 

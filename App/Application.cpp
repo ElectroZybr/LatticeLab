@@ -116,6 +116,7 @@ int Application::run() {
     captureController.setSettings(userSettings.captureSettings);
     captureController.setOutputDirectory(userSettings.captureOutputDirectory);
     appInterface.setScenesDirectory(userSettings.scenesDirectory);
+    appInterface.ioPanel.setSceneCatalogView(static_cast<IOPanel::SceneCatalogView>(userSettings.sceneCatalogView));
     renderer.renderer().getRenderData(0).drawAtoms = userSettings.rendererDrawAtoms;
     renderer.renderer().getRenderData(0).drawGrid = userSettings.rendererDrawGrid;
     renderer.renderer().getRenderData(0).drawVectorField = userSettings.rendererDrawVectorField;
@@ -209,6 +210,7 @@ int Application::run() {
     UserSettingsIO::save(UserSettings{
         .captureOutputDirectory = captureController.outputDirectory(),
         .scenesDirectory = appInterface.scenesDirectory(),
+        .sceneCatalogView = static_cast<UserSettings::SceneCatalogView>(appInterface.ioPanel.sceneCatalogView()),
         .captureSettings = captureController.settings(),
         .windowState = windowState,
         .rendererUse3D = renderer.renderer().camera.getMode() != Camera::Mode::Mode2D,

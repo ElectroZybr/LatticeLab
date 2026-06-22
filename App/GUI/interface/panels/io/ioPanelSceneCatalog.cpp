@@ -4,6 +4,7 @@
 #include <array>
 #include <cctype>
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -15,6 +16,7 @@
 
 #include "App/save_system/AppSaveState.h"
 #include "Rendering/backend/WGPUContext.h"
+#include "stb/stb_image.h"
 
 namespace {
     struct ScenePathEntry {
@@ -221,6 +223,40 @@ namespace {
         return info;
     }
 
+    void tryLoadExternalPreview(const std::filesystem::path& scenePath, ParsedSceneInfo& info) {
+        if (info.hasEmbeddedPreview) {
+            return;
+        }
+
+        const std::filesystem::path previewPath = scenePath.parent_path() / (scenePath.stem().string() + ".png");
+        const std::filesystem::path fallbackPreviewPath = scenePath.parent_path() / (scenePath.stem().string() + ".preview.png");
+        const std::filesystem::path& resolvedPreviewPath =
+            std::filesystem::exists(previewPath) ? previewPath : fallbackPreviewPath;
+        if (!std::filesystem::exists(resolvedPreviewPath)) {
+            return;
+        }
+
+        int width = 0;
+        int height = 0;
+        int channels = 0;
+        unsigned char* pixels = stbi_load(resolvedPreviewPath.string().c_str(), &width, &height, &channels, 4);
+        if (pixels == nullptr || width <= 0 || height <= 0) {
+            if (pixels != nullptr) {
+                stbi_image_free(pixels);
+            }
+            return;
+        }
+
+        info.imageWidth = static_cast<unsigned>(width);
+        info.imageHeight = static_cast<unsigned>(height);
+        info.imageFormat = wgpu::TextureFormat::RGBA8Unorm;
+        const size_t byteCount = static_cast<size_t>(width) * static_cast<size_t>(height) * 4;
+        info.imageBytes.resize(byteCount);
+        std::memcpy(info.imageBytes.data(), pixels, byteCount);
+        info.hasEmbeddedPreview = true;
+        stbi_image_free(pixels);
+    }
+
     ParsedSceneInfo parseSceneInfo(const std::filesystem::path& path) {
         if (path.extension() == ".lat") {
             return parseTxtSceneInfo(path);
@@ -231,6 +267,7 @@ namespace {
         else if (path.extension() == ".lua") {
             ParsedSceneInfo info;
             info.title = path.stem().string();
+            tryLoadExternalPreview(path, info);
             return info;
         }
         return {};

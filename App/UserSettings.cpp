@@ -82,6 +82,28 @@ namespace {
     std::string integratorFromString(const std::string& value) {
         return Integrator::registry().find(value) != nullptr ? value : "verlet";
     }
+
+    const char* sceneCatalogViewToString(UserSettings::SceneCatalogView view) {
+        switch (view) {
+        case UserSettings::SceneCatalogView::Demo:
+            return "demo";
+        case UserSettings::SceneCatalogView::User:
+            return "user";
+        case UserSettings::SceneCatalogView::All:
+            return "all";
+        }
+        return "all";
+    }
+
+    UserSettings::SceneCatalogView sceneCatalogViewFromString(const std::string& value) {
+        if (value == "demo") {
+            return UserSettings::SceneCatalogView::Demo;
+        }
+        if (value == "user") {
+            return UserSettings::SceneCatalogView::User;
+        }
+        return UserSettings::SceneCatalogView::All;
+    }
 }
 
 std::filesystem::path UserSettingsIO::defaultPath() { return std::filesystem::path(AppPaths::kUserSettingsPath); }
@@ -112,6 +134,11 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
             if (file >> std::ws && std::getline(file, value) && !value.empty()) {
                 settings.scenesDirectory = value;
             }
+        }
+        else if (tag == "scene_catalog_view") {
+            std::string value;
+            file >> value;
+            settings.sceneCatalogView = sceneCatalogViewFromString(value);
         }
         else if (tag == "capture_fps") {
             file >> settings.captureSettings.fps;
@@ -269,6 +296,7 @@ void UserSettingsIO::save(const UserSettings& settings, const std::filesystem::p
 
     file << "capture_output_dir " << settings.captureOutputDirectory.string() << "\n";
     file << "scenes_dir " << settings.scenesDirectory.string() << "\n";
+    file << "scene_catalog_view " << sceneCatalogViewToString(settings.sceneCatalogView) << "\n";
     file << "capture_fps " << settings.captureSettings.fps << "\n";
     file << "capture_crf " << settings.captureSettings.crf << "\n";
     file << "capture_preset " << presetToString(settings.captureSettings.preset) << "\n";

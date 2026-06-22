@@ -91,16 +91,6 @@ namespace {
         return "All";
     }
 
-    const char* sceneSourceLabel(IOPanelSceneSource source) {
-        switch (source) {
-        case IOPanelSceneSource::BuiltIn:
-            return "Demo";
-        case IOPanelSceneSource::User:
-            return "User";
-        }
-        return "Demo";
-    }
-
     std::string speciesLabel(std::string_view species) {
         if (species == "Z") {
             return "Zerium";
@@ -846,8 +836,6 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
         drawList->AddText(ImVec2(titlePos.x + 1.0f, titlePos.y + 1.0f), ImGui::GetColorU32(ImVec4(0.02f, 0.03f, 0.05f, 0.85f)),
                           tile.title.data());
         drawList->AddText(titlePos, ImGui::GetColorU32(ImVec4(0.95f, 0.96f, 0.98f, 1.0f)), tile.title.data());
-        const ImVec2 sourcePos(tileMin.x + 10.0f, tileMin.y + 10.0f);
-        drawList->AddText(sourcePos, ImGui::GetColorU32(ImVec4(0.78f, 0.83f, 0.88f, 0.96f)), sceneSourceLabel(tile.source));
         if (!tile.description.empty()) {
             const ImVec2 descriptionPos(tileMin.x + 10.0f, tileMax.y - 15.0f);
             drawList->AddText(ImVec2(descriptionPos.x + 1.0f, descriptionPos.y + 1.0f),
