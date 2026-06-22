@@ -109,6 +109,10 @@ namespace {
         return pressed;
     }
 
+    bool isPointInsideRect(const ImVec2& point, const ImVec2& min, const ImVec2& max) {
+        return point.x >= min.x && point.x <= max.x && point.y >= min.y && point.y <= max.y;
+    }
+
 }
 
 bool SideToolsPanel::isAreaTool(Tool tool) {
@@ -122,10 +126,14 @@ bool SideToolsPanel::isAreaTool(Tool tool) {
     }
 }
 
+bool SideToolsPanel::hasContextPopup(Tool tool) {
+    return tool == Tool::Cursor || isAreaTool(tool);
+}
+
 void SideToolsPanel::setSelectedTool(Tool tool) {
     if (selectedTool == tool) {
-        if (isAreaTool(tool)) {
-            areaPopupVisible_ = !areaPopupVisible_;
+        if (hasContextPopup(tool)) {
+            toolPopupVisible_ = !toolPopupVisible_;
         }
         return;
     }
@@ -145,11 +153,48 @@ void SideToolsPanel::setSelectedTool(Tool tool) {
         default:
             break;
         }
-        areaPopupVisible_ = true;
+        toolPopupVisible_ = true;
+    }
+    else if (tool == Tool::Cursor) {
+        toolPopupVisible_ = true;
     }
     else {
-        areaPopupVisible_ = false;
+        toolPopupVisible_ = false;
     }
+}
+
+void SideToolsPanel::updatePopupBounds() {
+    popupMin_ = ImGui::GetWindowPos();
+    const ImVec2 popupSize = ImGui::GetWindowSize();
+    popupMax_ = ImVec2(popupMin_.x + popupSize.x, popupMin_.y + popupSize.y);
+    popupBoundsValid_ = true;
+}
+
+void SideToolsPanel::drawCursorContextPopup(float scale, ImVec2 anchorPos) {
+    const float popupWidth = kAreaPopupWidth * scale;
+
+    ImGui::SetNextWindowPos(anchorPos, ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(popupWidth, 0.0f), ImGuiCond_Always);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f * scale, 10.0f * scale));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f * scale);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.28f, 0.35f, 0.44f, 0.95f));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.10f, 0.13f, 0.17f, 0.96f));
+
+    if (ImGui::Begin("##cursor_tool_context", nullptr,
+                     ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize)) {
+        updatePopupBounds();
+        ImGui::TextUnformatted("Cursor tool");
+        ImGui::SetNextItemWidth(kCompactFieldWidth * scale);
+        ImGui::SliderFloat("##cursor_drag_strength", &cursorDragStrength_, 0.2f, 20.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Strength");
+    }
+    ImGui::End();
+
+    ImGui::PopStyleColor(2);
+    ImGui::PopStyleVar(3);
 }
 
 void SideToolsPanel::drawAreaContextPopup(float scale, ImVec2 anchorPos, IOPanel& ioPanel) {
@@ -165,6 +210,7 @@ void SideToolsPanel::drawAreaContextPopup(float scale, ImVec2 anchorPos, IOPanel
 
     if (ImGui::Begin("##area_tool_context", nullptr,
                      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize)) {
+        updatePopupBounds();
         ImGui::TextUnformatted(selectedAreaToolTitle(selectedTool));
 
         ImGui::SetNextItemWidth(kCompactFieldWidth * scale);
@@ -237,6 +283,9 @@ void SideToolsPanel::draw(float scale, glm::ivec2 windowSize, IOPanel& ioPanel, 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(panelPaddingX, panelPaddingY));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, spacingY));
     ImGui::Begin("SideTools", nullptr, PANEL_FLAGS);
+    const ImVec2 panelMin = ImGui::GetWindowPos();
+    const ImVec2 panelSize = ImGui::GetWindowSize();
+    const ImVec2 panelMax(panelMin.x + panelSize.x, panelMin.y + panelSize.y);
 
     if (iconFont) {
         ImGui::PushFont(iconFont);
@@ -244,7 +293,7 @@ void SideToolsPanel::draw(float scale, glm::ivec2 windowSize, IOPanel& ioPanel, 
 
     ImVec2 selectedToolMin(0.0f, 0.0f);
     bool selectedToolVisible = false;
-    const bool suppressTooltips = areaPopupVisible_ && isAreaTool(selectedTool);
+    const bool suppressTooltips = toolPopupVisible_ && hasContextPopup(selectedTool);
     for (const ToolItem& item : TOOL_ITEMS) {
         if (drawToolButton(item.icon, item.tooltip, selectedTool == item.tool, suppressTooltips, buttonSize, scale, textFont)) {
             setSelectedTool(item.tool);
@@ -262,16 +311,31 @@ void SideToolsPanel::draw(float scale, glm::ivec2 windowSize, IOPanel& ioPanel, 
     ImGui::End();
     ImGui::PopStyleVar(2);
 
-    if (areaPopupVisible_ && selectedToolVisible && isAreaTool(selectedTool)) {
+    popupBoundsValid_ = false;
+    if (toolPopupVisible_ && selectedToolVisible && hasContextPopup(selectedTool)) {
         constexpr float kPopupWidth = kAreaPopupWidth;
         constexpr float kPopupGap = 12.0f;
         const ImVec2 popupPos(selectedToolMin.x - (kPopupWidth + kPopupGap) * scale, selectedToolMin.y);
         if (textFont) {
             ImGui::PushFont(textFont);
         }
-        drawAreaContextPopup(scale, popupPos, ioPanel);
+        if (selectedTool == Tool::Cursor) {
+            drawCursorContextPopup(scale, popupPos);
+        }
+        else {
+            drawAreaContextPopup(scale, popupPos, ioPanel);
+        }
         if (textFont) {
             ImGui::PopFont();
+        }
+    }
+
+    if (toolPopupVisible_ && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+        const ImVec2 mousePos = ImGui::GetMousePos();
+        const bool clickedPanel = isPointInsideRect(mousePos, panelMin, panelMax);
+        const bool clickedPopup = popupBoundsValid_ && isPointInsideRect(mousePos, popupMin_, popupMax_);
+        if (!clickedPanel && !clickedPopup) {
+            toolPopupVisible_ = false;
         }
     }
 }

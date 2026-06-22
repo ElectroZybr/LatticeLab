@@ -99,7 +99,7 @@ void ToolsManager::init(GLFWwindow* w, Lattice::Simulation& sim, std::unique_ptr
     for (auto& tool : toolInstances) {
         tool.reset();
     }
-    toolInstances[toIndex(Mode::Cursor)] = std::make_unique<CursorTool>(toolContext);
+    toolInstances[toIndex(Mode::Cursor)] = std::make_unique<CursorTool>(toolContext, *sideToolsPanel);
     toolInstances[toIndex(Mode::Area)] = std::make_unique<AreaTool>(toolContext, *sideToolsPanel);
     toolInstances[toIndex(Mode::Ruler)] = std::make_unique<RulerTool>(toolContext);
     toolInstances[toIndex(Mode::AddAtom)] = std::make_unique<AddAtomTool>(toolContext);

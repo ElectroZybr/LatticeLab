@@ -4,8 +4,9 @@
 #include "Lattice/Engine/Simulation.h"
 #include "GUI/interface/UiState.h"
 #include "GUI/io/keyboard/Keyboard.h"
+#include "GUI/interface/panels/tools/SideToolsPanel.h"
 
-CursorTool::CursorTool(ToolContext& context) noexcept : ITool(context) {}
+CursorTool::CursorTool(ToolContext& context, SideToolsPanel& sideToolsPanel) noexcept : ITool(context), sideToolsPanel_(sideToolsPanel) {}
 
 void CursorTool::onLeftPressed(glm::ivec2 mousePos) {
     ToolContext& ctx = context();
@@ -56,11 +57,11 @@ void CursorTool::onFrame(glm::ivec2 mousePos, float deltaTime) {
     const glm::vec3 displacement = worldMouse - selectedWorldPos;
 
     constexpr float kReferenceFrameRate = 60.0f;
-    constexpr float kDragStrength = 5.f;
     const float frameScale = deltaTime * kReferenceFrameRate;
+    const float dragStrength = sideToolsPanel_.cursorDragStrength();
 
     auto applyRawForce = [&](size_t idx, const glm::vec3& baseDisplacement) {
-        const glm::vec3 dragForce = baseDisplacement * (kDragStrength * frameScale);
+        const glm::vec3 dragForce = baseDisplacement * (dragStrength * frameScale);
         atoms.forceX(idx) += dragForce.x;
         atoms.forceY(idx) += dragForce.y;
         atoms.forceZ(idx) += dragForce.z;

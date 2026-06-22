@@ -3,9 +3,11 @@
 #include "App/interaction/tools/ITool.h"
 #include "Lattice/Engine/physics/Atom/AtomStorage.h"
 
+class SideToolsPanel;
+
 class CursorTool final : public ITool {
 public:
-    explicit CursorTool(ToolContext& context) noexcept;
+    CursorTool(ToolContext& context, SideToolsPanel& sideToolsPanel) noexcept;
 
     void onLeftPressed(glm::ivec2 mousePos) override;
     void onLeftReleased(glm::ivec2 mousePos) override;
@@ -15,6 +17,7 @@ public:
 private:
     static constexpr AtomStorage::AtomId InvalidAtomId = AtomStorage::InvalidAtomId;
 
+    SideToolsPanel& sideToolsPanel_;
     AtomStorage::AtomId selectedMoveAtomId_ = InvalidAtomId;
     bool atomMoveActive_ = false;
 };
