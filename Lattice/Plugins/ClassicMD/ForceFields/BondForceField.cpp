@@ -1,5 +1,6 @@
 #include "BondForceField.h"
 
+#include <numbers>
 #include <vector>
 
 #include "Lattice/Engine/NeighborSearch/NeighborList.h"
