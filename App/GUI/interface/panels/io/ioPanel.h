@@ -66,6 +66,7 @@ public:
     bool emitSpawnFromRegion(const AppSignals::UI::GeneratorRegionSpec& region, std::string_view species) const;
 
 private:
+    void ensureDefaultGeneratorRegions(const Lattice::Simulation& simulation);
     void drawRandomFillGeneratorEditor(float scale, const std::vector<std::string>& availableMolecules,
                                        AppSignals::UI::GeneratorRegionSpec* regionOverride,
                                        std::vector<AppSignals::UI::GeneratorComposeSpec>& composition,
@@ -85,9 +86,10 @@ private:
     bool visible_ = false;
     bool sceneCatalogLoaded_ = false;
     bool generatorsExpanded_ = true;
+    bool generatorRegionsInitialized_ = false;
     float animProgress_ = 0.f;
     int generatorAxisCount_ = 25;
-    GeneratorKind generatorKind_ = GeneratorKind::TriangularBipyramid;
+    GeneratorKind generatorKind_ = GeneratorKind::LatticeFill;
 
     AtomData::Type tbpAtomType_ = AtomData::Type::Z;
     AppSignals::UI::GeneratorRegionSpec randomFillRegion_{};

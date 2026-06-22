@@ -5,6 +5,19 @@
 #include <string>
 
 namespace {
+    std::filesystem::path normalizeCaptureOutputDirectory(const std::filesystem::path& path) {
+        if (path.empty()) {
+            return std::filesystem::path(AppPaths::kDefaultCaptureDirectory);
+        }
+
+        const std::filesystem::path normalized = path.lexically_normal();
+        if (normalized == "captures" || normalized == "./captures" || normalized == "capture" || normalized == "./capture") {
+            return std::filesystem::path(AppPaths::kDefaultCaptureDirectory);
+        }
+
+        return path;
+    }
+
     const char* presetToString(CaptureSettings::Preset preset) {
         switch (preset) {
         case CaptureSettings::Preset::Ultrafast:
@@ -126,7 +139,7 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
         if (tag == "capture_output_dir") {
             std::string value;
             if (file >> std::ws && std::getline(file, value) && !value.empty()) {
-                settings.captureOutputDirectory = value;
+                settings.captureOutputDirectory = normalizeCaptureOutputDirectory(value);
             }
         }
         else if (tag == "scenes_dir") {
@@ -259,6 +272,9 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
     settings.captureSettings.crf = std::clamp(settings.captureSettings.crf, 0, 51);
     if (settings.captureOutputDirectory.empty()) {
         settings.captureOutputDirectory = std::filesystem::path(AppPaths::kDefaultCaptureDirectory);
+    }
+    else {
+        settings.captureOutputDirectory = normalizeCaptureOutputDirectory(settings.captureOutputDirectory);
     }
     if (settings.scenesDirectory.empty()) {
         settings.scenesDirectory = std::filesystem::path(AppPaths::kUserScenesDirectory);

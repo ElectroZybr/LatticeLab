@@ -5,6 +5,9 @@ integrator_runge_kutta_4;Runge-Kutta 4;Runge-Kutta 4
 integrator_langevin;Langevin;Langevin
 integrator_andersen;Andersen;Andersen
 integrator_unknown;Unknown;Unknown
+thermostat_andersen;Andersen;Andersen
+thermostat_barendsen;Barendsen;Barendsen
+thermostat_accel_damp;Accel damping;Accel damping
 speed_color_normal_coloring;Normal coloring;Обычная раскраска
 speed_color_gradient_coloring;Speed gradient;Градиент скорости
 speed_color_turbo_coloring;Turbo gradient;Турбо градиент
@@ -34,9 +37,15 @@ imgui_worlds;Worlds;Миры
 imgui_world_prefix;World ;Мир 
 imgui_create_world;Create world;Создать мир
 imgui_delete_world;Delete;Удалить
-imgui_offset_x;Offset X##world_offset_x;Offset X##world_offset_x
-imgui_offset_y;Offset Y##world_offset_y;Offset Y##world_offset_y
-imgui_offset_z;Offset Z##world_offset_z;Offset Z##world_offset_z
+imgui_none;None;Нет
+imgui_offset_x;Offset X##world_offset_x;Смещение X##world_offset_x
+imgui_offset_y;Offset Y##world_offset_y;Смещение Y##world_offset_y
+imgui_offset_z;Offset Z##world_offset_z;Смещение Z##world_offset_z
+imgui_size_x;Size X;Размер X
+imgui_size_y;Size Y;Размер Y
+imgui_size_z;Size Z;Размер Z
+imgui_hard_walls;Hard walls;Жесткие стены
+imgui_wall_speed;Wall speed;Скорость стенки
 imgui_bond_formation;Bond formation;Образовывать связи
 imgui_lj;LJ;LJ
 imgui_coulomb;Coulomb;Coulomb
@@ -47,15 +56,23 @@ imgui_connections;Connections;Связи
 imgui_box;Box bounds;Границы куба
 imgui_atoms;Draw atoms;Атомы
 imgui_memory_order;Memory line;Линия памяти
+imgui_potential_gradient;Potential gradient;Градиент потенциала
+imgui_field_arrows;Field arrows;Стрелки поля
+imgui_field_isolines;Field isolines;Изолинии поля
+imgui_auto_field;Auto field;Авто поле
+imgui_field_scale;Field scale;Масштаб поля
+imgui_field_cell;Field cell;Шаг ячейки поля
+imgui_field_smooth;Field smooth;Сглаживание поля
+imgui_isoline_step;Isoline step;Шаг изолиний
 imgui_color_scheme;Color scheme;Цветовая схема
 imgui_speed_color_mode;##speed_color_mode;##speed_color_mode
 imgui_max_gradien_velocity;Max gradient velocity;Макс. скорость градиента
 imgui_speed_gradient_max_slider;##speed_gradient_max;##speed_gradient_max
 imgui_auto_speed_gradien;Auto##speed_gradient_auto;Авто##speed_gradient_auto
 imgui_neighbour_list;Neighbour list;Список соседей
-imgui_cell_size;Cell size;Cell size
-imgui_cutoff_nl;Cutoff NL;Cutoff NL
-imgui_skin_nl;Skin NL;Skin NL
+imgui_cell_size;Cell size;Размер ячейки
+imgui_cutoff_nl;Cutoff NL;Радиус NL
+imgui_skin_nl;Skin NL;Запас NL
 imgui_write;Record;Запись
 imgui_video_saving_folder;Video save folder;Папка сохранения видео
 imgui_capture_dir;##capture_dir;##capture_dir
@@ -65,9 +82,81 @@ imgui_fps_capture;FPS##capture_fps;FPS##capture_fps
 imgui_crf_capture;CRF##capture_crf;CRF##capture_crf
 imgui_preset_capture;Preset##capture_preset;Preset##capture_preset
 imgui_color_capture;Color##capture_color;Цвет##capture_color
-imgui_reset_settings;Reset settings;Reset settings
+imgui_reset_settings;Reset settings;Сбросить настройки
 imgui_fullscreen;Fullscreen;Полноэкранный
 imgui_windowed;Windowed;Оконный режим
-imgui_exit_button;Exit;Exit
+imgui_interface_scale;Interface scale;Масштаб
+imgui_exit_button;Exit;Выход
 version_text_pre;LatticeLab v;LatticeLab v
 version_text_after; demo; demo
+tool_cursor;Cursor;Курсор
+tool_rect;Rect;Рамка
+tool_lasso;Lasso;Лассо
+tool_brush;Brush;Кисть
+tool_ruler;Ruler;Линейка
+tool_add_atom;Add atom;Добавить атом
+tool_remove_atom;Remove atom;Удалить атом
+tool_cursor_title;Cursor tool;Инструмент курсора
+tool_rect_title;Rect tool;Инструмент рамки
+tool_lasso_title;Lasso tool;Инструмент лассо
+tool_brush_title;Brush tool;Инструмент кисти
+tool_area_title;Area tool;Инструмент области
+tool_select;Select;Выделение
+tool_spawn;Spawn;Спавн
+tool_strength;Strength;Сила
+tool_mode;Mode;Режим
+tool_radius;Radius;Радиус
+io_file;File;Файл
+io_load;Load;Загрузить
+io_save;Save;Сохранить
+io_clear;Clear;Очистить
+io_record;Record;Запись
+io_stop;Stop;Стоп
+io_generators;Generators;Генераторы
+io_scenes;Scenes;Сцены
+io_scene_target;Save target: %s;Путь сохранения: %s
+io_scene_delete_title;Delete scene?;Удалить сцену?
+io_scene_delete_failed;Failed to remove scene file;Не удалось удалить файл сцены
+io_delete;Delete;Удалить
+io_cancel;Cancel;Отмена
+io_demo;Demo;Demo
+io_user;User;User
+io_all;All;All
+io_triangular_bipyramid;Triangular bipyramid;Треугольная бипирамида
+io_random_fill;Random fill;Случайное заполнение
+io_lattice_fill;Lattice fill;Решетчатое заполнение
+io_box;Box;Бокс
+io_sphere;Sphere;Сфера
+io_cylinder;Cylinder;Цилиндр
+io_capsule;Capsule;Капсула
+io_torus;Torus;Тор
+io_triangle_pyramid;Triangle pyramid;Треугольная пирамида
+io_triangle_bipyramid;Triangle bipyramid;Треугольная бипирамида
+io_reset;Reset;Reset
+io_add;Add;Add
+io_replace;Replace;Replace
+io_molecules;Molecules;Молекулы
+io_atoms;Atoms;Атомы
+io_region;Region;Область
+io_center;Center;Центр
+io_size;Size;Размер
+io_radius;Radius;Радиус
+io_base_radius;Base radius;Радиус основания
+io_height;Height;Высота
+io_capsule_radius;Capsule radius;Радиус капсулы
+io_capsule_height;Capsule height;Высота капсулы
+io_major_radius;Major radius;Большой радиус
+io_tube_radius;Tube radius;Радиус трубки
+io_base_circumradius;Base circumradius;Радиус описанной окружности основания
+io_pyramid_height;Pyramid height;Высота пирамиды
+io_bipyramid_height;Bipyramid height;Высота бипирамиды
+io_add_type;Add type;Add type
+io_sum_format;sum %.1f%%;сумма %.1f%%
+io_density;Density;Плотность
+io_temp;Temp;Temp
+io_random_rotation;Random rotation;Случайный поворот
+io_fixed;Fixed;Фиксировать
+io_create;Create;Создать
+io_type;Type;Тип
+io_structure;Structure;Структура
+io_spawn_region;Spawn region;Область спавна

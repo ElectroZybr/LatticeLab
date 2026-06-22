@@ -59,7 +59,7 @@ namespace {
         if (meta != nullptr && !meta->description.empty()) {
             return i18n::tr(meta->description);
         }
-        return id.empty() ? "None" : id;
+        return id.empty() ? "imgui_none"_tr : id;
     }
 
     std::string_view speedColorModeName(RenderData::SpeedColorMode mode) {
@@ -195,7 +195,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     std::string_view currentThermostat = simulation.getThermostat();
     if (ComboStyle::beginCombo("Thermostat", thermostatName(currentThermostat).data(), 0.0f, uiScale)) {
         const bool noThermostatSelected = currentThermostat.empty();
-        if (ImGui::Selectable("None", noThermostatSelected)) {
+        if (ImGui::Selectable("imgui_none"_tr.data(), noThermostatSelected)) {
             simulation.setThermostat({});
             currentThermostat = simulation.getThermostat();
         }
@@ -233,8 +233,11 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     ImGui::PopItemWidth();
 
     ImGui::SeparatorText("imgui_worlds"_tr.data());
+    const float worldRowWidth = ImGui::GetContentRegionAvail().x;
+    const float worldRowSpacing = ImGui::GetStyle().ItemSpacing.x;
+    const float worldButtonWidth = (worldRowWidth - worldRowSpacing) * 0.5f;
     const std::string activeWorldLabel = std::string("imgui_world_prefix"_tr) + std::to_string(simulation.activeWorldId());
-    if (ComboStyle::beginCombo("##active_world", activeWorldLabel.c_str(), 180.0f * uiScale, uiScale, ImGuiComboFlags_HeightLargest)) {
+    if (ComboStyle::beginCombo("##active_world", activeWorldLabel.c_str(), worldRowWidth, uiScale, ImGuiComboFlags_HeightLargest)) {
         for (Lattice::Simulation::WorldId worldId = 0; worldId < simulation.worldCount(); ++worldId) {
             const std::string worldLabel = std::string("imgui_world_prefix"_tr) + std::to_string(worldId);
             const bool isSelected = worldId == simulation.activeWorldId();
@@ -247,7 +250,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         }
         ImGui::EndCombo();
     }
-    if (ImGui::Button("imgui_create_world"_tr.data(), ImVec2(150.0f * uiScale, 0.0f))) {
+    if (ImGui::Button("imgui_create_world"_tr.data(), ImVec2(worldButtonWidth, 0.0f))) {
         constexpr float worldGap = 20.0f;
         const glm::vec3 newWorldSize = simulation.world().getWorldSize();
         glm::vec3 newWorldOffset = simulation.world().getRenderOffset();
@@ -262,7 +265,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     }
     ImGui::SameLine();
     ImGui::BeginDisabled(simulation.worldCount() <= 1);
-    if (ImGui::Button("imgui_delete_world"_tr.data(), ImVec2(90.0f * uiScale, 0.0f))) {
+    if (ImGui::Button("imgui_delete_world"_tr.data(), ImVec2(worldButtonWidth, 0.0f))) {
         simulation.removeWorld(simulation.activeWorldId());
     }
     ImGui::EndDisabled();
@@ -297,13 +300,13 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
         ImGui::TextUnformatted(label);
         return changed;
     };
-    boxSizeChanged |= drawBoxSizeDrag("Size X", "##settings_box_size_x", pendingBoxSize_.x);
-    boxSizeChanged |= drawBoxSizeDrag("Size Y", "##settings_box_size_y", pendingBoxSize_.y);
-    boxSizeChanged |= drawBoxSizeDrag("Size Z", "##settings_box_size_z", pendingBoxSize_.z);
+    boxSizeChanged |= drawBoxSizeDrag("imgui_size_x"_tr.data(), "##settings_box_size_x", pendingBoxSize_.x);
+    boxSizeChanged |= drawBoxSizeDrag("imgui_size_y"_tr.data(), "##settings_box_size_y", pendingBoxSize_.y);
+    boxSizeChanged |= drawBoxSizeDrag("imgui_size_z"_tr.data(), "##settings_box_size_z", pendingBoxSize_.z);
     ImGui::PopItemWidth();
 
     bool hardWallsEnabled = !smoothBoxResizeEnabled_;
-    if (ImGui::Checkbox("Жесткие стены", &hardWallsEnabled)) {
+    if (ImGui::Checkbox("imgui_hard_walls"_tr.data(), &hardWallsEnabled)) {
         smoothBoxResizeEnabled_ = !hardWallsEnabled;
         boxSizeEditing_ = false;
         if (hardWallsEnabled && !isBoxResizeTargetReached(currentWorldSize, pendingBoxSize_)) {
@@ -313,7 +316,7 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
 
     ImGui::PushItemWidth(150.0f * uiScale);
     ImGui::BeginDisabled(hardWallsEnabled);
-    const bool wallSpeedChanged = ImGui::SliderFloat("Wall speed", &boxResizeMaxSpeed_, 1.0f, 500.0f, "%.1f A/dt",
+    const bool wallSpeedChanged = ImGui::SliderFloat("imgui_wall_speed"_tr.data(), &boxResizeMaxSpeed_, 1.0f, 500.0f, "%.1f A/dt",
                                                      ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_AlwaysClamp);
     ImGui::EndDisabled();
     ImGui::PopItemWidth();
@@ -355,21 +358,25 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     ImGui::SeparatorText("imgui_render"_tr.data());
     ImGui::Checkbox("imgui_atoms"_tr.data(), &activeRenderData.drawAtoms);
     ImGui::Checkbox("imgui_grid"_tr.data(), &activeRenderData.drawGrid);
-    ImGui::Checkbox("Potential gradient", &activeRenderData.drawVectorField);
-    ImGui::Checkbox("Field arrows", &activeRenderData.drawFieldArrows);
-    ImGui::Checkbox("Field isolines", &activeRenderData.drawFieldContours);
+    ImGui::Checkbox("imgui_potential_gradient"_tr.data(), &activeRenderData.drawVectorField);
+    ImGui::Checkbox("imgui_field_arrows"_tr.data(), &activeRenderData.drawFieldArrows);
+    ImGui::Checkbox("imgui_field_isolines"_tr.data(), &activeRenderData.drawFieldContours);
     const bool hasFieldVisualization = activeRenderData.drawVectorField || activeRenderData.drawFieldArrows || activeRenderData.drawFieldContours;
     if (hasFieldVisualization) {
-        ImGui::Checkbox("Auto field", &activeRenderData.fieldAutoScale);
+        ImGui::Checkbox("imgui_auto_field"_tr.data(), &activeRenderData.fieldAutoScale);
         ImGui::PushItemWidth(180.0f * uiScale);
-        ImGui::SliderFloat("Field scale", &activeRenderData.fieldPotentialScale, 0.1f, 500.0f, "%.1f", ImGuiSliderFlags_Logarithmic);
-        if (ImGui::SliderFloat("Field cell", &activeRenderData.fieldCellSize, 0.25f, 8.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp)) {
+        ImGui::SliderFloat("imgui_field_scale"_tr.data(), &activeRenderData.fieldPotentialScale, 0.1f, 500.0f, "%.1f",
+                           ImGuiSliderFlags_Logarithmic);
+        if (ImGui::SliderFloat("imgui_field_cell"_tr.data(), &activeRenderData.fieldCellSize, 0.25f, 8.0f, "%.2f",
+                               ImGuiSliderFlags_AlwaysClamp)) {
             simulation.world().setVectorFieldCellSize(activeRenderData.fieldCellSize);
         }
         activeRenderData.fieldCellSize = std::max(activeRenderData.fieldCellSize, 0.25f);
-        ImGui::SliderFloat("Field smooth", &activeRenderData.fieldSmoothing, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::SliderFloat("imgui_field_smooth"_tr.data(), &activeRenderData.fieldSmoothing, 0.0f, 1.0f, "%.2f",
+                           ImGuiSliderFlags_AlwaysClamp);
         activeRenderData.fieldSmoothing = std::clamp(activeRenderData.fieldSmoothing, 0.0f, 1.0f);
-        ImGui::SliderFloat("Isoline step", &activeRenderData.fieldContourStep, 0.01f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::SliderFloat("imgui_isoline_step"_tr.data(), &activeRenderData.fieldContourStep, 0.01f, 1.0f, "%.2f",
+                           ImGuiSliderFlags_AlwaysClamp);
         activeRenderData.fieldContourStep = std::clamp(activeRenderData.fieldContourStep, 0.01f, 1.0f);
         ImGui::PopItemWidth();
     }
@@ -545,7 +552,8 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     }
 
     ImGui::PushItemWidth(180.0f * uiScale);
-    if (ImGui::SliderFloat("Interface scale", &pendingInterfaceScale_, StyleManager::kMinUiScale, StyleManager::kMaxUiScale, "%.1f",
+    if (ImGui::SliderFloat("imgui_interface_scale"_tr.data(), &pendingInterfaceScale_, StyleManager::kMinUiScale,
+                           StyleManager::kMaxUiScale, "%.1f",
                            ImGuiSliderFlags_AlwaysClamp)) {
         pendingInterfaceScale_ = std::round(pendingInterfaceScale_ * 10.0f) / 10.0f;
         interfaceScaleEditing_ = true;

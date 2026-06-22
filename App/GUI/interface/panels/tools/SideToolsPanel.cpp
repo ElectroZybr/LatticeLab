@@ -4,6 +4,7 @@
 #include <cfloat>
 #include <cmath>
 
+#include "App/localization/i18n.h"
 #include "GUI/interface/panels/io/ioPanel.h"
 
 #define ICON_FA_MOUSE_POINTER "\uf245"
@@ -15,6 +16,8 @@
 #define ICON_FA_BRUSH "\uf55d"
 #define ICON_FA_SQUARE_FULL "\uf45c"
 #define ICON_FA_CIRCLE "\uf111"
+
+using i18n::operator""_tr;
 
 namespace {
     constexpr ImVec4 ACTIVE_COLOR = ImVec4(0.06f, 0.53f, 0.98f, 1.00f);
@@ -28,48 +31,48 @@ namespace {
     };
 
     constexpr std::array<ToolItem, 7> TOOL_ITEMS{{
-        {SideToolsPanel::Tool::Cursor, ICON_FA_MOUSE_POINTER, "Cursor"},
-        {SideToolsPanel::Tool::Rect, ICON_FA_VECTOR_SQUARE, "Rect"},
-        {SideToolsPanel::Tool::Lasso, ICON_FA_DRAW_POLYGON, "Lasso"},
-        {SideToolsPanel::Tool::Brush, ICON_FA_BRUSH, "Brush"},
-        {SideToolsPanel::Tool::Ruler, ICON_FA_RULER, "Ruler"},
-        {SideToolsPanel::Tool::AddAtom, ICON_FA_PLUS, "Add atom"},
-        {SideToolsPanel::Tool::RemoveAtom, ICON_FA_MINUS, "Remove atom"},
+        {SideToolsPanel::Tool::Cursor, ICON_FA_MOUSE_POINTER, "tool_cursor"},
+        {SideToolsPanel::Tool::Rect, ICON_FA_VECTOR_SQUARE, "tool_rect"},
+        {SideToolsPanel::Tool::Lasso, ICON_FA_DRAW_POLYGON, "tool_lasso"},
+        {SideToolsPanel::Tool::Brush, ICON_FA_BRUSH, "tool_brush"},
+        {SideToolsPanel::Tool::Ruler, ICON_FA_RULER, "tool_ruler"},
+        {SideToolsPanel::Tool::AddAtom, ICON_FA_PLUS, "tool_add_atom"},
+        {SideToolsPanel::Tool::RemoveAtom, ICON_FA_MINUS, "tool_remove_atom"},
     }};
 
-    const char* areaShapeLabel(SideToolsPanel::AreaShape shape) {
+    std::string_view areaShapeLabel(SideToolsPanel::AreaShape shape) {
         switch (shape) {
         case SideToolsPanel::AreaShape::Rect:
-            return "Rect";
+            return "tool_rect"_tr;
         case SideToolsPanel::AreaShape::Lasso:
-            return "Lasso";
+            return "tool_lasso"_tr;
         case SideToolsPanel::AreaShape::Brush:
-            return "Brush";
+            return "tool_brush"_tr;
         }
-        return "Rect";
+        return "tool_rect"_tr;
     }
 
-    const char* selectedAreaToolTitle(SideToolsPanel::Tool tool) {
+    std::string_view selectedAreaToolTitle(SideToolsPanel::Tool tool) {
         switch (tool) {
         case SideToolsPanel::Tool::Rect:
-            return "Rect tool";
+            return "tool_rect_title"_tr;
         case SideToolsPanel::Tool::Lasso:
-            return "Lasso tool";
+            return "tool_lasso_title"_tr;
         case SideToolsPanel::Tool::Brush:
-            return "Brush tool";
+            return "tool_brush_title"_tr;
         default:
-            return "Area tool";
+            return "tool_area_title"_tr;
         }
     }
 
-    const char* areaActionLabel(SideToolsPanel::AreaAction action) {
+    std::string_view areaActionLabel(SideToolsPanel::AreaAction action) {
         switch (action) {
         case SideToolsPanel::AreaAction::Select:
-            return "Select";
+            return "tool_select"_tr;
         case SideToolsPanel::AreaAction::Spawn:
-            return "Spawn";
+            return "tool_spawn"_tr;
         }
-        return "Select";
+        return "tool_select"_tr;
     }
 
     bool drawToolButton(const char* icon, const char* tooltip, bool selected, bool suppressTooltip, float buttonSize, float scale,
@@ -98,7 +101,7 @@ namespace {
                 ImGui::PushFont(textFont);
             }
             ImGui::SetWindowFontScale(1.12f);
-            ImGui::TextUnformatted(tooltip);
+            ImGui::TextUnformatted(i18n::tr(tooltip).data());
             if (textFont) {
                 ImGui::PopFont();
             }
@@ -184,12 +187,12 @@ void SideToolsPanel::drawCursorContextPopup(float scale, ImVec2 anchorPos) {
     if (ImGui::Begin("##cursor_tool_context", nullptr,
                      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize)) {
         updatePopupBounds();
-        ImGui::TextUnformatted("Cursor tool");
+        ImGui::TextUnformatted("tool_cursor_title"_tr.data());
         ImGui::SetNextItemWidth(kCompactFieldWidth * scale);
         ImGui::SliderFloat("##cursor_drag_strength", &cursorDragStrength_, 0.2f, 20.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
         ImGui::SameLine();
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Strength");
+        ImGui::TextUnformatted("tool_strength"_tr.data());
     }
     ImGui::End();
 
@@ -211,17 +214,17 @@ void SideToolsPanel::drawAreaContextPopup(float scale, ImVec2 anchorPos, IOPanel
     if (ImGui::Begin("##area_tool_context", nullptr,
                      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize)) {
         updatePopupBounds();
-        ImGui::TextUnformatted(selectedAreaToolTitle(selectedTool));
+        ImGui::TextUnformatted(selectedAreaToolTitle(selectedTool).data());
 
         ImGui::SetNextItemWidth(kCompactFieldWidth * scale);
-        if (ImGui::BeginCombo("##area_action", areaActionLabel(areaAction_))) {
+        if (ImGui::BeginCombo("##area_action", areaActionLabel(areaAction_).data())) {
             constexpr std::array<AreaAction, 2> kActions = {
                 AreaAction::Select,
                 AreaAction::Spawn,
             };
             for (AreaAction action : kActions) {
                 const bool selected = areaAction_ == action;
-                if (ImGui::Selectable(areaActionLabel(action), selected)) {
+                if (ImGui::Selectable(areaActionLabel(action).data(), selected)) {
                     areaAction_ = action;
                 }
                 if (selected) {
@@ -232,18 +235,18 @@ void SideToolsPanel::drawAreaContextPopup(float scale, ImVec2 anchorPos, IOPanel
         }
         ImGui::SameLine();
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Mode");
+        ImGui::TextUnformatted("tool_mode"_tr.data());
 
         if (areaShape_ == AreaShape::Brush) {
             ImGui::SetNextItemWidth(kCompactFieldWidth * scale);
             ImGui::SliderFloat("##brush_radius", &brushRadius_, 1.0f, 80.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
             ImGui::SameLine();
             ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted("Radius");
+            ImGui::TextUnformatted("tool_radius"_tr.data());
         }
 
         if (areaAction_ == AreaAction::Spawn && ioPanel.canSpawnFromRegionTool()) {
-            ImGui::SeparatorText("Spawn");
+            ImGui::SeparatorText("tool_spawn"_tr.data());
             ioPanel.drawRegionSpawnSettings(scale, true);
         }
     }
@@ -330,7 +333,8 @@ void SideToolsPanel::draw(float scale, glm::ivec2 windowSize, IOPanel& ioPanel, 
         }
     }
 
-    if (toolPopupVisible_ && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+    if (toolPopupVisible_ && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+        !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup)) {
         const ImVec2 mousePos = ImGui::GetMousePos();
         const bool clickedPanel = isPointInsideRect(mousePos, panelMin, panelMax);
         const bool clickedPopup = popupBoundsValid_ && isPointInsideRect(mousePos, popupMin_, popupMax_);

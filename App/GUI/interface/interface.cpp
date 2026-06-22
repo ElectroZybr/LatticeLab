@@ -81,6 +81,9 @@ namespace {
             if (ImGui::MenuItem("Зафиксировать")) {
                 ToolsManager::setSelectedAtomsFixed(true);
             }
+            if (ImGui::MenuItem("Отфиксировать")) {
+                ToolsManager::setSelectedAtomsFixed(false);
+            }
             ImGui::EndPopup();
         }
     }

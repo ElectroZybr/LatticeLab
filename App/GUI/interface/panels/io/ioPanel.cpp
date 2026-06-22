@@ -11,6 +11,7 @@
 #include <string_view>
 
 #include "App/AppSignals.h"
+#include "App/localization/i18n.h"
 #include "Lattice/Engine/Simulation.h"
 #include "GUI/interface/UiState.h"
 #include "GUI/interface/file_dialog/FileDialogManager.h"
@@ -25,36 +26,38 @@ namespace {
     constexpr float kCompactFieldWidth = 126.0f;
     const std::filesystem::path kBaseMoleculesDirectory = std::filesystem::path("Mods") / "Base" / "Molecules";
 
-    const char* generatorLabel(IOPanel::GeneratorKind kind) {
+    using i18n::operator""_tr;
+
+    std::string_view generatorLabel(IOPanel::GeneratorKind kind) {
         switch (kind) {
         case IOPanel::GeneratorKind::TriangularBipyramid:
-            return "Triangular bipyramid";
+            return "io_triangular_bipyramid"_tr;
         case IOPanel::GeneratorKind::RandomFill:
-            return "Random fill";
+            return "io_random_fill"_tr;
         case IOPanel::GeneratorKind::LatticeFill:
-            return "Lattice fill";
+            return "io_lattice_fill"_tr;
         }
-        return "Triangular bipyramid";
+        return "io_triangular_bipyramid"_tr;
     }
 
-    const char* regionLabel(AppSignals::UI::GeneratorRegionKind kind) {
+    std::string_view regionLabel(AppSignals::UI::GeneratorRegionKind kind) {
         switch (kind) {
         case AppSignals::UI::GeneratorRegionKind::Box:
-            return "Box";
+            return "io_box"_tr;
         case AppSignals::UI::GeneratorRegionKind::Sphere:
-            return "Sphere";
+            return "io_sphere"_tr;
         case AppSignals::UI::GeneratorRegionKind::Cylinder:
-            return "Cylinder";
+            return "io_cylinder"_tr;
         case AppSignals::UI::GeneratorRegionKind::Capsule:
-            return "Capsule";
+            return "io_capsule"_tr;
         case AppSignals::UI::GeneratorRegionKind::Torus:
-            return "Torus";
+            return "io_torus"_tr;
         case AppSignals::UI::GeneratorRegionKind::TrianglePyramid:
-            return "Triangle pyramid";
+            return "io_triangle_pyramid"_tr;
         case AppSignals::UI::GeneratorRegionKind::TriangleBiPyramid:
-            return "Triangle bipyramid";
+            return "io_triangle_bipyramid"_tr;
         }
-        return "Box";
+        return "io_box"_tr;
     }
 
     const char* latticeStructureLabel(Generators::LatticeStructure structure) {
@@ -67,28 +70,28 @@ namespace {
         return "BCC";
     }
 
-    const char* spawnModeLabel(Generators::SpawnMode mode) {
+    std::string_view spawnModeLabel(Generators::SpawnMode mode) {
         switch (mode) {
         case Generators::SpawnMode::Reset:
-            return "Reset";
+            return "io_reset"_tr;
         case Generators::SpawnMode::Add:
-            return "Add";
+            return "io_add"_tr;
         case Generators::SpawnMode::Replace:
-            return "Replace";
+            return "io_replace"_tr;
         }
-        return "Replace";
+        return "io_replace"_tr;
     }
 
-    const char* sceneCatalogViewLabel(IOPanel::SceneCatalogView view) {
+    std::string_view sceneCatalogViewLabel(IOPanel::SceneCatalogView view) {
         switch (view) {
         case IOPanel::SceneCatalogView::BuiltIn:
-            return "Demo";
+            return "io_demo"_tr;
         case IOPanel::SceneCatalogView::User:
-            return "User";
+            return "io_user"_tr;
         case IOPanel::SceneCatalogView::All:
-            return "All";
+            return "io_all"_tr;
         }
-        return "All";
+        return "io_all"_tr;
     }
 
     std::string speciesLabel(std::string_view species) {
@@ -125,7 +128,7 @@ namespace {
         const std::string previewLabel = speciesLabel(species);
         if (ComboStyle::beginCombo(id, previewLabel.c_str(), width, scale)) {
             if (allowMolecules && !moleculeNames.empty()) {
-                ImGui::SeparatorText("Molecules");
+                ImGui::SeparatorText("io_molecules"_tr.data());
                 for (const std::string& moleculeName : moleculeNames) {
                     const bool selected = (species == moleculeName);
                     if (ImGui::Selectable(moleculeName.c_str(), selected)) {
@@ -137,7 +140,7 @@ namespace {
                 }
             }
 
-            ImGui::SeparatorText("Atoms");
+            ImGui::SeparatorText("io_atoms"_tr.data());
             for (int i = 0; i < static_cast<int>(AtomData::Type::COUNT); ++i) {
                 const AtomData::Type atomType = static_cast<AtomData::Type>(i);
                 const std::string_view symbol = AtomData::symbol(atomType);
@@ -255,7 +258,7 @@ namespace {
     }
 
     void drawRegionEditor(const char* prefix, AppSignals::UI::GeneratorRegionSpec& region, float scale) {
-        if (ImGui::BeginCombo((std::string("Region##") + prefix).c_str(), regionLabel(region.kind))) {
+        if (ImGui::BeginCombo((std::string("io_region"_tr) + "##" + prefix).c_str(), regionLabel(region.kind).data())) {
             constexpr AppSignals::UI::GeneratorRegionKind regionKinds[] = {
                 AppSignals::UI::GeneratorRegionKind::Box,
                 AppSignals::UI::GeneratorRegionKind::Sphere,
@@ -268,7 +271,7 @@ namespace {
 
             for (AppSignals::UI::GeneratorRegionKind kind : regionKinds) {
                 const bool selected = kind == region.kind;
-                if (ImGui::Selectable(regionLabel(kind), selected)) {
+                if (ImGui::Selectable(regionLabel(kind).data(), selected)) {
                     region.kind = kind;
                 }
                 if (selected) {
@@ -279,48 +282,54 @@ namespace {
         }
 
         ImGui::SetNextItemWidth(220.0f * scale);
-        ImGui::DragFloat3((std::string("Center##") + prefix).c_str(), &region.center.x, 0.25f, -10000.0f, 10000.0f, "%.2f");
+        ImGui::DragFloat3((std::string("io_center"_tr) + "##" + prefix).c_str(), &region.center.x, 0.25f, -10000.0f, 10000.0f, "%.2f");
 
         switch (region.kind) {
         case AppSignals::UI::GeneratorRegionKind::Box:
             ImGui::SetNextItemWidth(220.0f * scale);
-            ImGui::DragFloat3((std::string("Size##") + prefix).c_str(), &region.boxSize.x, 0.25f, 0.0f, 10000.0f, "%.2f");
+            ImGui::DragFloat3((std::string("io_size"_tr) + "##" + prefix).c_str(), &region.boxSize.x, 0.25f, 0.0f, 10000.0f, "%.2f");
             break;
         case AppSignals::UI::GeneratorRegionKind::Sphere:
             ImGui::SetNextItemWidth(120.0f * scale);
-            ImGui::DragFloat((std::string("Radius##") + prefix).c_str(), &region.sphereRadius, 0.25f, 0.0f, 10000.0f, "%.2f");
+            ImGui::DragFloat((std::string("io_radius"_tr) + "##" + prefix).c_str(), &region.sphereRadius, 0.25f, 0.0f, 10000.0f, "%.2f");
             break;
         case AppSignals::UI::GeneratorRegionKind::Cylinder:
             ImGui::SetNextItemWidth(120.0f * scale);
-            ImGui::DragFloat((std::string("Base radius##") + prefix).c_str(), &region.cylinderRadius, 0.25f, 0.0f, 10000.0f, "%.2f");
+            ImGui::DragFloat((std::string("io_base_radius"_tr) + "##" + prefix).c_str(), &region.cylinderRadius, 0.25f, 0.0f, 10000.0f, "%.2f");
             ImGui::SetNextItemWidth(120.0f * scale);
-            ImGui::DragFloat((std::string("Height##") + prefix).c_str(), &region.cylinderHeight, 0.25f, 0.0f, 10000.0f, "%.2f");
+            ImGui::DragFloat((std::string("io_height"_tr) + "##" + prefix).c_str(), &region.cylinderHeight, 0.25f, 0.0f, 10000.0f, "%.2f");
             break;
         case AppSignals::UI::GeneratorRegionKind::Capsule:
             ImGui::SetNextItemWidth(120.0f * scale);
-            ImGui::DragFloat((std::string("Capsule radius##") + prefix).c_str(), &region.capsuleRadius, 0.25f, 0.0f, 10000.0f, "%.2f");
+            ImGui::DragFloat((std::string("io_capsule_radius"_tr) + "##" + prefix).c_str(), &region.capsuleRadius, 0.25f, 0.0f, 10000.0f,
+                             "%.2f");
             ImGui::SetNextItemWidth(120.0f * scale);
-            ImGui::DragFloat((std::string("Capsule height##") + prefix).c_str(), &region.capsuleHeight, 0.25f, 0.0f, 10000.0f, "%.2f");
+            ImGui::DragFloat((std::string("io_capsule_height"_tr) + "##" + prefix).c_str(), &region.capsuleHeight, 0.25f, 0.0f, 10000.0f,
+                             "%.2f");
             break;
         case AppSignals::UI::GeneratorRegionKind::Torus:
             ImGui::SetNextItemWidth(120.0f * scale);
-            ImGui::DragFloat((std::string("Major radius##") + prefix).c_str(), &region.torusMajorRadius, 0.25f, 0.0f, 10000.0f, "%.2f");
+            ImGui::DragFloat((std::string("io_major_radius"_tr) + "##" + prefix).c_str(), &region.torusMajorRadius, 0.25f, 0.0f, 10000.0f,
+                             "%.2f");
             ImGui::SetNextItemWidth(120.0f * scale);
-            ImGui::DragFloat((std::string("Tube radius##") + prefix).c_str(), &region.torusTubeRadius, 0.25f, 0.0f, 10000.0f, "%.2f");
+            ImGui::DragFloat((std::string("io_tube_radius"_tr) + "##" + prefix).c_str(), &region.torusTubeRadius, 0.25f, 0.0f, 10000.0f,
+                             "%.2f");
             break;
         case AppSignals::UI::GeneratorRegionKind::TrianglePyramid:
             ImGui::SetNextItemWidth(120.0f * scale);
-            ImGui::DragFloat((std::string("Base circumradius##") + prefix).c_str(), &region.pyramidBaseCircumradius, 0.25f, 0.0f, 10000.0f,
-                             "%.2f");
+            ImGui::DragFloat((std::string("io_base_circumradius"_tr) + "##" + prefix).c_str(), &region.pyramidBaseCircumradius, 0.25f, 0.0f,
+                             10000.0f, "%.2f");
             ImGui::SetNextItemWidth(120.0f * scale);
-            ImGui::DragFloat((std::string("Pyramid height##") + prefix).c_str(), &region.pyramidHeight, 0.25f, 0.0f, 10000.0f, "%.2f");
+            ImGui::DragFloat((std::string("io_pyramid_height"_tr) + "##" + prefix).c_str(), &region.pyramidHeight, 0.25f, 0.0f, 10000.0f,
+                             "%.2f");
             break;
         case AppSignals::UI::GeneratorRegionKind::TriangleBiPyramid:
             ImGui::SetNextItemWidth(120.0f * scale);
-            ImGui::DragFloat((std::string("Base circumradius##") + prefix).c_str(), &region.bipyramidBaseCircumradius, 0.25f, 0.0f,
+            ImGui::DragFloat((std::string("io_base_circumradius"_tr) + "##" + prefix).c_str(), &region.bipyramidBaseCircumradius, 0.25f, 0.0f,
                              10000.0f, "%.2f");
             ImGui::SetNextItemWidth(120.0f * scale);
-            ImGui::DragFloat((std::string("Bipyramid height##") + prefix).c_str(), &region.bipyramidHeight, 0.25f, 0.0f, 10000.0f, "%.2f");
+            ImGui::DragFloat((std::string("io_bipyramid_height"_tr) + "##" + prefix).c_str(), &region.bipyramidHeight, 0.25f, 0.0f,
+                             10000.0f, "%.2f");
             break;
         }
     }
@@ -359,7 +368,7 @@ namespace {
             }
         }
 
-        if (ImGui::Button((std::string("Add type##") + prefix).c_str(), ImVec2((compact ? 86.0f : 140.0f) * scale, 0.0f))) {
+        if (ImGui::Button((std::string("io_add_type"_tr) + "##" + prefix).c_str(), ImVec2((compact ? 86.0f : 140.0f) * scale, 0.0f))) {
             composition.push_back({
                 .species = defaultSpecies,
                 .fraction = 0.0f,
@@ -372,7 +381,7 @@ namespace {
             totalFraction += std::max(entry.fraction, 0.0f);
         }
         ImGui::SameLine();
-        ImGui::Text("sum %.1f%%", totalFraction * 100.0f);
+        ImGui::Text("io_sum_format"_tr.data(), totalFraction * 100.0f);
     }
 }
 
@@ -428,6 +437,38 @@ void IOPanel::removeSceneTileByPath(std::string_view path) {
     }
 }
 
+void IOPanel::ensureDefaultGeneratorRegions(const Lattice::Simulation& simulation) {
+    if (generatorRegionsInitialized_) {
+        return;
+    }
+
+    const glm::vec3 worldSize = simulation.world().getWorldSize();
+    const glm::vec3 safeWorldSize = glm::max(worldSize, glm::vec3(1.0f));
+    const glm::vec3 defaultCenter = safeWorldSize * 0.5f;
+    const glm::vec3 defaultBoxSize = glm::max(safeWorldSize - glm::vec3(4.0f), glm::vec3(1.0f));
+
+    auto applyWorldDefaults = [&](AppSignals::UI::GeneratorRegionSpec& region) {
+        region.kind = AppSignals::UI::GeneratorRegionKind::Box;
+        region.center = defaultCenter;
+        region.boxSize = defaultBoxSize;
+        region.sphereRadius = 0.5f * std::min(defaultBoxSize.x, std::min(defaultBoxSize.y, defaultBoxSize.z));
+        region.cylinderRadius = 0.25f * std::min(defaultBoxSize.x, defaultBoxSize.y);
+        region.cylinderHeight = defaultBoxSize.z;
+        region.capsuleRadius = region.cylinderRadius;
+        region.capsuleHeight = std::max(0.0f, defaultBoxSize.z - 2.0f * region.capsuleRadius);
+        region.torusMajorRadius = 0.25f * std::min(defaultBoxSize.x, defaultBoxSize.y);
+        region.torusTubeRadius = std::max(1.0f, 0.25f * region.torusMajorRadius);
+        region.pyramidBaseCircumradius = 0.25f * std::min(defaultBoxSize.x, defaultBoxSize.y);
+        region.pyramidHeight = defaultBoxSize.z;
+        region.bipyramidBaseCircumradius = region.pyramidBaseCircumradius;
+        region.bipyramidHeight = defaultBoxSize.z;
+    };
+
+    applyWorldDefaults(randomFillRegion_);
+    applyWorldDefaults(latticeFillRegion_);
+    generatorRegionsInitialized_ = true;
+}
+
 void IOPanel::drawRandomFillGeneratorEditor(float scale, const std::vector<std::string>& availableMolecules,
                                             AppSignals::UI::GeneratorRegionSpec* regionOverride,
                                             std::vector<AppSignals::UI::GeneratorComposeSpec>& composition,
@@ -442,9 +483,9 @@ void IOPanel::drawRandomFillGeneratorEditor(float scale, const std::vector<std::
                           availableMolecules, true, compact);
 
     const char* modeId = regionOverride != nullptr ? "##region_tool_random_fill_mode" : "##random_fill_mode";
-    const bool modeOpen = compact ? compactComboRow("Mode", modeId, spawnModeLabel(options.mode), scale)
+    const bool modeOpen = compact ? compactComboRow("tool_mode"_tr.data(), modeId, spawnModeLabel(options.mode).data(), scale)
                                   : ComboStyle::beginCombo(regionOverride != nullptr ? "Mode##region_tool_random_fill" : "Mode##random_fill",
-                                                           spawnModeLabel(options.mode), 0.0f, scale);
+                                                           spawnModeLabel(options.mode).data(), 0.0f, scale);
     if (modeOpen) {
         constexpr Generators::SpawnMode spawnModes[] = {
             Generators::SpawnMode::Reset,
@@ -453,7 +494,7 @@ void IOPanel::drawRandomFillGeneratorEditor(float scale, const std::vector<std::
         };
         for (Generators::SpawnMode value : spawnModes) {
             const bool selected = value == options.mode;
-            if (ImGui::Selectable(spawnModeLabel(value), selected)) {
+            if (ImGui::Selectable(spawnModeLabel(value).data(), selected)) {
                 options.mode = value;
             }
             if (selected) {
@@ -464,17 +505,18 @@ void IOPanel::drawRandomFillGeneratorEditor(float scale, const std::vector<std::
     }
 
     if (compact) {
-        compactDragFloatRow("Density", "##region_tool_random_fill_density_compact", options.density, 0.001f, 0.0f, 10.0f, "%.4f", scale);
-        compactDragFloatRow("Temp", "##region_tool_random_fill_temperature_compact", options.temperature, 1.0f, 0.0f, 100000.0f, "%.1f",
-                            scale);
+        compactDragFloatRow("io_density"_tr.data(), "##region_tool_random_fill_density_compact", options.density, 0.001f, 0.0f, 10.0f,
+                            "%.4f", scale);
+        compactDragFloatRow("io_temp"_tr.data(), "##region_tool_random_fill_temperature_compact", options.temperature, 1.0f, 0.0f, 100000.0f,
+                            "%.1f", scale);
     }
     else {
         ImGui::SetNextItemWidth(120.0f * scale);
-        ImGui::DragFloat(regionOverride != nullptr ? "Density##region_tool_random_fill" : "Density##random_fill", &options.density, 0.001f, 0.0f,
-                         10.0f, "%.4f");
+        ImGui::DragFloat((std::string("io_density"_tr) + (regionOverride != nullptr ? "##region_tool_random_fill" : "##random_fill")).c_str(),
+                         &options.density, 0.001f, 0.0f, 10.0f, "%.4f");
         ImGui::SetNextItemWidth(120.0f * scale);
-        ImGui::DragFloat(regionOverride != nullptr ? "Temperature##region_tool_random_fill" : "Temperature##random_fill", &options.temperature,
-                         1.0f, 0.0f, 100000.0f, "%.1f");
+        ImGui::DragFloat((std::string("io_temp"_tr) + (regionOverride != nullptr ? "##region_tool_random_fill" : "##random_fill")).c_str(),
+                         &options.temperature, 1.0f, 0.0f, 100000.0f, "%.1f");
     }
 
     if (!compact) {
@@ -492,12 +534,16 @@ void IOPanel::drawRandomFillGeneratorEditor(float scale, const std::vector<std::
         }
     }
 
-    ImGui::Checkbox(regionOverride != nullptr ? "Random rotation##region_tool_random_fill" : "Random rotation##random_fill", &options.randomRotation);
-    ImGui::SameLine();
-    ImGui::Checkbox(regionOverride != nullptr ? "Fixed##region_tool_random_fill" : "Fixed##random_fill", &options.fixed);
+    ImGui::Checkbox((std::string("io_random_rotation"_tr) + (regionOverride != nullptr ? "##region_tool_random_fill" : "##random_fill")).c_str(),
+                    &options.randomRotation);
+    if (!compact) {
+        ImGui::SameLine();
+    }
+    ImGui::Checkbox((std::string("io_fixed"_tr) + (regionOverride != nullptr ? "##region_tool_random_fill" : "##random_fill")).c_str(),
+                    &options.fixed);
 
     if (showCreateButton) {
-        if (ImGui::Button("Create##random_fill", ImVec2(140.0f * scale, 0.0f))) {
+        if (ImGui::Button((std::string("io_create"_tr) + "##random_fill").c_str(), ImVec2(140.0f * scale, 0.0f))) {
             AppSignals::UI::RandomFillRequest request;
             request.region = region;
             request.composition = composition;
@@ -519,9 +565,9 @@ void IOPanel::drawLatticeFillGeneratorEditor(float scale, const std::vector<std:
     }
 
     const char* structureId = regionOverride != nullptr ? "##region_tool_lattice_fill_structure" : "##lattice_fill_structure";
-    const bool structureOpen = compact ? compactComboRow("Type", structureId, latticeStructureLabel(options.structure), scale)
-                                       : ComboStyle::beginCombo(regionOverride != nullptr ? "Structure##region_tool_lattice_fill"
-                                                                                          : "Structure##lattice_fill",
+    const bool structureOpen = compact ? compactComboRow("io_type"_tr.data(), structureId, latticeStructureLabel(options.structure), scale)
+                                       : ComboStyle::beginCombo(regionOverride != nullptr ? (std::string("io_structure"_tr) + "##region_tool_lattice_fill").c_str()
+                                                                                          : (std::string("io_structure"_tr) + "##lattice_fill").c_str(),
                                                                 latticeStructureLabel(options.structure), 0.0f, scale);
     if (structureOpen) {
         constexpr Generators::LatticeStructure structures[] = {
@@ -544,10 +590,10 @@ void IOPanel::drawLatticeFillGeneratorEditor(float scale, const std::vector<std:
                           availableMolecules, false, compact);
 
     const char* modeId = regionOverride != nullptr ? "##region_tool_lattice_fill_mode" : "##lattice_fill_mode";
-    const bool modeOpen = compact ? compactComboRow("Mode", modeId, spawnModeLabel(options.mode), scale)
+    const bool modeOpen = compact ? compactComboRow("tool_mode"_tr.data(), modeId, spawnModeLabel(options.mode).data(), scale)
                                   : ComboStyle::beginCombo(regionOverride != nullptr ? "Mode##region_tool_lattice_fill"
                                                                                      : "Mode##lattice_fill",
-                                                           spawnModeLabel(options.mode), 0.0f, scale);
+                                                           spawnModeLabel(options.mode).data(), 0.0f, scale);
     if (modeOpen) {
         constexpr Generators::SpawnMode spawnModes[] = {
             Generators::SpawnMode::Reset,
@@ -556,7 +602,7 @@ void IOPanel::drawLatticeFillGeneratorEditor(float scale, const std::vector<std:
         };
         for (Generators::SpawnMode value : spawnModes) {
             const bool selected = value == options.mode;
-            if (ImGui::Selectable(spawnModeLabel(value), selected)) {
+            if (ImGui::Selectable(spawnModeLabel(value).data(), selected)) {
                 options.mode = value;
             }
             if (selected) {
@@ -574,10 +620,11 @@ void IOPanel::drawLatticeFillGeneratorEditor(float scale, const std::vector<std:
             options.seed = static_cast<uint32_t>(std::max(seed, 0));
         }
     }
-    ImGui::Checkbox(regionOverride != nullptr ? "Fixed##region_tool_lattice_fill" : "Fixed##lattice_fill", &options.fixed);
+    ImGui::Checkbox((std::string("io_fixed"_tr) + (regionOverride != nullptr ? "##region_tool_lattice_fill" : "##lattice_fill")).c_str(),
+                    &options.fixed);
 
     if (showCreateButton) {
-        if (ImGui::Button("Create##lattice_fill", ImVec2(140.0f * scale, 0.0f))) {
+        if (ImGui::Button((std::string("io_create"_tr) + "##lattice_fill").c_str(), ImVec2(140.0f * scale, 0.0f))) {
             AppSignals::UI::LatticeFillRequest request;
             request.region = region;
             request.composition = composition;
@@ -612,6 +659,7 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
     ensureUserScenesDirectory();
     fileDialog.setSimulationDirectory(scenesDirectory_.string());
     ensureSceneCatalogLoaded();
+    ensureDefaultGeneratorRegions(simulation);
     const std::vector<std::string> availableMolecules = listAvailableMolecules();
     const float panelWidth = 300.f * scale;
     const float topOffset = 65.f * scale;
@@ -624,16 +672,16 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
     ImGui::SetNextWindowSize(ImVec2(panelWidth, panelHeight));
     ImGui::Begin("##IOPanel", nullptr, PANEL_FLAGS);
 
-    ImGui::SeparatorText("Файл");
-    if (ImGui::Button("Загрузить", ImVec2(saveButtonWidth * scale, 0.f))) {
+    ImGui::SeparatorText("io_file"_tr.data());
+    if (ImGui::Button("io_load"_tr.data(), ImVec2(saveButtonWidth * scale, 0.f))) {
         fileDialog.openLoad();
     }
     ImGui::SameLine();
-    if (ImGui::Button("Сохранить", ImVec2(saveButtonWidth * scale, 0.f))) {
+    if (ImGui::Button("io_save"_tr.data(), ImVec2(saveButtonWidth * scale, 0.f))) {
         fileDialog.openSave();
     }
     ImGui::SameLine();
-    if (ImGui::Button("Очистить", ImVec2(saveButtonWidth * scale, 0.f))) {
+    if (ImGui::Button("io_clear"_tr.data(), ImVec2(saveButtonWidth * scale, 0.f))) {
         AppSignals::UI::ClearSimulation.emit();
     }
 
@@ -647,7 +695,7 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
     const bool xyzRecording = uiState.xyzRecording;
     const bool selectedRecording = videoSelected ? videoRecording : xyzRecording;
     const bool selectedFormatAvailable = videoSelected ? uiState.captureAvailable : true;
-    const char* captureLabel = selectedRecording ? "Стоп" : "Запись";
+    const char* captureLabel = selectedRecording ? "io_stop"_tr.data() : "io_record"_tr.data();
 
     ImGui::SameLine();
     ImGui::BeginDisabled(!selectedFormatAvailable);
@@ -670,13 +718,13 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
         drawIOPanelRecordingStatusLine(xyzRecording, uiState.xyzFps, uiState.xyzFrameCount);
     }
     ImGuiTreeNodeFlags generatorHeaderFlags = generatorsExpanded_ ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None;
-    const bool generatorsOpen = ImGui::CollapsingHeader("Генераторы", generatorHeaderFlags);
+    const bool generatorsOpen = ImGui::CollapsingHeader("io_generators"_tr.data(), generatorHeaderFlags);
     generatorsExpanded_ = generatorsOpen;
     if (!generatorsOpen) {
         AppSignals::UI::ClearGeneratorPhantom.emit();
     }
     else {
-        if (ImGui::BeginCombo("##generator_kind", generatorLabel(generatorKind_))) {
+        if (ComboStyle::beginCombo("##generator_kind", generatorLabel(generatorKind_).data(), -FLT_MIN, scale)) {
             constexpr IOPanel::GeneratorKind generators[] = {
                 IOPanel::GeneratorKind::TriangularBipyramid,
                 IOPanel::GeneratorKind::RandomFill,
@@ -684,7 +732,7 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
             };
             for (IOPanel::GeneratorKind kind : generators) {
                 const bool selected = kind == generatorKind_;
-                if (ImGui::Selectable(generatorLabel(kind), selected)) {
+                if (ImGui::Selectable(generatorLabel(kind).data(), selected)) {
                     generatorKind_ = kind;
                 }
                 if (selected) {
@@ -699,7 +747,7 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
             ImGui::SliderInt("##atoms_per_axis_tbp", &generatorAxisCount_, 2, 100);
             ImGui::SameLine();
             drawIOPanelAtomTypeCombo("##atom_type_tbp", tbpAtomType_, 80.f * scale, scale);
-            if (ImGui::Button("Create##tbp", ImVec2(buttonWidth * scale, 0.f))) {
+            if (ImGui::Button((std::string("io_create"_tr) + "##tbp").c_str(), ImVec2(buttonWidth * scale, 0.f))) {
                 AppSignals::UI::CreateTriangularBipyramidCrystal.emit(generatorAxisCount_, tbpAtomType_);
             }
             break;
@@ -715,8 +763,8 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
         }
     }
 
-    ImGui::SeparatorText("Сцены");
-    if (ComboStyle::beginCombo("##scene_catalog_view", sceneCatalogViewLabel(sceneCatalogView_), -FLT_MIN, scale)) {
+    ImGui::SeparatorText("io_scenes"_tr.data());
+    if (ComboStyle::beginCombo("##scene_catalog_view", sceneCatalogViewLabel(sceneCatalogView_).data(), -FLT_MIN, scale)) {
         constexpr SceneCatalogView views[] = {
             SceneCatalogView::BuiltIn,
             SceneCatalogView::User,
@@ -724,7 +772,7 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
         };
         for (SceneCatalogView view : views) {
             const bool selected = view == sceneCatalogView_;
-            if (ImGui::Selectable(sceneCatalogViewLabel(view), selected)) {
+            if (ImGui::Selectable(sceneCatalogViewLabel(view).data(), selected)) {
                 sceneCatalogView_ = view;
                 sceneCatalogLoaded_ = false;
             }
@@ -734,7 +782,7 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
         }
         ImGui::EndCombo();
     }
-    ImGui::TextDisabled("Save target: %s", scenesDirectory_.string().c_str());
+    ImGui::TextDisabled("io_scene_target"_tr.data(), scenesDirectory_.string().c_str());
 
     const float availableWidth = ImGui::GetContentRegionAvail().x;
     const float tileSpacing = ImGui::GetStyle().ItemSpacing.x;
@@ -862,7 +910,7 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
 
         if (ImGui::BeginPopup(kDeletePopupId,
                               ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings)) {
-            const char* deleteTitle = "Удалить сцену?";
+            const char* deleteTitle = "io_scene_delete_title"_tr.data();
             const float titleWidth = ImGui::CalcTextSize(deleteTitle).x;
             const float titleOffsetX = std::max(0.0f, (ImGui::GetContentRegionAvail().x - titleWidth) * 0.5f);
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + titleOffsetX);
@@ -872,7 +920,7 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.15f, 0.17f, 0.92f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.77f, 0.20f, 0.24f, 0.98f));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.58f, 0.14f, 0.18f, 1.0f));
-            if (ImGui::Button("Удалить", ImVec2(100.0f * scale, 0.0f))) {
+            if (ImGui::Button("io_delete"_tr.data(), ImVec2(100.0f * scale, 0.0f))) {
                 const std::string deletedScenePath = pendingDeleteScenePath_;
                 std::error_code removeError;
                 const bool removed = std::filesystem::remove(deletedScenePath, removeError);
@@ -882,13 +930,13 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
                     ImGui::CloseCurrentPopup();
                 }
                 else {
-                    pendingDeleteError_ = removeError ? removeError.message() : "Не удалось удалить файл сцены";
+                    pendingDeleteError_ = removeError ? removeError.message() : std::string("io_scene_delete_failed"_tr);
                 }
             }
             ImGui::PopStyleColor(3);
 
             ImGui::SameLine();
-            if (ImGui::Button("Отмена", ImVec2(100.0f * scale, 0.0f))) {
+            if (ImGui::Button("io_cancel"_tr.data(), ImVec2(100.0f * scale, 0.0f))) {
                 clearPendingDeleteState();
                 ImGui::CloseCurrentPopup();
             }
@@ -928,7 +976,7 @@ void IOPanel::drawRegionSpawnPopup(float scale, ImVec2 anchorPos, std::string_vi
 
     if (ImGui::Begin(popupId.data(), nullptr,
                      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::TextUnformatted("Spawn region");
+        ImGui::TextUnformatted("io_spawn_region"_tr.data());
         drawRegionSpawnSettings(scale, true);
     }
     ImGui::End();
@@ -939,9 +987,10 @@ void IOPanel::drawRegionSpawnPopup(float scale, ImVec2 anchorPos, std::string_vi
 
 void IOPanel::drawRegionSpawnSettings(float scale, bool compact) {
     const std::vector<std::string> availableMolecules = listAvailableMolecules();
-    const bool generatorOpen = compact ? compactComboRow("Spawn", "##region_tool_generator_kind", generatorLabel(regionToolGeneratorKind_), scale)
-                                       : ComboStyle::beginCombo("##region_tool_generator_kind", generatorLabel(regionToolGeneratorKind_), 0.0f,
-                                                                scale);
+    const bool generatorOpen = compact ? compactComboRow("tool_spawn"_tr.data(), "##region_tool_generator_kind",
+                                                         generatorLabel(regionToolGeneratorKind_).data(), scale)
+                                       : ComboStyle::beginCombo("##region_tool_generator_kind", generatorLabel(regionToolGeneratorKind_).data(),
+                                                                0.0f, scale);
     if (generatorOpen) {
         constexpr GeneratorKind generators[] = {
             GeneratorKind::RandomFill,
@@ -949,7 +998,7 @@ void IOPanel::drawRegionSpawnSettings(float scale, bool compact) {
         };
         for (GeneratorKind kind : generators) {
             const bool selected = kind == regionToolGeneratorKind_;
-            if (ImGui::Selectable(generatorLabel(kind), selected)) {
+            if (ImGui::Selectable(generatorLabel(kind).data(), selected)) {
                 regionToolGeneratorKind_ = kind;
             }
             if (selected) {
