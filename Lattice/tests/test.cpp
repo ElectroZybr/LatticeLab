@@ -244,6 +244,32 @@ static void testCheckedMoleculeSpawnRejectsBlockedPoint() {
     expect(simulation.atoms().size() == atomCountBefore, "Failed checked spawn should not add atoms");
 }
 
+static void testFixedAtomsParticipateInPairPhysics() {
+    Lattice::Simulation simulation;
+    simulation.createWorld(glm::vec3(20.0f, 20.0f, 20.0f));
+    simulation.setBondFormationEnabled(false);
+    simulation.setCoulombEnabled(false);
+    simulation.setLJEnabled(true);
+
+    simulation.createAtom(glm::vec3(10.0f, 10.0f, 10.0f), glm::vec3(0.0f), AtomData::Type::Ar, false);
+    simulation.createAtom(glm::vec3(11.0f, 10.0f, 10.0f), glm::vec3(0.0f), AtomData::Type::Ar, true);
+
+    World& world = simulation.world();
+    world.getNeighborList().rebuildPipeline(world.getAtomStorage(), world, 0);
+    std::fill_n(simulation.atoms().fxData(), simulation.atoms().size(), 0.0f);
+    std::fill_n(simulation.atoms().fyData(), simulation.atoms().size(), 0.0f);
+    std::fill_n(simulation.atoms().fzData(), simulation.atoms().size(), 0.0f);
+    std::fill_n(simulation.atoms().energyData(), simulation.atoms().size(), 0.0f);
+
+    (void)simulation.forceField().compute(world, false, simulation.getDt());
+    expect(std::fabs(simulation.atoms().forceX(1)) > 1e-4f, "Fixed atom should receive non-zero pair force");
+    expect(isClose(simulation.atoms().forceX(0), -simulation.atoms().forceX(1), 1e-4f), "Pair force should satisfy Newton's third law");
+
+    const glm::vec3 fixedPosBefore = simulation.atoms().pos(1);
+    simulation.update();
+    expect(isClose(simulation.atoms().pos(1), fixedPosBefore, 1e-6f), "Fixed atom should stay in place after update");
+}
+
 static void testWaterMoleculeBondsStayLocalAfterNeighborSort() {
     Lattice::Simulation simulation;
     simulation.createWorld(glm::vec3(40.0f, 40.0f, 40.0f));
@@ -415,6 +441,7 @@ int main() {
     testSpawnNitrogenMoleculeCreatesStableBond();
     testSpawnAdditionalDiatomicMoleculesCreateStableBond();
     testCheckedMoleculeSpawnRejectsBlockedPoint();
+    testFixedAtomsParticipateInPairPhysics();
     testWaterMoleculeBondsStayLocalAfterNeighborSort();
     testLuaSceneObjectLoadsMoleculesDirectory();
     testLuaDslSimulationWorldGasBuildsScene();

@@ -60,7 +60,7 @@ public:
 
 private:
     float temperature_ = 300.0f;
-    float param_ = 1.0f;
+    float param_ = 100.0f;
 };
 
 #define REGISTER_THERMOSTAT(Type) REGISTER_MODULE(Type, IThermostat, Thermostat::registry, autoRegThermostat_)

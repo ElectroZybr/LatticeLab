@@ -17,6 +17,8 @@ bool ITool::onRightPressed(glm::ivec2 mousePos) {
     return false;
 }
 
+void ITool::onRightReleased(glm::ivec2 mousePos) { (void)mousePos; }
+
 void ITool::onFrame(glm::ivec2 mousePos, float deltaTime) {
     (void)mousePos;
     (void)deltaTime;

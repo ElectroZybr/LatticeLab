@@ -10,7 +10,7 @@ void WallForceField::compute(World& world) const {
     const vec3 gravity = world.getGravity();
     const vec3 wallMax = world.getWorldSize();
 
-    for (size_t atomIndex = 0; atomIndex < atoms.mobileCount(); ++atomIndex) {
+    for (size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
         float forceX = atoms.forceX(atomIndex);
         float forceY = atoms.forceY(atomIndex);
         float forceZ = atoms.forceZ(atomIndex);

@@ -27,7 +27,7 @@ void Mouse::onMouseButton(GLFWwindow*, int button, int action, int mods) {
     if (imgui_mouse_callback) {
         imgui_mouse_callback(window, button, action, mods);
     }
-    if (ImGui::GetIO().WantCaptureMouse) {
+    if (ImGui::GetIO().WantCaptureMouse && action == GLFW_PRESS) {
         return;
     }
 
@@ -40,6 +40,9 @@ void Mouse::onMouseButton(GLFWwindow*, int button, int action, int mods) {
         }
         if (button == GLFW_MOUSE_BUTTON_RIGHT && appInterface != nullptr && !appInterface->state().cursorHovered &&
             !ToolsManager::blocksCameraControls()) {
+            if (ToolsManager::openSelectionContextMenu(mouse_pos)) {
+                return;
+            }
             if (!ToolsManager::onRightPressed(mouse_pos)) {
                 rend->camera.isDragging = true;
                 rend->camera.dragStartPixelPos = {mouse_pos.x, mouse_pos.y};
@@ -53,6 +56,7 @@ void Mouse::onMouseButton(GLFWwindow*, int button, int action, int mods) {
             ToolsManager::onLeftReleased(mouse_pos);
         }
         if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+            ToolsManager::onRightReleased(mouse_pos);
             rend->camera.isDragging = false;
         }
     }

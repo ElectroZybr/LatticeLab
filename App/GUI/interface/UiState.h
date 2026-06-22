@@ -23,6 +23,9 @@ struct UiState {
 
     bool drawToolTrip = false;
     std::string toolTooltipText;
+    bool openSelectionContextMenu = false;
+    float selectionContextMenuX = 0.0f;
+    float selectionContextMenuY = 0.0f;
 
     bool captureRecording = false;
     bool captureAvailable = false;

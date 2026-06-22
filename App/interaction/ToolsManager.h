@@ -43,6 +43,9 @@ public:
     static void onLeftPressed(glm::ivec2 mousePos);
     static void onLeftReleased(glm::ivec2 mousePos);
     static bool onRightPressed(glm::ivec2 mousePos);
+    static void onRightReleased(glm::ivec2 mousePos);
+    static bool openSelectionContextMenu(glm::ivec2 mousePos);
+    static void setSelectedAtomsFixed(bool fixed);
     static void onFrame(glm::ivec2 mousePos, float deltaTime);
     static void resetInteractionState();
     static bool isInteractingNow() noexcept;

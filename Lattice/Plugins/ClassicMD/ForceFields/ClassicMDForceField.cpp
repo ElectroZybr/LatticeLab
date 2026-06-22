@@ -59,7 +59,7 @@ void computePairInteractionsImpl(AtomStorage& atoms, const NeighborList& neighbo
     const auto& offsets = neighborList.offsets();
     const auto& neighbours = neighborList.neighbors();
 
-    for (size_t atomIndex = 0; atomIndex < atoms.mobileCount(); ++atomIndex) {
+    for (size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
         const uint32_t begin = offsets[atomIndex];
         const uint32_t end = offsets[atomIndex + 1];
         if (begin > end || static_cast<size_t>(end) > neighbours.size()) {

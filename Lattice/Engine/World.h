@@ -71,6 +71,7 @@ public:
     void addBond(size_t aIndex, size_t bIndex);
     void removeAtom(size_t atomIndex);
     void removeAtoms(std::vector<size_t> atomIndices);
+    void setAtomsFixed(std::span<const AtomStorage::AtomId> atomIds, bool fixed);
     void remapAtomIndices(std::span<const uint32_t> oldToNew);
     void clearAtoms() {
         atomStorage_.clear();

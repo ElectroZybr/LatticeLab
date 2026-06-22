@@ -40,6 +40,7 @@ public:
     virtual void onLeftPressed(glm::ivec2 mousePos);
     virtual void onLeftReleased(glm::ivec2 mousePos);
     virtual bool onRightPressed(glm::ivec2 mousePos);
+    virtual void onRightReleased(glm::ivec2 mousePos);
     virtual void onFrame(glm::ivec2 mousePos, float deltaTime);
     virtual void reset();
 

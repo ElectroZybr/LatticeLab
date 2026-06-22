@@ -6,6 +6,7 @@
 #include <backends/imgui_impl_wgpu.h>
 
 #include "App/capture/CaptureController.h"
+#include "App/interaction/ToolsManager.h"
 #include "Rendering/BaseRenderer.h"
 #include "Rendering/backend/WGPUContext.h"
 
@@ -63,6 +64,23 @@ namespace {
         drawList->AddRectFilled(ImVec2(0.0f, frameMax.y), ImVec2(displaySize.x, displaySize.y), shadeColor);
 
         drawList->AddRect(frameMin, frameMax, frameColor, 10.0f, 0, 1.5f);
+    }
+
+    void drawSelectionContextMenu(UiState& uiState) {
+        constexpr const char* kPopupId = "##selection_context_menu";
+
+        if (uiState.openSelectionContextMenu) {
+            ImGui::SetNextWindowPos(ImVec2(uiState.selectionContextMenuX, uiState.selectionContextMenuY));
+            ImGui::OpenPopup(kPopupId);
+            uiState.openSelectionContextMenu = false;
+        }
+
+        if (ImGui::BeginPopup(kPopupId)) {
+            if (ImGui::MenuItem("Зафиксировать")) {
+                ToolsManager::setSelectedAtomsFixed(true);
+            }
+            ImGui::EndPopup();
+        }
     }
 }
 
@@ -187,6 +205,7 @@ int Interface::update() {
     ImGui::PopFont();
 
     ImGui::PushFont(fontManager.dialog);
+    drawSelectionContextMenu(uiState_);
     fileDialog.draw(styleManager.getScale());
     debugPanel.draw(styleManager.getScale(), glm::ivec2(width, height));
     settingsPanel.draw(styleManager.getScale(), glm::ivec2(width, height), *simulation_, *renderer_, *captureController_, fileDialog, *this);

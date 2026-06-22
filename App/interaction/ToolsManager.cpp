@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <vector>
 
 #include "App/interaction/tools/AddAtomTool.h"
 #include "App/interaction/tools/AreaTool.h"
@@ -158,7 +159,7 @@ void ToolsManager::onLeftReleased(glm::ivec2 mousePos) {
     }
 
     const bool cursorHovered = uiState != nullptr && uiState->cursorHovered;
-    const glm::ivec2 releasePos = cursorHovered ? lastSceneMousePos : mousePos;
+    const glm::ivec2 releasePos = (cursorHovered && currentMode() != Mode::AddAtom) ? lastSceneMousePos : mousePos;
 
     if (ITool* tool = activeTool(); tool != nullptr) {
         tool->onLeftReleased(releasePos);
@@ -177,6 +178,62 @@ bool ToolsManager::onRightPressed(glm::ivec2 mousePos) {
         return tool->onRightPressed(mousePos);
     }
     return false;
+}
+
+void ToolsManager::onRightReleased(glm::ivec2 mousePos) {
+    syncToolMode();
+
+    const bool cursorHovered = uiState != nullptr && uiState->cursorHovered;
+    const glm::ivec2 releasePos = cursorHovered ? lastSceneMousePos : mousePos;
+    if (ITool* tool = activeTool(); tool != nullptr) {
+        tool->onRightReleased(releasePos);
+    }
+}
+
+bool ToolsManager::openSelectionContextMenu(glm::ivec2 mousePos) {
+    if (uiState == nullptr || pickingSystem == nullptr || renderer == nullptr || !renderer->get()) {
+        return false;
+    }
+
+    syncPickingWorldToActive(true);
+
+    AtomHit hit{};
+    if (!pickingSystem->pickAtom(mousePos, 10.0f, hit)) {
+        return false;
+    }
+
+    const auto& selectedAtomIds = pickingSystem->getSelectedAtomIds();
+    if (selectedAtomIds.empty() || !selectedAtomIds.contains(hit.id)) {
+        return false;
+    }
+
+    uiState->openSelectionContextMenu = true;
+    uiState->selectionContextMenuX = static_cast<float>(mousePos.x);
+    uiState->selectionContextMenuY = static_cast<float>(mousePos.y);
+    uiState->selectedAtomCount = static_cast<int>(selectedAtomIds.size());
+    return true;
+}
+
+void ToolsManager::setSelectedAtomsFixed(bool fixed) {
+    if (simulation == nullptr || pickingSystem == nullptr) {
+        return;
+    }
+
+    const auto& selectedAtomIds = pickingSystem->getSelectedAtomIds();
+    if (selectedAtomIds.empty()) {
+        return;
+    }
+
+    std::vector<AtomStorage::AtomId> atomIds;
+    atomIds.reserve(selectedAtomIds.size());
+    for (const AtomStorage::AtomId atomId : selectedAtomIds) {
+        atomIds.push_back(atomId);
+    }
+
+    simulation->world().setAtomsFixed(atomIds, fixed);
+    if (uiState != nullptr) {
+        uiState->selectedAtomCount = static_cast<int>(selectedAtomIds.size());
+    }
 }
 
 void ToolsManager::onFrame(glm::ivec2 mousePos, float deltaTime) {

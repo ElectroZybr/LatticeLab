@@ -10,7 +10,7 @@ public:
     static constexpr std::string_view id = "barendsen";
     static constexpr std::string_view description = "thermostat_barendsen";
 
-    Barendsen(double temperature = 300.0, double param = 5.0)  :
+    Barendsen(double temperature = 300.0, double param = 100.0)  :
         t(temperature), nu(param) {}
 
     float temperature() const override { return static_cast<float>(t); }

@@ -8,6 +8,8 @@ World::World(glm::vec3 size, glm::vec3 renderOffset) : size(size), renderOffset(
     atomStorage_.reserve(250000);
     neighborList_.setParams(5.f, 1.f);
     state_.forceField_.setForceField("classic_md");
+    state_.thermostat.setParam(100.0f);
+    state_.thermostat.setThermostat("barendsen");
 }
 
 void World::clear() {
@@ -101,6 +103,36 @@ void World::removeAtoms(std::vector<size_t> atomIndices) {
 
         atomStorage_.removeAtom(atomIndex);
     }
+    grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
+    neighborList_.clear();
+    invalidateMetrics();
+    invalidateVectorField();
+}
+
+void World::setAtomsFixed(std::span<const AtomStorage::AtomId> atomIds, bool fixed) {
+    if (atomIds.empty() || atomStorage_.empty()) {
+        return;
+    }
+
+    std::vector<AtomStorage::AtomId> previousOrder(atomStorage_.size(), AtomStorage::InvalidAtomId);
+    for (size_t index = 0; index < atomStorage_.size(); ++index) {
+        previousOrder[index] = atomStorage_.atomId(index);
+    }
+
+    for (const AtomStorage::AtomId atomId : atomIds) {
+        const size_t index = atomStorage_.indexOf(atomId);
+        if (index < atomStorage_.size()) {
+            atomStorage_.setFixed(index, fixed);
+        }
+    }
+
+    std::vector<uint32_t> oldToNew(atomStorage_.size(), 0);
+    for (size_t oldIndex = 0; oldIndex < previousOrder.size(); ++oldIndex) {
+        const size_t newIndex = atomStorage_.indexOf(previousOrder[oldIndex]);
+        oldToNew[oldIndex] = static_cast<uint32_t>(newIndex < atomStorage_.size() ? newIndex : oldIndex);
+    }
+    remapAtomIndices(oldToNew);
+
     grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
     neighborList_.clear();
     invalidateMetrics();
