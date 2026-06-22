@@ -343,7 +343,6 @@ void SettingsPanel::draw(float uiScale, glm::ivec2 windowSize, Lattice::Simulati
     if (ImGui::Checkbox("imgui_lj"_tr.data(), &ljEnabled)) {
         simulation.world().setLJEnabled(ljEnabled);
     }
-    ImGui::SameLine();
     bool coulombEnabled = simulation.world().isCoulombEnabled();
     if (ImGui::Checkbox("imgui_coulomb"_tr.data(), &coulombEnabled)) {
         simulation.world().setCoulombEnabled(coulombEnabled);

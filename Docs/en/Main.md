@@ -17,9 +17,10 @@ The repository is split into several major parts:
 - `App/` - application layer, windowing, viewport, UI, and glue code
 - `Lattice/` - physical model, scene data, and simulation logic
 - `Rendering/` - rendering, GPU pipelines, draw layers, rendering benchmarks, and tests
+- `Mods/Base/scenes/` - built-in scenes provided by the base mod
 - `Docs/` - project documentation
 - `assets/` - application assets
-- `demo/` - demo scenes and media
+- `User/` - local user data such as saved scenes, not tracked in git
 
 ## Navigation
 

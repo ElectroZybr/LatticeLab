@@ -1,10 +1,12 @@
 #include "interface.h"
 
 #include <cmath>
+#include <filesystem>
 
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_wgpu.h>
 
+#include "App/AppPaths.h"
 #include "App/capture/CaptureController.h"
 #include "App/interaction/ToolsManager.h"
 #include "Rendering/BaseRenderer.h"
@@ -89,6 +91,11 @@ Interface::Interface(GLFWwindow* w, Lattice::Simulation& s, std::unique_ptr<Base
 
 int Interface::init() {
     ImGui::CreateContext();
+    {
+        std::error_code fsError;
+        std::filesystem::create_directories(std::filesystem::path(AppPaths::kUserDirectory), fsError);
+    }
+    ImGui::GetIO().IniFilename = AppPaths::kImguiIniPath.data();
 
     styleManager.applyCustomStyle();
     syncWindowMetrics();

@@ -84,12 +84,17 @@ namespace {
     }
 }
 
-std::filesystem::path UserSettingsIO::defaultPath() { return "user_settings.cfg"; }
+std::filesystem::path UserSettingsIO::defaultPath() { return std::filesystem::path(AppPaths::kUserSettingsPath); }
 
 UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
     UserSettings settings;
 
-    std::ifstream file(path);
+    std::filesystem::path resolvedPath = path;
+    if (resolvedPath == defaultPath() && !std::filesystem::exists(resolvedPath) && std::filesystem::exists("user_settings.cfg")) {
+        resolvedPath = "user_settings.cfg";
+    }
+
+    std::ifstream file(resolvedPath);
     if (!file.is_open()) {
         return settings;
     }
@@ -226,10 +231,13 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
     }
     settings.captureSettings.crf = std::clamp(settings.captureSettings.crf, 0, 51);
     if (settings.captureOutputDirectory.empty()) {
-        settings.captureOutputDirectory = "captures";
+        settings.captureOutputDirectory = std::filesystem::path(AppPaths::kDefaultCaptureDirectory);
     }
     if (settings.scenesDirectory.empty()) {
-        settings.scenesDirectory = AppPaths::kDefaultScenesDirectory;
+        settings.scenesDirectory = std::filesystem::path(AppPaths::kUserScenesDirectory);
+    }
+    if (settings.scenesDirectory == std::filesystem::path(AppPaths::kBuiltInScenesDirectory)) {
+        settings.scenesDirectory = std::filesystem::path(AppPaths::kUserScenesDirectory);
     }
     settings.interfaceScale = std::clamp(settings.interfaceScale, StyleManager::kMinUiScale, StyleManager::kMaxUiScale);
     settings.rendererSpeedGradientMax = std::max(0.0f, settings.rendererSpeedGradientMax);
@@ -245,6 +253,15 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
 }
 
 void UserSettingsIO::save(const UserSettings& settings, const std::filesystem::path& path) {
+    const std::filesystem::path parentPath = path.parent_path();
+    if (!parentPath.empty()) {
+        std::error_code fsError;
+        std::filesystem::create_directories(parentPath, fsError);
+        if (fsError) {
+            return;
+        }
+    }
+
     std::ofstream file(path, std::ios::trunc);
     if (!file.is_open()) {
         return;

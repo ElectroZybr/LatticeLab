@@ -190,7 +190,6 @@ include(windows_resources)
 
 install(TARGETS ${APP_NAME} RUNTIME DESTINATION .)
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/assets" DESTINATION .)
-
-if(EXISTS "${CMAKE_SOURCE_DIR}/demo/scenes")
-    install(DIRECTORY "${CMAKE_SOURCE_DIR}/demo/scenes" DESTINATION demo)
+if(EXISTS "${CMAKE_SOURCE_DIR}/Mods")
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/Mods" DESTINATION .)
 endif()

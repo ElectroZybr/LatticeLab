@@ -79,6 +79,28 @@ namespace {
         return "Replace";
     }
 
+    const char* sceneCatalogViewLabel(IOPanel::SceneCatalogView view) {
+        switch (view) {
+        case IOPanel::SceneCatalogView::BuiltIn:
+            return "Demo";
+        case IOPanel::SceneCatalogView::User:
+            return "User";
+        case IOPanel::SceneCatalogView::All:
+            return "All";
+        }
+        return "All";
+    }
+
+    const char* sceneSourceLabel(IOPanelSceneSource source) {
+        switch (source) {
+        case IOPanelSceneSource::BuiltIn:
+            return "Demo";
+        case IOPanelSceneSource::User:
+            return "User";
+        }
+        return "Demo";
+    }
+
     std::string speciesLabel(std::string_view species) {
         if (species == "Z") {
             return "Zerium";
@@ -370,7 +392,20 @@ void IOPanel::ensureSceneCatalogLoaded() {
     }
 
     try {
-        sceneTiles_ = loadIOPanelSceneTiles(scenesDirectory_.string());
+        std::vector<IOPanelSceneDirectory> sceneDirectories;
+        switch (sceneCatalogView_) {
+        case SceneCatalogView::BuiltIn:
+            sceneDirectories.push_back({builtInScenesDirectory_, IOPanelSceneSource::BuiltIn});
+            break;
+        case SceneCatalogView::User:
+            sceneDirectories.push_back({scenesDirectory_, IOPanelSceneSource::User});
+            break;
+        case SceneCatalogView::All:
+            sceneDirectories.push_back({builtInScenesDirectory_, IOPanelSceneSource::BuiltIn});
+            sceneDirectories.push_back({scenesDirectory_, IOPanelSceneSource::User});
+            break;
+        }
+        sceneTiles_ = loadIOPanelSceneTiles(std::span<const IOPanelSceneDirectory>(sceneDirectories.data(), sceneDirectories.size()));
     }
     catch (const std::exception&) {
         sceneTiles_.clear();
@@ -386,7 +421,13 @@ void IOPanel::clearPendingDeleteState() {
 
 void IOPanel::setScenesDirectory(std::filesystem::path scenesDirectory) {
     scenesDirectory_ = std::move(scenesDirectory);
+    ensureUserScenesDirectory();
     sceneCatalogLoaded_ = false;
+}
+
+void IOPanel::ensureUserScenesDirectory() {
+    std::error_code fsError;
+    std::filesystem::create_directories(scenesDirectory_, fsError);
 }
 
 void IOPanel::removeSceneTileByPath(std::string_view path) {
@@ -566,19 +607,19 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
     }
 
     if (fileDialog.hasSelectedSceneDirectory()) {
-        setScenesDirectory(fileDialog.consumeSelectedSceneDirectory());
+        (void)fileDialog.consumeSelectedSceneDirectory();
     }
     if (fileDialog.hasSavedSimulationPath()) {
-        const std::filesystem::path savedSimulationPath = fileDialog.consumeSavedSimulationPath();
-        if (savedSimulationPath.parent_path().lexically_normal() == scenesDirectory_.lexically_normal()) {
-            pendingReloadFrames_ = 1;
-        }
+        (void)fileDialog.consumeSavedSimulationPath();
+        pendingReloadFrames_ = 1;
+        sceneCatalogView_ = SceneCatalogView::User;
     }
     // Задержка, что бы изображение успело записаться в файл сохранения .lat
     if (pendingReloadFrames_ > 0 && --pendingReloadFrames_ == 0) {
         sceneCatalogLoaded_ = false;
     }
 
+    ensureUserScenesDirectory();
     fileDialog.setSimulationDirectory(scenesDirectory_.string());
     ensureSceneCatalogLoaded();
     const std::vector<std::string> availableMolecules = listAvailableMolecules();
@@ -685,16 +726,25 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
     }
 
     ImGui::SeparatorText("Сцены");
-    std::array<char, 512> scenesDirBuffer{};
-    const std::string scenesDir = scenesDirectory_.string();
-    std::snprintf(scenesDirBuffer.data(), scenesDirBuffer.size(), "%s", scenesDir.data());
-    const float browseButtonWidth = ImGui::GetFrameHeight();
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseButtonWidth - ImGui::GetStyle().ItemSpacing.x);
-    ImGui::InputText("##scenes_dir", scenesDirBuffer.data(), scenesDirBuffer.size(), ImGuiInputTextFlags_ReadOnly);
-    ImGui::SameLine();
-    if (ImGui::Button("...##scenes_dir_browse", ImVec2(browseButtonWidth, 0.0f))) {
-        fileDialog.openSceneDirectory(scenesDir);
+    if (ComboStyle::beginCombo("##scene_catalog_view", sceneCatalogViewLabel(sceneCatalogView_), -FLT_MIN, scale)) {
+        constexpr SceneCatalogView views[] = {
+            SceneCatalogView::BuiltIn,
+            SceneCatalogView::User,
+            SceneCatalogView::All,
+        };
+        for (SceneCatalogView view : views) {
+            const bool selected = view == sceneCatalogView_;
+            if (ImGui::Selectable(sceneCatalogViewLabel(view), selected)) {
+                sceneCatalogView_ = view;
+                sceneCatalogLoaded_ = false;
+            }
+            if (selected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
     }
+    ImGui::TextDisabled("Save target: %s", scenesDirectory_.string().c_str());
 
     const float availableWidth = ImGui::GetContentRegionAvail().x;
     const float tileSpacing = ImGui::GetStyle().ItemSpacing.x;
@@ -755,24 +805,30 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
         const ImVec4 borderColor = isHovered ? ImVec4(0.38f, 0.64f, 1.00f, 1.0f) : ImVec4(0.30f, 0.36f, 0.42f, 1.0f);
         drawList->AddRect(tileMin, tileMax, ImGui::GetColorU32(borderColor), kSceneTileRounding, 0, isHovered ? 1.5f : 1.0f);
 
-        const float deleteButtonSize = 20.0f * scale;
-        const float deleteButtonPadding = 8.0f * scale;
-        const ImVec2 deleteMin(tileMax.x - deleteButtonSize - deleteButtonPadding, tileMin.y + deleteButtonPadding);
-        const ImVec2 deleteMax(deleteMin.x + deleteButtonSize, deleteMin.y + deleteButtonSize);
-        const bool deleteHovered = ImGui::IsMouseHoveringRect(deleteMin, deleteMax);
-        const bool deleteClicked = deleteHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+        bool deleteHovered = false;
+        bool deleteClicked = false;
+        ImVec2 deletePopupAnchor(tileMax.x + 8.0f * scale, tileMin.y + 8.0f * scale);
+        if (tile.writable) {
+            const float deleteButtonSize = 20.0f * scale;
+            const float deleteButtonPadding = 8.0f * scale;
+            const ImVec2 deleteMin(tileMax.x - deleteButtonSize - deleteButtonPadding, tileMin.y + deleteButtonPadding);
+            const ImVec2 deleteMax(deleteMin.x + deleteButtonSize, deleteMin.y + deleteButtonSize);
+            deletePopupAnchor = ImVec2(deleteMax.x + 8.0f * scale, deleteMin.y);
+            deleteHovered = ImGui::IsMouseHoveringRect(deleteMin, deleteMax);
+            deleteClicked = deleteHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left);
 
-        drawList->AddRectFilled(deleteMin, deleteMax,
-                                ImGui::GetColorU32(deleteHovered ? ImVec4(0.76f, 0.24f, 0.28f, 0.96f) : ImVec4(0.10f, 0.12f, 0.16f, 0.86f)),
-                                6.0f * scale);
-        const ImVec2 deleteCenter(deleteMin.x + deleteButtonSize * 0.5f - 0.5f * scale,
-                                  deleteMin.y + deleteButtonSize * 0.5f - 0.5f * scale);
-        const float crossHalfExtent = deleteButtonSize * 0.18f;
-        const ImU32 crossColor = ImGui::GetColorU32(ImVec4(0.96f, 0.97f, 0.99f, 1.0f));
-        drawList->AddLine(ImVec2(deleteCenter.x - crossHalfExtent, deleteCenter.y - crossHalfExtent),
-                          ImVec2(deleteCenter.x + crossHalfExtent, deleteCenter.y + crossHalfExtent), crossColor, 1.4f * scale);
-        drawList->AddLine(ImVec2(deleteCenter.x - crossHalfExtent, deleteCenter.y + crossHalfExtent),
-                          ImVec2(deleteCenter.x + crossHalfExtent, deleteCenter.y - crossHalfExtent), crossColor, 1.4f * scale);
+            drawList->AddRectFilled(deleteMin, deleteMax,
+                                    ImGui::GetColorU32(deleteHovered ? ImVec4(0.76f, 0.24f, 0.28f, 0.96f) : ImVec4(0.10f, 0.12f, 0.16f, 0.86f)),
+                                    6.0f * scale);
+            const ImVec2 deleteCenter(deleteMin.x + deleteButtonSize * 0.5f - 0.5f * scale,
+                                      deleteMin.y + deleteButtonSize * 0.5f - 0.5f * scale);
+            const float crossHalfExtent = deleteButtonSize * 0.18f;
+            const ImU32 crossColor = ImGui::GetColorU32(ImVec4(0.96f, 0.97f, 0.99f, 1.0f));
+            drawList->AddLine(ImVec2(deleteCenter.x - crossHalfExtent, deleteCenter.y - crossHalfExtent),
+                              ImVec2(deleteCenter.x + crossHalfExtent, deleteCenter.y + crossHalfExtent), crossColor, 1.4f * scale);
+            drawList->AddLine(ImVec2(deleteCenter.x - crossHalfExtent, deleteCenter.y + crossHalfExtent),
+                              ImVec2(deleteCenter.x + crossHalfExtent, deleteCenter.y - crossHalfExtent), crossColor, 1.4f * scale);
+        }
 
         if (!deleteHovered && isHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
             AppSignals::UI::LoadSimulation.emit(tile.path);
@@ -782,7 +838,7 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
             pendingDeleteScenePath_ = tile.path;
             pendingDeleteSceneTitle_ = tile.title;
             pendingDeleteError_.clear();
-            pendingDeletePopupPos_ = ImVec2(deleteMax.x + 8.0f * scale, deleteMin.y);
+            pendingDeletePopupPos_ = deletePopupAnchor;
             openDeleteConfirmation = true;
         }
 
@@ -790,6 +846,8 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
         drawList->AddText(ImVec2(titlePos.x + 1.0f, titlePos.y + 1.0f), ImGui::GetColorU32(ImVec4(0.02f, 0.03f, 0.05f, 0.85f)),
                           tile.title.data());
         drawList->AddText(titlePos, ImGui::GetColorU32(ImVec4(0.95f, 0.96f, 0.98f, 1.0f)), tile.title.data());
+        const ImVec2 sourcePos(tileMin.x + 10.0f, tileMin.y + 10.0f);
+        drawList->AddText(sourcePos, ImGui::GetColorU32(ImVec4(0.78f, 0.83f, 0.88f, 0.96f)), sceneSourceLabel(tile.source));
         if (!tile.description.empty()) {
             const ImVec2 descriptionPos(tileMin.x + 10.0f, tileMax.y - 15.0f);
             drawList->AddText(ImVec2(descriptionPos.x + 1.0f, descriptionPos.y + 1.0f),

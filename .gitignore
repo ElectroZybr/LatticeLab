@@ -14,7 +14,6 @@ LatticeLab
 Lattice-cli
 LatticeTests
 RenderTests
-captures
 *.exe
 *.dll
 *.so
@@ -31,11 +30,8 @@ cmake-build-*/
 *.tmp
 *.temp
 
-# Local app state
-*.ini
-
 # Python
 __pycache__/
 
-# user settings
-user_settings.cfg
+# user data
+User/

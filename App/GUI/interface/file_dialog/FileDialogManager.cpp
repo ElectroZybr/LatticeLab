@@ -14,17 +14,22 @@ namespace {
         if (!currentPath.empty() && std::filesystem::exists(currentPath)) {
             return currentPath;
         }
-        constexpr std::string_view defaultScenesPath = AppPaths::kDefaultScenesDirectory;
-        if (std::filesystem::exists(defaultScenesPath)) {
-            return std::string(defaultScenesPath);
+        constexpr std::string_view builtInScenesPath = AppPaths::kBuiltInScenesDirectory;
+        if (std::filesystem::exists(builtInScenesPath)) {
+            return std::string(builtInScenesPath);
         }
         return ".";
     }
 }
 
 void FileDialogManager::openSave() {
+    const std::filesystem::path saveDirectory =
+        simulationDirectory_.empty() ? std::filesystem::path(AppPaths::kUserScenesDirectory) : std::filesystem::path(simulationDirectory_);
+    std::error_code fsError;
+    std::filesystem::create_directories(saveDirectory, fsError);
+
     IGFD::FileDialogConfig config;
-    config.path = defaultSimulationPath(simulationDirectory_);
+    config.path = saveDirectory.string();
     config.fileName = "scene";
     config.countSelectionMax = 1;
     config.flags = ImGuiFileDialogFlags_ConfirmOverwrite;

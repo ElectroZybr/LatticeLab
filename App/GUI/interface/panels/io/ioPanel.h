@@ -32,6 +32,12 @@ public:
         LatticeFill,
     };
 
+    enum class SceneCatalogView : uint8_t {
+        BuiltIn,
+        User,
+        All,
+    };
+
     static constexpr ImGuiWindowFlags PANEL_FLAGS =
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_AlwaysVerticalScrollbar;
@@ -68,6 +74,7 @@ private:
                                         std::vector<AppSignals::UI::GeneratorComposeSpec>& composition,
                                         Generators::LatticeFillOptions& options, bool showRegionEditor, bool showCreateButton,
                                         bool compact = false);
+    void ensureUserScenesDirectory();
     void ensureSceneCatalogLoaded();
     void clearPendingDeleteState();
     void removeSceneTileByPath(std::string_view path);
@@ -119,7 +126,9 @@ private:
     };
     Generators::LatticeFillOptions regionToolLatticeFillOptions_{};
     RecordingFormat recordingFormat_ = RecordingFormat::MP4;
-    std::filesystem::path scenesDirectory_ = AppPaths::kDefaultScenesDirectory;
+    SceneCatalogView sceneCatalogView_ = SceneCatalogView::All;
+    std::filesystem::path builtInScenesDirectory_ = std::filesystem::path(AppPaths::kBuiltInScenesDirectory);
+    std::filesystem::path scenesDirectory_ = std::filesystem::path(AppPaths::kUserScenesDirectory);
     std::vector<IOPanelSceneTile> sceneTiles_;
     std::string pendingDeleteScenePath_;
     std::string pendingDeleteSceneTitle_;

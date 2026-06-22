@@ -17,6 +17,11 @@
 #include "Rendering/backend/WGPUContext.h"
 
 namespace {
+    struct ScenePathEntry {
+        std::filesystem::path path;
+        IOPanelSceneSource source = IOPanelSceneSource::BuiltIn;
+    };
+
     struct ParsedSceneInfo {
         std::string title;
         std::string description;
@@ -232,39 +237,48 @@ namespace {
     }
 }
 
-std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::string_view scenesDirectory) {
+std::vector<IOPanelSceneTile> loadIOPanelSceneTiles(std::span<const IOPanelSceneDirectory> sceneDirectories) {
     std::vector<IOPanelSceneTile> sceneTiles;
+    std::vector<ScenePathEntry> sceneEntries;
 
-    const std::filesystem::path scenesDir = scenesDirectory.empty() ? std::filesystem::path(".") : std::filesystem::path(scenesDirectory);
-    std::error_code fsError;
-    if (!std::filesystem::exists(scenesDir, fsError) || fsError || !std::filesystem::is_directory(scenesDir, fsError) || fsError) {
-        return sceneTiles;
-    }
-
-    std::vector<std::filesystem::path> scenePaths;
-    for (std::filesystem::directory_iterator it(scenesDir, fsError), end; !fsError && it != end; it.increment(fsError)) {
-        if (fsError) {
-            break;
-        }
-        const auto& entry = *it;
-        if (!entry.is_regular_file(fsError) || fsError) {
+    for (const IOPanelSceneDirectory& sceneDirectory : sceneDirectories) {
+        const std::filesystem::path scenesDir = sceneDirectory.path.empty() ? std::filesystem::path(".") : sceneDirectory.path;
+        std::error_code fsError;
+        if (!std::filesystem::exists(scenesDir, fsError) || fsError || !std::filesystem::is_directory(scenesDir, fsError) || fsError) {
             continue;
         }
-        if (entry.path().extension() == ".lat" || entry.path().extension() == ".latbin" || entry.path().extension() == ".lua") {
-            scenePaths.emplace_back(entry.path());
+
+        std::vector<std::filesystem::path> scenePaths;
+        for (std::filesystem::directory_iterator it(scenesDir, fsError), end; !fsError && it != end; it.increment(fsError)) {
+            if (fsError) {
+                break;
+            }
+            const auto& entry = *it;
+            if (!entry.is_regular_file(fsError) || fsError) {
+                continue;
+            }
+            if (entry.path().extension() == ".lat" || entry.path().extension() == ".latbin" || entry.path().extension() == ".lua") {
+                scenePaths.emplace_back(entry.path());
+            }
+        }
+
+        std::sort(scenePaths.begin(), scenePaths.end());
+        sceneEntries.reserve(sceneEntries.size() + scenePaths.size());
+        for (const auto& path : scenePaths) {
+            sceneEntries.push_back({path, sceneDirectory.source});
         }
     }
 
-    std::sort(scenePaths.begin(), scenePaths.end());
-    sceneTiles.reserve(scenePaths.size());
-
-    for (const auto& path : scenePaths) {
-        ParsedSceneInfo parsed = parseSceneInfo(path);
+    sceneTiles.reserve(sceneEntries.size());
+    for (const ScenePathEntry& entry : sceneEntries) {
+        ParsedSceneInfo parsed = parseSceneInfo(entry.path);
 
         IOPanelSceneTile tile;
-        tile.path = path.string();
+        tile.path = entry.path.string();
         tile.title = std::move(parsed.title);
         tile.description = std::move(parsed.description);
+        tile.source = entry.source;
+        tile.writable = entry.source == IOPanelSceneSource::User;
 
         if (parsed.hasEmbeddedPreview && parsed.imageWidth > 0 && parsed.imageHeight > 0) {
             if (!WGPUContext::instance().device()) {

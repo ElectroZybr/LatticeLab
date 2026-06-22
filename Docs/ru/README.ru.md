@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="../../../demo/logo.png" alt="LatticeLab logo" width="720">
+  <img src="../../../assets/logo.png" alt="LatticeLab logo" width="720">
 </p>
 
 <p align="center">
@@ -105,9 +105,10 @@ cmake --build --preset release
 - `App/` — слой приложения, UI, viewport, ввод и интеграционный код
 - `Lattice/` — движок симуляции, физическая модель и основные структуры данных
 - `Rendering/` — рендеринг, GPU-пайплайны, камера и логика отрисовки
+- `Mods/Base/scenes/` — встроенные базовые сцены базового мода
 - `Docs/` — документация проекта
 - `assets/` — ресурсы приложения
-- `demo/` — демонстрационные сцены и медиа
+- `User/` — локальные пользовательские данные и сохранения, не хранятся в git
 
 ---
 

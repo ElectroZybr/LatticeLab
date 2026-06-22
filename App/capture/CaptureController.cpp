@@ -36,12 +36,12 @@ namespace {
 void CaptureController::setOutputDirectory(const std::filesystem::path& path) {
 #ifndef _WIN32
     if (path.empty() || looksLikeForeignPath(path)) {
-        outputDirectory_ = "captures";
+        outputDirectory_ = std::filesystem::path(AppPaths::kDefaultCaptureDirectory);
         return;
     }
 #else
     if (path.empty()) {
-        outputDirectory_ = "captures";
+        outputDirectory_ = std::filesystem::path(AppPaths::kDefaultCaptureDirectory);
         return;
     }
 #endif

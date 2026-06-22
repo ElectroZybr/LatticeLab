@@ -20,8 +20,8 @@ struct UserSettings {
         int height = 1080;
     };
 
-    std::filesystem::path captureOutputDirectory = "captures";
-    std::filesystem::path scenesDirectory = AppPaths::kDefaultScenesDirectory;
+    std::filesystem::path captureOutputDirectory = std::filesystem::path(AppPaths::kDefaultCaptureDirectory);
+    std::filesystem::path scenesDirectory = std::filesystem::path(AppPaths::kUserScenesDirectory);
     CaptureSettings captureSettings{};
     WindowState windowState{};
 

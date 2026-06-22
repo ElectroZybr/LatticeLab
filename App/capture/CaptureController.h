@@ -3,6 +3,7 @@
 #include "CaptureSettings.h"
 #include "FfmpegStreamer.h"
 #include "FrameProducer.h"
+#include "App/AppPaths.h"
 
 #include <cstdint>
 #include <filesystem>
@@ -50,7 +51,7 @@ private:
 
     bool available_ = false;
     CaptureSettings settings_{};
-    std::filesystem::path outputDirectory_ = "captures";
+    std::filesystem::path outputDirectory_ = std::filesystem::path(AppPaths::kDefaultCaptureDirectory);
 
     FrameProducer producer_;
     FFmpegStreamer streamer_;
