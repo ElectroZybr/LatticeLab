@@ -1,11 +1,12 @@
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 
 #include <CLI/CLI.hpp>
 
+#include "Lattice/CLI/SystemInfo.h"
 #include "Engine/Simulation.h"
 #include "Engine/physics/Atom/AtomData.h"
 #include "Lattice/Plugins/ClassicMD/ClassicMDPlugin.h"
@@ -29,6 +30,7 @@ static void printHelp() {
     std::cout << "  run [count]   - execute multiple simulation steps\n";
     std::cout << "  positions     - print atom positions\n";
     std::cout << "  metrics       - print current metrics\n";
+    std::cout << "  sysinfo       - print system information\n";
     std::cout << "  reset         - reset the world to the initial state\n";
     std::cout << "  help          - show this help message\n";
     std::cout << "  quit          - exit the program\n";
@@ -88,6 +90,8 @@ int main(int argc, char** argv) {
 
     printBanner();
     std::cout << "Welcome to LatticeEngine CLI. Type 'help' to see available commands.\n\n";
+    Lattice::CliSystemInfo::printSystemInfo(std::cout);
+    std::cout << '\n';
 
     Simulation simulation;
     createInitialSimulation(simulation, worldSize, gravity, dt, maxSpeed);
@@ -150,6 +154,10 @@ int main(int argc, char** argv) {
         }
         if (command == "metrics" || command == "m") {
             printMetrics(simulation);
+            continue;
+        }
+        if (command == "sysinfo" || command == "si") {
+            Lattice::CliSystemInfo::printSystemInfo(std::cout);
             continue;
         }
         if (command == "reset") {

@@ -53,7 +53,11 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(CLI11)
 
-add_executable(Lattice-cli CLI/main.cpp)
+add_executable(Lattice-cli
+    CLI/main.cpp
+    CLI/SystemInfo.cpp
+    CLI/SystemInfo.h
+)
 
 set_target_properties(Lattice-cli PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
