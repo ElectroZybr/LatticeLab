@@ -25,7 +25,7 @@ public:
 
     inline void pairInteraction(AtomStorage& atoms, uint32_t bIndex, float dx, float dy, float dz, float d2, float chargeA, float& forceX,
                                 float& forceY, float& forceZ, float& potentialEnergy) const {
-        const float chargeB = atoms.charge(bIndex);
+        const float chargeB = atoms.charge()[bIndex];
         if (chargeB == 0.0f) {
             return;
         }
@@ -47,11 +47,11 @@ public:
         forceY -= pairForceY;
         forceZ -= pairForceZ;
 
-        atoms.forceX(bIndex) += pairForceX;
-        atoms.forceY(bIndex) += pairForceY;
-        atoms.forceZ(bIndex) += pairForceZ;
+        atoms.fx()[bIndex] += pairForceX;
+        atoms.fy()[bIndex] += pairForceY;
+        atoms.fz()[bIndex] += pairForceZ;
 
         potentialEnergy += 0.5f * potential;
-        atoms.energy(bIndex) += 0.5f * potential;
+        atoms.energy()[bIndex] += 0.5f * potential;
     }
 };

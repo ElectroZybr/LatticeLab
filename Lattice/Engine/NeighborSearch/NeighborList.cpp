@@ -53,7 +53,7 @@ void NeighborList::rebuildPipeline(AtomStorage& atoms, World& world, int simStep
     atoms.sort(world.getGrid());
     world.remapAtomIndices(atoms.lastSortOldToNew());
     // перестройка пространственной сетки уже под новый порядок атомов
-    world.getGrid().rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
+    world.getGrid().rebuild(atoms.x(), atoms.y(), atoms.z());
     // перестройка списка соседей
     build(atoms, world);
     // обновление метрик
@@ -66,9 +66,9 @@ void NeighborList::build(const AtomStorage& atoms, World& box) {
 
     const SpatialGrid& grid = box.getGrid();
     const uint32_t atomCount = static_cast<uint32_t>(atoms.size());
-    const float* RESTRICT x = atoms.xData();
-    const float* RESTRICT y = atoms.yData();
-    const float* RESTRICT z = atoms.zData();
+    const float* RESTRICT x = atoms.x().data();
+    const float* RESTRICT y = atoms.y().data();
+    const float* RESTRICT z = atoms.z().data();
 
     reserveListBuffers(atoms);
 
@@ -99,9 +99,9 @@ bool NeighborList::needsRebuild(const AtomStorage& atoms) const {
     const float maxDisp = (0.5f * skin_);
     const float maxDispSqr = maxDisp * maxDisp;
 
-    const float* RESTRICT x = atoms.xData();
-    const float* RESTRICT y = atoms.yData();
-    const float* RESTRICT z = atoms.zData();
+    const float* RESTRICT x = atoms.x().data();
+    const float* RESTRICT y = atoms.y().data();
+    const float* RESTRICT z = atoms.z().data();
 
     const float* RESTRICT refX = refPosX_.data();
     const float* RESTRICT refY = refPosY_.data();

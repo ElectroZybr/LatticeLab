@@ -215,7 +215,7 @@ int latticeFill(Lattice::Simulation& sim, const Generators::Region& region, cons
     const size_t initialAtomCount = sim.atoms().size();
     std::unordered_set<AtomStorage::AtomId> initialAtomIds;
     initialAtomIds.reserve(initialAtomCount);
-    for (const AtomStorage::AtomId atomId : sim.atoms().atomIdDataSpan()) {
+    for (const AtomStorage::AtomId atomId : sim.atoms().id()) {
         initialAtomIds.insert(atomId);
     }
 

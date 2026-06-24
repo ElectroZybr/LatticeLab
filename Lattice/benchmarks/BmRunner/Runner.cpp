@@ -51,7 +51,7 @@ namespace Benchmarks::BmRunner {
         };
 
         constexpr std::array kRunProfiles{
-            RunProfile{"Quick", 1, "0.1s"},
+            RunProfile{"Quick", 2, "0.1s"},
             RunProfile{"Medium", 3, "0.5s"},
             RunProfile{"Accurate", 7, "1s"},
         };

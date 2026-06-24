@@ -20,11 +20,11 @@ namespace {
 
         double kineticEnergy = 0.0;
         for (size_t i = 0; i < mobileCount; ++i) {
-            const double vx = atomStorage.velX(i);
-            const double vy = atomStorage.velY(i);
-            const double vz = atomStorage.velZ(i);
+            const double vx = atomStorage.vx()[i];
+            const double vy = atomStorage.vy()[i];
+            const double vz = atomStorage.vz()[i];
             const double speedSqr = vx * vx + vy * vy + vz * vz;
-            kineticEnergy += 0.5 * static_cast<double>(AtomData::getProps(atomStorage.type(i)).mass) * speedSqr;
+            kineticEnergy += 0.5 * static_cast<double>(AtomData::getProps(atomStorage.type()[i]).mass) * speedSqr;
         }
 
         const double dof = 3.0 * static_cast<double>(mobileCount);
@@ -55,37 +55,57 @@ void AccelDamp::apply(StepContext& stepContext) {
     const std::string_view integratorId = stepContext.world.getIntegrator().getIntegrator();
     const float dt = stepContext.dt;
 
-    const float* invMass = atomStorage.invMassData();
-    float* vx = atomStorage.vxData();
-    float* vy = atomStorage.vyData();
-    float* vz = atomStorage.vzData();
+    const float* invMass = atomStorage.invMass().data();
+    float* vx = atomStorage.vx().data();
+    float* vy = atomStorage.vy().data();
+    float* vz = atomStorage.vz().data();
 
     if (integratorId == "verlet") {
-        const float* fx = atomStorage.fxData();
-        const float* fy = atomStorage.fyData();
-        const float* fz = atomStorage.fzData();
-        const float* pfx = atomStorage.pfxData();
-        const float* pfy = atomStorage.pfyData();
-        const float* pfz = atomStorage.pfzData();
+        const float* fx = atomStorage.fx().data();
+        const float* fy = atomStorage.fy().data();
+        const float* fz = atomStorage.fz().data();
+        const float* pfx = atomStorage.pfx().data();
+        const float* pfy = atomStorage.pfy().data();
+        const float* pfz = atomStorage.pfz().data();
 
+        // Раздельные проходы здесь заметно лучше векторизуются для текущего SoA layout.
+        #pragma GCC ivdep
         for (size_t i = 0; i < mobileCount; ++i) {
             const float kick = 0.5f * dt * invMass[i] * damping;
             vx[i] -= (pfx[i] + fx[i]) * kick;
+        }
+        #pragma GCC ivdep
+        for (size_t i = 0; i < mobileCount; ++i) {
+            const float kick = 0.5f * dt * invMass[i] * damping;
             vy[i] -= (pfy[i] + fy[i]) * kick;
+        }
+        #pragma GCC ivdep
+        for (size_t i = 0; i < mobileCount; ++i) {
+            const float kick = 0.5f * dt * invMass[i] * damping;
             vz[i] -= (pfz[i] + fz[i]) * kick;
         }
         return;
     }
 
     if (integratorId == "kdk") {
-        const float* fx = atomStorage.fxData();
-        const float* fy = atomStorage.fyData();
-        const float* fz = atomStorage.fzData();
+        const float* fx = atomStorage.fx().data();
+        const float* fy = atomStorage.fy().data();
+        const float* fz = atomStorage.fz().data();
 
+        // Раздельные проходы здесь заметно лучше векторизуются для текущего SoA layout.
+        #pragma GCC ivdep
         for (size_t i = 0; i < mobileCount; ++i) {
             const float kick = 0.5f * dt * invMass[i] * damping;
             vx[i] -= fx[i] * kick;
+        }
+        #pragma GCC ivdep
+        for (size_t i = 0; i < mobileCount; ++i) {
+            const float kick = 0.5f * dt * invMass[i] * damping;
             vy[i] -= fy[i] * kick;
+        }
+        #pragma GCC ivdep
+        for (size_t i = 0; i < mobileCount; ++i) {
+            const float kick = 0.5f * dt * invMass[i] * damping;
             vz[i] -= fz[i] * kick;
         }
     }

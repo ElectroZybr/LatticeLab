@@ -9,10 +9,10 @@ namespace Benchmarks::BmRunner {
         std::string filter;
         bool save = false;
         bool list = false;
-        int repetitions = 3;
+        int repetitions = 2;
         std::string minTime;
         std::string scene = "crystal";
-        int warmupSteps = 30;
+        int warmupSteps = 0;
         std::string degradation = "size";
     };
 

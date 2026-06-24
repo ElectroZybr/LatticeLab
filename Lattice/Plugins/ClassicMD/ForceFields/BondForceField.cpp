@@ -85,9 +85,9 @@ bool BondForceField::tryCreateBond(AtomStorage& atoms, Bond::List& bonds, uint32
         return false;
     }
 
-    const float dx = atoms.posX(bIndex) - atoms.posX(aIndex);
-    const float dy = atoms.posY(bIndex) - atoms.posY(aIndex);
-    const float dz = atoms.posZ(bIndex) - atoms.posZ(aIndex);
+    const float dx = atoms.x()[bIndex] - atoms.x()[aIndex];
+    const float dy = atoms.y()[bIndex] - atoms.y()[aIndex];
+    const float dz = atoms.z()[bIndex] - atoms.z()[aIndex];
     const float distanceSqr = dx * dx + dy * dy + dz * dz;
 
     const float formationDistance = std::max(2.5f, bondParams->r0 * 1.35f);
@@ -103,19 +103,19 @@ bool BondForceField::shouldBreak(const Bond& bond, const AtomStorage& atoms) {
         return true;
     }
 
-    const double dx = static_cast<double>(atoms.posX(bond.aIndex)) - atoms.posX(bond.bIndex);
-    const double dy = static_cast<double>(atoms.posY(bond.aIndex)) - atoms.posY(bond.bIndex);
-    const double dz = static_cast<double>(atoms.posZ(bond.aIndex)) - atoms.posZ(bond.bIndex);
+    const double dx = static_cast<double>(atoms.x()[bond.aIndex]) - atoms.x()[bond.bIndex];
+    const double dy = static_cast<double>(atoms.y()[bond.aIndex]) - atoms.y()[bond.bIndex];
+    const double dz = static_cast<double>(atoms.z()[bond.aIndex]) - atoms.z()[bond.bIndex];
     const double distanceSqr = dx * dx + dy * dy + dz * dz;
     return distanceSqr > kBondBreakDistance * kBondBreakDistance;
 }
 
 void BondForceField::detachBond(const Bond& bond, AtomStorage& atomStorage) {
     if (bond.aIndex < atomStorage.size()) {
-        ++atomStorage.valenceCount(bond.aIndex);
+        ++atomStorage.valence()[bond.aIndex];
     }
     if (bond.bIndex < atomStorage.size()) {
-        ++atomStorage.valenceCount(bond.bIndex);
+        ++atomStorage.valence()[bond.bIndex];
     }
 }
 
@@ -131,9 +131,9 @@ void BondForceField::applyBondForce(const Bond& bond, AtomStorage& atomStorage, 
         return;
     }
 
-    const double dx = static_cast<double>(atomStorage.posX(bond.aIndex)) - atomStorage.posX(bond.bIndex);
-    const double dy = static_cast<double>(atomStorage.posY(bond.aIndex)) - atomStorage.posY(bond.bIndex);
-    const double dz = static_cast<double>(atomStorage.posZ(bond.aIndex)) - atomStorage.posZ(bond.bIndex);
+    const double dx = static_cast<double>(atomStorage.x()[bond.aIndex]) - atomStorage.x()[bond.bIndex];
+    const double dy = static_cast<double>(atomStorage.y()[bond.aIndex]) - atomStorage.y()[bond.bIndex];
+    const double dz = static_cast<double>(atomStorage.z()[bond.aIndex]) - atomStorage.z()[bond.bIndex];
     const double distance = std::sqrt(dx * dx + dy * dy + dz * dz);
     if (distance <= 1e-12) {
         return;
@@ -145,25 +145,25 @@ void BondForceField::applyBondForce(const Bond& bond, AtomStorage& atomStorage, 
     const double forceY = dy * invDistance * forceMagnitude;
     const double forceZ = dz * invDistance * forceMagnitude;
 
-    atomStorage.forceX(bond.aIndex) += static_cast<float>(forceX);
-    atomStorage.forceY(bond.aIndex) += static_cast<float>(forceY);
-    atomStorage.forceZ(bond.aIndex) += static_cast<float>(forceZ);
+    atomStorage.fx()[bond.aIndex] += static_cast<float>(forceX);
+    atomStorage.fy()[bond.aIndex] += static_cast<float>(forceY);
+    atomStorage.fz()[bond.aIndex] += static_cast<float>(forceZ);
 
-    atomStorage.forceX(bond.bIndex) -= static_cast<float>(forceX);
-    atomStorage.forceY(bond.bIndex) -= static_cast<float>(forceY);
-    atomStorage.forceZ(bond.bIndex) -= static_cast<float>(forceZ);
+    atomStorage.fx()[bond.bIndex] -= static_cast<float>(forceX);
+    atomStorage.fy()[bond.bIndex] -= static_cast<float>(forceY);
+    atomStorage.fz()[bond.bIndex] -= static_cast<float>(forceZ);
 }
 
 void BondForceField::applyAngleForce(AtomStorage& atomStorage, size_t aIndex, size_t bIndex, size_t cIndex) {
-    const double ox = atomStorage.posX(aIndex);
-    const double oy = atomStorage.posY(aIndex);
-    const double oz = atomStorage.posZ(aIndex);
-    const double bx = atomStorage.posX(bIndex);
-    const double by = atomStorage.posY(bIndex);
-    const double bz = atomStorage.posZ(bIndex);
-    const double cx = atomStorage.posX(cIndex);
-    const double cy = atomStorage.posY(cIndex);
-    const double cz = atomStorage.posZ(cIndex);
+    const double ox = atomStorage.x()[aIndex];
+    const double oy = atomStorage.y()[aIndex];
+    const double oz = atomStorage.z()[aIndex];
+    const double bx = atomStorage.x()[bIndex];
+    const double by = atomStorage.y()[bIndex];
+    const double bz = atomStorage.z()[bIndex];
+    const double cx = atomStorage.x()[cIndex];
+    const double cy = atomStorage.y()[cIndex];
+    const double cz = atomStorage.z()[cIndex];
 
     const double delta_ob_x = bx - ox;
     const double delta_ob_y = by - oy;
@@ -210,17 +210,17 @@ void BondForceField::applyAngleForce(AtomStorage& atomStorage, size_t aIndex, si
     const double force_o_y = -(force_b_y + force_c_y);
     const double force_o_z = -(force_b_z + force_c_z);
 
-    atomStorage.forceX(bIndex) += static_cast<float>(force_b_x);
-    atomStorage.forceY(bIndex) += static_cast<float>(force_b_y);
-    atomStorage.forceZ(bIndex) += static_cast<float>(force_b_z);
+    atomStorage.fx()[bIndex] += static_cast<float>(force_b_x);
+    atomStorage.fy()[bIndex] += static_cast<float>(force_b_y);
+    atomStorage.fz()[bIndex] += static_cast<float>(force_b_z);
 
-    atomStorage.forceX(cIndex) += static_cast<float>(force_c_x);
-    atomStorage.forceY(cIndex) += static_cast<float>(force_c_y);
-    atomStorage.forceZ(cIndex) += static_cast<float>(force_c_z);
+    atomStorage.fx()[cIndex] += static_cast<float>(force_c_x);
+    atomStorage.fy()[cIndex] += static_cast<float>(force_c_y);
+    atomStorage.fz()[cIndex] += static_cast<float>(force_c_z);
 
-    atomStorage.forceX(aIndex) += static_cast<float>(force_o_x);
-    atomStorage.forceY(aIndex) += static_cast<float>(force_o_y);
-    atomStorage.forceZ(aIndex) += static_cast<float>(force_o_z);
+    atomStorage.fx()[aIndex] += static_cast<float>(force_o_x);
+    atomStorage.fy()[aIndex] += static_cast<float>(force_o_y);
+    atomStorage.fz()[aIndex] += static_cast<float>(force_o_z);
 }
 
 void BondForceField::applyAngleForces(AtomStorage& atoms, const Bond::List& bonds) {

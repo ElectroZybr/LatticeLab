@@ -16,21 +16,21 @@ void CoulombForceField::computeLongRange(AtomStorage& atoms, const SpatialGrid& 
 
     constexpr float kTheta = 0.7f;
     for (size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
-        if (atoms.charge(atomIndex) == 0.0f) {
+        if (atoms.charge()[atomIndex] == 0.0f) {
             continue;
         }
 
-        float forceX = atoms.forceX(atomIndex);
-        float forceY = atoms.forceY(atomIndex);
-        float forceZ = atoms.forceZ(atomIndex);
-        float potentialEnergy = atoms.energy(atomIndex);
+        float forceX = atoms.fx()[atomIndex];
+        float forceY = atoms.fy()[atomIndex];
+        float forceZ = atoms.fz()[atomIndex];
+        float potentialEnergy = atoms.energy()[atomIndex];
 
         computeForce(atoms, atomIndex, root, kTheta, forceX, forceY, forceZ, potentialEnergy);
 
-        atoms.forceX(atomIndex) = forceX;
-        atoms.forceY(atomIndex) = forceY;
-        atoms.forceZ(atomIndex) = forceZ;
-        atoms.energy(atomIndex) = potentialEnergy;
+        atoms.fx()[atomIndex] = forceX;
+        atoms.fy()[atomIndex] = forceY;
+        atoms.fz()[atomIndex] = forceZ;
+        atoms.energy()[atomIndex] = potentialEnergy;
     }
 }
 
@@ -39,7 +39,7 @@ void CoulombForceField::computeForce(const AtomStorage& atoms, size_t atomIndex,
         return;
     }
 
-    const float chargeA = atoms.charge(atomIndex);
+    const float chargeA = atoms.charge()[atomIndex];
     if (chargeA == 0.0f) {
         return;
     }
@@ -48,24 +48,24 @@ void CoulombForceField::computeForce(const AtomStorage& atoms, size_t atomIndex,
     const bool containsTarget = atomIndex >= node.firstAtom && atomIndex < node.firstAtom + node.atomCount;
 
     if (isLeaf) {
-        const float posX = atoms.posX(atomIndex);
-        const float posY = atoms.posY(atomIndex);
-        const float posZ = atoms.posZ(atomIndex);
+        const float posX = atoms.x()[atomIndex];
+        const float posY = atoms.y()[atomIndex];
+        const float posZ = atoms.z()[atomIndex];
 
         for (size_t other = node.firstAtom; other < node.firstAtom + node.atomCount; ++other) {
             if (other == atomIndex) {
                 continue;
             }
 
-            const float dx = atoms.posX(other) - posX;
-            const float dy = atoms.posY(other) - posY;
-            const float dz = atoms.posZ(other) - posZ;
+            const float dx = atoms.x()[other] - posX;
+            const float dy = atoms.y()[other] - posY;
+            const float dz = atoms.z()[other] - posZ;
             const float d2 = dx * dx + dy * dy + dz * dz;
             if (d2 <= Consts::Epsilon) {
                 continue;
             }
 
-            const float qqScale = kCoulombEvAngstrom * chargeA * atoms.charge(other);
+            const float qqScale = kCoulombEvAngstrom * chargeA * atoms.charge()[other];
             const float invR = 1.0f / std::sqrt(d2);
             const float forceScale = qqScale * invR / d2;
 
@@ -78,9 +78,9 @@ void CoulombForceField::computeForce(const AtomStorage& atoms, size_t atomIndex,
     }
 
     const glm::vec3 sourcePos = node.dipoleMoment / node.charge;
-    const float dx = sourcePos.x - atoms.posX(atomIndex);
-    const float dy = sourcePos.y - atoms.posY(atomIndex);
-    const float dz = sourcePos.z - atoms.posZ(atomIndex);
+    const float dx = sourcePos.x - atoms.x()[atomIndex];
+    const float dy = sourcePos.y - atoms.y()[atomIndex];
+    const float dz = sourcePos.z - atoms.z()[atomIndex];
     const float d2 = dx * dx + dy * dy + dz * dz;
 
     if (!containsTarget && d2 > Consts::Epsilon) {
@@ -110,14 +110,14 @@ CoulombForceField::FieldSample CoulombForceField::fieldAtPoint(const AtomStorage
 
     FieldSample sample{};
     for (size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
-        const float charge = atoms.charge(atomIndex);
+        const float charge = atoms.charge()[atomIndex];
         if (charge == 0.0f) {
             continue;
         }
 
-        const float dx = atoms.posX(atomIndex) - x;
-        const float dy = atoms.posY(atomIndex) - y;
-        const float dz = atoms.posZ(atomIndex) - z;
+        const float dx = atoms.x()[atomIndex] - x;
+        const float dy = atoms.y()[atomIndex] - y;
+        const float dz = atoms.z()[atomIndex] - z;
         constexpr float kPotentialSofteningSqr = 0.25f;
         const float d2 = std::max(dx * dx + dy * dy + dz * dz, kPotentialSofteningSqr);
 

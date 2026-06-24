@@ -17,38 +17,54 @@ void KDK::pipeline(StepContext& stepContext) const {
 
 void KDK::halfKick(AtomStorage& atomStorage, float dt) {
     PROFILE_SCOPE("KDK::halfKick");
-    const float* RESTRICT fx = atomStorage.fxData();
-    const float* RESTRICT fy = atomStorage.fyData();
-    const float* RESTRICT fz = atomStorage.fzData();
+    const float* RESTRICT fx = atomStorage.fx().data();
+    const float* RESTRICT fy = atomStorage.fy().data();
+    const float* RESTRICT fz = atomStorage.fz().data();
 
-    float* RESTRICT vx = atomStorage.vxData();
-    float* RESTRICT vy = atomStorage.vyData();
-    float* RESTRICT vz = atomStorage.vzData();
+    float* RESTRICT vx = atomStorage.vx().data();
+    float* RESTRICT vy = atomStorage.vy().data();
+    float* RESTRICT vz = atomStorage.vz().data();
 
-    const float* RESTRICT invMass = atomStorage.invMassData();
+    const float* RESTRICT invMass = atomStorage.invMass().data();
     const size_t mobileCount = atomStorage.mobileCount();
 
+    // Раздельные проходы здесь заметно лучше векторизуются для текущего SoA layout.
+    #pragma GCC ivdep
     for (size_t i = 0; i < mobileCount; ++i) {
         vx[i] += 0.5f * fx[i] * invMass[i] * dt;
+    }
+    #pragma GCC ivdep
+    for (size_t i = 0; i < mobileCount; ++i) {
         vy[i] += 0.5f * fy[i] * invMass[i] * dt;
+    }
+    #pragma GCC ivdep
+    for (size_t i = 0; i < mobileCount; ++i) {
         vz[i] += 0.5f * fz[i] * invMass[i] * dt;
     }
 }
 
 void KDK::drift(AtomStorage& atomStorage, float dt) {
     PROFILE_SCOPE("KDK::drift");
-    float* RESTRICT x = atomStorage.xData();
-    float* RESTRICT y = atomStorage.yData();
-    float* RESTRICT z = atomStorage.zData();
+    float* RESTRICT x = atomStorage.x().data();
+    float* RESTRICT y = atomStorage.y().data();
+    float* RESTRICT z = atomStorage.z().data();
 
-    const float* RESTRICT vx = atomStorage.vxData();
-    const float* RESTRICT vy = atomStorage.vyData();
-    const float* RESTRICT vz = atomStorage.vzData();
+    const float* RESTRICT vx = atomStorage.vx().data();
+    const float* RESTRICT vy = atomStorage.vy().data();
+    const float* RESTRICT vz = atomStorage.vz().data();
 
     const size_t mobileCount = atomStorage.mobileCount();
+    // Раздельные проходы здесь заметно лучше векторизуются для текущего SoA layout.
+    #pragma GCC ivdep
     for (size_t i = 0; i < mobileCount; ++i) {
         x[i] += vx[i] * dt;
+    }
+    #pragma GCC ivdep
+    for (size_t i = 0; i < mobileCount; ++i) {
         y[i] += vy[i] * dt;
+    }
+    #pragma GCC ivdep
+    for (size_t i = 0; i < mobileCount; ++i) {
         z[i] += vz[i] * dt;
     }
 }

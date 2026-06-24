@@ -66,22 +66,22 @@ void computePairInteractionsImpl(AtomStorage& atoms, const NeighborList& neighbo
             continue;
         }
 
-        const float posX = atoms.posX(atomIndex);
-        const float posY = atoms.posY(atomIndex);
-        const float posZ = atoms.posZ(atomIndex);
-        float forceX = atoms.forceX(atomIndex);
-        float forceY = atoms.forceY(atomIndex);
-        float forceZ = atoms.forceZ(atomIndex);
-        float potentialEnergy = atoms.energy(atomIndex);
+        const float posX = atoms.x()[atomIndex];
+        const float posY = atoms.y()[atomIndex];
+        const float posZ = atoms.z()[atomIndex];
+        float forceX = atoms.fx()[atomIndex];
+        float forceY = atoms.fy()[atomIndex];
+        float forceZ = atoms.fz()[atomIndex];
+        float potentialEnergy = atoms.energy()[atomIndex];
 
         const LJForceField::LJPairRow* ljPairRow = nullptr;
         if constexpr (UseLJ) {
-            ljPairRow = &ljForceField.pairRow(atoms.type(atomIndex));
+            ljPairRow = &ljForceField.pairRow(atoms.type()[atomIndex]);
         }
 
         float charge = 0.0f;
         if constexpr (UseCoulomb) {
-            charge = atoms.charge(atomIndex);
+            charge = atoms.charge()[atomIndex];
             if (charge == 0.0f) {
                 if constexpr (!UseLJ) {
                     continue;
@@ -95,9 +95,9 @@ void computePairInteractionsImpl(AtomStorage& atoms, const NeighborList& neighbo
                 continue;
             }
 
-            const float dx = atoms.posX(bIndex) - posX;
-            const float dy = atoms.posY(bIndex) - posY;
-            const float dz = atoms.posZ(bIndex) - posZ;
+            const float dx = atoms.x()[bIndex] - posX;
+            const float dy = atoms.y()[bIndex] - posY;
+            const float dz = atoms.z()[bIndex] - posZ;
             const float d2 = dx * dx + dy * dy + dz * dz;
 
             if constexpr (UseLJ) {
@@ -110,10 +110,10 @@ void computePairInteractionsImpl(AtomStorage& atoms, const NeighborList& neighbo
             }
         }
 
-        atoms.forceX(atomIndex) = forceX;
-        atoms.forceY(atomIndex) = forceY;
-        atoms.forceZ(atomIndex) = forceZ;
-        atoms.energy(atomIndex) = potentialEnergy;
+        atoms.fx()[atomIndex] = forceX;
+        atoms.fy()[atomIndex] = forceY;
+        atoms.fz()[atomIndex] = forceZ;
+        atoms.energy()[atomIndex] = potentialEnergy;
     }
 }
 } // namespace

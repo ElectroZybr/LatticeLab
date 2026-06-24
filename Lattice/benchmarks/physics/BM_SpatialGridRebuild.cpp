@@ -10,7 +10,7 @@ BENCHMARK_DEFINE_F(Fixture, SpatialGridRebuild)(benchmark::State& state) {
     auto& grid = simulation_->world().getGrid();
 
     for (auto _ : state) {
-        grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
+        grid.rebuild(atoms.x(), atoms.y(), atoms.z());
         benchmark::DoNotOptimize(grid.stats().lastNonEmptyCellCount());
         benchmark::ClobberMemory();
     }

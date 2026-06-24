@@ -16,7 +16,7 @@ void World::clear() {
     clearAtoms();
     clearBonds();
     neighborList_.clear();
-    grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
+    grid.rebuild(atomStorage_.x(), atomStorage_.y(), atomStorage_.z());
     invalidateMetrics();
     invalidateVectorField();
 }
@@ -35,7 +35,7 @@ void World::resizeBox(const glm::vec3& newSize, float cellSize) {
 
 void World::addAtom(const glm::vec3& start_coords, const glm::vec3& start_speed, AtomData::Type type, bool fixed) {
     (void)atomStorage_.addAtom(start_coords, start_speed, type, fixed);
-    grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
+    grid.rebuild(atomStorage_.x(), atomStorage_.y(), atomStorage_.z());
     invalidateMetrics();
     invalidateVectorField();
 }
@@ -80,10 +80,10 @@ void World::removeAtoms(std::vector<size_t> atomIndices) {
         for (auto it = bonds_.begin(); it != bonds_.end();) {
             if (it->aIndex == atomIndex || it->bIndex == atomIndex) {
                 if (it->aIndex == atomIndex && it->bIndex != atomIndex && it->bIndex < atomStorage_.size()) {
-                    ++atomStorage_.valenceCount(it->bIndex);
+                    ++atomStorage_.valence()[it->bIndex];
                 }
                 if (it->bIndex == atomIndex && it->aIndex != atomIndex && it->aIndex < atomStorage_.size()) {
-                    ++atomStorage_.valenceCount(it->aIndex);
+                    ++atomStorage_.valence()[it->aIndex];
                 }
                 it = bonds_.erase(it);
                 continue;
@@ -103,7 +103,7 @@ void World::removeAtoms(std::vector<size_t> atomIndices) {
 
         atomStorage_.removeAtom(atomIndex);
     }
-    grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
+    grid.rebuild(atomStorage_.x(), atomStorage_.y(), atomStorage_.z());
     neighborList_.clear();
     invalidateMetrics();
     invalidateVectorField();
@@ -133,14 +133,14 @@ void World::setAtomsFixed(std::span<const AtomStorage::AtomId> atomIds, bool fix
     }
     remapAtomIndices(oldToNew);
 
-    grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
+    grid.rebuild(atomStorage_.x(), atomStorage_.y(), atomStorage_.z());
     neighborList_.clear();
     invalidateMetrics();
     invalidateVectorField();
 }
 
 void World::finalizeAtomBatch() {
-    grid.rebuild(atomStorage_.xDataSpan(), atomStorage_.yDataSpan(), atomStorage_.zDataSpan());
+    grid.rebuild(atomStorage_.x(), atomStorage_.y(), atomStorage_.z());
     neighborList_.clear();
     invalidateMetrics();
     invalidateVectorField();

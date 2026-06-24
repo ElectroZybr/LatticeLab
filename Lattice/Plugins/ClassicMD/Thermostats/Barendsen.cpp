@@ -22,11 +22,11 @@ void Barendsen::apply(StepContext& stepContext) {
 
     double kineticEnergy = 0.0;
     for (size_t i = 0; i < mobileCount; ++i) {
-        const double vx = atomStorage.velX(i);
-        const double vy = atomStorage.velY(i);
-        const double vz = atomStorage.velZ(i);
+        const double vx = atomStorage.vx()[i];
+        const double vy = atomStorage.vy()[i];
+        const double vz = atomStorage.vz()[i];
         const double speedSqr = vx * vx + vy * vy + vz * vz;
-        kineticEnergy += 0.5 * static_cast<double>(AtomData::getProps(atomStorage.type(i)).mass) * speedSqr;
+        kineticEnergy += 0.5 * static_cast<double>(AtomData::getProps(atomStorage.type()[i]).mass) * speedSqr;
     }
 
     const double dof = 3.0 * static_cast<double>(mobileCount);
@@ -47,8 +47,8 @@ void Barendsen::apply(StepContext& stepContext) {
 
     const float lambda = static_cast<float>(std::sqrt(lambdaSqr));
     for (size_t i = 0; i < mobileCount; ++i) {
-        atomStorage.velX(i) *= lambda;
-        atomStorage.velY(i) *= lambda;
-        atomStorage.velZ(i) *= lambda;
+        atomStorage.vx()[i] *= lambda;
+        atomStorage.vy()[i] *= lambda;
+        atomStorage.vz()[i] *= lambda;
     }
 }

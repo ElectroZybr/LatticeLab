@@ -32,9 +32,9 @@ namespace {
     float resolveAutoSpeedGradientMax(const Lattice::Simulation& simulation) {
         const AtomStorage& atoms = simulation.atoms();
         const size_t count = atoms.size();
-        const float* vx = atoms.vxData();
-        const float* vy = atoms.vyData();
-        const float* vz = atoms.vzData();
+        const float* vx = atoms.vx().data();
+        const float* vy = atoms.vy().data();
+        const float* vz = atoms.vz().data();
         if (count == 0 || vx == nullptr || vy == nullptr || vz == nullptr) {
             return 1.0f;
         }

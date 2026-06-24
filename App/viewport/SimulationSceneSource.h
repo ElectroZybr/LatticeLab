@@ -45,13 +45,13 @@ namespace App::Viewport {
         const AtomStorage& atoms = world.getAtomStorage();
         return View::RenderAtomsView{
             .count = atoms.size(),
-            .x = atoms.xData(),
-            .y = atoms.yData(),
-            .z = atoms.zData(),
-            .vx = atoms.vxData(),
-            .vy = atoms.vyData(),
-            .vz = atoms.vzData(),
-            .type = reinterpret_cast<const uint8_t*>(atoms.atomTypeData()),
+            .x = atoms.x().data(),
+            .y = atoms.y().data(),
+            .z = atoms.z().data(),
+            .vx = atoms.vx().data(),
+            .vy = atoms.vy().data(),
+            .vz = atoms.vz().data(),
+            .type = reinterpret_cast<const uint8_t*>(atoms.type().data()),
             .radius = nullptr,
         };
     }

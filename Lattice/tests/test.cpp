@@ -69,12 +69,12 @@ static void testOctreeBuildChargeAndChildren() {
     AtomStorage atoms;
     atoms.reserve(count);
     for (size_t i = 0; i < count; ++i) {
-        atoms.addAtom(glm::vec3(x[i], y[i], z[i]), glm::vec3(vx[i], vy[i], vz[i]), types[i]);
-        atoms.charge(i) = charge[i];
+        (void)atoms.addAtom(glm::vec3(x[i], y[i], z[i]), glm::vec3(vx[i], vy[i], vz[i]), types[i]);
+        atoms.charge()[i] = charge[i];
     }
 
     SpatialGrid grid(glm::vec3(8.0f), 4.0f);
-    grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
+    grid.rebuild(atoms.x(), atoms.y(), atoms.z());
 
     AtomSort sorter;
     sorter.mortonOrder(atoms, grid);
@@ -131,8 +131,8 @@ static void testCoulombFarFieldApproximation() {
     AtomStorage atoms;
     atoms.reserve(count);
     for (size_t i = 0; i < count; ++i) {
-        atoms.addAtom(glm::vec3(x[i], y[i], z[i]), glm::vec3(vx[i], vy[i], vz[i]), types[i]);
-        atoms.charge(i) = charge[i];
+        (void)atoms.addAtom(glm::vec3(x[i], y[i], z[i]), glm::vec3(vx[i], vy[i], vz[i]), types[i]);
+        atoms.charge()[i] = charge[i];
     }
 
     OctreeNode root;
@@ -264,14 +264,14 @@ static void testFixedAtomsParticipateInPairPhysics() {
 
     World& world = simulation.world();
     world.getNeighborList().rebuildPipeline(world.getAtomStorage(), world, 0);
-    std::fill_n(simulation.atoms().fxData(), simulation.atoms().size(), 0.0f);
-    std::fill_n(simulation.atoms().fyData(), simulation.atoms().size(), 0.0f);
-    std::fill_n(simulation.atoms().fzData(), simulation.atoms().size(), 0.0f);
-    std::fill_n(simulation.atoms().energyData(), simulation.atoms().size(), 0.0f);
+    std::fill(simulation.atoms().fx().begin(), simulation.atoms().fx().end(), 0.0f);
+    std::fill(simulation.atoms().fy().begin(), simulation.atoms().fy().end(), 0.0f);
+    std::fill(simulation.atoms().fz().begin(), simulation.atoms().fz().end(), 0.0f);
+    std::fill(simulation.atoms().energy().begin(), simulation.atoms().energy().end(), 0.0f);
 
     (void)simulation.forceField().compute(world, false, simulation.getDt());
-    expect(std::fabs(simulation.atoms().forceX(1)) > 1e-4f, "Fixed atom should receive non-zero pair force");
-    expect(isClose(simulation.atoms().forceX(0), -simulation.atoms().forceX(1), 1e-4f), "Pair force should satisfy Newton's third law");
+    expect(std::fabs(simulation.atoms().fx()[1]) > 1e-4f, "Fixed atom should receive non-zero pair force");
+    expect(isClose(simulation.atoms().fx()[0], -simulation.atoms().fx()[1], 1e-4f), "Pair force should satisfy Newton's third law");
 
     const glm::vec3 fixedPosBefore = simulation.atoms().pos(1);
     simulation.update();

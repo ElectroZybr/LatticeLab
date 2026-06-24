@@ -39,8 +39,8 @@ void updateAtomSelectionDebug(const DebugViews& debugViews, const Lattice::Simul
             debugViews.atomSingle->add_data("Скорость (км/ч)", speed * Units::SpeedUnitToKmph);
             debugViews.atomSingle->add_data("Силы", atoms.force(selectedIndex));
             debugViews.atomSingle->add_data("Пред. силы", atoms.prevForce(selectedIndex));
-            debugViews.atomSingle->add_data("Потенциальная энергия", atoms.energy(selectedIndex));
-            const AtomData::Type atomType = atoms.type(selectedIndex);
+            debugViews.atomSingle->add_data("Потенциальная энергия", atoms.energy()[selectedIndex]);
+            const AtomData::Type atomType = atoms.type()[selectedIndex];
             debugViews.atomSingle->add_data("Масса", AtomData::getProps(atomType).mass);
             debugViews.atomSingle->add_data("Радиус", AtomData::getProps(atomType).radius);
             debugViews.atomSingle->add_data("Тип", static_cast<int>(atomType));

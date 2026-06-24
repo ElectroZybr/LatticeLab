@@ -59,9 +59,9 @@ void ThermalTool::applyAt(glm::ivec2 mousePos, float deltaTime) {
     const float radiusSqr = radius_ * radius_;
     const bool is2D = renderer->camera.getMode() == Camera::Mode::Mode2D;
 
-    float* const vx = atoms.vxData();
-    float* const vy = atoms.vyData();
-    float* const vz = atoms.vzData();
+    float* const vx = atoms.vx().data();
+    float* const vy = atoms.vy().data();
+    float* const vz = atoms.vz().data();
 
     const float sign = (mode_ == Mode::Heat) ? 1.0f : -1.0f;
     const float amount = strength_ * deltaTime;

@@ -254,7 +254,7 @@ namespace {
         }
         simulation.finishAtomBatch();
         for (size_t i = 0; i < lastFrameAtoms.size(); ++i) {
-            simulation.atoms().charge(i) = lastFrameAtoms[i].charge;
+            simulation.atoms().charge()[i] = lastFrameAtoms[i].charge;
         }
         simulation.restoreRuntimeState(loadedStep, loadedTimeNs);
     }
@@ -296,8 +296,8 @@ namespace {
             const glm::vec3 pos = atoms.pos(atomIndex);
             const glm::vec3 vel = atoms.vel(atomIndex);
             file << kBlockIndent << "atom " << pos.x << " " << pos.y << " " << pos.z << " " << vel.x << " " << vel.y << " " << vel.z << " "
-                 << static_cast<int>(atoms.type(atomIndex)) << " " << static_cast<int>(atoms.isAtomFixed(atomIndex)) << " "
-                 << atoms.charge(atomIndex) << "\n";
+                 << static_cast<int>(atoms.type()[atomIndex]) << " " << static_cast<int>(atoms.isAtomFixed(atomIndex)) << " "
+                 << atoms.charge()[atomIndex] << "\n";
         }
         file << "\n";
 
@@ -562,7 +562,7 @@ namespace {
         }
         simulation.finishAtomBatch();
         for (size_t i = 0; i < atoms.size(); ++i) {
-            simulation.atoms().charge(i) = atoms[i].charge;
+            simulation.atoms().charge()[i] = atoms[i].charge;
         }
         for (const auto& [aIndex, bIndex] : bonds) {
             simulation.addBond(aIndex, bIndex);

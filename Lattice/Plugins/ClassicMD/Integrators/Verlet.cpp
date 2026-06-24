@@ -20,24 +20,31 @@ void Verlet::pipeline(StepContext& stepContext) const {
 void Verlet::predict(AtomStorage& atomStorage, float dt) {
     const size_t n = atomStorage.mobileCount();
 
-    float* RESTRICT x = atomStorage.xData();
-    float* RESTRICT y = atomStorage.yData();
-    float* RESTRICT z = atomStorage.zData();
+    float* RESTRICT x = atomStorage.x().data();
+    float* RESTRICT y = atomStorage.y().data();
+    float* RESTRICT z = atomStorage.z().data();
 
-    const float* RESTRICT fx = atomStorage.fxData();
-    const float* RESTRICT fy = atomStorage.fyData();
-    const float* RESTRICT fz = atomStorage.fzData();
+    const float* RESTRICT fx = atomStorage.fx().data();
+    const float* RESTRICT fy = atomStorage.fy().data();
+    const float* RESTRICT fz = atomStorage.fz().data();
 
-    const float* RESTRICT vx = atomStorage.vxData();
-    const float* RESTRICT vy = atomStorage.vyData();
-    const float* RESTRICT vz = atomStorage.vzData();
+    const float* RESTRICT vx = atomStorage.vx().data();
+    const float* RESTRICT vy = atomStorage.vy().data();
+    const float* RESTRICT vz = atomStorage.vz().data();
 
-    const float* RESTRICT invMass = atomStorage.invMassData();
+    const float* RESTRICT invMass = atomStorage.invMass().data();
 
+    // Раздельные проходы заметно лучше векторизуются
     #pragma GCC ivdep
     for (size_t i = 0; i < n; ++i) {
         x[i] += (vx[i] + fx[i] * invMass[i] * 0.5f * dt) * dt;
+    }
+    #pragma GCC ivdep
+    for (size_t i = 0; i < n; ++i) {
         y[i] += (vy[i] + fy[i] * invMass[i] * 0.5f * dt) * dt;
+    }
+    #pragma GCC ivdep
+    for (size_t i = 0; i < n; ++i) {
         z[i] += (vz[i] + fz[i] * invMass[i] * 0.5f * dt) * dt;
     }
 }
@@ -46,26 +53,34 @@ void Verlet::correct(AtomStorage& atomStorage, float dt) {
     PROFILE_SCOPE("Verlet::correct");
     const size_t n = atomStorage.mobileCount();
 
-    const float* RESTRICT fx = atomStorage.fxData();
-    const float* RESTRICT fy = atomStorage.fyData();
-    const float* RESTRICT fz = atomStorage.fzData();
+    const float* RESTRICT fx = atomStorage.fx().data();
+    const float* RESTRICT fy = atomStorage.fy().data();
+    const float* RESTRICT fz = atomStorage.fz().data();
 
-    const float* RESTRICT pfx = atomStorage.pfxData();
-    const float* RESTRICT pfy = atomStorage.pfyData();
-    const float* RESTRICT pfz = atomStorage.pfzData();
+    const float* RESTRICT pfx = atomStorage.pfx().data();
+    const float* RESTRICT pfy = atomStorage.pfy().data();
+    const float* RESTRICT pfz = atomStorage.pfz().data();
 
-    float* RESTRICT vx = atomStorage.vxData();
-    float* RESTRICT vy = atomStorage.vyData();
-    float* RESTRICT vz = atomStorage.vzData();
+    float* RESTRICT vx = atomStorage.vx().data();
+    float* RESTRICT vy = atomStorage.vy().data();
+    float* RESTRICT vz = atomStorage.vz().data();
 
-    const float* RESTRICT invMass = atomStorage.invMassData();
+    const float* RESTRICT invMass = atomStorage.invMass().data();
 
+    // Раздельные проходы заметно лучше векторизуются
     #pragma GCC ivdep
     for (size_t i = 0; i < n; ++i) {
         const float halfDtInvMass = 0.5f * dt * invMass[i];
-
         vx[i] += (pfx[i] + fx[i]) * halfDtInvMass;
+    }
+    #pragma GCC ivdep
+    for (size_t i = 0; i < n; ++i) {
+        const float halfDtInvMass = 0.5f * dt * invMass[i];
         vy[i] += (pfy[i] + fy[i]) * halfDtInvMass;
+    }
+    #pragma GCC ivdep
+    for (size_t i = 0; i < n; ++i) {
+        const float halfDtInvMass = 0.5f * dt * invMass[i];
         vz[i] += (pfz[i] + fz[i]) * halfDtInvMass;
     }
 }

@@ -18,6 +18,7 @@
 #include "App/viewport/SceneViewport.h"
 #include "App/save_system/AppStateIO.h"
 #include "Lattice/Engine/Simulation.h"
+#include "Lattice/Engine/restrict.h"
 #include "GUI/interface/UiState.h"
 
 namespace {
@@ -35,9 +36,9 @@ namespace {
     }
 
     void shiftAtoms(AtomStorage& atomStorage, glm::vec3 delta) {
-        float* x = atomStorage.xData();
-        float* y = atomStorage.yData();
-        float* z = atomStorage.zData();
+        float* RESTRICT x = atomStorage.x().data();
+        float* RESTRICT y = atomStorage.y().data();
+        float* RESTRICT z = atomStorage.z().data();
         const size_t atomCount = atomStorage.size();
 
         for (size_t i = 0; i < atomCount; ++i) {

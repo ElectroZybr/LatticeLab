@@ -122,7 +122,7 @@ bool PickingSystem::pickAtom2D(glm::ivec2 screenPos, float tolerance, AtomHit& h
         const float distSqr = static_cast<float>(d.x * d.x + d.y * d.y);
 
         // радиус атома в экранных пикселях
-        const float atomRadius = AtomData::getProps(atomStorage->type(i)).radius;
+        const float atomRadius = AtomData::getProps(atomStorage->type()[i]).radius;
         const float screenRadius = atomRadius * rend->camera.getZoom() + tolerance;
 
         if (distSqr < screenRadius * screenRadius && distSqr < bestDistSqr) {
@@ -148,7 +148,7 @@ bool PickingSystem::pickAtom3D(glm::ivec2 screenPos, AtomHit& hit) const {
 
     for (size_t i = 0; i < atomStorage->size(); ++i) {
         const glm::vec3 worldPos = displayAtomPos(i);
-        const float radius = AtomData::getProps(atomStorage->type(i)).radius;
+        const float radius = AtomData::getProps(atomStorage->type()[i]).radius;
 
         RenderRaySphereHit rayHit{};
         if (renderRaySphereIntersect(ray, worldPos, radius, rayHit)) {

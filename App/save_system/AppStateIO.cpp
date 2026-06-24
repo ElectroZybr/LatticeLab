@@ -321,14 +321,14 @@ void AppStateIO::saveBinary(CaptureController& captureController, const PreviewF
     simState.neighborListSkin = simulation.getNeighborListSkin();
     simState.maxParticleSpeed = simulation.getMaxParticleSpeed();
     simState.atomMobileCount = simulation.atoms().mobileCount();
-    simState.x.assign(simulation.atoms().xDataSpan().begin(), simulation.atoms().xDataSpan().end());
-    simState.y.assign(simulation.atoms().yDataSpan().begin(), simulation.atoms().yDataSpan().end());
-    simState.z.assign(simulation.atoms().zDataSpan().begin(), simulation.atoms().zDataSpan().end());
-    simState.vx.assign(simulation.atoms().vxDataSpan().begin(), simulation.atoms().vxDataSpan().end());
-    simState.vy.assign(simulation.atoms().vyDataSpan().begin(), simulation.atoms().vyDataSpan().end());
-    simState.vz.assign(simulation.atoms().vzDataSpan().begin(), simulation.atoms().vzDataSpan().end());
-    simState.atomType.assign(simulation.atoms().atomTypeDataSpan().begin(), simulation.atoms().atomTypeDataSpan().end());
-    simState.atomCharge.assign(simulation.atoms().chargeDataSpan().begin(), simulation.atoms().chargeDataSpan().end());
+    simState.x.assign(simulation.atoms().x().begin(), simulation.atoms().x().end());
+    simState.y.assign(simulation.atoms().y().begin(), simulation.atoms().y().end());
+    simState.z.assign(simulation.atoms().z().begin(), simulation.atoms().z().end());
+    simState.vx.assign(simulation.atoms().vx().begin(), simulation.atoms().vx().end());
+    simState.vy.assign(simulation.atoms().vy().begin(), simulation.atoms().vy().end());
+    simState.vz.assign(simulation.atoms().vz().begin(), simulation.atoms().vz().end());
+    simState.atomType.assign(simulation.atoms().type().begin(), simulation.atoms().type().end());
+    simState.atomCharge.assign(simulation.atoms().charge().begin(), simulation.atoms().charge().end());
 
     auto view = simulation.bonds() | std::views::transform([](const Bond& b) { return std::pair{b.aIndex, b.bIndex}; });
     simState.bonds.assign(view.begin(), view.end());
@@ -471,11 +471,11 @@ void AppStateIO::loadBinary(Lattice::Simulation& simulation, BaseRenderer& rende
     simulation.reserveAtoms(atomCount);
     for (size_t i = 0; i < atomCount; ++i) {
         const bool fixed = i >= atomMobileCount;
-        atoms.addAtom(glm::vec3(simState.x[i], simState.y[i], simState.z[i]),
-                      glm::vec3(simState.vx[i], simState.vy[i], simState.vz[i]),
-                      simState.atomType[i],
-                      fixed);
-        atoms.charge(i) = simState.atomCharge[i];
+        (void)atoms.addAtom(glm::vec3(simState.x[i], simState.y[i], simState.z[i]),
+                            glm::vec3(simState.vx[i], simState.vy[i], simState.vz[i]),
+                            simState.atomType[i],
+                            fixed);
+        atoms.charge()[i] = simState.atomCharge[i];
     }
     simulation.finishAtomBatch();
 

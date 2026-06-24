@@ -7,16 +7,16 @@
 namespace {
     void assignAlternatingCharges(AtomStorage& atoms) {
         for (size_t i = 0; i < atoms.size(); ++i) {
-            atoms.charge(i) = (i & 1u) == 0u ? 1.0f : -1.0f;
+            atoms.charge()[i] = (i & 1u) == 0u ? 1.0f : -1.0f;
         }
     }
 
     void clearForceAndEnergy(AtomStorage& atoms) {
         for (size_t i = 0; i < atoms.size(); ++i) {
-            atoms.forceX(i) = 0.0f;
-            atoms.forceY(i) = 0.0f;
-            atoms.forceZ(i) = 0.0f;
-            atoms.energy(i) = 0.0f;
+            atoms.fx()[i] = 0.0f;
+            atoms.fy()[i] = 0.0f;
+            atoms.fz()[i] = 0.0f;
+            atoms.energy()[i] = 0.0f;
         }
     }
 }
@@ -64,21 +64,21 @@ BENCHMARK_DEFINE_F(Fixture, LongRangeCoulomb)(benchmark::State& state) {
         clearForceAndEnergy(atoms);
 
         for (size_t atomIndex = 0; atomIndex < atoms.size(); ++atomIndex) {
-            float forceX = atoms.forceX(atomIndex);
-            float forceY = atoms.forceY(atomIndex);
-            float forceZ = atoms.forceZ(atomIndex);
-            float potentialEnergy = atoms.energy(atomIndex);
+            float forceX = atoms.fx()[atomIndex];
+            float forceY = atoms.fy()[atomIndex];
+            float forceZ = atoms.fz()[atomIndex];
+            float potentialEnergy = atoms.energy()[atomIndex];
 
             coulombForceField.computeForce(atoms, atomIndex, root, kTheta, forceX, forceY, forceZ, potentialEnergy);
 
-            atoms.forceX(atomIndex) = forceX;
-            atoms.forceY(atomIndex) = forceY;
-            atoms.forceZ(atomIndex) = forceZ;
-            atoms.energy(atomIndex) = potentialEnergy;
+            atoms.fx()[atomIndex] = forceX;
+            atoms.fy()[atomIndex] = forceY;
+            atoms.fz()[atomIndex] = forceZ;
+            atoms.energy()[atomIndex] = potentialEnergy;
         }
 
-        benchmark::DoNotOptimize(atoms.forceX(0));
-        benchmark::DoNotOptimize(atoms.energy(0));
+        benchmark::DoNotOptimize(atoms.fx()[0]);
+        benchmark::DoNotOptimize(atoms.energy()[0]);
         benchmark::ClobberMemory();
     }
 

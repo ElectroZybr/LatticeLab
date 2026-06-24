@@ -40,17 +40,17 @@ namespace StepOps {
         };
 
         for (size_t atomIndex = 0; atomIndex < atomStorage.mobileCount(); ++atomIndex) {
-            confineAxis(atomStorage.posX(atomIndex), atomStorage.velX(atomIndex), max.x);
-            confineAxis(atomStorage.posY(atomIndex), atomStorage.velY(atomIndex), max.y);
-            confineAxis(atomStorage.posZ(atomIndex), atomStorage.velZ(atomIndex), max.z);
+            confineAxis(atomStorage.x()[atomIndex], atomStorage.vx()[atomIndex], max.x);
+            confineAxis(atomStorage.y()[atomIndex], atomStorage.vy()[atomIndex], max.y);
+            confineAxis(atomStorage.z()[atomIndex], atomStorage.vz()[atomIndex], max.z);
         }
     }
 
     inline void postProcessVelocities(AtomStorage& atomStorage, float maxSpeed) {
         const float maxSpeedSqr = maxSpeed * maxSpeed;
-        float* RESTRICT vx = atomStorage.vxData();
-        float* RESTRICT vy = atomStorage.vyData();
-        float* RESTRICT vz = atomStorage.vzData();
+        float* RESTRICT vx = atomStorage.vx().data();
+        float* RESTRICT vy = atomStorage.vy().data();
+        float* RESTRICT vz = atomStorage.vz().data();
 
         const size_t mobileCount = atomStorage.mobileCount();
         #pragma GCC ivdep
@@ -100,9 +100,9 @@ namespace StepOps {
         confineToBox(stepContext.world);
 
         atomStorage.swapPrevCurrentForces();
-        std::fill_n(atomStorage.fxData(), atomStorage.size(), 0.0f);
-        std::fill_n(atomStorage.fyData(), atomStorage.size(), 0.0f);
-        std::fill_n(atomStorage.fzData(), atomStorage.size(), 0.0f);
-        std::fill_n(atomStorage.energyData(), atomStorage.size(), 0.0f);
+        std::fill(atomStorage.fx().begin(), atomStorage.fx().end(), 0.0f);
+        std::fill(atomStorage.fy().begin(), atomStorage.fy().end(), 0.0f);
+        std::fill(atomStorage.fz().begin(), atomStorage.fz().end(), 0.0f);
+        std::fill(atomStorage.energy().begin(), atomStorage.energy().end(), 0.0f);
     }
 }

@@ -31,7 +31,7 @@ public:
             return;
         }
 
-        const LJParams& params = ljPairRow[static_cast<size_t>(atoms.type(bIndex))];
+        const LJParams& params = ljPairRow[static_cast<size_t>(atoms.type()[bIndex])];
 
         const float invD2 = 1.0f / d2;
         const float invD6 = invD2 * invD2 * invD2;
@@ -51,12 +51,12 @@ public:
         forceY -= pairForceY;
         forceZ -= pairForceZ;
 
-        atoms.forceX(bIndex) += pairForceX;
-        atoms.forceY(bIndex) += pairForceY;
-        atoms.forceZ(bIndex) += pairForceZ;
+        atoms.fx()[bIndex] += pairForceX;
+        atoms.fy()[bIndex] += pairForceY;
+        atoms.fz()[bIndex] += pairForceZ;
 
         potenE += 0.5f * potential;
-        atoms.energy(bIndex) += 0.5f * potential;
+        atoms.energy()[bIndex] += 0.5f * potential;
     }
 
 private:

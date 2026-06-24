@@ -50,11 +50,11 @@ namespace EnergyMetrics {
         const size_t mobileCount = atomStorage.mobileCount();
         for (size_t atomIndex = 0; atomIndex < mobileCount; ++atomIndex) {
             const vec3 speed = atomStorage.vel(atomIndex);
-            totalKineticEnergy += kineticEnergy(atomStorage.type(atomIndex), speed);
+            totalKineticEnergy += kineticEnergy(atomStorage.type()[atomIndex], speed);
             totalSpeed += length(speed);
         }
         for (size_t atomIndex = 0; atomIndex < atomStorage.size(); ++atomIndex) {
-            totalPotentialEnergy += atomStorage.energy(atomIndex);
+            totalPotentialEnergy += atomStorage.energy()[atomIndex];
         }
 
         const float invAtomCount = 1.0f / atomStorage.size();

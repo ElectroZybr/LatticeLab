@@ -22,7 +22,7 @@ const BondParams* paramsFor(const AtomStorage& atomStorage, size_t aIndex, size_
         return nullptr;
     }
 
-    const BondParams& params = bondDefaultProps.get(atomStorage.type(aIndex), atomStorage.type(bIndex));
+    const BondParams& params = bondDefaultProps.get(atomStorage.type()[aIndex], atomStorage.type()[bIndex]);
     if (params.r0 <= 0.0f || params.a <= 0.0f || params.De <= 0.0f) {
         return nullptr;
     }
@@ -37,7 +37,7 @@ Bond* create(Bond::List& bonds, size_t aIndex, size_t bIndex, AtomStorage& atomS
         return nullptr;
     }
 
-    if (atomStorage.valenceCount(aIndex) <= 0 || atomStorage.valenceCount(bIndex) <= 0) {
+    if (atomStorage.valence()[aIndex] <= 0 || atomStorage.valence()[bIndex] <= 0) {
         return nullptr;
     }
 
@@ -53,8 +53,8 @@ Bond* create(Bond::List& bonds, size_t aIndex, size_t bIndex, AtomStorage& atomS
     }
 
     bonds.emplace_back(aIndex, bIndex, *bondParams);
-    --atomStorage.valenceCount(aIndex);
-    --atomStorage.valenceCount(bIndex);
+    --atomStorage.valence()[aIndex];
+    --atomStorage.valence()[bIndex];
     return &bonds.back();
 }
 

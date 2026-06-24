@@ -14,16 +14,16 @@ namespace {
         const AtomStorage& atomStorage = simulation.atoms();
         const std::size_t mobileCount = atomStorage.mobileCount();
 
-        data.baseVx.assign(atomStorage.vxData(), atomStorage.vxData() + mobileCount);
-        data.baseVy.assign(atomStorage.vyData(), atomStorage.vyData() + mobileCount);
-        data.baseVz.assign(atomStorage.vzData(), atomStorage.vzData() + mobileCount);
+        data.baseVx.assign(atomStorage.vx().begin(), atomStorage.vx().begin() + static_cast<std::ptrdiff_t>(mobileCount));
+        data.baseVy.assign(atomStorage.vy().begin(), atomStorage.vy().begin() + static_cast<std::ptrdiff_t>(mobileCount));
+        data.baseVz.assign(atomStorage.vz().begin(), atomStorage.vz().begin() + static_cast<std::ptrdiff_t>(mobileCount));
         return data;
     }
 
     void restoreVelocities(AtomStorage& atomStorage, const VelocityPostProcessData& data) {
-        std::copy(data.baseVx.begin(), data.baseVx.end(), atomStorage.vxData());
-        std::copy(data.baseVy.begin(), data.baseVy.end(), atomStorage.vyData());
-        std::copy(data.baseVz.begin(), data.baseVz.end(), atomStorage.vzData());
+        std::copy(data.baseVx.begin(), data.baseVx.end(), atomStorage.vx().begin());
+        std::copy(data.baseVy.begin(), data.baseVy.end(), atomStorage.vy().begin());
+        std::copy(data.baseVz.begin(), data.baseVz.end(), atomStorage.vz().begin());
     }
 }
 
@@ -40,7 +40,7 @@ BENCHMARK_DEFINE_F(Fixture, PostProcessVelocities)(benchmark::State& state) {
 
         StepOps::postProcessVelocities(simulation_->atoms(), 1.0f);
 
-        benchmark::DoNotOptimize(simulation_->atoms().vxData()[0]);
+        benchmark::DoNotOptimize(simulation_->atoms().vx()[0]);
         benchmark::ClobberMemory();
     }
     setCounters(state);

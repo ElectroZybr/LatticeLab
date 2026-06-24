@@ -29,7 +29,7 @@ bool isInsideManualSpawnBounds(const World& world, const glm::vec3& position) {
 
 bool collidesWithExistingAtoms(const AtomStorage& storage, const glm::vec3& position, float radius) {
     for (size_t atomIndex = 0; atomIndex < storage.size(); ++atomIndex) {
-        const float otherRadius = AtomData::getProps(storage.type(atomIndex)).radius;
+        const float otherRadius = AtomData::getProps(storage.type()[atomIndex]).radius;
         const float minDistance = 2.0f * (radius + otherRadius);
         const glm::vec3 delta = storage.pos(atomIndex) - position;
         if (glm::dot(delta, delta) <= minDistance * minDistance) {

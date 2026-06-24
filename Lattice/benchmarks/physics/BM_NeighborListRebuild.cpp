@@ -8,7 +8,7 @@ BENCHMARK_DEFINE_F(Fixture, NeighborListRebuildOnly)(benchmark::State& state) {
 
     auto& atoms = simulation_->atoms();
     auto& grid = simulation_->world().getGrid();
-    grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
+    grid.rebuild(atoms.x(), atoms.y(), atoms.z());
 
     for (auto _ : state) {
         simulation_->neighborList().build(simulation_->atoms(), simulation_->world());

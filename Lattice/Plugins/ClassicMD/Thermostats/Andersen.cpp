@@ -31,13 +31,13 @@ void Andersen::mkMove(StepContext& stepContext)
 
         if(randomVal < probability)
         {
-            const float m = AtomData::getProps(atomStorage.type(i)).mass;
+            const float m = AtomData::getProps(atomStorage.type()[i]).mass;
             const float sigma = std::sqrt(Units::kboltzmann * t / m);
             std::normal_distribution<float> Maksvell(0.f, sigma);
 
-            atomStorage.velX(i) = Maksvell(randomGenerator);
-            atomStorage.velY(i) = Maksvell(randomGenerator);
-            atomStorage.velZ(i) = Maksvell(randomGenerator);
+            atomStorage.vx()[i] = Maksvell(randomGenerator);
+            atomStorage.vy()[i] = Maksvell(randomGenerator);
+            atomStorage.vz()[i] = Maksvell(randomGenerator);
         }
     }
 }

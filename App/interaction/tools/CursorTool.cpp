@@ -62,9 +62,9 @@ void CursorTool::onFrame(glm::ivec2 mousePos, float deltaTime) {
 
     auto applyRawForce = [&](size_t idx, const glm::vec3& baseDisplacement) {
         const glm::vec3 dragForce = baseDisplacement * (dragStrength * frameScale);
-        atoms.forceX(idx) += dragForce.x;
-        atoms.forceY(idx) += dragForce.y;
-        atoms.forceZ(idx) += dragForce.z;
+        atoms.fx()[idx] += dragForce.x;
+        atoms.fy()[idx] += dragForce.y;
+        atoms.fz()[idx] += dragForce.z;
     };
 
     if (selectedAtomIds.contains(selectedMoveAtomId_)) {

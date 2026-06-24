@@ -25,7 +25,7 @@ void OctreeNode::buildNode(const AtomStorage& atoms, int levels) {
 
         // Morton-порядок уже сгруппировал атомы так, что на данном уровне октанты идут подряд
         for (size_t atomIndex = begin; atomIndex < end; ++atomIndex) {
-            const glm::vec3 pos(atoms.posX(atomIndex), atoms.posY(atomIndex), atoms.posZ(atomIndex));
+            const glm::vec3 pos(atoms.x()[atomIndex], atoms.y()[atomIndex], atoms.z()[atomIndex]);
             ++octantCounts[childIndexFor(center, pos)];
         }
 
@@ -64,8 +64,8 @@ void OctreeNode::buildNode(const AtomStorage& atoms, int levels) {
         const size_t begin = firstAtom;
         const size_t end = firstAtom + atomCount;
         for (size_t i = begin; i < end; ++i) {
-            glm::vec3 pos(atoms.posX(i), atoms.posY(i), atoms.posZ(i));
-            float q = atoms.charge(i);
+            glm::vec3 pos(atoms.x()[i], atoms.y()[i], atoms.z()[i]);
+            float q = atoms.charge()[i];
             charge += q;
             dipoleMoment += pos * q;
         }

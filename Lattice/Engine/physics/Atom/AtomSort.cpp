@@ -31,11 +31,11 @@ void AtomSort::updateViewFromStorage(AtomStorage& atoms, size_t index, AtomView&
     view.vel = atoms.vel(index);
     view.force = atoms.force(index);
     view.prevForce = atoms.prevForce(index);
-    view.energy = atoms.energy(index);
-    view.invMass = atoms.invMass(index);
-    view.charge = atoms.charge(index);
-    view.type = atoms.type(index);
-    view.valenceCount = atoms.valenceCount(index);
+    view.energy = atoms.energy()[index];
+    view.invMass = atoms.invMass()[index];
+    view.charge = atoms.charge()[index];
+    view.type = atoms.type()[index];
+    view.valenceCount = atoms.valence()[index];
     view.id = atoms.atomId(index);
 }
 
@@ -45,11 +45,11 @@ void AtomSort::applyViewToStorage(AtomStorage& atoms, size_t index, const AtomVi
     atoms.setVel(index, view.vel);
     atoms.setForce(index, view.force);
     atoms.setPrevForce(index, view.prevForce);
-    atoms.energy(index) = view.energy;
-    atoms.invMass(index) = view.invMass;
-    atoms.charge(index) = view.charge;
-    atoms.type(index) = view.type;
-    atoms.valenceCount(index) = view.valenceCount;
+    atoms.energy()[index] = view.energy;
+    atoms.invMass()[index] = view.invMass;
+    atoms.charge()[index] = view.charge;
+    atoms.type()[index] = view.type;
+    atoms.valence()[index] = view.valenceCount;
     atoms.setAtomId(index, view.id);
 }
 
@@ -138,9 +138,9 @@ void AtomSort::mortonOrder(AtomStorage& atoms, const SpatialGrid& grid) {
     uint64_t maxMortonKey = 0;
     // Строим Morton-ключи по координатам ячеек сетки.
     for (size_t i = 0; i < atoms.mobileCount(); ++i) {
-        uint32_t cx = std::clamp(static_cast<int>(grid.worldToCellX(atoms.posX(i))), 0, static_cast<int>(grid.size.x - 1));
-        uint32_t cy = std::clamp(static_cast<int>(grid.worldToCellY(atoms.posY(i))), 0, static_cast<int>(grid.size.y - 1));
-        uint32_t cz = std::clamp(static_cast<int>(grid.worldToCellZ(atoms.posZ(i))), 0, static_cast<int>(grid.size.z - 1));
+        uint32_t cx = std::clamp(static_cast<int>(grid.worldToCellX(atoms.x()[i])), 0, static_cast<int>(grid.size.x - 1));
+        uint32_t cy = std::clamp(static_cast<int>(grid.worldToCellY(atoms.y()[i])), 0, static_cast<int>(grid.size.y - 1));
+        uint32_t cz = std::clamp(static_cast<int>(grid.worldToCellZ(atoms.z()[i])), 0, static_cast<int>(grid.size.z - 1));
         const uint64_t mortonKey = Morton3D::encode(cx, cy, cz);
         keyed_[i] = {mortonKey, static_cast<uint32_t>(i)};
         maxMortonKey = std::max(maxMortonKey, mortonKey);
