@@ -1,5 +1,5 @@
 add_executable(RenderTests
-    CameraTests.cpp
+    unit/CameraTests.cpp
 )
 
 target_link_libraries(RenderTests PRIVATE

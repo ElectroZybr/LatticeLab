@@ -229,8 +229,8 @@ namespace Benchmarks::BmRunner {
         const std::regex groupPattern(R"meta("group":"([^"]+)")meta");
 
         const std::array benchmarkRoots{
-            repoRoot / "Lattice" / "benchmarks",
-            repoRoot / "Rendering" / "benchmarks",
+            repoRoot / "Lattice",
+            repoRoot / "Rendering",
         };
 
         for (const auto& benchmarkRoot : benchmarkRoots) {
@@ -240,6 +240,15 @@ namespace Benchmarks::BmRunner {
 
             for (const auto& entry : fs::recursive_directory_iterator(benchmarkRoot)) {
                 if (!entry.is_regular_file() || entry.path().extension() != ".cpp") {
+                    continue;
+                }
+
+                const fs::path relativePath = fs::relative(entry.path(), repoRoot);
+                const std::string relative = relativePath.generic_string();
+                const bool isBenchSource =
+                    relative.find("/tests/bench/") != std::string::npos ||
+                    relative.find("/benchmarks/") != std::string::npos;
+                if (!isBenchSource) {
                     continue;
                 }
 
@@ -261,7 +270,6 @@ namespace Benchmarks::BmRunner {
                     }
 
                     std::smatch groupMatch;
-                    const fs::path relativePath = fs::relative(entry.path(), repoRoot);
                     meta[idMatch[1].str()] = BenchmarkMeta{
                         .label = labelMatch[1].str(),
                         .group = std::regex_search(line, groupMatch, groupPattern) ? groupMatch[1].str() : "",

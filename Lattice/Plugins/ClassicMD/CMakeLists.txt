@@ -6,6 +6,10 @@ file(GLOB_RECURSE CLASSIC_MD_HEADERS CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
 )
 
+foreach(classic_md_file_list IN ITEMS CLASSIC_MD_SOURCES CLASSIC_MD_HEADERS)
+    list(FILTER ${classic_md_file_list} EXCLUDE REGEX ".*/tests/.*")
+endforeach()
+
 add_library(LatticeClassicMD OBJECT
     ${CLASSIC_MD_SOURCES}
     ${CLASSIC_MD_HEADERS}

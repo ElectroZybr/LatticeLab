@@ -6,7 +6,8 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Rendering/benchmarks/CMakeLists.txt")
 endif()
 
 file(GLOB_RECURSE BENCHMARK_SOURCES CONFIGURE_DEPENDS
-    "physics/*.cpp"
+    "${CMAKE_SOURCE_DIR}/Lattice/Engine/*/tests/bench/*.cpp"
+    "${CMAKE_SOURCE_DIR}/Lattice/Plugins/*/tests/bench/*.cpp"
     "rendering/*.cpp"
     "SceneBuilder.cpp"
     "BmRunner/BenchmarkMain.cpp"
