@@ -1,16 +1,16 @@
 #pragma once
 
 #include <algorithm>
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <numeric>
 #include <span>
-#include <utility>
+#include <type_traits>
 #include <vector>
 
 #include "Lattice/Engine/NeighborSearch/SpatialGrid.h"
+#include "Lattice/Engine/math/DynamicSoA.h"
 #include "Lattice/Engine/physics/Atom/AtomData.h"
 #include "Lattice/Engine/physics/Atom/AtomSort.h"
 
@@ -19,414 +19,306 @@ public:
     using AtomId = uint32_t;
     static constexpr AtomId InvalidAtomId = std::numeric_limits<AtomId>::max();
 
+    enum class ColumnId : uint32_t {
+        X,
+        Y,
+        Z,
+        Vx,
+        Vy,
+        Vz,
+        Fx,
+        Fy,
+        Fz,
+        Pfx,
+        Pfy,
+        Pfz,
+        Energy,
+        InvMass,
+        Charge,
+        Type,
+        Valence,
+        Id
+    };
+
+    struct X { using ValueType = float; static constexpr ColumnId id = ColumnId::X; };
+    struct Y { using ValueType = float; static constexpr ColumnId id = ColumnId::Y; };
+    struct Z { using ValueType = float; static constexpr ColumnId id = ColumnId::Z; };
+    struct Vx { using ValueType = float; static constexpr ColumnId id = ColumnId::Vx; };
+    struct Vy { using ValueType = float; static constexpr ColumnId id = ColumnId::Vy; };
+    struct Vz { using ValueType = float; static constexpr ColumnId id = ColumnId::Vz; };
+    struct Fx { using ValueType = float; static constexpr ColumnId id = ColumnId::Fx; };
+    struct Fy { using ValueType = float; static constexpr ColumnId id = ColumnId::Fy; };
+    struct Fz { using ValueType = float; static constexpr ColumnId id = ColumnId::Fz; };
+    struct Pfx { using ValueType = float; static constexpr ColumnId id = ColumnId::Pfx; };
+    struct Pfy { using ValueType = float; static constexpr ColumnId id = ColumnId::Pfy; };
+    struct Pfz { using ValueType = float; static constexpr ColumnId id = ColumnId::Pfz; };
+    struct Energy { using ValueType = float; static constexpr ColumnId id = ColumnId::Energy; };
+    struct InvMass { using ValueType = float; static constexpr ColumnId id = ColumnId::InvMass; };
+    struct Charge { using ValueType = float; static constexpr ColumnId id = ColumnId::Charge; };
+    struct Type { using ValueType = AtomData::Type; static constexpr ColumnId id = ColumnId::Type; };
+    struct Valence { using ValueType = uint8_t; static constexpr ColumnId id = ColumnId::Valence; };
+    struct Id { using ValueType = AtomId; static constexpr ColumnId id = ColumnId::Id; };
+
 private:
-    enum class Field : size_t { X, Y, Z, Vx, Vy, Vz, Fx, Fy, Fz, Pfx, Pfy, Pfz, Pe, InvMass, Charge, Count };
-
-    AtomSort sort_;
-
-    static constexpr size_t kFieldCount = static_cast<size_t>(Field::Count);
     static constexpr size_t InvalidIndex = static_cast<size_t>(-1);
 
-    std::array<float**, kFieldCount> fieldPtrs() {
-        return {&x_, &y_, &z_, &vx_, &vy_, &vz_, &fx_, &fy_, &fz_, &pfx_, &pfy_, &pfz_, &pe_, &invMass_, &charge_};
-    }
-
-    size_t count_ = 0;
-    size_t capacity_ = 0;
+    AtomSort sort_;
+    DynamicSoA soa_;
     size_t mobileCount_ = 0;
-
-    std::vector<float> floatData_;
-
-    float* x_ = nullptr;
-    float* y_ = nullptr;
-    float* z_ = nullptr;
-    float* vx_ = nullptr;
-    float* vy_ = nullptr;
-    float* vz_ = nullptr;
-    float* fx_ = nullptr;
-    float* fy_ = nullptr;
-    float* fz_ = nullptr;
-    float* pfx_ = nullptr;
-    float* pfy_ = nullptr;
-    float* pfz_ = nullptr;
-    float* pe_ = nullptr;
-    float* invMass_ = nullptr;
-    float* charge_ = nullptr;
-
-    std::vector<AtomData::Type> atomType_;
-    std::vector<uint8_t> valence_;
-    std::vector<AtomId> atomIds_;
     std::vector<size_t> atomIdToIndex_;
     AtomId nextAtomId_ = 0;
 
-    // Обновляет все raw pointer члены по текущему floatData_ и capacity_.
-    void rebind() {
-        auto ptrs = fieldPtrs();
-        if (capacity_ == 0 || floatData_.empty()) {
-            for (float** p : ptrs) {
-                *p = nullptr;
-            }
-            return;
-        }
-        float* base = floatData_.data();
-        for (size_t i = 0; i < kFieldCount; ++i) {
-            *ptrs[i] = base + i * capacity_;
-        }
+    template<typename T>
+    T* col(ColumnId c) {
+        return soa_.column<T>(static_cast<uint32_t>(c));
     }
 
-    void ensureCapacity(size_t required) {
-        if (required <= capacity_) {
-            return;
-        }
-
-        size_t newCap = (capacity_ == 0) ? required : capacity_;
-        while (newCap < required) {
-            newCap = newCap * 3 / 2 + 1;
-        }
-
-        std::vector<float> newData(kFieldCount * newCap, 0.f);
-
-        if (count_ > 0) {
-            auto ptrs = fieldPtrs();
-            for (size_t i = 0; i < kFieldCount; ++i) {
-                std::copy_n(*ptrs[i], count_, newData.data() + i * newCap);
-            }
-        }
-
-        floatData_ = std::move(newData);
-        capacity_ = newCap;
-        rebind();
+    template<typename T>
+    const T* col(ColumnId c) const {
+        return soa_.column<T>(static_cast<uint32_t>(c));
     }
 
-    void resize(size_t count) {
-        ensureCapacity(count);
-        count_ = count;
-        atomType_.resize(count);
-        valence_.resize(count);
-        atomIds_.resize(count);
+    template<typename T>
+    std::span<T> colSpan(ColumnId c) {
+        return soa_.span<T>(static_cast<uint32_t>(c));
+    }
+
+    template<typename T>
+    std::span<const T> colSpan(ColumnId c) const {
+        return soa_.span<T>(static_cast<uint32_t>(c));
+    }
+
+    template<typename T>
+    T& at(ColumnId c, size_t i) {
+        return col<T>(c)[i];
+    }
+
+    template<typename T>
+    const T& at(ColumnId c, size_t i) const {
+        return col<T>(c)[i];
+    }
+
+    void setVec3(ColumnId x, ColumnId y, ColumnId z, size_t i, const glm::vec3& v) {
+        at<float>(x, i) = v.x;
+        at<float>(y, i) = v.y;
+        at<float>(z, i) = v.z;
     }
 
 public:
-    AtomStorage() = default;
+    AtomStorage() {
+        soa_.add<float>(static_cast<uint32_t>(X::id));
+        soa_.add<float>(static_cast<uint32_t>(Y::id));
+        soa_.add<float>(static_cast<uint32_t>(Z::id));
+        soa_.add<float>(static_cast<uint32_t>(Vx::id));
+        soa_.add<float>(static_cast<uint32_t>(Vy::id));
+        soa_.add<float>(static_cast<uint32_t>(Vz::id));
+        soa_.add<float>(static_cast<uint32_t>(Fx::id));
+        soa_.add<float>(static_cast<uint32_t>(Fy::id));
+        soa_.add<float>(static_cast<uint32_t>(Fz::id));
+        soa_.add<float>(static_cast<uint32_t>(Pfx::id));
+        soa_.add<float>(static_cast<uint32_t>(Pfy::id));
+        soa_.add<float>(static_cast<uint32_t>(Pfz::id));
+        soa_.add<float>(static_cast<uint32_t>(Energy::id));
+        soa_.add<float>(static_cast<uint32_t>(InvMass::id));
+        soa_.add<float>(static_cast<uint32_t>(Charge::id));
+        soa_.add<AtomData::Type>(static_cast<uint32_t>(Type::id));
+        soa_.add<uint8_t>(static_cast<uint32_t>(Valence::id));
+        soa_.add<AtomId>(static_cast<uint32_t>(Id::id));
+    }
+
     AtomStorage(const AtomStorage&) = delete;
     AtomStorage& operator=(const AtomStorage&) = delete;
-
-    AtomStorage(AtomStorage&& other) noexcept
-        : count_(other.count_), capacity_(other.capacity_), mobileCount_(other.mobileCount_), floatData_(std::move(other.floatData_)),
-          atomType_(std::move(other.atomType_)), valence_(std::move(other.valence_)), atomIds_(std::move(other.atomIds_)),
-          atomIdToIndex_(std::move(other.atomIdToIndex_)), nextAtomId_(other.nextAtomId_) {
-        rebind();
-        other.count_ = other.capacity_ = other.mobileCount_ = 0;
-        other.nextAtomId_ = 0;
-        other.rebind();
-    }
-
-    AtomStorage& operator=(AtomStorage&& other) noexcept {
-        if (this == &other) {
-            return *this;
-        }
-        count_ = other.count_;
-        capacity_ = other.capacity_;
-        mobileCount_ = other.mobileCount_;
-        floatData_ = std::move(other.floatData_);
-        atomType_ = std::move(other.atomType_);
-        valence_ = std::move(other.valence_);
-        atomIds_ = std::move(other.atomIds_);
-        atomIdToIndex_ = std::move(other.atomIdToIndex_);
-        nextAtomId_ = other.nextAtomId_;
-        rebind();
-        other.count_ = other.capacity_ = other.mobileCount_ = 0;
-        other.nextAtomId_ = 0;
-        other.rebind();
-        return *this;
-    }
-
-    // Фиксированные атомы должны быть в конце массива (индексы [mobileCount, count)).
-    void init(size_t count, size_t mobileCount, std::span<const float> x, std::span<const float> y, std::span<const float> z,
-              std::span<const float> vx, std::span<const float> vy, std::span<const float> vz, std::span<const AtomData::Type> atomType,
-              std::span<const float> charge) {
-        clear();
-        resize(count);
-        mobileCount_ = mobileCount;
-
-        std::copy_n(x.data(), count, x_);
-        std::copy_n(y.data(), count, y_);
-        std::copy_n(z.data(), count, z_);
-        std::copy_n(vx.data(), count, vx_);
-        std::copy_n(vy.data(), count, vy_);
-        std::copy_n(vz.data(), count, vz_);
-        std::copy_n(charge.data(), count, charge_);
-        std::copy_n(atomType.data(), count, atomType_.data());
-        atomIds_.resize(count);
-        atomIdToIndex_.assign(count, InvalidIndex);
-
-        std::fill_n(fx_, count, 0.f);
-        std::fill_n(fy_, count, 0.f);
-        std::fill_n(fz_, count, 0.f);
-        std::fill_n(pfx_, count, 0.f);
-        std::fill_n(pfy_, count, 0.f);
-        std::fill_n(pfz_, count, 0.f);
-        std::fill_n(pe_, count, 0.f);
-
-        for (size_t i = 0; i < count; ++i) {
-            const auto& props = AtomData::getProps(atomType_[i]);
-            invMass_[i] = 1.f / props.mass;
-            valence_[i] = props.maxValence;
-            atomIds_[i] = static_cast<AtomId>(i);
-            atomIdToIndex_[i] = i;
-        }
-        nextAtomId_ = static_cast<AtomId>(count);
-    }
+    AtomStorage(AtomStorage&&) noexcept = default;
+    AtomStorage& operator=(AtomStorage&&) noexcept = default;
 
     void clear() {
-        count_ = mobileCount_ = capacity_ = 0;
+        soa_.clear();
+        mobileCount_ = 0;
         nextAtomId_ = 0;
-        floatData_.clear();
-        floatData_.shrink_to_fit();
-        atomType_.clear();
-        atomType_.shrink_to_fit();
-        valence_.clear();
-        valence_.shrink_to_fit();
-        atomIds_.clear();
-        atomIds_.shrink_to_fit();
         atomIdToIndex_.clear();
         atomIdToIndex_.shrink_to_fit();
-        rebind(); // обнуляем указатели, чтобы не держать висячие
     }
 
     void reserve(size_t count) {
-        ensureCapacity(count);
-        atomType_.reserve(count);
-        valence_.reserve(count);
-        atomIds_.reserve(count);
+        soa_.reserve(count);
+        atomIdToIndex_.reserve(count);
     }
 
-    [[nodiscard]] AtomId addAtom(const glm::vec3& coords, const glm::vec3& speed, AtomData::Type type, bool fixed = false) {
-        ensureCapacity(count_ + 1);
+    [[nodiscard]] AtomId addAtom(const glm::vec3& coords, const glm::vec3& speed, AtomData::Type typeValue, bool fixed = false) {
+        soa_.resize(size() + 1);
+        const size_t i = size() - 1;
 
-        x_[count_] = static_cast<float>(coords.x);
-        y_[count_] = static_cast<float>(coords.y);
-        z_[count_] = static_cast<float>(coords.z);
+        setPos(i, coords);
+        setVel(i, speed);
+        setForce(i, glm::vec3(0.0f));
+        setPrevForce(i, glm::vec3(0.0f));
+        at<float>(Energy::id, i) = 0.0f;
 
-        vx_[count_] = static_cast<float>(speed.x);
-        vy_[count_] = static_cast<float>(speed.y);
-        vz_[count_] = static_cast<float>(speed.z);
+        const auto& props = AtomData::getProps(typeValue);
+        at<float>(InvMass::id, i) = 1.0f / props.mass;
+        at<float>(Charge::id, i) = props.defaultCharge;
+        at<AtomData::Type>(Type::id, i) = typeValue;
+        at<uint8_t>(Valence::id, i) = props.maxValence;
 
-        fx_[count_] = fy_[count_] = fz_[count_] = 0.f;
-        pfx_[count_] = pfy_[count_] = pfz_[count_] = 0.f;
-        pe_[count_] = 0.f;
-
-        const auto& props = AtomData::getProps(type);
-        invMass_[count_] = 1.f / props.mass;
-        charge_[count_] = props.defaultCharge;
-
-        atomType_.emplace_back(type);
-        valence_.emplace_back(props.maxValence);
-        const AtomId newId = nextAtomId_++;
-        atomIds_.emplace_back(newId);
-        ++count_;
-        if (atomIdToIndex_.size() <= newId) {
-            atomIdToIndex_.resize(static_cast<size_t>(newId) + 1, InvalidIndex);
-        }
-        atomIdToIndex_[newId] = count_ - 1;
+        const AtomId id = nextAtomId_++;
+        setAtomId(i, id);
 
         if (!fixed) {
-            // Сохраняем инвариант: мобильные атомы идут первыми
-            swapAtoms(count_ - 1, mobileCount_);
+            swapAtoms(i, mobileCount_);
             ++mobileCount_;
         }
-
-        return newId;
+        return id;
     }
 
     void removeAtom(size_t index) {
-        if (index >= count_) {
+        if (index >= size()) {
             return;
         }
 
-        const size_t last = count_ - 1;
+        const size_t last = size() - 1;
         if (index < mobileCount_) {
             swapAtoms(index, mobileCount_ - 1);
             --mobileCount_;
             swapAtoms(mobileCount_, last);
-        }
-        else {
-            if (index != last) {
-                swapAtoms(index, last);
-            }
+        } else if (index != last) {
+            swapAtoms(index, last);
         }
 
-        atomIdToIndex_[atomIds_.back()] = InvalidIndex;
-        atomType_.pop_back();
-        valence_.pop_back();
-        atomIds_.pop_back();
-        --count_;
+        atomIdToIndex_[atomId(last)] = InvalidIndex;
+        soa_.resize(last);
     }
 
     void swapAtoms(size_t a, size_t b) {
-        if (a >= count_ || b >= count_ || a == b) {
+        if (a >= size() || b >= size() || a == b) {
             return;
         }
-
-        std::swap(x_[a], x_[b]);
-        std::swap(y_[a], y_[b]);
-        std::swap(z_[a], z_[b]);
-        std::swap(vx_[a], vx_[b]);
-        std::swap(vy_[a], vy_[b]);
-        std::swap(vz_[a], vz_[b]);
-        std::swap(fx_[a], fx_[b]);
-        std::swap(fy_[a], fy_[b]);
-        std::swap(fz_[a], fz_[b]);
-        std::swap(pfx_[a], pfx_[b]);
-        std::swap(pfy_[a], pfy_[b]);
-        std::swap(pfz_[a], pfz_[b]);
-        std::swap(pe_[a], pe_[b]);
-        std::swap(invMass_[a], invMass_[b]);
-        std::swap(charge_[a], charge_[b]);
-        std::swap(atomType_[a], atomType_[b]);
-        std::swap(valence_[a], valence_[b]);
-        std::swap(atomIds_[a], atomIds_[b]);
-        atomIdToIndex_[atomIds_[a]] = a;
-        atomIdToIndex_[atomIds_[b]] = b;
+        soa_.swapRows(a, b);
+        atomIdToIndex_[atomId(a)] = a;
+        atomIdToIndex_[atomId(b)] = b;
     }
 
     void swapPrevCurrentForces() {
-        std::swap(pfx_, fx_);
-        std::swap(pfy_, fy_);
-        std::swap(pfz_, fz_);
+        for (size_t i = 0; i < size(); ++i) {
+            std::swap(at<float>(Fx::id, i), at<float>(Pfx::id, i));
+            std::swap(at<float>(Fy::id, i), at<float>(Pfy::id, i));
+            std::swap(at<float>(Fz::id, i), at<float>(Pfz::id, i));
+        }
     }
 
-    size_t size() const { return count_; }
+    size_t size() const { return soa_.size(); }
     size_t mobileCount() const { return mobileCount_; }
-    bool empty() const { return count_ == 0; }
+    bool empty() const { return size() == 0; }
     bool isAtomFixed(size_t i) const { return i >= mobileCount_; }
 
-    size_t memoryBytes() const {
-        return floatData_.capacity() * sizeof(float) + atomType_.capacity() * sizeof(AtomData::Type) +
-               valence_.capacity() * sizeof(uint8_t);
-    }
+    size_t memoryBytes() const { return soa_.storageBytes() + atomIdToIndex_.capacity() * sizeof(size_t); }
 
-    float& posX(size_t i) { return x_[i]; }
-    float& posY(size_t i) { return y_[i]; }
-    float& posZ(size_t i) { return z_[i]; }
-    const float& posX(size_t i) const { return x_[i]; }
-    const float& posY(size_t i) const { return y_[i]; }
-    const float& posZ(size_t i) const { return z_[i]; }
+    float* x() { return col<float>(X::id); }
+    const float* x() const { return col<float>(X::id); }
+    std::span<float> xSpan() { return colSpan<float>(X::id); }
+    std::span<const float> xSpan() const { return colSpan<float>(X::id); }
 
-    float& velX(size_t i) { return vx_[i]; }
-    float& velY(size_t i) { return vy_[i]; }
-    float& velZ(size_t i) { return vz_[i]; }
-    const float& velX(size_t i) const { return vx_[i]; }
-    const float& velY(size_t i) const { return vy_[i]; }
-    const float& velZ(size_t i) const { return vz_[i]; }
+    float* y() { return col<float>(Y::id); }
+    const float* y() const { return col<float>(Y::id); }
+    std::span<float> ySpan() { return colSpan<float>(Y::id); }
+    std::span<const float> ySpan() const { return colSpan<float>(Y::id); }
 
-    float& forceX(size_t i) { return fx_[i]; }
-    float& forceY(size_t i) { return fy_[i]; }
-    float& forceZ(size_t i) { return fz_[i]; }
-    const float& forceX(size_t i) const { return fx_[i]; }
-    const float& forceY(size_t i) const { return fy_[i]; }
-    const float& forceZ(size_t i) const { return fz_[i]; }
+    float* z() { return col<float>(Z::id); }
+    const float* z() const { return col<float>(Z::id); }
+    std::span<float> zSpan() { return colSpan<float>(Z::id); }
+    std::span<const float> zSpan() const { return colSpan<float>(Z::id); }
 
-    float& prevForceX(size_t i) { return pfx_[i]; }
-    float& prevForceY(size_t i) { return pfy_[i]; }
-    float& prevForceZ(size_t i) { return pfz_[i]; }
-    const float& prevForceX(size_t i) const { return pfx_[i]; }
-    const float& prevForceY(size_t i) const { return pfy_[i]; }
-    const float& prevForceZ(size_t i) const { return pfz_[i]; }
+    float* vx() { return col<float>(Vx::id); }
+    const float* vx() const { return col<float>(Vx::id); }
+    std::span<float> vxSpan() { return colSpan<float>(Vx::id); }
+    std::span<const float> vxSpan() const { return colSpan<float>(Vx::id); }
 
-    float& invMass(size_t i) { return invMass_[i]; }
-    const float& invMass(size_t i) const { return invMass_[i]; }
+    float* vy() { return col<float>(Vy::id); }
+    const float* vy() const { return col<float>(Vy::id); }
+    std::span<float> vySpan() { return colSpan<float>(Vy::id); }
+    std::span<const float> vySpan() const { return colSpan<float>(Vy::id); }
 
-    float& charge(size_t i) { return charge_[i]; }
-    const float& charge(size_t i) const { return charge_[i]; }
+    float* vz() { return col<float>(Vz::id); }
+    const float* vz() const { return col<float>(Vz::id); }
+    std::span<float> vzSpan() { return colSpan<float>(Vz::id); }
+    std::span<const float> vzSpan() const { return colSpan<float>(Vz::id); }
 
-    float& energy(size_t i) { return pe_[i]; }
-    const float& energy(size_t i) const { return pe_[i]; }
+    float* fx() { return col<float>(Fx::id); }
+    const float* fx() const { return col<float>(Fx::id); }
+    std::span<float> fxSpan() { return colSpan<float>(Fx::id); }
+    std::span<const float> fxSpan() const { return colSpan<float>(Fx::id); }
 
-    AtomData::Type& type(size_t i) { return atomType_[i]; }
-    const AtomData::Type& type(size_t i) const { return atomType_[i]; }
+    float* fy() { return col<float>(Fy::id); }
+    const float* fy() const { return col<float>(Fy::id); }
+    std::span<float> fySpan() { return colSpan<float>(Fy::id); }
+    std::span<const float> fySpan() const { return colSpan<float>(Fy::id); }
 
-    uint8_t& valenceCount(size_t i) { return valence_[i]; }
-    const uint8_t& valenceCount(size_t i) const { return valence_[i]; }
+    float* fz() { return col<float>(Fz::id); }
+    const float* fz() const { return col<float>(Fz::id); }
+    std::span<float> fzSpan() { return colSpan<float>(Fz::id); }
+    std::span<const float> fzSpan() const { return colSpan<float>(Fz::id); }
 
-    glm::vec3 pos(size_t i) const { return {x_[i], y_[i], z_[i]}; }
-    glm::vec3 vel(size_t i) const { return {vx_[i], vy_[i], vz_[i]}; }
-    glm::vec3 force(size_t i) const { return {fx_[i], fy_[i], fz_[i]}; }
-    glm::vec3 prevForce(size_t i) const { return {pfx_[i], pfy_[i], pfz_[i]}; }
+    float* pfx() { return col<float>(Pfx::id); }
+    const float* pfx() const { return col<float>(Pfx::id); }
+    std::span<float> pfxSpan() { return colSpan<float>(Pfx::id); }
+    std::span<const float> pfxSpan() const { return colSpan<float>(Pfx::id); }
 
-    void setPos(size_t i, const glm::vec3& v) {
-        x_[i] = v.x;
-        y_[i] = v.y;
-        z_[i] = v.z;
-    }
-    void setVel(size_t i, const glm::vec3& v) {
-        vx_[i] = v.x;
-        vy_[i] = v.y;
-        vz_[i] = v.z;
-    }
-    void setForce(size_t i, const glm::vec3& v) {
-        fx_[i] = v.x;
-        fy_[i] = v.y;
-        fz_[i] = v.z;
-    }
-    void setPrevForce(size_t i, const glm::vec3& v) {
-        pfx_[i] = v.x;
-        pfy_[i] = v.y;
-        pfz_[i] = v.z;
-    }
+    float* pfy() { return col<float>(Pfy::id); }
+    const float* pfy() const { return col<float>(Pfy::id); }
+    std::span<float> pfySpan() { return colSpan<float>(Pfy::id); }
+    std::span<const float> pfySpan() const { return colSpan<float>(Pfy::id); }
 
-    float* xData() { return x_; }
-    const float* xData() const { return x_; }
-    float* yData() { return y_; }
-    const float* yData() const { return y_; }
-    float* zData() { return z_; }
-    const float* zData() const { return z_; }
-    float* vxData() { return vx_; }
-    const float* vxData() const { return vx_; }
-    float* vyData() { return vy_; }
-    const float* vyData() const { return vy_; }
-    float* vzData() { return vz_; }
-    const float* vzData() const { return vz_; }
-    float* fxData() { return fx_; }
-    float* fyData() { return fy_; }
-    float* fzData() { return fz_; }
-    float* pfxData() { return pfx_; }
-    float* pfyData() { return pfy_; }
-    float* pfzData() { return pfz_; }
-    float* energyData() { return pe_; }
-    float* invMassData() { return invMass_; }
-    float* chargeData() { return charge_; }
-    const float* chargeData() const { return charge_; }
+    float* pfz() { return col<float>(Pfz::id); }
+    const float* pfz() const { return col<float>(Pfz::id); }
+    std::span<float> pfzSpan() { return colSpan<float>(Pfz::id); }
+    std::span<const float> pfzSpan() const { return colSpan<float>(Pfz::id); }
 
-    AtomData::Type* atomTypeData() { return atomType_.data(); }
-    const AtomData::Type* atomTypeData() const { return atomType_.data(); }
+    float* charge() { return col<float>(Charge::id); }
+    const float* charge() const { return col<float>(Charge::id); }
+    std::span<float> chargeSpan() { return colSpan<float>(Charge::id); }
+    std::span<const float> chargeSpan() const { return colSpan<float>(Charge::id); }
 
-    std::span<const float> floatDataSpan() const { return {floatData_.data(), floatData_.size()}; }
+    float* energy() { return col<float>(Energy::id); }
+    const float* energy() const { return col<float>(Energy::id); }
+    std::span<float> energySpan() { return colSpan<float>(Energy::id); }
+    std::span<const float> energySpan() const { return colSpan<float>(Energy::id); }
 
-    std::span<float> xDataSpan() const { return {x_, count_}; }
-    std::span<float> yDataSpan() const { return {y_, count_}; }
-    std::span<float> zDataSpan() const { return {z_, count_}; }
-    std::span<float> vxDataSpan() const { return {vx_, count_}; }
-    std::span<float> vyDataSpan() const { return {vy_, count_}; }
-    std::span<float> vzDataSpan() const { return {vz_, count_}; }
-    std::span<float> chargeDataSpan() const { return {charge_, count_}; }
+    float* invMass() { return col<float>(InvMass::id); }
+    const float* invMass() const { return col<float>(InvMass::id); }
+    std::span<float> invMassSpan() { return colSpan<float>(InvMass::id); }
+    std::span<const float> invMassSpan() const { return colSpan<float>(InvMass::id); }
 
-    std::span<const AtomData::Type> atomTypeDataSpan() const { return {atomType_.data(), atomType_.size()}; }
-    std::span<const uint8_t> valenceDataSpan() const { return {valence_.data(), valence_.size()}; }
-    std::span<const AtomId> atomIdDataSpan() const { return {atomIds_.data(), atomIds_.size()}; }
+    AtomData::Type* type() { return col<AtomData::Type>(Type::id); }
+    const AtomData::Type* type() const { return col<AtomData::Type>(Type::id); }
+    std::span<AtomData::Type> typeSpan() { return colSpan<AtomData::Type>(Type::id); }
+    std::span<const AtomData::Type> typeSpan() const { return colSpan<AtomData::Type>(Type::id); }
+
+    uint8_t* valence() { return col<uint8_t>(Valence::id); }
+    const uint8_t* valence() const { return col<uint8_t>(Valence::id); }
+    std::span<uint8_t> valenceSpan() { return colSpan<uint8_t>(Valence::id); }
+    std::span<const uint8_t> valenceSpan() const { return colSpan<uint8_t>(Valence::id); }
+
+    std::span<const AtomId> atomIdDataSpan() const { return colSpan<AtomId>(ColumnId::Id); }
+    std::span<const float> floatDataSpan() const { return {}; }
+
+    glm::vec3 pos(size_t i) const { return {at<float>(X::id, i), at<float>(Y::id, i), at<float>(Z::id, i)}; }
+    glm::vec3 vel(size_t i) const { return {at<float>(Vx::id, i), at<float>(Vy::id, i), at<float>(Vz::id, i)}; }
+    glm::vec3 force(size_t i) const { return {at<float>(Fx::id, i), at<float>(Fy::id, i), at<float>(Fz::id, i)}; }
+    glm::vec3 prevForce(size_t i) const { return {at<float>(Pfx::id, i), at<float>(Pfy::id, i), at<float>(Pfz::id, i)}; }
+
+    void setPos(size_t i, const glm::vec3& v) { setVec3(X::id, Y::id, Z::id, i, v); }
+    void setVel(size_t i, const glm::vec3& v) { setVec3(Vx::id, Vy::id, Vz::id, i, v); }
+    void setForce(size_t i, const glm::vec3& v) { setVec3(Fx::id, Fy::id, Fz::id, i, v); }
+    void setPrevForce(size_t i, const glm::vec3& v) { setVec3(Pfx::id, Pfy::id, Pfz::id, i, v); }
 
     void setAtomId(size_t index, AtomId id) noexcept {
-        if (index >= atomIds_.size()) {
-            return;
-        }
-        atomIds_[index] = id;
+        at<AtomId>(Id::id, index) = id;
         if (static_cast<size_t>(id) >= atomIdToIndex_.size()) {
             atomIdToIndex_.resize(static_cast<size_t>(id) + 1, InvalidIndex);
         }
         atomIdToIndex_[id] = index;
     }
 
-    [[nodiscard]] AtomId atomId(size_t index) const noexcept { return index < atomIds_.size() ? atomIds_[index] : InvalidAtomId; }
+    [[nodiscard]] AtomId atomId(size_t index) const noexcept { return index < size() ? at<AtomId>(Id::id, index) : InvalidAtomId; }
     [[nodiscard]] size_t indexOf(AtomId id) const noexcept { return id < atomIdToIndex_.size() ? atomIdToIndex_[id] : InvalidIndex; }
     [[nodiscard]] bool containsAtomId(AtomId id) const noexcept { return indexOf(id) != InvalidIndex; }
 
@@ -436,13 +328,12 @@ public:
                 return;
             }
             --mobileCount_;
-            swapAtoms(i, mobileCount_); // последний мобильный встаёт на место i
-        }
-        else {
+            swapAtoms(i, mobileCount_);
+        } else {
             if (i < mobileCount_) {
                 return;
             }
-            swapAtoms(i, mobileCount_); // первый фиксированный встаёт на место i
+            swapAtoms(i, mobileCount_);
             ++mobileCount_;
         }
     }

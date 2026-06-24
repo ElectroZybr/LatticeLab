@@ -469,8 +469,14 @@ void AppStateIO::loadBinary(Lattice::Simulation& simulation, BaseRenderer& rende
 
     AtomStorage& atoms = simulation.atoms();
     simulation.reserveAtoms(atomCount);
-    atoms.init(atomCount, atomMobileCount, simState.x, simState.y, simState.z, simState.vx, simState.vy, simState.vz, simState.atomType,
-               simState.atomCharge);
+    for (size_t i = 0; i < atomCount; ++i) {
+        const bool fixed = i >= atomMobileCount;
+        atoms.addAtom(glm::vec3(simState.x[i], simState.y[i], simState.z[i]),
+                      glm::vec3(simState.vx[i], simState.vy[i], simState.vz[i]),
+                      simState.atomType[i],
+                      fixed);
+        atoms.charge(i) = simState.atomCharge[i];
+    }
     simulation.finishAtomBatch();
 
     for (const auto& [aIndex, bIndex] : simState.bonds) {

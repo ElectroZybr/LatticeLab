@@ -67,7 +67,11 @@ static void testOctreeBuildChargeAndChildren() {
     std::vector<float> charge{1.0f, -2.0f, 3.0f};
 
     AtomStorage atoms;
-    atoms.init(count, count, x, y, z, vx, vy, vz, types, charge);
+    atoms.reserve(count);
+    for (size_t i = 0; i < count; ++i) {
+        atoms.addAtom(glm::vec3(x[i], y[i], z[i]), glm::vec3(vx[i], vy[i], vz[i]), types[i]);
+        atoms.charge(i) = charge[i];
+    }
 
     SpatialGrid grid(glm::vec3(8.0f), 4.0f);
     grid.rebuild(atoms.xDataSpan(), atoms.yDataSpan(), atoms.zDataSpan());
@@ -125,7 +129,11 @@ static void testCoulombFarFieldApproximation() {
     std::vector<float> charge{1.0f, 1.0f};
 
     AtomStorage atoms;
-    atoms.init(count, count, x, y, z, vx, vy, vz, types, charge);
+    atoms.reserve(count);
+    for (size_t i = 0; i < count; ++i) {
+        atoms.addAtom(glm::vec3(x[i], y[i], z[i]), glm::vec3(vx[i], vy[i], vz[i]), types[i]);
+        atoms.charge(i) = charge[i];
+    }
 
     OctreeNode root;
     OctreeTestSupport::setSize(root, 1.0f);
