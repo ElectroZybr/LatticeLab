@@ -6,6 +6,12 @@
 #include <vector>
 
 namespace Lattice::CliSystemInfo {
+    struct EngineInfo {
+        std::string version;
+        std::string build;
+        std::string compiler;
+    };
+
     struct CpuInfo {
         std::string name;
         std::string simd;
@@ -25,6 +31,7 @@ namespace Lattice::CliSystemInfo {
         std::string os;
         std::string arch;
         uint64_t totalRamBytes = 0;
+        EngineInfo engine;
         CpuInfo cpu;
         std::vector<GpuInfo> gpus;
     };

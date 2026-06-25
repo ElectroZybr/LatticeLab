@@ -54,6 +54,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(CLI11)
 
 add_executable(Lattice-cli
+    CLI/CliStyle.h
     CLI/main.cpp
     CLI/SystemInfo.cpp
     CLI/SystemInfo.h
@@ -66,6 +67,12 @@ set_target_properties(Lattice-cli PROPERTIES
 target_link_libraries(Lattice-cli PRIVATE
     Lattice
     CLI11::CLI11
+)
+
+target_compile_definitions(Lattice-cli PRIVATE
+    LL_CLI_ENGINE_VERSION="${APP_VERSION_STRING}"
+    LL_CLI_BUILD_TYPE="$<CONFIG>"
+    LL_CLI_COMPILER="${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}"
 )
 
 add_subdirectory(tests)

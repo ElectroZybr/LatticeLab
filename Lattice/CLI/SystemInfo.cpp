@@ -1,4 +1,5 @@
 #include "Lattice/CLI/SystemInfo.h"
+#include "Lattice/CLI/CliStyle.h"
 
 #include <algorithm>
 #include <array>
@@ -19,6 +20,7 @@
 #include <windows.h>
 #elif defined(__linux__)
 #include <cpuid.h>
+#include <sys/utsname.h>
 #include <sys/sysinfo.h>
 #elif defined(__APPLE__)
 #if defined(__x86_64__) || defined(__i386__)
@@ -31,15 +33,27 @@ namespace fs = std::filesystem;
 
 namespace Lattice::CliSystemInfo {
     namespace {
-        constexpr const char* kReset = "\033[0m";
-        constexpr const char* kDim = "\033[90m";
-        constexpr const char* kTitle = "\033[96m";
-        constexpr const char* kLabel = "\033[94m";
-        constexpr const char* kValue = "\033[97m";
-        constexpr const char* kDevice = "\033[93m";
+#ifndef LL_CLI_ENGINE_VERSION
+#define LL_CLI_ENGINE_VERSION "unknown"
+#endif
 
-        std::string colorize(std::string_view text, const char* color) {
-            return std::string(color) + std::string(text) + kReset;
+#ifndef LL_CLI_BUILD_TYPE
+#define LL_CLI_BUILD_TYPE "unknown"
+#endif
+
+#ifndef LL_CLI_COMPILER
+#define LL_CLI_COMPILER "unknown"
+#endif
+
+        constexpr std::string_view kReset = CliStyle::Color::reset;
+        constexpr std::string_view kDim = CliStyle::Color::tree;
+        constexpr std::string_view kTitle = CliStyle::Color::header;
+        constexpr std::string_view kLabel = CliStyle::Color::key;
+        constexpr std::string_view kValue = CliStyle::Color::value;
+        constexpr std::string_view kDevice = CliStyle::Color::device;
+
+        std::string colorize(std::string_view text, std::string_view color) {
+            return CliStyle::paint(text, color);
         }
 
         std::string trim(std::string text) {
@@ -51,6 +65,23 @@ namespace Lattice::CliSystemInfo {
             return text.substr(begin, end - begin + 1);
         }
 
+        std::string trimCpuName(std::string name) {
+            static constexpr std::array<std::string_view, 4> suffixes{
+                " 16-Core Processor",
+                " 12-Core Processor",
+                " 8-Core Processor",
+                " 6-Core Processor",
+            };
+
+            for (std::string_view suffix : suffixes) {
+                if (name.size() >= suffix.size() && name.ends_with(suffix)) {
+                    name.erase(name.size() - suffix.size());
+                    break;
+                }
+            }
+            return trim(name);
+        }
+
         std::string readFirstLine(const fs::path& path) {
             std::ifstream input(path);
             std::string line;
@@ -58,6 +89,26 @@ namespace Lattice::CliSystemInfo {
                 return trim(line);
             }
             return {};
+        }
+
+        std::map<std::string, std::string> readKeyValueFile(const fs::path& path) {
+            std::ifstream input(path);
+            std::map<std::string, std::string> values;
+            std::string line;
+            while (std::getline(input, line)) {
+                const std::size_t equals = line.find('=');
+                if (equals == std::string::npos) {
+                    continue;
+                }
+
+                std::string key = trim(line.substr(0, equals));
+                std::string value = trim(line.substr(equals + 1));
+                if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
+                    value = value.substr(1, value.size() - 2);
+                }
+                values.emplace(std::move(key), std::move(value));
+            }
+            return values;
         }
 
         uint64_t readUint64FromFile(const fs::path& path) {
@@ -99,7 +150,21 @@ namespace Lattice::CliSystemInfo {
 #elif defined(__APPLE__)
             return "macOS";
 #elif defined(__linux__)
-            return "Linux";
+            std::string osName = "Linux";
+            const auto osRelease = readKeyValueFile("/etc/os-release");
+            if (const auto it = osRelease.find("PRETTY_NAME"); it != osRelease.end() && !it->second.empty()) {
+                osName = it->second;
+            } else if (const auto it = osRelease.find("NAME"); it != osRelease.end() && !it->second.empty()) {
+                osName = it->second;
+            }
+
+            struct utsname uts {};
+            if (uname(&uts) == 0 && std::strlen(uts.release) > 0) {
+                osName += " (kernel ";
+                osName += uts.release;
+                osName += ")";
+            }
+            return osName;
 #else
             return "Unknown OS";
 #endif
@@ -117,6 +182,27 @@ namespace Lattice::CliSystemInfo {
 #else
             return "unknown";
 #endif
+        }
+
+        std::string normalizeCompilerName(std::string compiler) {
+            if (compiler.starts_with("GNU ")) {
+                compiler.replace(0, 4, "GCC ");
+            } else if (compiler.starts_with("Clang ")) {
+                compiler.replace(0, 6, "Clang ");
+            } else if (compiler.starts_with("AppleClang ")) {
+                compiler.replace(0, 11, "Apple Clang ");
+            } else if (compiler.starts_with("MSVC ")) {
+                compiler.replace(0, 5, "MSVC ");
+            }
+            return compiler;
+        }
+
+        EngineInfo detectEngineInfo() {
+            return EngineInfo{
+                .version = LL_CLI_ENGINE_VERSION,
+                .build = LL_CLI_BUILD_TYPE,
+                .compiler = normalizeCompilerName(LL_CLI_COMPILER),
+            };
         }
 
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
@@ -245,7 +331,7 @@ namespace Lattice::CliSystemInfo {
         std::string detectCpuName() {
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
             if (const std::string brand = detectCpuBrandX86(); !brand.empty()) {
-                return brand;
+                return trimCpuName(brand);
             }
 #endif
 
@@ -256,7 +342,7 @@ namespace Lattice::CliSystemInfo {
                 if (line.rfind("model name", 0) == 0) {
                     const auto pos = line.find(':');
                     if (pos != std::string::npos) {
-                        return trim(line.substr(pos + 1));
+                        return trimCpuName(trim(line.substr(pos + 1)));
                     }
                 }
             }
@@ -264,7 +350,7 @@ namespace Lattice::CliSystemInfo {
             char buffer[256]{};
             size_t size = sizeof(buffer);
             if (sysctlbyname("machdep.cpu.brand_string", buffer, &size, nullptr, 0) == 0) {
-                return trim(std::string(buffer, size > 0 ? size - 1 : 0));
+                return trimCpuName(trim(std::string(buffer, size > 0 ? size - 1 : 0)));
             }
 #endif
 
@@ -424,7 +510,7 @@ namespace Lattice::CliSystemInfo {
             return fields;
         }
 
-        std::map<std::string, std::string> readKeyValueFile(const fs::path& path) {
+        std::map<std::string, std::string> readColonKeyValueFile(const fs::path& path) {
             std::ifstream input(path);
             std::map<std::string, std::string> values;
             std::string line;
@@ -545,7 +631,7 @@ namespace Lattice::CliSystemInfo {
             }
 
             std::string driverVersion;
-            const auto versionInfo = readKeyValueFile(nvidiaRoot / "version");
+            const auto versionInfo = readColonKeyValueFile(nvidiaRoot / "version");
             const auto versionIt = versionInfo.find("NVRM version");
             if (versionIt != versionInfo.end()) {
                 const std::string& versionLine = versionIt->second;
@@ -579,7 +665,7 @@ namespace Lattice::CliSystemInfo {
                 }
 
                 GpuInfo& gpu = *it->second;
-                const auto info = readKeyValueFile(entry.path() / "information");
+                const auto info = readColonKeyValueFile(entry.path() / "information");
                 const auto modelIt = info.find("Model");
                 if (modelIt != info.end() && !modelIt->second.empty()) {
                     gpu.name = modelIt->second;
@@ -759,6 +845,7 @@ namespace Lattice::CliSystemInfo {
         info.os = detectOsName();
         info.arch = detectArchName();
         info.totalRamBytes = detectTotalRamBytes();
+        info.engine = detectEngineInfo();
         info.cpu.name = detectCpuName();
         info.cpu.simd = detectSimdWidth();
         info.cpu.cores = detectCpuCores();
@@ -772,6 +859,13 @@ namespace Lattice::CliSystemInfo {
         out << colorize("├─", kDim) << ' ' << colorize("OS:", kLabel) << ' ' << colorize(info.os, kValue) << '\n';
         out << colorize("├─", kDim) << ' ' << colorize("Arch:", kLabel) << ' ' << colorize(info.arch, kValue) << '\n';
         out << colorize("├─", kDim) << ' ' << colorize("RAM:", kLabel) << ' ' << colorize(formatBytes(info.totalRamBytes), kValue) << '\n';
+        out << colorize("├─", kDim) << ' ' << colorize("Engine", kTitle) << '\n';
+        out << colorize("│", kDim) << "  " << colorize("├─", kDim) << ' ' << colorize("Version:", kLabel) << ' '
+            << colorize(info.engine.version, kValue) << '\n';
+        out << colorize("│", kDim) << "  " << colorize("├─", kDim) << ' ' << colorize("Build:", kLabel) << ' '
+            << colorize(info.engine.build, kValue) << '\n';
+        out << colorize("│", kDim) << "  " << colorize("└─", kDim) << ' ' << colorize("Compiler:", kLabel) << ' '
+            << colorize(info.engine.compiler, kValue) << '\n';
         out << colorize("└─", kDim) << ' ' << colorize("Devices", kTitle) << '\n';
         out << "   " << colorize("├─", kDim) << ' ' << colorize("CPU[0]:", kDevice) << ' ' << colorize(info.cpu.name, kValue) << '\n';
         out << "   " << colorize("│", kDim) << "  " << colorize("├─", kDim) << ' ' << colorize("Cores:", kLabel) << ' '

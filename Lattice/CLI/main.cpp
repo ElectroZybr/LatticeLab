@@ -6,6 +6,7 @@
 
 #include <CLI/CLI.hpp>
 
+#include "Lattice/CLI/CliStyle.h"
 #include "Lattice/CLI/SystemInfo.h"
 #include "Engine/Simulation.h"
 #include "Engine/physics/Atom/AtomData.h"
@@ -14,14 +15,14 @@
 using namespace Lattice;
 
 static void printBanner() {
-std::cout << "\033[36m" << R"(
+std::cout << Lattice::CliStyle::paint(R"(
     __    ___  ____________________________   ________    ____
    / /   /   |/_  __/_  __/  _/ ____/ ____/  / ____/ /   /  _/
   / /   / /| | / /   / /  / // /   / __/    / /   / /    / /  
  / /___/ ___ |/ /   / / _/ // /___/ /___   / /___/ /____/ /   
 /_____/_/  |_/_/   /_/ /___/\____/_____/   \____/_____/___/   
 
-)" << "\033[0m" << '\n';
+)", Lattice::CliStyle::Color::logo);
 }
 
 static void printHelp() {
@@ -89,21 +90,21 @@ int main(int argc, char** argv) {
     CLI11_PARSE(app, argc, argv);
 
     printBanner();
-    std::cout << "Welcome to LatticeEngine CLI. Type 'help' to see available commands.\n\n";
     Lattice::CliSystemInfo::printSystemInfo(std::cout);
-    std::cout << '\n';
 
     Simulation simulation;
     createInitialSimulation(simulation, worldSize, gravity, dt, maxSpeed);
+    std::cout << "\nType 'help' for available commands.\n";
 
     if (verbose) {
+        std::cout << '\n';
         printMetrics(simulation);
         std::cout << "\n";
     }
 
     std::string line;
     while (true) {
-        std::cout << "\n> ";
+        std::cout << "\n" << Lattice::CliStyle::paint("❯", Lattice::CliStyle::Color::prompt) << ' ';
         if (!std::getline(std::cin, line)) {
             break;
         }
