@@ -1,13 +1,18 @@
 #include <benchmark/benchmark.h>
 
+#include <filesystem>
 #include <string>
 #include <vector>
 
 #include "Fixture.h"
-#include "Lattice/Plugins/ClassicMD/ClassicMDPlugin.h"
+#include "Lattice/Engine/pluginLoader.hpp"
+
+namespace {
+    const std::filesystem::path pluginsPath = std::filesystem::path("Plugins");
+}
 
 int main(int argc, char** argv) {
-    registerClassicMDPlugin();
+    PluginLoader pluginLoader(pluginsPath);
 
     std::vector<char*> filteredArgs;
     filteredArgs.reserve(static_cast<std::size_t>(argc));

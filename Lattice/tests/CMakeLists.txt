@@ -6,5 +6,8 @@ file(GLOB_RECURSE LATTICE_TEST_SOURCES CONFIGURE_DEPENDS
 
 add_executable(LatticeTests ${LATTICE_TEST_SOURCES})
 
-target_link_libraries(LatticeTests PRIVATE Lattice)
+target_link_libraries(LatticeTests PRIVATE
+    Lattice
+    LatticeClassicMD
+)
 add_test(NAME LatticeTests COMMAND LatticeTests)

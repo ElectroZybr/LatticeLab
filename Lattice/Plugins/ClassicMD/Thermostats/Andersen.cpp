@@ -10,8 +10,6 @@
 #include "Lattice/Engine/physics/Atom/AtomStorage.h"
 #include "Lattice/Engine/physics/IIntegrator.h"
 
-REGISTER_THERMOSTAT(Andersen)
-
 void Andersen::apply(StepContext& stepContext)
 {
     PROFILE_SCOPE("Andersen::apply");

@@ -8,8 +8,6 @@
 #include "Lattice/Engine/metrics/Profiler.h"
 #include "Lattice/Engine/physics/Atom/AtomStorage.h"
 
-REGISTER_FORCE_FIELD(ClassicMDForceField)
-
 namespace {
 using ExclusionList = std::vector<std::vector<uint32_t>>;
 

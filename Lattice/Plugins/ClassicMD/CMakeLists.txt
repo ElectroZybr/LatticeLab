@@ -10,9 +10,14 @@ foreach(classic_md_file_list IN ITEMS CLASSIC_MD_SOURCES CLASSIC_MD_HEADERS)
     list(FILTER ${classic_md_file_list} EXCLUDE REGEX ".*/tests/.*")
 endforeach()
 
-add_library(LatticeClassicMD OBJECT
+add_library(LatticeClassicMD SHARED
     ${CLASSIC_MD_SOURCES}
     ${CLASSIC_MD_HEADERS}
+)
+
+set_target_properties(LatticeClassicMD PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/Plugins"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/Plugins"
 )
 
 target_include_directories(LatticeClassicMD PUBLIC
@@ -20,6 +25,7 @@ target_include_directories(LatticeClassicMD PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(LatticeClassicMD PUBLIC
+target_link_libraries(LatticeClassicMD PRIVATE
+    Lattice
     glm::glm
 )

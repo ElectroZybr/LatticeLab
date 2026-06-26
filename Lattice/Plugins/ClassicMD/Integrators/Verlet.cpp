@@ -3,8 +3,6 @@
 #include "Lattice/Engine/metrics/Profiler.h"
 #include "Lattice/Plugins/ClassicMD/Integrators/StepOps.h"
 
-REGISTER_INTEGRATOR(Verlet)
-
 void Verlet::pipeline(StepContext& stepContext) const {
     PROFILE_SCOPE("Verlet::pipeline");
     // Расчет новых позиций
@@ -34,7 +32,6 @@ void Verlet::predict(AtomStorage& atomStorage, float dt) {
 
     const float* RESTRICT invMass = atomStorage.invMass().data();
 
-    // Раздельные проходы заметно лучше векторизуются
     #pragma GCC ivdep
     for (size_t i = 0; i < n; ++i) {
         x[i] += (vx[i] + fx[i] * invMass[i] * 0.5f * dt) * dt;
@@ -67,7 +64,6 @@ void Verlet::correct(AtomStorage& atomStorage, float dt) {
 
     const float* RESTRICT invMass = atomStorage.invMass().data();
 
-    // Раздельные проходы заметно лучше векторизуются
     #pragma GCC ivdep
     for (size_t i = 0; i < n; ++i) {
         const float halfDtInvMass = 0.5f * dt * invMass[i];

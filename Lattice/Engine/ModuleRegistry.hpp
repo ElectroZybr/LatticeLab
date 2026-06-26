@@ -5,7 +5,17 @@
 #include <string_view>
 #include <vector>
 
-/// базовый виртуальный класс модуля
+/*
+Базовая инфраструктура runtime-модулей движка.
+
+Этот файл описывает общий механизм регистрации и создания модулей, который
+используется для интеграторов, force field, thermostat и других расширений,
+подключаемых через плагины. Здесь находятся метаданные модуля, реестр доступных
+реализаций и helper для владения активным экземпляром выбранного модуля.
+Смысл этого слоя — держать создание и выбор модулей явными, легковесными и
+независимыми от конкретного физического подмодуля или конкретного плагина.
+*/
+
 class IModule {
 public:
     virtual ~IModule() = default;
@@ -20,6 +30,17 @@ struct ModuleMeta {
     std::string description;
     ModuleFactory<TModule> factory = nullptr;
 };
+
+template <typename TModule, typename TImplementation>
+ModuleMeta<TModule> makeModuleMeta() {
+    return ModuleMeta<TModule>{
+        .id = std::string(TImplementation::id),
+        .description = std::string(TImplementation::description),
+        .factory = []() -> std::unique_ptr<TModule> {
+            return std::make_unique<TImplementation>();
+        },
+    };
+}
 
 template <typename TModule>
 class ModuleRegistry {
@@ -101,24 +122,3 @@ protected:
     std::string currentId_{};
     std::unique_ptr<TModule> impl_{};
 };
-
-#ifndef LL_CONCAT_IMPL
-#define LL_CONCAT_IMPL(a, b) a##b
-#endif
-
-#ifndef LL_CONCAT
-#define LL_CONCAT(a, b) LL_CONCAT_IMPL(a, b)
-#endif
-
-#define REGISTER_MODULE(Type, ModuleType, RegistryFn, Prefix)                            \
-    namespace {                                                                          \
-        const bool LL_CONCAT(Prefix, __LINE__) = []() {                                  \
-            return RegistryFn().add(ModuleMeta<ModuleType>{                              \
-                std::string(Type::id),                                                   \
-                std::string(Type::description),                                          \
-                []() -> std::unique_ptr<ModuleType> {                                    \
-                    return std::make_unique<Type>();                                     \
-                },                                                                       \
-            });                                                                          \
-        }();                                                                             \
-    }

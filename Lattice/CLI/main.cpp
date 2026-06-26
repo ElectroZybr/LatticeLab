@@ -1,6 +1,7 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -8,11 +9,15 @@
 
 #include "Lattice/CLI/CliStyle.h"
 #include "Lattice/CLI/SystemInfo.h"
+#include "Lattice/Engine/pluginLoader.hpp"
 #include "Engine/Simulation.h"
 #include "Engine/physics/Atom/AtomData.h"
-#include "Lattice/Plugins/ClassicMD/ClassicMDPlugin.h"
 
 using namespace Lattice;
+
+namespace {
+    const std::filesystem::path pluginsPath = std::filesystem::path("Plugins");
+}
 
 static void printBanner() {
 std::cout << Lattice::CliStyle::paint(R"(
@@ -71,7 +76,7 @@ static void createInitialSimulation(Simulation& simulation, glm::vec3 worldSize,
 }
 
 int main(int argc, char** argv) {
-    registerClassicMDPlugin();
+    PluginLoader pluginLoader(pluginsPath);
 
     int defaultSteps = 100;
     float dt = 0.01f;

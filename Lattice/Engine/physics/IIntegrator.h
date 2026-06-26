@@ -6,7 +6,7 @@
 #include <string_view>
 
 #include "Lattice/Engine/StepContext.h"
-#include "Lattice/Engine/physics/Registrator.hpp"
+#include "Lattice/Engine/ModuleRegistry.hpp"
 
 class AtomStorage;
 class ForceField;
@@ -46,5 +46,3 @@ public:
 private:
     float maxParticleSpeed_ = 0.0f;
 };
-
-#define REGISTER_INTEGRATOR(Type) REGISTER_MODULE(Type, IIntegrator, Integrator::registry, autoRegIntegrator_)

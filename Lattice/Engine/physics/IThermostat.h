@@ -6,7 +6,7 @@
 #include <string_view>
 
 #include "Lattice/Engine/StepContext.h"
-#include "Lattice/Engine/physics/Registrator.hpp"
+#include "Lattice/Engine/ModuleRegistry.hpp"
 
 class IThermostat : public IModule {
 public:
@@ -62,5 +62,3 @@ private:
     float temperature_ = 300.0f;
     float param_ = 100.0f;
 };
-
-#define REGISTER_THERMOSTAT(Type) REGISTER_MODULE(Type, IThermostat, Thermostat::registry, autoRegThermostat_)

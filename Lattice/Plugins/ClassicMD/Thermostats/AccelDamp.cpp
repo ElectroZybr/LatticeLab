@@ -9,8 +9,6 @@
 #include "Lattice/Engine/physics/Atom/AtomData.h"
 #include "Lattice/Engine/physics/Atom/AtomStorage.h"
 
-REGISTER_THERMOSTAT(AccelDamp)
-
 namespace {
     double currentTemperature(const AtomStorage& atomStorage) {
         const size_t mobileCount = atomStorage.mobileCount();
@@ -68,7 +66,6 @@ void AccelDamp::apply(StepContext& stepContext) {
         const float* pfy = atomStorage.pfy().data();
         const float* pfz = atomStorage.pfz().data();
 
-        // Раздельные проходы здесь заметно лучше векторизуются для текущего SoA layout.
         #pragma GCC ivdep
         for (size_t i = 0; i < mobileCount; ++i) {
             const float kick = 0.5f * dt * invMass[i] * damping;
@@ -92,7 +89,6 @@ void AccelDamp::apply(StepContext& stepContext) {
         const float* fy = atomStorage.fy().data();
         const float* fz = atomStorage.fz().data();
 
-        // Раздельные проходы здесь заметно лучше векторизуются для текущего SoA layout.
         #pragma GCC ivdep
         for (size_t i = 0; i < mobileCount; ++i) {
             const float kick = 0.5f * dt * invMass[i] * damping;

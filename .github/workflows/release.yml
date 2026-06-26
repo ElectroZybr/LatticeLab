@@ -67,13 +67,13 @@ jobs:
             -DAPP_RELEASE_BUILD=${{ env.APP_RELEASE_BUILD }} \
             -DOPTIMIZE_FOR_NATIVE=OFF \
             -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++"
-          cmake --build build --config Release -j 4
+          cmake --build build --config Release --target LatticeLab -j 4
 
       - name: Configure and Build (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
           cmake --preset release -DAPP_RELEASE_BUILD=${{ env.APP_RELEASE_BUILD }} -DOPTIMIZE_FOR_NATIVE=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5
-          cmake --build --preset release
+          cmake --build --preset release --target LatticeLab
 
       - name: Prepare Release Dist (Windows)
         if: runner.os == 'Windows'

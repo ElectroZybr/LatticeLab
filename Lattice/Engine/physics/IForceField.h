@@ -7,7 +7,7 @@
 #include <string_view>
 
 #include "Lattice/Engine/physics/Bond.h"
-#include "Lattice/Engine/physics/Registrator.hpp"
+#include "Lattice/Engine/ModuleRegistry.hpp"
 
 class World;
 class AtomStorage;
@@ -58,5 +58,3 @@ public:
         return impl_ != nullptr ? impl_->fieldAtPoint(atoms, grid, x, y, z) : IForceField::FieldSample{};
     }
 };
-
-#define REGISTER_FORCE_FIELD(Type) REGISTER_MODULE(Type, IForceField, ForceField::registry, autoRegForceField_)

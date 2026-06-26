@@ -1,13 +1,18 @@
 #include <iostream>
+#include <filesystem>
 
-#include "Lattice/Plugins/ClassicMD/ClassicMDPlugin.h"
+#include "Lattice/Engine/pluginLoader.hpp"
+
+namespace {
+    const std::filesystem::path pluginsPath = std::filesystem::path("Plugins");
+}
 
 void runNeighborSearchTests();
 void runPhysicsTests();
 void runIoTests();
 
 int main() {
-    registerClassicMDPlugin();
+    PluginLoader pluginLoader(pluginsPath);
     runNeighborSearchTests();
     runPhysicsTests();
     runIoTests();

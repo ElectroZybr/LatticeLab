@@ -9,8 +9,6 @@
 #include "Lattice/Engine/physics/Atom/AtomData.h"
 #include "Lattice/Engine/physics/Atom/AtomStorage.h"
 
-REGISTER_THERMOSTAT(Barendsen)
-
 void Barendsen::apply(StepContext& stepContext) {
     PROFILE_SCOPE("Barendsen::apply");
 

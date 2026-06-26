@@ -15,11 +15,17 @@ add_library(Lattice STATIC
     ${LATTICE_PUBLIC_HEADERS}
 )
 
-add_subdirectory(Plugins/ClassicMD)
-
-target_sources(Lattice PRIVATE
-    $<TARGET_OBJECTS:LatticeClassicMD>
+set_target_properties(Lattice PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
 )
+
+set(LATTICE_PLUGIN_TARGETS)
+file(GLOB plugin_dirs RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/Plugins" "${CMAKE_CURRENT_SOURCE_DIR}/Plugins/*")
+foreach(plugin_dir IN LISTS plugin_dirs)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Plugins/${plugin_dir}/CMakeLists.txt")
+        add_subdirectory("Plugins/${plugin_dir}")
+    endif()
+endforeach()
 
 add_library(LatticeLab::Lattice ALIAS Lattice)
 

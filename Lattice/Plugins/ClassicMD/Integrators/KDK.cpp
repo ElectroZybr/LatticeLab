@@ -3,8 +3,6 @@
 #include "Lattice/Engine/metrics/Profiler.h"
 #include "Lattice/Plugins/ClassicMD/Integrators/StepOps.h"
 
-REGISTER_INTEGRATOR(KDK)
-
 void KDK::pipeline(StepContext& stepContext) const {
     PROFILE_SCOPE("KDK::pipeline");
     halfKick(stepContext.world.getAtomStorage(), stepContext.dt);
@@ -28,7 +26,6 @@ void KDK::halfKick(AtomStorage& atomStorage, float dt) {
     const float* RESTRICT invMass = atomStorage.invMass().data();
     const size_t mobileCount = atomStorage.mobileCount();
 
-    // Раздельные проходы здесь заметно лучше векторизуются для текущего SoA layout.
     #pragma GCC ivdep
     for (size_t i = 0; i < mobileCount; ++i) {
         vx[i] += 0.5f * fx[i] * invMass[i] * dt;
@@ -54,7 +51,6 @@ void KDK::drift(AtomStorage& atomStorage, float dt) {
     const float* RESTRICT vz = atomStorage.vz().data();
 
     const size_t mobileCount = atomStorage.mobileCount();
-    // Раздельные проходы здесь заметно лучше векторизуются для текущего SoA layout.
     #pragma GCC ivdep
     for (size_t i = 0; i < mobileCount; ++i) {
         x[i] += vx[i] * dt;

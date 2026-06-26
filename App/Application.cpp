@@ -15,7 +15,6 @@
 #include "App/interaction/ToolsManager.h"
 #include "Lattice/Engine/Simulation.h"
 #include "Lattice/Engine/metrics/Profiler.h"
-#include "Lattice/Plugins/ClassicMD/ClassicMDPlugin.h"
 #include "GUI/interface/interface.h"
 #include "GUI/io/keyboard/Keyboard.h"
 #include "GUI/io/manager/EventManager.h"
@@ -24,6 +23,7 @@
 #include "capture/CaptureController.h"
 #include "debug/CreateDebugPanels.h"
 #include "debug/DebugRuntime.h"
+#include "Lattice/Engine/pluginLoader.hpp"
 
 using Clock = std::chrono::high_resolution_clock;
 
@@ -31,8 +31,8 @@ constexpr int FPS = 60;
 constexpr int LPS = 20;
 
 namespace {
-    const std::filesystem::path kBootstrapScriptPath = std::filesystem::path("Mods") / "Base" / "scenes" / "hexzerium.lua";
-    const std::filesystem::path kBaseMoleculesPath = std::filesystem::path("Mods") / "Base" / "Molecules";
+    const std::filesystem::path MoleculesPath = std::filesystem::path("Mods") / "Base" / "Molecules";
+    const std::filesystem::path pluginsPath = std::filesystem::path("Plugins");
 
     uint32_t makeXYZStepInterval(float simulationStepsPerSecond, int captureFps) {
         const float sanitizedStepsPerSecond = std::max(simulationStepsPerSecond, 1.0f);
@@ -48,11 +48,11 @@ namespace {
     }
 
     void loadBaseMoleculeTemplates(Lattice::Simulation& simulation) {
-        if (!std::filesystem::exists(kBaseMoleculesPath) || !std::filesystem::is_directory(kBaseMoleculesPath)) {
+        if (!std::filesystem::exists(MoleculesPath) || !std::filesystem::is_directory(MoleculesPath)) {
             return;
         }
 
-        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(kBaseMoleculesPath)) {
+        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(MoleculesPath)) {
             if (!entry.is_regular_file() || entry.path().extension() != ".pdb") {
                 continue;
             }
@@ -73,7 +73,7 @@ namespace {
 }
 
 int Application::run() {
-    registerClassicMDPlugin();
+    PluginLoader pluginLoader(pluginsPath);
     const UserSettings userSettings = UserSettingsIO::load();
     GLFWwindow* window = createWindow(userSettings.windowState);
     if (!window) {
