@@ -25,6 +25,18 @@ target_include_directories(LatticeClassicMD PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+target_compile_options(LatticeClassicMD PRIVATE
+    $<$<AND:$<BOOL:${OPTIMIZE_FOR_NATIVE}>,$<NOT:$<CONFIG:Debug>>,$<CXX_COMPILER_ID:GNU,Clang,AppleClang>>:-march=native>
+)
+
+include(CheckIPOSupported)
+if(ENABLE_IPO)
+    check_ipo_supported(RESULT classic_md_lto_supported OUTPUT classic_md_lto_error)
+    if(classic_md_lto_supported AND NOT MINGW)
+        enable_non_debug_ipo(LatticeClassicMD)
+    endif()
+endif()
+
 target_link_libraries(LatticeClassicMD PRIVATE
     Lattice
     glm::glm

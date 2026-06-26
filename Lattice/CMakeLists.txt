@@ -33,6 +33,14 @@ target_compile_options(Lattice PRIVATE
     $<$<AND:$<BOOL:${OPTIMIZE_FOR_NATIVE}>,$<NOT:$<CONFIG:Debug>>,$<CXX_COMPILER_ID:GNU,Clang,AppleClang>>:-march=native>
 )
 
+include(CheckIPOSupported)
+if(ENABLE_IPO)
+    check_ipo_supported(RESULT lattice_lto_supported OUTPUT lattice_lto_error)
+    if(lattice_lto_supported AND NOT MINGW)
+        enable_non_debug_ipo(Lattice)
+    endif()
+endif()
+
 target_compile_definitions(Lattice PUBLIC
     $<$<PLATFORM_ID:Windows>:NOMINMAX>
     $<$<PLATFORM_ID:Windows>:WIN32_LEAN_AND_MEAN>

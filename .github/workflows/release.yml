@@ -87,6 +87,9 @@ jobs:
           if [ -d Mods ]; then
             cp -r Mods release_dist/
           fi
+          if [ -d Plugins ]; then
+            cp -r Plugins release_dist/
+          fi
           cd release_dist
           7z a "../${archive_name}" *
 
@@ -101,6 +104,9 @@ jobs:
           cp -r assets/* release_dist/assets/
           if [ -d Mods ]; then
             cp -r Mods release_dist/
+          fi
+          if [ -d Plugins ]; then
+            cp -r Plugins release_dist/
           fi
           tar -czf "${archive_name}" -C release_dist .
 
