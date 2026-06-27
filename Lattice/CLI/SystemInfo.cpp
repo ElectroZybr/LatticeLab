@@ -207,7 +207,7 @@ namespace Lattice::CliSystemInfo {
 
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
         uint64_t readXcr0() {
-#if defined(_WIN32)
+#if defined(_MSC_VER)
             return static_cast<uint64_t>(_xgetbv(0));
 #elif defined(__GNUC__) || defined(__clang__)
             uint32_t eax = 0;
