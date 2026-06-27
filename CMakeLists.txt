@@ -84,6 +84,10 @@ endfunction()
 include(CTest)
 include(dependencies)
 
+if(TARGET lua_static)
+    set_target_properties(lua_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
+
 set(GENERATED_ROOT "${CMAKE_BINARY_DIR}/gen_includes")
 set(GENERATED_DIR "${GENERATED_ROOT}/generated")
 file(MAKE_DIRECTORY "${GENERATED_DIR}")

@@ -10,13 +10,15 @@ foreach(lattice_file_list IN ITEMS LATTICE_SOURCES LATTICE_PUBLIC_HEADERS)
     list(FILTER ${lattice_file_list} EXCLUDE REGEX ".*/(CLI|benchmarks|build|tests|_deps|Plugins)/.*")
 endforeach()
 
-add_library(Lattice STATIC
+add_library(Lattice SHARED
     ${LATTICE_SOURCES}
     ${LATTICE_PUBLIC_HEADERS}
 )
 
 set_target_properties(Lattice PROPERTIES
     POSITION_INDEPENDENT_CODE ON
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
 
 set(LATTICE_PLUGIN_TARGETS)

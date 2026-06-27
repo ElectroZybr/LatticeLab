@@ -9,6 +9,7 @@ file(GLOB_RECURSE BENCHMARK_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SOURCE_DIR}/Lattice/Engine/*/tests/bench/*.cpp"
     "${CMAKE_SOURCE_DIR}/Lattice/Plugins/*/tests/bench/*.cpp"
     "rendering/*.cpp"
+    "BmRunner/Support.cpp"
     "SceneBuilder.cpp"
     "BmRunner/BenchmarkMain.cpp"
 )
