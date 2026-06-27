@@ -16,6 +16,7 @@ add_library(LatticeClassicMD SHARED
 )
 
 set_target_properties(LatticeClassicMD PROPERTIES
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/Plugins"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/Plugins"
 )

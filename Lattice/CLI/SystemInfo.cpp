@@ -1,5 +1,5 @@
 #include "Lattice/CLI/SystemInfo.h"
-#include "Lattice/CLI/CliStyle.h"
+#include "Lattice/LogStyle.h"
 
 #include <algorithm>
 #include <array>
@@ -45,15 +45,15 @@ namespace Lattice::CliSystemInfo {
 #define LL_CLI_COMPILER "unknown"
 #endif
 
-        constexpr std::string_view kReset = CliStyle::Color::reset;
-        constexpr std::string_view kDim = CliStyle::Color::tree;
-        constexpr std::string_view kTitle = CliStyle::Color::header;
-        constexpr std::string_view kLabel = CliStyle::Color::key;
-        constexpr std::string_view kValue = CliStyle::Color::value;
-        constexpr std::string_view kDevice = CliStyle::Color::device;
+        constexpr std::string_view kReset = LogStyle::Color::reset;
+        constexpr std::string_view kDim = LogStyle::Color::tree;
+        constexpr std::string_view kTitle = LogStyle::Color::header;
+        constexpr std::string_view kLabel = LogStyle::Color::key;
+        constexpr std::string_view kValue = LogStyle::Color::value;
+        constexpr std::string_view kDevice = LogStyle::Color::device;
 
         std::string colorize(std::string_view text, std::string_view color) {
-            return CliStyle::paint(text, color);
+            return LogStyle::paint(text, color);
         }
 
         std::string trim(std::string text) {

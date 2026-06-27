@@ -17,6 +17,7 @@ add_library(Lattice SHARED
 
 set_target_properties(Lattice PROPERTIES
     POSITION_INDEPENDENT_CODE ON
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
@@ -70,7 +71,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(CLI11)
 
 add_executable(Lattice-cli
-    CLI/CliStyle.h
+    LogStyle.h
     CLI/main.cpp
     CLI/SystemInfo.cpp
     CLI/SystemInfo.h

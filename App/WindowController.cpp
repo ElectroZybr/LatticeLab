@@ -1,12 +1,14 @@
 #include "WindowController.h"
 
 #include <algorithm>
-#include <iostream>
+#include <format>
+
+#include "Lattice/Log.hpp"
 
 namespace {
 void logWindowState(const char* label, GLFWwindow* window, bool isFullscreen, bool windowedWasMaximized) {
     if (!window) {
-        std::cerr << "[WindowController] " << label << " window=null" << std::endl;
+        Log::warning("WindowController", "{} window={}", label, Log::highlight("null"));
         return;
     }
 
@@ -17,19 +19,20 @@ void logWindowState(const char* label, GLFWwindow* window, bool isFullscreen, bo
     glfwGetWindowPos(window, &x, &y);
     glfwGetWindowSize(window, &width, &height);
 
-    std::cerr
-        << "[WindowController] " << label
-        << " ptr=" << window
-        << " fullscreen=" << isFullscreen
-        << " monitor=" << glfwGetWindowMonitor(window)
-        << " decorated=" << glfwGetWindowAttrib(window, GLFW_DECORATED)
-        << " maximized=" << glfwGetWindowAttrib(window, GLFW_MAXIMIZED)
-        << " focused=" << glfwGetWindowAttrib(window, GLFW_FOCUSED)
-        << " iconified=" << glfwGetWindowAttrib(window, GLFW_ICONIFIED)
-        << " savedMaximized=" << windowedWasMaximized
-        << " pos=(" << x << "," << y << ")"
-        << " size=(" << width << "x" << height << ")"
-        << std::endl;
+    Log::info(
+        "WindowController",
+        "{} ptr={} fullscreen={} monitor={} decorated={} maximized={} focused={} iconified={} savedMaximized={} pos={} size={}",
+        label,
+        Log::highlight("{}", static_cast<const void*>(window)),
+        Log::highlight("{}", isFullscreen),
+        Log::highlight("{}", static_cast<const void*>(glfwGetWindowMonitor(window))),
+        glfwGetWindowAttrib(window, GLFW_DECORATED),
+        glfwGetWindowAttrib(window, GLFW_MAXIMIZED),
+        glfwGetWindowAttrib(window, GLFW_FOCUSED),
+        glfwGetWindowAttrib(window, GLFW_ICONIFIED),
+        windowedWasMaximized,
+        Log::highlight("({},{})", x, y),
+        Log::highlight("({}x{})", width, height));
 }
 
 bool monitorWorkArea(GLFWmonitor* monitor, int& x, int& y, int& width, int& height) {

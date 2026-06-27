@@ -7,7 +7,7 @@
 
 #include <CLI/CLI.hpp>
 
-#include "Lattice/CLI/CliStyle.h"
+#include "Lattice/LogStyle.h"
 #include "Lattice/CLI/SystemInfo.h"
 #include "Lattice/Engine/pluginLoader.hpp"
 #include "Engine/Simulation.h"
@@ -20,14 +20,14 @@ namespace {
 }
 
 static void printBanner() {
-std::cout << Lattice::CliStyle::paint(R"(
+std::cout << LogStyle::paint(R"(
     __    ___  ____________________________   ________    ____
    / /   /   |/_  __/_  __/  _/ ____/ ____/  / ____/ /   /  _/
   / /   / /| | / /   / /  / // /   / __/    / /   / /    / /  
  / /___/ ___ |/ /   / / _/ // /___/ /___   / /___/ /____/ /   
 /_____/_/  |_/_/   /_/ /___/\____/_____/   \____/_____/___/   
 
-)", Lattice::CliStyle::Color::logo);
+)", LogStyle::Color::logo);
 }
 
 static void printHelp() {
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
 
     std::string line;
     while (true) {
-        std::cout << "\n" << Lattice::CliStyle::paint("❯", Lattice::CliStyle::Color::prompt) << ' ';
+        std::cout << "\n" << LogStyle::paint("❯", LogStyle::Color::prompt) << ' ';
         if (!std::getline(std::cin, line)) {
             break;
         }

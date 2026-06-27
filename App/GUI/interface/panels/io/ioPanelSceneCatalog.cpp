@@ -16,7 +16,7 @@
 
 #include "App/save_system/AppSaveState.h"
 #include "Rendering/backend/WGPUContext.h"
-#include "stb/stb_image.h"
+#include "App/StbImage.h"
 
 namespace {
     struct ScenePathEntry {

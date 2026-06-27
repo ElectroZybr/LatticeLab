@@ -1,12 +1,12 @@
 #pragma once
 
 #include <filesystem>
-#include <iostream>
 #include <utility>
 #include <vector>
 
 #include "Lattice/Engine/DynamicLibrary.hpp"
 #include "Lattice/Engine/PluginHost.hpp"
+#include "Lattice/Log.hpp"
 #include "Lattice/Engine/physics/IForceField.h"
 #include "Lattice/Engine/physics/IIntegrator.h"
 #include "Lattice/Engine/physics/IThermostat.h"
@@ -29,11 +29,11 @@ public:
         int loadedCount = 0;
 
         if (!std::filesystem::exists(pluginsDir) || !std::filesystem::is_directory(pluginsDir)) {
-            std::cerr << "[PluginLoader] Plugins directory is missing or not a directory: " << pluginsDir.string() << "\n";
+            Log::warning("PluginLoader", "Plugins directory is missing or not a directory: {}", pluginsDir.string());
             return 0;
         }
 
-        std::cerr << "[PluginLoader] Scanning: " << pluginsDir.string() << "\n";
+        Log::write("PluginLoader", "Scanning {}...", pluginsDir.string());
 
         for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(pluginsDir)) {
             if (!entry.is_regular_file()) {
@@ -45,38 +45,46 @@ public:
                 continue;
             }
 
-            std::cerr << "[PluginLoader] Loading: " << libraryPath.string() << "\n";
+            Log::write("PluginLoader", "Loading {}", libraryPath.string());
 
             DynamicLibrary library;
             if (!library.open(libraryPath)) {
-                std::cerr << "[PluginLoader] Failed to open '" << libraryPath.string() << "': " << library.lastError() << "\n";
+                Log::error("PluginLoader", "Failed to open {}: {}",
+                           "'{}'", libraryPath.string(),
+                           Log::highlight(library.lastError()));
                 continue;
             }
 
             PluginInitFn init = library.symbol<PluginInitFn>("plugin_init");
             if (init == nullptr) {
-                std::cerr << "[PluginLoader] Missing symbol 'plugin_init' in '" << libraryPath.string() << "': " << library.lastError() << "\n";
+                Log::error("PluginLoader", "Missing symbol {} in {}: {}",
+                           Log::highlight("'plugin_init'"),
+                           "'{}'", libraryPath.string(),
+                           Log::highlight(library.lastError()));
                 continue;
             }
 
             if (!init(host_, library.info)) {
-                std::cerr << "[PluginLoader] plugin_init failed for '" << libraryPath.string() << "'\n";
+                Log::error("PluginLoader", "plugin_init failed for '{}'", libraryPath.string());
                 continue;
             }
 
-            std::cerr << "[PluginLoader] Loaded plugin: "
-                      << (library.info.name != nullptr && library.info.name[0] != '\0' ? library.info.name : "<unnamed>")
-                      << " id="
-                      << (library.info.id != nullptr && library.info.id[0] != '\0' ? library.info.id : "<none>")
-                      << " version="
-                      << (library.info.version != nullptr && library.info.version[0] != '\0' ? library.info.version : "<none>")
-                      << "\n";
+            Log::ok(
+                "PluginLoader",
+                "Loaded \"{}\" id={} version={}",
+                Log::highlight(library.info.name != nullptr && library.info.name[0] != '\0' ? library.info.name : "<unnamed>"),
+                Log::highlight(library.info.id != nullptr && library.info.id[0] != '\0' ? library.info.id : "<none>"),
+                Log::highlight(library.info.version != nullptr && library.info.version[0] != '\0' ? library.info.version : "<none>"));
 
             loadedPlugins_.push_back(std::move(library));
             ++loadedCount;
         }
 
-        std::cerr << "[PluginLoader] Total loaded: " << loadedCount << "\n";
+        if (loadedCount == 0) {
+            Log::warning("PluginLoader", "No plugins were loaded from {}", pluginsDir.string());
+        } else {
+            Log::ok("PluginLoader", "Loaded {} plugin", Log::highlight("{}", loadedCount));
+        }
         return loadedCount;
     }
 

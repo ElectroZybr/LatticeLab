@@ -27,7 +27,7 @@
 #include <limits.h>
 #include <unistd.h>
 
-#include "stb/stb_image.h"
+#include "App/StbImage.h"
 #endif
 
 #include <iostream>

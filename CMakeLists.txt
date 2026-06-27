@@ -102,6 +102,12 @@ file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
     "App/*.cpp"
 )
 
+set_source_files_properties(
+    "${CMAKE_SOURCE_DIR}/App/StbImage.cpp"
+    PROPERTIES
+        COMPILE_OPTIONS "$<$<CXX_COMPILER_ID:GNU>:-Wno-stringop-overflow>"
+)
+
 include(shaders)
 include(embedded_resources)
 include(embedded_translate)
@@ -117,6 +123,7 @@ add_dependencies(latticelab_lib
 
 target_compile_options(latticelab_lib PRIVATE
     $<$<AND:$<BOOL:${OPTIMIZE_FOR_NATIVE}>,$<NOT:$<CONFIG:Debug>>,$<CXX_COMPILER_ID:GNU,Clang,AppleClang>>:-march=native>
+    $<$<CXX_COMPILER_ID:GNU>:-Wno-stringop-overflow>
 )
 
 target_compile_definitions(latticelab_lib PUBLIC
@@ -180,6 +187,14 @@ endif()
 add_executable(${APP_NAME} main.cpp)
 set_target_properties(${APP_NAME} PROPERTIES
     WIN32_EXECUTABLE $<BOOL:${WIN32}>
+)
+
+target_compile_options(${APP_NAME} PRIVATE
+    $<$<CXX_COMPILER_ID:GNU>:-Wno-stringop-overflow>
+)
+
+target_link_options(${APP_NAME} PRIVATE
+    $<$<CXX_COMPILER_ID:GNU>:-Wno-stringop-overflow>
 )
 
 if(ENABLE_IPO AND lto_supported AND NOT MINGW)
