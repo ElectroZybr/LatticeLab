@@ -8,7 +8,7 @@
 namespace {
 void logWindowState(const char* label, GLFWwindow* window, bool isFullscreen, bool windowedWasMaximized) {
     if (!window) {
-        Log::warning("WindowController", "{} window={}", label, Log::highlight("null"));
+        Log::warning("WindowController", "{} window={}", label, "null");
         return;
     }
 
@@ -23,16 +23,16 @@ void logWindowState(const char* label, GLFWwindow* window, bool isFullscreen, bo
         "WindowController",
         "{} ptr={} fullscreen={} monitor={} decorated={} maximized={} focused={} iconified={} savedMaximized={} pos={} size={}",
         label,
-        Log::highlight("{}", static_cast<const void*>(window)),
-        Log::highlight("{}", isFullscreen),
-        Log::highlight("{}", static_cast<const void*>(glfwGetWindowMonitor(window))),
+        static_cast<const void*>(window),
+        isFullscreen,
+        static_cast<const void*>(glfwGetWindowMonitor(window)),
         glfwGetWindowAttrib(window, GLFW_DECORATED),
         glfwGetWindowAttrib(window, GLFW_MAXIMIZED),
         glfwGetWindowAttrib(window, GLFW_FOCUSED),
         glfwGetWindowAttrib(window, GLFW_ICONIFIED),
         windowedWasMaximized,
-        Log::highlight("({},{})", x, y),
-        Log::highlight("({}x{})", width, height));
+        std::format("({},{})", x, y),
+        std::format("({}x{})", width, height));
 }
 
 bool monitorWorkArea(GLFWmonitor* monitor, int& x, int& y, int& width, int& height) {

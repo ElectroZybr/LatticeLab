@@ -27,4 +27,4 @@ inline std::string paint(std::string_view text, std::string_view color) {
     out += Color::reset;
     return out;
 }
-} // namespace Lattice::LogStyle
+}

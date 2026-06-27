@@ -33,7 +33,7 @@ public:
             return 0;
         }
 
-        Log::write("PluginLoader", "Scanning {}...", pluginsDir.string());
+        Log::debug("PluginLoader", "Scanning {}...", pluginsDir.string());
 
         for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(pluginsDir)) {
             if (!entry.is_regular_file()) {
@@ -45,22 +45,17 @@ public:
                 continue;
             }
 
-            Log::write("PluginLoader", "Loading {}", libraryPath.string());
+            Log::debug("PluginLoader", "Loading {}", libraryPath.string());
 
             DynamicLibrary library;
             if (!library.open(libraryPath)) {
-                Log::error("PluginLoader", "Failed to open {}: {}",
-                           "'{}'", libraryPath.string(),
-                           Log::highlight(library.lastError()));
+                Log::error("PluginLoader", "Failed to open '{}': {}", libraryPath.string(), library.lastError());
                 continue;
             }
 
             PluginInitFn init = library.symbol<PluginInitFn>("plugin_init");
             if (init == nullptr) {
-                Log::error("PluginLoader", "Missing symbol {} in {}: {}",
-                           Log::highlight("'plugin_init'"),
-                           "'{}'", libraryPath.string(),
-                           Log::highlight(library.lastError()));
+                Log::error("PluginLoader", "Missing symbol 'plugin_init' in '{}': {}", libraryPath.string(), library.lastError());
                 continue;
             }
 
@@ -72,9 +67,9 @@ public:
             Log::ok(
                 "PluginLoader",
                 "Loaded \"{}\" id={} version={}",
-                Log::highlight(library.info.name != nullptr && library.info.name[0] != '\0' ? library.info.name : "<unnamed>"),
-                Log::highlight(library.info.id != nullptr && library.info.id[0] != '\0' ? library.info.id : "<none>"),
-                Log::highlight(library.info.version != nullptr && library.info.version[0] != '\0' ? library.info.version : "<none>"));
+                library.info.name != nullptr && library.info.name[0] != '\0' ? library.info.name : "<unnamed>",
+                library.info.id != nullptr && library.info.id[0] != '\0' ? library.info.id : "<none>",
+                library.info.version != nullptr && library.info.version[0] != '\0' ? library.info.version : "<none>");
 
             loadedPlugins_.push_back(std::move(library));
             ++loadedCount;
@@ -83,7 +78,7 @@ public:
         if (loadedCount == 0) {
             Log::warning("PluginLoader", "No plugins were loaded from {}", pluginsDir.string());
         } else {
-            Log::ok("PluginLoader", "Loaded {} plugin", Log::highlight("{}", loadedCount));
+            Log::ok("PluginLoader", "Loaded {} plugin", loadedCount);
         }
         return loadedCount;
     }
