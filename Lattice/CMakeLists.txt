@@ -30,6 +30,10 @@ foreach(plugin_dir IN LISTS plugin_dirs)
     endif()
 endforeach()
 
+if(LATTICE_PLUGIN_TARGETS)
+    add_custom_target(Lattice-plugins DEPENDS ${LATTICE_PLUGIN_TARGETS})
+endif()
+
 add_library(LatticeLab::Lattice ALIAS Lattice)
 
 target_compile_options(Lattice PRIVATE

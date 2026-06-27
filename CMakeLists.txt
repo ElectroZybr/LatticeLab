@@ -203,6 +203,9 @@ endif()
 
 target_link_libraries(${APP_NAME} PRIVATE latticelab_lib)
 add_dependencies(${APP_NAME} Lattice-cli)
+if(TARGET Lattice-plugins)
+    add_dependencies(${APP_NAME} Lattice-plugins)
+endif()
 target_copy_webgpu_binaries(${APP_NAME})
 
 include(windows_resources)
