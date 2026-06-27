@@ -921,11 +921,18 @@ void IOPanel::draw(float scale, glm::ivec2 windowSize, Lattice::Simulation& simu
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.77f, 0.20f, 0.24f, 0.98f));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.58f, 0.14f, 0.18f, 1.0f));
             if (ImGui::Button("io_delete"_tr.data(), ImVec2(100.0f * scale, 0.0f))) {
-                const std::string deletedScenePath = pendingDeleteScenePath_;
+                const std::filesystem::path deletedScenePath = pendingDeleteScenePath_;
                 std::error_code removeError;
                 const bool removed = std::filesystem::remove(deletedScenePath, removeError);
                 if (!removeError && (removed || !std::filesystem::exists(deletedScenePath))) {
-                    removeSceneTileByPath(deletedScenePath);
+                    std::error_code previewRemoveError;
+                    std::filesystem::remove(deletedScenePath.parent_path() / (deletedScenePath.stem().string() + ".png"), previewRemoveError);
+                    previewRemoveError.clear();
+                    std::filesystem::remove(deletedScenePath.parent_path() / (deletedScenePath.stem().string() + ".preview.png"), previewRemoveError);
+
+                    // Do not erase the tile immediately in the same frame: ImGui may still
+                    // reference its preview texture in the current draw list.
+                    sceneCatalogLoaded_ = false;
                     clearPendingDeleteState();
                     ImGui::CloseCurrentPopup();
                 }

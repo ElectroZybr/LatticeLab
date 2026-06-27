@@ -102,6 +102,8 @@ file(GLOB_RECURSE CORE_SOURCES CONFIGURE_DEPENDS
     "App/*.cpp"
 )
 
+list(FILTER CORE_SOURCES EXCLUDE REGEX ".*/App/tests/.*")
+
 set_source_files_properties(
     "${CMAKE_SOURCE_DIR}/App/StbImage.cpp"
     PROPERTIES
@@ -182,6 +184,10 @@ if(ENABLE_IPO)
     else()
         message(STATUS "IPO is not supported: ${lto_error}")
     endif()
+endif()
+
+if(BUILD_TESTING)
+    add_subdirectory(App/tests)
 endif()
 
 add_executable(${APP_NAME} main.cpp)
