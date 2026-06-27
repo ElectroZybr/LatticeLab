@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "App/Signals.h"
 #include "App/capture/CaptureController.h"
 #include "App/debug/CreateDebugPanels.h"
 #include "App/viewport/SimulationSceneSource.h"
@@ -11,20 +12,18 @@ namespace Lattice {
     class Simulation;
 }
 class Interface;
+struct UserSettings;
 
 class SceneViewport {
 public:
-    enum class RendererType : unsigned char {
-        Renderer2D = 0,
-        Renderer3D = 1,
-    };
-
     SceneViewport(RendererType type, CaptureController& captureController);
+    SceneViewport(const UserSettings& settings, CaptureController& captureController);
 
     [[nodiscard]] BaseRenderer& renderer() noexcept { return *renderer_; }
     [[nodiscard]] const BaseRenderer& renderer() const noexcept { return *renderer_; }
     [[nodiscard]] std::unique_ptr<BaseRenderer>& rendererHandle() noexcept { return renderer_; }
     [[nodiscard]] const std::unique_ptr<BaseRenderer>& rendererHandle() const noexcept { return renderer_; }
+    [[nodiscard]] RendererType rendererType() const noexcept;
 
     void setScreenSize(int width, int height);
     void resetView();

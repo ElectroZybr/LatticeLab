@@ -4,10 +4,11 @@
 
 #include <GLFW/glfw3.h>
 
-#include "App/UserSettings.h"
+#include "App/AppIOSystem/UserSettings.h"
 
 class WindowController {
 public:
+    static GLFWwindow* create(const UserSettings::WindowState& initialWindowState);
     static void init(GLFWwindow* window, const UserSettings::WindowState& initialWindowState);
     static void toggleFullscreen();
     static UserSettings::WindowState snapshot();

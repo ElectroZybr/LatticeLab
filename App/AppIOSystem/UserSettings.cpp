@@ -1,5 +1,11 @@
 #include "UserSettings.h"
 
+#include "App/GUI/interface/interface.h"
+#include "App/capture/CaptureController.h"
+#include "App/viewport/SceneViewport.h"
+#include "Lattice/Engine/Simulation.h"
+#include "Lattice/Log.hpp"
+
 #include <algorithm>
 #include <fstream>
 #include <string>
@@ -121,7 +127,93 @@ namespace {
 
 std::filesystem::path UserSettingsIO::defaultPath() { return std::filesystem::path(AppPaths::kUserSettingsPath); }
 
+void UserSettings::applyTo(CaptureController& captureController) const {
+    captureController.setSettings(captureSettings);
+    captureController.setOutputDirectory(captureOutputDirectory);
+}
+
+void UserSettings::applyTo(Interface& appInterface) const {
+    appInterface.setScenesDirectory(scenesDirectory);
+    appInterface.ioPanel.setSceneCatalogView(static_cast<IOPanel::SceneCatalogView>(sceneCatalogView));
+    appInterface.setUiScaleMultiplier(interfaceScale);
+    appInterface.state().simulationSpeed = 100.0f;
+    appInterface.state().pause = true;
+}
+
+void UserSettings::applyTo(SceneViewport& renderer) const {
+    auto& renderData = renderer.renderer().getRenderData(0);
+    renderData.drawAtoms = rendererDrawAtoms;
+    renderData.drawGrid = rendererDrawGrid;
+    renderData.drawVectorField = rendererDrawVectorField;
+    renderData.drawFieldArrows = rendererDrawFieldArrows;
+    renderData.drawFieldContours = rendererDrawFieldContours;
+    renderData.fieldAutoScale = rendererFieldAutoScale;
+    renderData.fieldPotentialScale = rendererFieldPotentialScale;
+    renderData.fieldCellSize = rendererFieldCellSize;
+    renderData.fieldSmoothing = rendererFieldSmoothing;
+    renderData.fieldContourStep = rendererFieldContourStep;
+    renderData.drawBonds = rendererDrawBonds;
+    renderData.drawBox = rendererDrawBox;
+    renderData.drawMemoryOrder = rendererDrawMemoryOrder;
+    renderData.speedColorMode = rendererSpeedColorMode;
+    renderData.speedGradientMax = rendererSpeedGradientMax;
+}
+
+void UserSettings::applyTo(Lattice::Simulation& simulation) const {
+    simulation.world().setVectorFieldCellSize(rendererFieldCellSize);
+    simulation.setIntegrator(simulationIntegrator);
+    simulation.world().setBondFormationEnabled(simulationBondFormationEnabled);
+    simulation.world().setLJEnabled(simulationLJEnabled);
+    simulation.world().setCoulombEnabled(simulationCoulombEnabled);
+    simulation.world().setCoulombLongRangeEnabled(simulationCoulombLongRangeEnabled);
+}
+
+void UserSettings::captureFrom(const CaptureController& captureController) {
+    captureOutputDirectory = captureController.outputDirectory();
+    captureSettings = captureController.settings();
+}
+
+void UserSettings::captureFrom(const Interface& appInterface) {
+    scenesDirectory = appInterface.scenesDirectory();
+    sceneCatalogView = static_cast<UserSettings::SceneCatalogView>(appInterface.ioPanel.sceneCatalogView());
+    interfaceScale = appInterface.uiScaleMultiplier();
+}
+
+void UserSettings::captureFrom(const SceneViewport& renderer) {
+    const auto& renderData = renderer.renderer().getRenderData(0);
+
+    rendererUse3D = renderer.renderer().camera.getMode() != Camera::Mode::Mode2D;
+    rendererDrawAtoms = renderData.drawAtoms;
+    rendererDrawGrid = renderData.drawGrid;
+    rendererDrawVectorField = renderData.drawVectorField;
+    rendererDrawFieldArrows = renderData.drawFieldArrows;
+    rendererDrawFieldContours = renderData.drawFieldContours;
+    rendererFieldAutoScale = renderData.fieldAutoScale;
+    rendererDrawBonds = renderData.drawBonds;
+    rendererDrawBox = renderData.drawBox;
+    rendererDrawMemoryOrder = renderData.drawMemoryOrder;
+    rendererSpeedColorMode = renderData.speedColorMode;
+    rendererSpeedGradientMax = renderData.speedGradientMax;
+    rendererFieldPotentialScale = renderData.fieldPotentialScale;
+    rendererFieldCellSize = renderData.fieldCellSize;
+    rendererFieldSmoothing = renderData.fieldSmoothing;
+    rendererFieldContourStep = renderData.fieldContourStep;
+}
+
+void UserSettings::captureFrom(const Lattice::Simulation& simulation) {
+    simulationIntegrator = std::string(simulation.getIntegrator());
+    simulationBondFormationEnabled = simulation.world().isBondFormationEnabled();
+    simulationLJEnabled = simulation.isLJEnabled();
+    simulationCoulombEnabled = simulation.isCoulombEnabled();
+    simulationCoulombLongRangeEnabled = simulation.world().isCoulombLongRangeEnabled();
+}
+
+void UserSettings::captureFrom(const WindowState& state) {
+    windowState = state;
+}
+
 UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
+    LogScope scope("Settings", "Loading user settings", "User settings loaded");
     UserSettings settings;
 
     std::filesystem::path resolvedPath = path;
@@ -296,6 +388,7 @@ UserSettings UserSettingsIO::load(const std::filesystem::path& path) {
 }
 
 void UserSettingsIO::save(const UserSettings& settings, const std::filesystem::path& path) {
+    LogScope scope("Settings", "Saving user settings", "User settings saved");
     const std::filesystem::path parentPath = path.parent_path();
     if (!parentPath.empty()) {
         std::error_code fsError;

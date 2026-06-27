@@ -20,11 +20,6 @@ public:
               Thermostat::registry(),
           } {}
 
-    explicit PluginLoader(const std::filesystem::path& pluginsDir)
-        : PluginLoader() {
-        load(pluginsDir);
-    }
-
     int load(const std::filesystem::path& pluginsDir) {
         int loadedCount = 0;
 

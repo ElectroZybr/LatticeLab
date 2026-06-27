@@ -2,9 +2,15 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <vector>
+
+enum class RendererType : uint8_t {
+    Renderer2D,
+    Renderer3D,
+};
 
 namespace Signals {
     class Connection {

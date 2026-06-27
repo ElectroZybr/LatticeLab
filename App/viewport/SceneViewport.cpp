@@ -1,5 +1,6 @@
 #include "App/viewport/SceneViewport.h"
 
+#include "App/AppIOSystem/UserSettings.h"
 #include "App/debug/DebugRuntime.h"
 #include "App/interaction/ToolsManager.h"
 #include <array>
@@ -493,6 +494,13 @@ namespace {
 }
 
 SceneViewport::SceneViewport(RendererType type, CaptureController& captureController) : captureController_(&captureController), renderer_(createRenderer(type)) {}
+
+SceneViewport::SceneViewport(const UserSettings& settings, CaptureController& captureController)
+    : SceneViewport(settings.rendererUse3D ? RendererType::Renderer3D : RendererType::Renderer2D, captureController) {}
+
+RendererType SceneViewport::rendererType() const noexcept {
+    return renderer_ && renderer_->camera.getMode() == Camera::Mode::Mode2D ? RendererType::Renderer2D : RendererType::Renderer3D;
+}
 
 void SceneViewport::setScreenSize(int width, int height) {
     renderer_->camera.setScreenSize(glm::vec2(static_cast<float>(width), static_cast<float>(height)));

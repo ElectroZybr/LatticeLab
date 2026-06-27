@@ -1,12 +1,7 @@
 #pragma once
-#include <cstdint>
 
 #include <imgui.h>
-
-enum class RendererType : uint8_t {
-    Renderer2D,
-    Renderer3D,
-};
+#include "App/Signals.h"
 
 class DebugPanel;
 class FileDialogManager;

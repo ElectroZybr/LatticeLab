@@ -9,6 +9,13 @@
 #include "Lattice/Engine/physics/IIntegrator.h"
 #include "Rendering/RenderData.h"
 
+class CaptureController;
+class Interface;
+class SceneViewport;
+namespace Lattice {
+    class Simulation;
+}
+
 struct UserSettings {
     enum class SceneCatalogView : uint8_t {
         Demo,
@@ -55,6 +62,16 @@ struct UserSettings {
     bool simulationLJEnabled = true;
     bool simulationCoulombEnabled = true;
     bool simulationCoulombLongRangeEnabled = true;
+
+    void applyTo(CaptureController& captureController) const;
+    void applyTo(Interface& appInterface) const;
+    void applyTo(SceneViewport& renderer) const;
+    void applyTo(Lattice::Simulation& simulation) const;
+    void captureFrom(const CaptureController& captureController);
+    void captureFrom(const Interface& appInterface);
+    void captureFrom(const SceneViewport& renderer);
+    void captureFrom(const Lattice::Simulation& simulation);
+    void captureFrom(const WindowState& windowState);
 };
 
 class UserSettingsIO {

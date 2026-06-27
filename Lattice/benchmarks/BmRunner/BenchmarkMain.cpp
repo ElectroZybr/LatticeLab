@@ -14,7 +14,8 @@ int main(int argc, char** argv) {
     const std::filesystem::path repoRoot = benchmarksRoot.parent_path().parent_path();
     const std::filesystem::path pluginsPath = repoRoot / "Plugins";
 
-    PluginLoader pluginLoader(pluginsPath);
+    PluginLoader pluginLoader;
+    pluginLoader.load(pluginsPath);
     if (pluginLoader.loadedPlugins().empty()) {
         std::cerr << "[BenchmarkMain] No plugins were loaded from: " << pluginsPath << "\n";
         return 1;

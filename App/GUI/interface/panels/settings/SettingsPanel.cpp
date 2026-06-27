@@ -8,7 +8,7 @@
 #include <imgui.h>
 
 #include "App/AppSignals.h"
-#include "App/UserSettings.h"
+#include "App/AppIOSystem/UserSettings.h"
 #include "App/WindowController.h"
 #include "App/capture/CaptureController.h"
 #include "App/localization/i18n.h"

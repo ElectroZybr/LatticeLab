@@ -76,7 +76,8 @@ static void createInitialSimulation(Simulation& simulation, glm::vec3 worldSize,
 }
 
 int main(int argc, char** argv) {
-    PluginLoader pluginLoader(pluginsPath);
+    PluginLoader pluginLoader;
+    pluginLoader.load(pluginsPath);
 
     int defaultSteps = 100;
     float dt = 0.01f;

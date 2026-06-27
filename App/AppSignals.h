@@ -10,7 +10,6 @@
 #include "Lattice/Engine/physics/Atom/AtomData.h"
 #include "Lattice/Generators/LatticeFill.hpp"
 #include "Lattice/Generators/RandomFill.hpp"
-#include "GUI/interface/panels/tools/ToolsPanel.h"
 #include "Rendering/camera/Camera.h"
 #include "App/Signals.h"
 

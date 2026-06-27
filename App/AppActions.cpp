@@ -16,7 +16,7 @@
 #include "App/capture/CaptureController.h"
 #include "App/interaction/ToolsManager.h"
 #include "App/viewport/SceneViewport.h"
-#include "App/save_system/AppStateIO.h"
+#include "App/AppIOSystem/AppStateIO.h"
 #include "Lattice/Engine/Simulation.h"
 #include "Lattice/Engine/restrict.h"
 #include "GUI/interface/UiState.h"
@@ -443,9 +443,7 @@ namespace AppActions {
 
     void Handler::trackToolsPanel(Lattice::Simulation& simulation, SceneViewport& renderer) {
         track(AppSignals::UI::SetRender.connect([&](RendererType type) {
-            const SceneViewport::RendererType rendererType =
-                (type == RendererType::Renderer2D) ? SceneViewport::RendererType::Renderer2D : SceneViewport::RendererType::Renderer3D;
-            if (renderer.setRendererType(rendererType, simulation)) {
+            if (renderer.setRendererType(type, simulation)) {
                 ToolsManager::resetInteractionState();
             }
         }));

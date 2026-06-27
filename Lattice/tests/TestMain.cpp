@@ -12,7 +12,8 @@ void runPhysicsTests();
 void runIoTests();
 
 int main() {
-    PluginLoader pluginLoader(pluginsPath);
+    PluginLoader pluginLoader;
+    pluginLoader.load(pluginsPath);
     runNeighborSearchTests();
     runPhysicsTests();
     runIoTests();
