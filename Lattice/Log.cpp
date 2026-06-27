@@ -1,5 +1,6 @@
 #include "Lattice/Log.hpp"
 
+#include <atomic>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -7,11 +8,13 @@
 #include <sstream>
 
 namespace {
+std::atomic<Log::ConsoleMode> gConsoleMode = Log::ConsoleMode::Default;
+
 struct LevelStyle {
     std::string_view label;
     std::string_view status;
     std::string_view color;
-    bool consoleVisible;
+    Log::ConsoleMode consoleMode;
     bool useStdErr;
 };
 
@@ -42,22 +45,24 @@ std::ofstream& logFile() {
 LevelStyle levelStyle(Log::Level level) {
     using Level = Log::Level;
     switch (level) {
+        case Level::Action:
+            return {"ACTION", "→", LogStyle::Color::header, Log::ConsoleMode::Default, false};
         case Level::Trace:
-            return {"TRACE", "·", LogStyle::Color::tree, false, false};
+            return {"TRACE", "·", LogStyle::Color::tree, Log::ConsoleMode::Trace, false};
         case Level::Debug:
-            return {"DEBUG", "→", LogStyle::Color::header, false, false};
+            return {"DEBUG", "→", LogStyle::Color::header, Log::ConsoleMode::Verbose, false};
         case Level::Info:
-            return {"INFO", "•", LogStyle::Color::value, true, false};
+            return {"INFO", "•", LogStyle::Color::value, Log::ConsoleMode::Verbose, false};
         case Level::Warning:
-            return {"WARN", "⚠", LogStyle::Color::warning, true, true};
+            return {"WARN", "⚠", LogStyle::Color::warning, Log::ConsoleMode::Default, true};
         case Level::Error:
-            return {"ERROR", "✗", LogStyle::Color::error, true, true};
+            return {"ERROR", "✗", LogStyle::Color::error, Log::ConsoleMode::Default, true};
         case Level::Fatal:
-            return {"FATAL", "✗", LogStyle::Color::error, true, true};
+            return {"FATAL", "✗", LogStyle::Color::error, Log::ConsoleMode::Default, true};
         case Level::Ok:
-            return {"OK", "✓", LogStyle::Color::ok, true, false};
+            return {"OK", "✓", LogStyle::Color::ok, Log::ConsoleMode::Default, false};
     }
-    return {"INFO", "•", LogStyle::Color::value, true, false};
+    return {"INFO", "•", LogStyle::Color::value, Log::ConsoleMode::Verbose, false};
 }
 
 std::string makePlainLine(std::string_view label, std::string_view tag, std::string_view message) {
@@ -79,6 +84,14 @@ std::string makeConsoleLine(std::string_view status, std::string_view color, std
 }
 }
 
+void Log::setConsoleMode(ConsoleMode mode) noexcept {
+    gConsoleMode.store(mode, std::memory_order_relaxed);
+}
+
+Log::ConsoleMode Log::consoleMode() noexcept {
+    return gConsoleMode.load(std::memory_order_relaxed);
+}
+
 std::mutex& Log::mutex() {
     static std::mutex consoleMutex;
     return consoleMutex;
@@ -98,7 +111,7 @@ void Log::print(Level level, std::string_view tag, const std::string& message) {
         file.flush();
     }
 
-    if (!style.consoleVisible) {
+    if (static_cast<int>(consoleMode()) < static_cast<int>(style.consoleMode)) {
         return;
     }
 

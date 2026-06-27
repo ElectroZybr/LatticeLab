@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utility>
+
 #include <GLFW/glfw3.h>
 
 #include "App/UserSettings.h"
@@ -9,6 +11,7 @@ public:
     static void init(GLFWwindow* window, const UserSettings::WindowState& initialWindowState);
     static void toggleFullscreen();
     static UserSettings::WindowState snapshot();
+    static std::pair<int, int> framebufferSize();
 
 private:
     static void windowPosCallback(GLFWwindow* window, int x, int y);

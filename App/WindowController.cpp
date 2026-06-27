@@ -19,7 +19,7 @@ void logWindowState(const char* label, GLFWwindow* window, bool isFullscreen, bo
     glfwGetWindowPos(window, &x, &y);
     glfwGetWindowSize(window, &width, &height);
 
-    Log::info(
+    Log::trace(
         "WindowController",
         "{} ptr={} fullscreen={} monitor={} decorated={} maximized={} focused={} iconified={} savedMaximized={} pos={} size={}",
         label,
@@ -243,6 +243,17 @@ void WindowController::init(GLFWwindow* window, const UserSettings::WindowState&
     if (!isFullscreen) {
         syncWindowedStateFromWindow();
     }
+}
+
+std::pair<int, int> WindowController::framebufferSize() {
+    if (!window) {
+        return {0, 0};
+    }
+
+    int width = 0;
+    int height = 0;
+    glfwGetFramebufferSize(window, &width, &height);
+    return {width, height};
 }
 
 void WindowController::toggleFullscreen() {

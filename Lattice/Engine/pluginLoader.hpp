@@ -33,7 +33,7 @@ public:
             return 0;
         }
 
-        Log::debug("PluginLoader", "Scanning {}...", pluginsDir.string());
+        Log::action("PluginLoader", "Scanning {}...", pluginsDir.string());
 
         for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(pluginsDir)) {
             if (!entry.is_regular_file()) {
@@ -45,7 +45,7 @@ public:
                 continue;
             }
 
-            Log::debug("PluginLoader", "Loading {}", libraryPath.string());
+            Log::action("PluginLoader", "Loading {}", libraryPath.string());
 
             DynamicLibrary library;
             if (!library.open(libraryPath)) {
@@ -64,7 +64,7 @@ public:
                 continue;
             }
 
-            Log::ok(
+            Log::info(
                 "PluginLoader",
                 "Loaded \"{}\" id={} version={}",
                 library.info.name != nullptr && library.info.name[0] != '\0' ? library.info.name : "<unnamed>",
@@ -78,7 +78,7 @@ public:
         if (loadedCount == 0) {
             Log::warning("PluginLoader", "No plugins were loaded from {}", pluginsDir.string());
         } else {
-            Log::ok("PluginLoader", "Loaded {} plugin", loadedCount);
+            Log::ok("PluginLoader", "Plugins loaded: {}", loadedCount);
         }
         return loadedCount;
     }

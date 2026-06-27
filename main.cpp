@@ -1,6 +1,22 @@
 ﻿#include "App/Application.h"
+#include "Lattice/Log.hpp"
 
-int runApplication(int, char**) {
+#include <string_view>
+
+int runApplication(int argc, char** argv) {
+    Log::ConsoleMode consoleMode = Log::ConsoleMode::Default;
+    for (int i = 1; i < argc; ++i) {
+        const std::string_view arg = argv[i];
+        if (arg == "--trace") {
+            consoleMode = Log::ConsoleMode::Trace;
+        } else if (arg == "--verbose" || arg == "-v") {
+            if (consoleMode != Log::ConsoleMode::Trace) {
+                consoleMode = Log::ConsoleMode::Verbose;
+            }
+        }
+    }
+
+    Log::setConsoleMode(consoleMode);
     Application application;
     return application.run();
 }
