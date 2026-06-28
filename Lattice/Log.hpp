@@ -12,6 +12,7 @@
 class Log {
 public:
     enum class ConsoleMode {
+        Quiet,
         Default,
         Verbose,
         Trace,

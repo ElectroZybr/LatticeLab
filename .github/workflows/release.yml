@@ -82,7 +82,16 @@ jobs:
           archive_name="LatticeLab-${VERSION}-${{ matrix.archive_suffix }}.${{ matrix.archive_ext }}"
           mkdir -p release_dist/assets
           cp LatticeLab.exe release_dist/
+          if [ -f Lattice/Lattice-cli.exe ]; then
+            cp Lattice/Lattice-cli.exe release_dist/
+          fi
           find . -maxdepth 1 -type f -name "*.dll" -exec cp {} release_dist/ \;
+          mingw_bin="$(dirname "$(which g++)")"
+          for runtime_dll in libstdc++-6.dll libgcc_s_seh-1.dll libwinpthread-1.dll; do
+            if [ -f "${mingw_bin}/${runtime_dll}" ]; then
+              cp "${mingw_bin}/${runtime_dll}" release_dist/
+            fi
+          done
           cp -r assets/* release_dist/assets/
           if [ -d Mods ]; then
             cp -r Mods release_dist/
@@ -100,6 +109,9 @@ jobs:
           archive_name="LatticeLab-${VERSION}-${{ matrix.archive_suffix }}.${{ matrix.archive_ext }}"
           mkdir -p release_dist/assets
           cp LatticeLab release_dist/
+          if [ -f Lattice/Lattice-cli ]; then
+            cp Lattice/Lattice-cli release_dist/
+          fi
           find . -maxdepth 1 -type f \( -name "${{ matrix.package_glob }}" \) -exec cp {} release_dist/ \; || true
           cp -r assets/* release_dist/assets/
           if [ -d Mods ]; then

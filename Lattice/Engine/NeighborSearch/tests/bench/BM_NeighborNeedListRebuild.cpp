@@ -7,8 +7,8 @@ BENCHMARK_DEFINE_F(Fixture, NeighborListNeedRebuild)(benchmark::State& state) {
     warmupScene();
 
     for (auto _ : state) {
-        simulation_->neighborList().needsRebuild(simulation_->atoms());
-        benchmark::DoNotOptimize(simulation_->neighborList().pairStorageSize());
+        const bool needsRebuild = simulation_->neighborList().needsRebuild(simulation_->atoms());
+        benchmark::DoNotOptimize(static_cast<int>(needsRebuild));
         benchmark::ClobberMemory();
     }
 

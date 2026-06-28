@@ -1,5 +1,7 @@
 #include <benchmark/benchmark.h>
 
+#include <optional>
+
 #include "Fixture.h"
 #include "Lattice/Engine/NeighborSearch/BarnesHut/Octree.h"
 #include "Lattice/Plugins/ClassicMD/ForceFields/CoulombForceField.h"
@@ -28,11 +30,16 @@ BENCHMARK_DEFINE_F(Fixture, BarnesHutOctreeBuild)(benchmark::State& state) {
 
     auto& atoms = simulation_->atoms();
     auto& grid = simulation_->world().getGrid();
+    std::optional<OctreeNode> root;
 
     for (auto _ : state) {
-        OctreeNode root;
-        root.build(atoms, grid);
-        benchmark::DoNotOptimize(root);
+        state.PauseTiming();
+        root.reset();
+        root.emplace();
+        state.ResumeTiming();
+
+        root->build(atoms, grid);
+        benchmark::DoNotOptimize(*root);
         benchmark::ClobberMemory();
     }
 
