@@ -1,6 +1,10 @@
-id = "WGPURendering"
-name = "WGPU Rendering"
+id = "Render"
+name = "Render"
 version = "1.0.0"
 
 [core]
 api = "1.0"
+
+[[dependencies]]
+id = "GPU"
+version = ">=1.0.0"
