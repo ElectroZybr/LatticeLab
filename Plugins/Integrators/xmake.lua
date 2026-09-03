@@ -8,6 +8,6 @@ target("Integrator")
     add_includedirs("..", {public = true})
     add_includedirs("src")
 
-    add_includedirs("../ParticleDynamics/api", {public = true})
+    add_includedirs("../ParticleDynamics/include", {public = true})
 
     add_deps("Lattice")
