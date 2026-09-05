@@ -170,11 +170,13 @@ namespace Lattice {
     void PluginManager::loadCandidates() {
         uint16_t loadedPlugins = 0; 
         for (Plugin* candidate : loadQueue) {
-            Logger::Scope scope(tag, "Loading {}", candidate->path.string());
+            Logger::Scope scope(tag, "Loading '{}'", candidate->path.string());
             if (loadPlugin(candidate)) {
-                scope.finish("Loaded plugin {}", candidate->manifest.id);
+                scope.finish("Loaded plugin '{}'", candidate->manifest.id);
                 loadedPlugins++;
-            } 
+            } else {
+                scope.finishError("failed to load plugin '{}'", candidate->manifest.id);
+            }
         }
         if (!loadedPlugins) {
             Logger::warning(tag, "No plugins could be loaded");
@@ -186,11 +188,17 @@ namespace Lattice {
     bool PluginManager::loadPlugin(Plugin* candidate) {
         std::filesystem::path path;
 
+        
         for (const auto& entry : std::filesystem::directory_iterator(candidate->path)) {
             if (entry.is_regular_file() && entry.path().extension() == DynamicLibrary::extension()) {
                 path = entry.path();
                 break;
             }
+        }
+
+        if (dlLoader.find(path.stem().string())) {
+            Logger::error(tag, "Dynamic library '{}' already loaded", candidate->path.stem().string());
+            return false;
         }
 
         if (path.empty()) {
@@ -202,13 +210,13 @@ namespace Lattice {
 
         const size_t depsBefore = compileDepSink().size();
 
-        auto* library = dlLoader.loadLibrary(path);
-        if (!library) {
+        candidate->library = dlLoader.loadLibrary(path);
+        if (!candidate->library) {
             candidate->status = LoadStatus::Failed;
             return false;
         }
 
-        auto regFn = library->symbol<PluginRegisterFn>("plugin_register");
+        auto regFn = candidate->library->symbol<PluginRegisterFn>("plugin_register");
         if (!regFn) {
             Logger::error(tag, "plugin_register symbol not found in '{}'", path.string());
             candidate->status = LoadStatus::Failed;

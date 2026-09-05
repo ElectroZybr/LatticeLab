@@ -4,7 +4,7 @@
 
 
 extern "C" bool plugin_register(Lattice::Registry& reg) {
-    return true;
+    return false;
 }
 
 extern "C" void plugin_shutdown() {}

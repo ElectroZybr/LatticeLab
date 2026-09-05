@@ -1,4 +1,4 @@
-id = "TestFailingRegister"
+id = "FailingRegister"
 name = "Test Failing Register"
 version = "1.0.0"
 

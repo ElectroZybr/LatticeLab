@@ -1,4 +1,4 @@
-id = "TestConsumer"
+id = "Consumer"
 name = "Test Consumer"
 version = "1.0.0"
 
@@ -6,5 +6,5 @@ version = "1.0.0"
 api = "1.0"
 
 [[dependencies]]
-id = "TestProvider"
+id = "Provider"
 version = ">=1.0.0"

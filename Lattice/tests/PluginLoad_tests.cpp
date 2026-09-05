@@ -142,7 +142,6 @@ TEST(Plugin_NoRegister, RuntimeFixture,
 
     REQUIRE(plugin);
     REQUIRE(plugin->status == LoadStatus::Failed);
-    REQUIRE(plugin->library == nullptr);
 }
 
 TEST(Plugin_FailingRegister, RuntimeFixture,
@@ -159,7 +158,6 @@ TEST(Plugin_FailingRegister, RuntimeFixture,
 
     REQUIRE(plugin);
     REQUIRE(plugin->status == LoadStatus::Failed);
-    REQUIRE(plugin->library == nullptr);
 }
 
 TEST(Plugin_CheckCandidatesTwice, RuntimeFixture,
