@@ -14,6 +14,7 @@
 
 // Source
 #include <Lattice/Engine/physics/Atom/AtomData.h>
+#include "Lattice/Kernel/Exception.hpp"
 #include "StdData/include/SoA.hpp"
 
 namespace ClassicMD {

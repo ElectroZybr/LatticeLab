@@ -1,4 +1,4 @@
-id = "TestMissingDependency"
+id = "MissingDependency"
 name = "Test Missing Dependency"
 version = "1.0.0"
 

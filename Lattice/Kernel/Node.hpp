@@ -46,17 +46,17 @@ class Node {
         return raw;
     }
 
-    void appendTree(Logger::Tree& tree, size_t depth, const Node* highlighted) const {
+    void appendTree(Logger::Tree& tree, size_t depth, const ObjectId highlighted) const {
         for (const auto& child : children) {
-            const bool selected = child.get() == highlighted;
+            // const bool selected = child.get() == highlighted;
 
             const Entry& entry = objectRegistry.require(child->id);
-            // std::string label = child->self.type;
-            // if (selected)
-            //     // label = Lattice::Text("<b><r>{} 🡸<//>");
-            //     label = std::format("{}{}{} 🡸{}", Color::red, Color::bold, label, Color::reset);
+            std::string label = entry.type;
+            if (child->id == highlighted)
+                // label = Lattice::Text("<b><r>{} 🡸<//>");
+                label = std::format("{}{}{} 🡸{}", Color::red, Color::bold, label, Color::reset);
 
-            tree.node(std::format("{} ({}) #{}", entry.type, entry.name, child->id), depth);
+            tree.node(std::format("{} ({}) #{}", label, entry.name, child->id), depth);
             child->appendTree(tree, depth + 1, highlighted);
         }
     }
@@ -383,7 +383,7 @@ public:
 
     void dumpTree(std::string_view componentName = "Unknown") const {
         Logger::Tree tree("Root");
-        appendTree(tree, 0, nullptr);
+        appendTree(tree, 0, 7);
         tree.print();
     }
 

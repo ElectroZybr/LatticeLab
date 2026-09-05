@@ -87,7 +87,7 @@ public:
         try {
             Logger::ConsoleMode consoleMode = Logger::ConsoleMode::Default;
             std::filesystem::path configPath = "lattice.toml";
-            bool testMode = false;
+            bool testMode = true;
             for (int i = 1; i < argc; ++i) {
                 const std::string_view arg = argv[i];
                 if (arg == "--trace") {
@@ -121,13 +121,13 @@ public:
                 buildBranch(entry);
             root.configureAll();
             startServices(config);
-
             if (!hostName.empty()) {
                 auto host = root.require<ServiceAPI>(hostName);
                 host->enter();
             } else {
-                while (running)
+                while (running) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                }
             }
             stopAll();
         } catch (const std::exception& error) {
