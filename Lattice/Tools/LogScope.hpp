@@ -92,6 +92,7 @@ private:
     void start(LogMode mode, size_t maxDepth, const Text& message) {
         auto& log = LogSystem::current();
         log.pushScope(mode, maxDepth);
+        Logger::blank();
         Logger::print(Level::Action, tag_, message);
         log.addDepth(1);
     }

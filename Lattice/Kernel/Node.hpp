@@ -14,6 +14,7 @@
 #include <Lattice/Kernel/Path.hpp>
 #include <Lattice/Tools/LogStyle.hpp>
 #include <Lattice/Tools/Logger.hpp>
+#include <Lattice/Tools/LogTree.hpp>
 
 
 namespace Lattice {
@@ -46,20 +47,17 @@ class Node {
         return raw;
     }
 
-    // void appendTree(Logger::Tree& tree, size_t depth, const ObjectId highlighted) const {
-    //     for (const auto& child : children) {
-    //         // const bool selected = child.get() == highlighted;
+    void appendTree(Logger::Tree& tree, size_t depth, const ObjectId highlighted) const {
+        for (const auto& child : children) {
+            const Entry& entry = objectRegistry.require(child->id);
+            std::string label = entry.type;
+            if (child->id == highlighted)
+                label = std::format("<b><r>{} 🡸<//>", label);
 
-    //         const Entry& entry = objectRegistry.require(child->id);
-    //         std::string label = entry.type;
-    //         if (child->id == highlighted)
-    //             // label = Lattice::Text("<b><r>{} 🡸<//>");
-    //             label = std::format("{}{}{} 🡸{}", Color::red, Color::bold, label, Color::reset);
-
-    //         tree.node(std::format("{} ({}) #{}", label, entry.name, child->id), depth);
-    //         child->appendTree(tree, depth + 1, highlighted);
-    //     }
-    // }
+            tree.node(std::format("{} <gr>({}) #{}</>", label, entry.name, child->id), depth);
+            child->appendTree(tree, depth + 1, highlighted);
+        }
+    }
 
     template<typename T>
     void collectInto(std::vector<T*>& out) const {
@@ -381,11 +379,11 @@ public:
         return path;
     }
 
-    // void dumpTree(std::string_view componentName = "Unknown") const {
-    //     Logger::Tree tree("Root");
-    //     appendTree(tree, 0, 7);
-    //     tree.print();
-    // }
+    void dumpTree(std::string_view componentName = "Unknown") const {
+        Logger::Tree tree("Root");
+        appendTree(tree, 0, 7);
+        tree.print();
+    }
 
     void* getObject() const noexcept {
         return api ? api : instance;

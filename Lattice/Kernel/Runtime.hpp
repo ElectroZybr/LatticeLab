@@ -28,15 +28,7 @@ class Runtime {
     static constexpr std::string_view tag = "Runtime";
 public:
     Runtime() : root(globalRegistry, objectRegistry, nullptr)
-              , pluginManager(globalRegistry, dlLoader) {
-        LogScope scope(tag, "System launching");
-        Lattice::CliSystemInfo::printSystemInfo(std::cout);
-        // регистрация интерфейсов ядра
-        globalRegistry.registerAPI<ServiceAPI>();
-        globalRegistry.registerAPI<SubsystemAPI>();
-        globalRegistry.registerComponent<Settings>();
-        root.add<Settings>();
-    }
+              , pluginManager(globalRegistry, dlLoader) {}
 
     bool loadPlugins(std::filesystem::path path) {
         // загрузка внешних плагинов
@@ -89,13 +81,21 @@ public:
 
     void run(int argc, char** argv) {
         try {
-            Logger::setDefaultMode(LogMode::Clean | LogMode::OnlyWarn);
+            Logger::setDefaultMode(LogModes::Default);
+            Lattice::CliSystemInfo::printSystemInfo(std::cout);
+            LogScope scope(tag, "<b>System launching</>");
+            // регистрация интерфейсов ядра
+            globalRegistry.registerAPI<ServiceAPI>();
+            globalRegistry.registerAPI<SubsystemAPI>();
+            globalRegistry.registerComponent<Settings>();
+            root.add<Settings>();
+
             std::filesystem::path configPath = "lattice.toml";
             bool testMode = false;
             for (int i = 1; i < argc; ++i) {
                 const std::string_view arg = argv[i];
                 if (arg == "--verbose" || arg == "-v") {
-                    Logger::setDefaultMode(LogMode::Verbose);
+                    Logger::setDefaultMode(LogMode::Verbose | LogMode::Gap);
                 } else if (arg == "--config" || arg == "-c") {
                     if (++i >= argc)
                         throw Lattice::Exception(tag, "missing path for {}", arg);
@@ -108,17 +108,21 @@ public:
             StartupConfig config(configPath);
 
             loadPlugins("Plugins");
+
+            scope.finish("<b>Cofiguration finished</>");
+            
             if (testMode) {
                 dlLoader.load("Lattice", ".tests");
                 dlLoader.load("Plugins", ".tests");
                 TestRegistry::instance().runAll();
                 return;
             }
-
+            
             for (const auto& entry : config.entries())
                 buildBranch(entry);
             root.configureAll();
             startServices(config);
+            root.dumpTree();
             if (!hostName.empty()) {
                 auto host = root.require<ServiceAPI>(hostName);
                 host->enter();
@@ -160,11 +164,11 @@ public:
         if (fatal) {
             Logger::exception(fatal->tag(), "{}", error.what());
             Logger::message("Dump components tree (failed node is red):");
-            // root.dumpTree(fatal->tag());
+            root.dumpTree(fatal->tag());
         } else {
             Logger::exception(tag, "Unhandled exception: {}", error.what());
             Logger::message("Dump components tree:");
-            // root.dumpTree();
+            root.dumpTree();
         }
         Logger::message("\n<r><b>Critical error. Application terminated.<//>");
         Logger::message("Crash log: {}", std::string(LogSystem::getPath()));
@@ -174,7 +178,7 @@ public:
     void reportUnknownException() const {
         Logger::exception(tag, "Unhandled non-standard exception");
         Logger::message("Dump components tree (failed node is red):");
-        // root.dumpTree();
+        root.dumpTree();
     }
 
 private:

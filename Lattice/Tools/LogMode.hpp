@@ -1,10 +1,8 @@
 #pragma once
 
-#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <string_view>
 
 #include <Lattice/Kernel/Exception.hpp>
 
@@ -16,7 +14,8 @@ enum class Level : uint8_t {
     Info,
     Warning,
     Error,
-    Exception
+    Exception,
+    Blank
 };
 
 
@@ -25,6 +24,7 @@ enum class LogMode : uint8_t {
     OnlyWarn      = 1 << 1,
     Clean         = 1 << 2,
     SuppressError = 1 << 3,
+    Gap           = 1 << 4,
 };
 
 
@@ -67,10 +67,11 @@ namespace LogModes {
 
 inline constexpr size_t UnlimitedDepth = std::numeric_limits<size_t>::max();
 
-inline constexpr LogMode Default = LogMode::Clean | LogMode::OnlyWarn;
+inline constexpr LogMode Default =
+    LogMode::Clean | LogMode::OnlyWarn | LogMode::Gap;
 
 inline constexpr LogMode Inheritable =
-    LogMode::Verbose | LogMode::OnlyWarn;
+    LogMode::Verbose | LogMode::OnlyWarn | LogMode::Gap;
 
 
 constexpr LogMode inherit(LogMode local, LogMode parent) noexcept {
@@ -80,16 +81,24 @@ constexpr LogMode inherit(LogMode local, LogMode parent) noexcept {
     const bool onlyWarn =
         hasMode(local, LogMode::OnlyWarn) ||
         hasMode(parent, LogMode::OnlyWarn);
+    const bool gap =
+        hasMode(local, LogMode::Gap) ||
+        hasMode(parent, LogMode::Gap);
 
     if (verbose) {
         LogMode mode = LogMode::Verbose;
         if (onlyWarn)
             mode |= LogMode::OnlyWarn;
+        if (gap)
+            mode |= LogMode::Gap;
         return mode;
     }
 
     if (onlyWarn && !hasMode(local, LogMode::SuppressError))
         local |= LogMode::OnlyWarn;
+
+    if (gap)
+        local |= LogMode::Gap;
 
     return local;
 }
@@ -119,11 +128,19 @@ struct KeepContext {
 };
 
 
+constexpr bool shouldKeepGap(LogMode mode, bool keptAction) noexcept {
+    return keptAction && hasMode(mode, LogMode::Gap);
+}
+
+
 constexpr bool shouldKeep(const KeepContext& q) noexcept {
     const bool verbose       = hasMode(q.mode, LogMode::Verbose);
     const bool onlyWarn      = hasMode(q.mode, LogMode::OnlyWarn);
     const bool clean         = hasMode(q.mode, LogMode::Clean);
     const bool suppressError = hasMode(q.mode, LogMode::SuppressError);
+
+    if (q.level == Level::Blank)
+        return false;
 
     if (suppressError && isError(q.level))
         return false;
