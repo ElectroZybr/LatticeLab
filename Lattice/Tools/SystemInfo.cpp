@@ -1,6 +1,7 @@
 #include <Lattice/Tools/SystemInfo.hpp>
 #include <Lattice/Tools/LogStyle.hpp>
 #include <Lattice/Tools/Logger.hpp>
+#include <Lattice/Tools/LogTree.hpp>
 
 #include <algorithm>
 #include <array>
@@ -856,42 +857,42 @@ namespace {
     }
 
     void printSystemInfo(std::ostream& out, const SystemInfo& info) {
-        // Logger::Tree tree("System");
+        Logger::Tree tree("System");
 
-        // tree.node(std::format("{} {}", Color::paint("OS:", Color::brightBlue), Color::paint(info.os, Color::brightWhite)), 0);
-        // tree.node(std::format("{} {}", Color::paint("Arch:", Color::brightBlue), Color::paint(info.arch, Color::brightWhite)), 0);
-        // tree.node(std::format("{} {}", Color::paint("RAM:", Color::brightBlue), Color::paint(formatBytes(info.totalRamBytes), Color::brightWhite)), 0);
+        tree.node(std::format("{} {}", Color::paint("OS:", Color::brightBlue), Color::paint(info.os, Color::brightWhite)), 0);
+        tree.node(std::format("{} {}", Color::paint("Arch:", Color::brightBlue), Color::paint(info.arch, Color::brightWhite)), 0);
+        tree.node(std::format("{} {}", Color::paint("RAM:", Color::brightBlue), Color::paint(formatBytes(info.totalRamBytes), Color::brightWhite)), 0);
 
-        // tree.node(Color::paint("Build", Color::brightCyan), 0);
-        // tree.node(std::format("{} {}", Color::paint("Version:", Color::brightBlue), Color::paint(info.engine.version, Color::brightWhite)), 1);
-        // tree.node(std::format("{} {}", Color::paint("Build:", Color::brightBlue), Color::paint(info.engine.build, Color::brightWhite)), 1);
-        // tree.node(std::format("{} {}", Color::paint("Compiler:", Color::brightBlue), Color::paint(info.engine.compiler, Color::brightWhite)), 1);
+        tree.node(Color::paint("Build", Color::brightCyan), 0);
+        tree.node(std::format("{} {}", Color::paint("Version:", Color::brightBlue), Color::paint(info.engine.version, Color::brightWhite)), 1);
+        tree.node(std::format("{} {}", Color::paint("Build:", Color::brightBlue), Color::paint(info.engine.build, Color::brightWhite)), 1);
+        tree.node(std::format("{} {}", Color::paint("Compiler:", Color::brightBlue), Color::paint(info.engine.compiler, Color::brightWhite)), 1);
 
-        // tree.node(Color::paint("Devices", Color::brightCyan), 0);
-        // tree.node(std::format("{} {}", Color::paint("CPU[0]:", Color::brightYellow), Color::paint(info.cpu.name, Color::brightWhite)), 1);
-        // tree.node(std::format("{} {}", Color::paint("Cores:", Color::brightBlue), Color::paint(info.cpu.cores ? std::to_string(info.cpu.cores) : "unknown", Color::brightWhite)), 2);
-        // tree.node(std::format("{} {}", Color::paint("Threads:", Color::brightBlue), Color::paint(info.cpu.threads ? std::to_string(info.cpu.threads) : "unknown", Color::brightWhite)), 2);
-        // tree.node(std::format("{} {}", Color::paint("SIMD:", Color::brightBlue), Color::paint(info.cpu.simd, Color::brightWhite)), 2);
+        tree.node(Color::paint("Devices", Color::brightCyan), 0);
+        tree.node(std::format("{} {}", Color::paint("CPU[0]:", Color::brightYellow), Color::paint(info.cpu.name, Color::brightWhite)), 1);
+        tree.node(std::format("{} {}", Color::paint("Cores:", Color::brightBlue), Color::paint(info.cpu.cores ? std::to_string(info.cpu.cores) : "unknown", Color::brightWhite)), 2);
+        tree.node(std::format("{} {}", Color::paint("Threads:", Color::brightBlue), Color::paint(info.cpu.threads ? std::to_string(info.cpu.threads) : "unknown", Color::brightWhite)), 2);
+        tree.node(std::format("{} {}", Color::paint("SIMD:", Color::brightBlue), Color::paint(info.cpu.simd, Color::brightWhite)), 2);
 
-        // if (info.gpus.empty()) {
-        //     tree.node(std::format("{} {}", Color::paint("GPU[0]:", Color::brightYellow), Color::paint("unknown", Color::brightWhite)), 1);
-        // } else {
-        //     for (std::size_t i = 0; i < info.gpus.size(); ++i) {
-        //         const auto& gpu = info.gpus[i];
+        if (info.gpus.empty()) {
+            tree.node(std::format("{} {}", Color::paint("GPU[0]:", Color::brightYellow), Color::paint("unknown", Color::brightWhite)), 1);
+        } else {
+            for (std::size_t i = 0; i < info.gpus.size(); ++i) {
+                const auto& gpu = info.gpus[i];
 
-        //         tree.node(std::format("{} {}", Color::paint(std::format("GPU[{}]:", i), Color::brightYellow), Color::paint(gpu.name, Color::brightWhite)), 1);
-        //         if (!gpu.pciAddress.empty())
-        //             tree.node(std::format("{} {}", Color::paint("PCI:", Color::brightBlue), Color::paint(gpu.pciAddress, Color::brightWhite)), 2);
-        //         if (!gpu.driver.empty())
-        //             tree.node(std::format("{} {}", Color::paint("Driver:", Color::brightBlue), Color::paint(gpu.driver, Color::brightWhite)), 2);
-        //         if (!gpu.computeInfo.empty())
-        //             tree.node(std::format("{} {}", Color::paint("Compute:", Color::brightBlue), Color::paint(gpu.computeInfo, Color::brightWhite)), 2);
+                tree.node(std::format("{} {}", Color::paint(std::format("GPU[{}]:", i), Color::brightYellow), Color::paint(gpu.name, Color::brightWhite)), 1);
+                if (!gpu.pciAddress.empty())
+                    tree.node(std::format("{} {}", Color::paint("PCI:", Color::brightBlue), Color::paint(gpu.pciAddress, Color::brightWhite)), 2);
+                if (!gpu.driver.empty())
+                    tree.node(std::format("{} {}", Color::paint("Driver:", Color::brightBlue), Color::paint(gpu.driver, Color::brightWhite)), 2);
+                if (!gpu.computeInfo.empty())
+                    tree.node(std::format("{} {}", Color::paint("Compute:", Color::brightBlue), Color::paint(gpu.computeInfo, Color::brightWhite)), 2);
 
-        //         tree.node(std::format("{} {}", Color::paint("VRAM:", Color::brightBlue), Color::paint(formatVram(gpu.vramBytes), Color::brightWhite)), 2);
-        //     }
-        // }
+                tree.node(std::format("{} {}", Color::paint("VRAM:", Color::brightBlue), Color::paint(formatVram(gpu.vramBytes), Color::brightWhite)), 2);
+            }
+        }
 
-        // tree.print();
+        tree.print();
     }
 
     void printSystemInfo(std::ostream& out) {

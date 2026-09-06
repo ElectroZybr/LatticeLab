@@ -21,7 +21,8 @@ constexpr LogMode kFlags[] = {
     LogMode::Verbose,
     LogMode::OnlyWarn,
     LogMode::Clean,
-    LogMode::SuppressError
+    LogMode::SuppressError,
+    LogMode::Gap
 };
 
 using LogModes::KeepContext;
@@ -44,9 +45,9 @@ LogMode without(LogMode mode, LogMode flag) {
 }
 
 TEST(LogMode_DefaultIsCleanOnlyWarn, LogInvariantFixture,
-    "Дефолтный режим — Clean | OnlyWarn.")
+    "Дефолтный режим — Clean | OnlyWarn | Gap.")
 {
-    REQUIRE(LogModes::Default == (LogMode::Clean | LogMode::OnlyWarn));
+    REQUIRE(LogModes::Default == (LogMode::Clean | LogMode::OnlyWarn | LogMode::Gap));
 }
 
 TEST(LogMode_OrIsCommutative, LogInvariantFixture,
@@ -478,7 +479,7 @@ TEST(LogMode_InheritSuppressErrorBlocksOnlyWarn, LogInvariantFixture,
 
     const LogMode tests = LogMode::Clean | LogMode::SuppressError;
 
-    REQUIRE(inherit(tests, LogModes::Default) == tests);
+    REQUIRE(inherit(tests, LogModes::Default) == (tests | LogMode::Gap));
     REQUIRE(inherit(tests, LogMode::OnlyWarn) == tests);
     REQUIRE(inherit(tests, LogMode::Clean | LogMode::OnlyWarn) == tests);
 }
@@ -492,4 +493,15 @@ TEST(LogMode_InheritOnlyWarnWithoutSuppress, LogInvariantFixture,
         inherit(LogMode::Clean, LogMode::OnlyWarn) ==
         (LogMode::Clean | LogMode::OnlyWarn)
     );
+}
+
+TEST(LogMode_KeepGapFollowsAction, LogInvariantFixture,
+    "Пустая строка остаётся только если остался Action и включён Gap.")
+{
+    using LogModes::shouldKeepGap;
+
+    REQUIRE(shouldKeepGap(LogMode::Gap, true));
+    REQUIRE(!shouldKeepGap(LogMode::Gap, false));
+    REQUIRE(!shouldKeepGap(LogMode::Verbose, true));
+    REQUIRE(shouldKeepGap(LogMode::Verbose | LogMode::Gap, true));
 }

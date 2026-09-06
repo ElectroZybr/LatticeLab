@@ -72,22 +72,43 @@ void LogSystem::write(Level level, const Text& text) {
 }
 
 void LoggerImpl::print(Level level, const Text& text, bool isScopeFinal) {
+    LogSystem::write(level, text);
+
     if (scopeCount_ != 0) {
-        lines_.push_back(packLine(level, scopeCount_, isScopeFinal));
+        const auto& scope = scopes_[scopeCount_ - 1];
 
-        const bool problem =
-            level == Level::Warning ||
-            (LogModes::isError(level) &&
-             !hasMode(scopes_[scopeCount_ - 1].mode, LogMode::SuppressError));
-
-        if (problem) {
+        if (level == Level::Warning ||
+            (LogModes::isError(level) && !hasMode(scope.mode, LogMode::SuppressError)))
+        {
             for (uint8_t i = 0; i < scopeCount_; ++i)
                 scopes_[i].hadProblem = true;
         }
+
+        if (!isScopeFinal &&
+            level != Level::Action &&
+            !LogModes::shouldKeep({
+                .mode = scope.mode,
+                .level = level,
+                .success = true,
+                .depth = scopeCount_,
+                .maxDepth = scope.maxDepth,
+                .hadProblem = scope.hadProblem
+            }))
+        {
+            return;
+        }
+
+        lines_.push_back(packLine(level, scopeCount_, isScopeFinal));
     }
 
-    LogSystem::write(level, text);
     std::cout << std::string(indent_, ' ') << text.render() << '\n';
+}
+
+void LoggerImpl::printBlank() {
+    if (scopeCount_ != 0)
+        lines_.push_back(packLine(Level::Blank, scopeCount_, false));
+
+    std::cout << '\n';
 }
 
 void LoggerImpl::pushScope(LogMode mode, size_t maxDepth) {
@@ -105,39 +126,56 @@ void LoggerImpl::popScope(bool success, bool hasFinal) {
     const size_t end = lines_.size();
     const size_t count = end - begin;
 
-    if (count != 0)
+    if (count != 0 && scopeCount_ > 1)
         std::cout << "\033[" << count << "A";
+
+    const bool verbose = hasMode(scope.mode, LogMode::Verbose);
+
+    auto shouldKeepLine = [&](size_t index, bool actionKept) {
+        const uint8_t packed = lines_[index];
+        const Level level = unpackLevel(packed);
+        const bool isCurrentFinal =
+            hasFinal && (index + 1 == end) && unpackFinal(packed);
+
+        if (unpackPinned(packed) && (verbose || unpackDepth(packed) < scope.maxDepth))
+            return true;
+
+        if (level == Level::Blank)
+            return LogModes::shouldKeepGap(scope.mode, actionKept);
+
+        return LogModes::shouldKeep({
+            .mode = scope.mode,
+            .level = level,
+            .success = success,
+            .depth = unpackDepth(packed),
+            .maxDepth = scope.maxDepth,
+            .isCurrentFinal = isCurrentFinal,
+            .isScopeFinal = unpackFinal(packed),
+            .hadProblem = scope.hadProblem
+        });
+    };
+
+    bool keptAction = false;
+    for (size_t i = begin; i < end; ++i) {
+        if (unpackLevel(lines_[i]) == Level::Action && shouldKeepLine(i, false)) {
+            keptAction = true;
+            break;
+        }
+    }
 
     size_t write = begin;
 
     for (size_t i = begin; i < end; ++i) {
         const uint8_t packed = lines_[i];
-        const bool isCurrentFinal =
-            hasFinal && (i + 1 == end) && unpackFinal(packed);
-
-        const bool verbose = hasMode(scope.mode, LogMode::Verbose);
-        const bool keepPinned =
-            unpackPinned(packed) &&
-            (verbose || unpackDepth(packed) < scope.maxDepth);
-
-        const bool keep =
-            keepPinned ||
-            LogModes::shouldKeep({
-                .mode = scope.mode,
-                .level = unpackLevel(packed),
-                .success = success,
-                .depth = unpackDepth(packed),
-                .maxDepth = scope.maxDepth,
-                .isCurrentFinal = isCurrentFinal,
-                .isScopeFinal = unpackFinal(packed),
-                .hadProblem = scope.hadProblem
-            });
+        const bool keep = shouldKeepLine(i, keptAction);
 
         if (keep) {
-            std::cout << "\r\033[1B";
+            if (scopeCount_ > 1)
+                std::cout << "\r\033[1B";
             lines_[write++] = static_cast<uint8_t>(packed | kPinnedBit);
         } else {
-            std::cout << "\r\033[M";
+            if (scopeCount_ > 1)
+                std::cout << "\r\033[M";
         }
     }
 

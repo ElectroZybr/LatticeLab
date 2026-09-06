@@ -20,6 +20,7 @@ inline constexpr LogStyle logStyles[] = {
     {"WARN",      "<y>⚠"},
     {"ERROR",     "<r>⚠"},
     {"EXCEPTION", "<r>✗"},
+    {"",          ""},
 };
 
 inline const LogStyle& LogStyle::get(Level level) {

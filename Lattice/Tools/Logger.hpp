@@ -17,6 +17,7 @@ class LoggerImpl {
 public:
 
     void print(Level level, const Text& text, bool isScopeFinal = false);
+    void printBlank();
     void pushScope(LogMode mode, size_t maxDepth);
     void popScope(bool success, bool hasFinal = true);
 
@@ -92,6 +93,10 @@ inline void addDefaultMode(LogMode mode) {
 
 inline void setMaxDepth(size_t depth) {
     LogSystem::current().setMaxDepth(depth);
+}
+
+inline void blank() {
+    LogSystem::current().printBlank();
 }
 
 inline void print(Level level, std::string_view tag, const Text& message, bool isScopeFinal = false) {
