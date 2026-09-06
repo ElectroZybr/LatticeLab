@@ -1,25 +1,13 @@
-#include <Lattice/Tools/Logger.hpp>
-#include "Lattice/Tools/LogStyle.hpp"
-
-#include <atomic>
 #include <chrono>
-#include <filesystem>
-#include <fstream>
+#include <ctime>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <string>
+
+#include <Lattice/Tools/Logger.hpp>
 
 namespace {
-
-std::atomic<Logger::ConsoleMode> gConsoleMode = Logger::ConsoleMode::Default;
-
-struct LevelStyle {
-    std::string_view label;
-    std::string_view status;
-    Lattice::TextStyle style;
-    Logger::ConsoleMode consoleMode;
-    bool useStdErr;
-};
 
 std::string timestampForLogLine() {
     const auto now = std::chrono::system_clock::now();
@@ -38,139 +26,141 @@ std::string timestampForLogLine() {
     return out.str();
 }
 
-std::ofstream& logFile() {
-    static std::ofstream file = [] {
-        const auto path = Logger::logPath();
 
-        std::filesystem::create_directories(path.parent_path());
+constexpr uint8_t kFinalBit  = 0x08;
+constexpr uint8_t kPinnedBit = 0x10;
 
-        return std::ofstream(
-            path,
-            std::ios::out | std::ios::trunc
-        );
-    }();
-
-    return file;
+constexpr uint8_t packLine(Level level, size_t depth, bool isScopeFinal) noexcept {
+    const uint8_t packedDepth = static_cast<uint8_t>(depth < 7 ? depth : 7);
+    return static_cast<uint8_t>(
+        (static_cast<uint8_t>(level) & 0x07) |
+        (isScopeFinal ? kFinalBit : 0) |
+        (packedDepth << 5)
+    );
 }
 
-LevelStyle levelStyle(Logger::Level level) {
-    using Level = Logger::Level;
+constexpr Level unpackLevel(uint8_t packed) noexcept {
+    return static_cast<Level>(packed & 0x07);
+}
 
-    switch (level) {
-        case Level::Ok:
-            return {"OK", "✓", TextStyle::Green, Logger::ConsoleMode::Default, false};
-        case Level::Warning:
-            return {"WARN", "⚠", TextStyle::Yellow, Logger::ConsoleMode::Default, true};
-        case Level::Error:
-            return {"ERROR", "⚠", TextStyle::Red, Logger::ConsoleMode::Default, true};
-        case Level::Exception:
-            return {"EXCEPTION", "✗", TextStyle::Red, Logger::ConsoleMode::Default, true};
-        case Level::Action:
-            return {"ACTION", "➜", TextStyle::Cyan, Logger::ConsoleMode::Default, false};
-        case Level::Info:
-            return {"INFO", "•", TextStyle::Gray, Logger::ConsoleMode::Default, false};
-        case Level::Trace:
-            return {"TRACE", "·", TextStyle::Gray, Logger::ConsoleMode::Trace, false};
-    }
+constexpr bool unpackFinal(uint8_t packed) noexcept {
+    return (packed & kFinalBit) != 0;
+}
 
-    return {"INFO", "•", TextStyle::None, Logger::ConsoleMode::Verbose, false};
+constexpr bool unpackPinned(uint8_t packed) noexcept {
+    return (packed & kPinnedBit) != 0;
+}
+
+constexpr size_t unpackDepth(uint8_t packed) noexcept {
+    return packed >> 5;
 }
 
 }
 
-void Logger::treeLine(std::string_view message) {
-    std::lock_guard lock(mutex());
+void LogSystem::write(Level level, const Text& text) {
+    std::lock_guard lock(mutex_);
 
-    std::ofstream& file = logFile();
-
-    if (file.is_open()) {
-        file << timestampForLogLine()
-             << ' '
-             << message
-             << '\n';
-
-        file.flush();
-    }
-
-    std::cout
-        << Color::gray
-        << message
-        << Color::reset
-        << '\n';
-}
-
-void Logger::setConsoleMode(ConsoleMode mode) noexcept {
-    gConsoleMode.store(mode, std::memory_order_relaxed);
-}
-
-Logger::ConsoleMode Logger::consoleMode() noexcept {
-    return gConsoleMode.load(std::memory_order_relaxed);
-}
-
-std::mutex& Logger::mutex() {
-    static std::mutex value;
-    return value;
-}
-
-size_t& Logger::indent() {
-    thread_local size_t value = 0;
-    return value;
-}
-
-std::vector<Logger::ScopeState>& Logger::scopes() {
-    thread_local std::vector<ScopeState> value;
-    return value;
-}
-
-void Logger::print(const Text& text, OutputMode mode) {
-    std::lock_guard lock(mutex());
-
-    std::ofstream& file = logFile();
-    if (file.is_open()) {
-        file << timestampForLogLine() << ' ' << text.plain() << '\n';
-        file.flush();
-    }
-
-    if (mode == OutputMode::Persistent || consoleMode() != ConsoleMode::Default) {
-        invalidateErase(mode);
-
-        Text wrapped = text.wrap(100, indent());
-        std::cout << wrapped.render() << '\n';
-
-        if (mode == OutputMode::Transient)
-            addScopeLines(wrapped.lines());
-    }
-}
-
-void Logger::print(Level level, std::string_view tag, const Text& text, OutputMode mode) {
-    std::lock_guard lock(mutex());
-
-    const LevelStyle style = levelStyle(level);
-
-    std::ofstream& file = logFile();
-    if (file.is_open()) {
-        file << timestampForLogLine() << ' '
-             << std::format("[{}] [{}] {}", style.label, tag, text.plain())
-             << '\n';
-        file.flush();
-    }
-
-    if (static_cast<int>(consoleMode()) < static_cast<int>(style.consoleMode))
+    if (!file_.is_open())
         return;
 
-    invalidateErase(mode);
+    const auto& style = LogStyle::get(level);
 
-    Text line;
-    if (indent() > 0)
-        line.append(std::string(indent(), ' '));
-    line.append(style.status, style.style);
-    line.append(" [");
-    line.append(tag, TextStyle::Bold);
-    line.append("] ");
-    line.append(text, style.style);
+    file_ << timestampForLogLine()
+          << ' '
+          << std::format("[{}] {}", style.label, text.plain())
+          << '\n';
+}
 
-    std::cout << line.render() << '\n';
+void LoggerImpl::print(Level level, const Text& text, bool isScopeFinal) {
+    if (scopeCount_ != 0) {
+        lines_.push_back(packLine(level, scopeCount_, isScopeFinal));
 
-    if (mode == OutputMode::Transient)
-        addScopeLines(line.lines());
+        const bool problem =
+            level == Level::Warning ||
+            (LogModes::isError(level) &&
+             !hasMode(scopes_[scopeCount_ - 1].mode, LogMode::SuppressError));
+
+        if (problem) {
+            for (uint8_t i = 0; i < scopeCount_; ++i)
+                scopes_[i].hadProblem = true;
+        }
+    }
+
+    LogSystem::write(level, text);
+    std::cout << std::string(indent_, ' ') << text.render() << '\n';
+}
+
+void LoggerImpl::pushScope(LogMode mode, size_t maxDepth) {
+    auto& scope = scopes_[scopeCount_];
+    scope.start = static_cast<uint32_t>(lines_.size());
+    scope.mode = mode;
+    scope.maxDepth = maxDepth;
+    scope.hadProblem = false;
+    ++scopeCount_;
+}
+
+void LoggerImpl::popScope(bool success, bool hasFinal) {
+    const auto& scope = scopes_[scopeCount_ - 1];
+    const size_t begin = scope.start;
+    const size_t end = lines_.size();
+    const size_t count = end - begin;
+
+    if (count != 0)
+        std::cout << "\033[" << count << "A";
+
+    size_t write = begin;
+
+    for (size_t i = begin; i < end; ++i) {
+        const uint8_t packed = lines_[i];
+        const bool isCurrentFinal =
+            hasFinal && (i + 1 == end) && unpackFinal(packed);
+
+        const bool verbose = hasMode(scope.mode, LogMode::Verbose);
+        const bool keepPinned =
+            unpackPinned(packed) &&
+            (verbose || unpackDepth(packed) < scope.maxDepth);
+
+        const bool keep =
+            keepPinned ||
+            LogModes::shouldKeep({
+                .mode = scope.mode,
+                .level = unpackLevel(packed),
+                .success = success,
+                .depth = unpackDepth(packed),
+                .maxDepth = scope.maxDepth,
+                .isCurrentFinal = isCurrentFinal,
+                .isScopeFinal = unpackFinal(packed),
+                .hadProblem = scope.hadProblem
+            });
+
+        if (keep) {
+            std::cout << "\r\033[1B";
+            lines_[write++] = static_cast<uint8_t>(packed | kPinnedBit);
+        } else {
+            std::cout << "\r\033[M";
+        }
+    }
+
+    std::cout << std::flush;
+
+    --scopeCount_;
+
+    if (scopeCount_ == 0) {
+        lines_.clear();
+        lines_.shrink_to_fit();
+    } else {
+        lines_.resize(write);
+    }
+}
+
+void LogSystem::setPath(const std::filesystem::path& path) {
+    std::lock_guard lock(mutex_);
+    path_ = path;
+
+    if (file_.is_open())
+        file_.close();
+
+    std::filesystem::create_directories(path.parent_path());
+
+    file_.open(path, std::ios::out | std::ios::trunc);
 }

@@ -475,7 +475,7 @@ void glfwWindow::onPos(int x, int y) {
     state_.x = x;
     state_.y = y;
     state_.monitorIndex = monitorIndex(currentMonitor());
-    Logger::trace("Window", "moved {},{}", x, y);
+    Logger::info("Window", "moved {},{}", x, y);
 }
 
 void glfwWindow::onSize(int width, int height) {

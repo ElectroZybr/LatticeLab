@@ -1,5 +1,7 @@
 #include <Lattice/Tools/Tests.hpp>
 #include <Lattice/Tools/Logger.hpp>
+#include "Lattice/Tools/LogMode.hpp"
+#include "Lattice/Tools/LogScope.hpp"
 
 
 namespace Lattice {
@@ -36,12 +38,19 @@ TestRegistry& TestRegistry::instance() {
     return registry;
 }
 
-int TestRegistry::runAll() {
+int TestRegistry::runAll(LogMode mode) {
     int failed = 0;
     Logger::message("<w>~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</>");
-    Logger::Scope testing("Tests", "<w><b>Running<//>");
+    LogScope testing("Tests", mode, "<w><b>Running<//>");
     for (TestCase& test : tests_) {
-        Logger::Scope testScope("Test", "'{}'", test.name);
+        auto& log = LogSystem::current();
+        const LogMode effective = LogModes::inherit(mode, log.currentOrDefault());
+        const size_t testDepth = log.scopeDepth() + 1;
+        const size_t maxDepth = hasMode(effective, LogMode::Verbose)
+            ? LogModes::UnlimitedDepth
+            : testDepth + 1;
+
+        LogScope testScope("Test", mode, maxDepth, "'{}'", test.name);
         currentTestFailed = false;
         try {
             auto fixture = test.createFixture();

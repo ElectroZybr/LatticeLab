@@ -1,359 +1,150 @@
 #pragma once
 
-#include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <format>
-#include <iostream>
-#include <memory>
+#include <fstream>
 #include <mutex>
-#include <string>
-#include <string_view>
+#include <utility>
 #include <vector>
 
+#include <Lattice/Tools/LogMode.hpp>
 #include <Lattice/Tools/LogStyle.hpp>
 #include <Lattice/Tools/Text.hpp>
 
-class Logger {
+
+class LoggerImpl {
 public:
-    class Indent {
-    public:
-        Indent() { ++Logger::indent(); }
-        ~Indent() { --Logger::indent(); }
-    };
 
-    enum class OutputMode {
-        Transient,
-        Persistent
-    };
+    void print(Level level, const Text& text, bool isScopeFinal = false);
+    void pushScope(LogMode mode, size_t maxDepth);
+    void popScope(bool success, bool hasFinal = true);
 
-    enum class ConsoleMode {
-        Default,
-        Verbose,
-        Trace
-    };
+    void setDefaultMode(LogMode mode) { defaultMode_ = mode; }
+    void addDefaultMode(LogMode mode) { defaultMode_ |= mode; }
+    void setMaxDepth(size_t depth) { defaultMaxDepth_ = depth; }
 
-    enum class Level {
-        Action,
-        Trace,
-        Info,
-        Warning,
-        Error,
-        Exception,
-        Ok
-    };
+    LogMode defaultMode() const { return defaultMode_; }
+    size_t defaultMaxDepth() const { return defaultMaxDepth_; }
 
-    static std::filesystem::path logPath() {
-        return std::filesystem::path("Logs") / "lattice.log";
+    LogMode currentScopeMode() const {
+        return scopes_[scopeCount_ - 1].mode;
     }
 
-    static void setConsoleMode(ConsoleMode mode) noexcept;
-    static ConsoleMode consoleMode() noexcept;
-
-    template <typename... TArgs>
-    static void message(std::format_string<TArgs...> format, TArgs&&... args) {
-        print(Text::format(format, std::forward<TArgs>(args)...), OutputMode::Persistent);
+    LogMode currentOrDefault() const {
+        return scopeCount_ != 0 ? scopes_[scopeCount_ - 1].mode : defaultMode_;
     }
 
-    template <typename... TArgs>
-    static void action(std::string_view tag, std::format_string<TArgs...> format, TArgs&&... args) {
-        print(Level::Action, tag, Text::format(format, std::forward<TArgs>(args)...), OutputMode::Transient);
+    size_t scopeDepth() const { return scopeCount_; }
+
+    bool currentHadProblem() const {
+        return scopeCount_ != 0 && scopes_[scopeCount_ - 1].hadProblem;
     }
 
-    template <typename... TArgs>
-    static void trace(std::string_view tag, std::format_string<TArgs...> format, TArgs&&... args) {
-        print(Level::Trace, tag, Text::format(format, std::forward<TArgs>(args)...), OutputMode::Transient);
+    void addDepth(int delta) {
+        indent_ = static_cast<size_t>(static_cast<int>(indent_) + delta);
     }
 
-    template <typename... TArgs>
-    static void info(std::string_view tag, std::format_string<TArgs...> format, TArgs&&... args) {
-        print(Level::Info, tag, Text::format(format, std::forward<TArgs>(args)...), OutputMode::Transient);
-    }
-
-    template <typename... TArgs>
-    static void warning(std::string_view tag, std::format_string<TArgs...> format, TArgs&&... args) {
-        print(Level::Warning, tag, Text::format(format, std::forward<TArgs>(args)...), OutputMode::Persistent);
-    }
-
-    template <typename... TArgs>
-    static void error(std::string_view tag, std::format_string<TArgs...> format, TArgs&&... args) {
-        print(Level::Error, tag, Text::format(format, std::forward<TArgs>(args)...), OutputMode::Persistent);
-    }
-
-    template <typename... TArgs>
-    static void exception(std::string_view tag, std::format_string<TArgs...> format, TArgs&&... args) {
-        print(Level::Exception, tag, Text::format(format, std::forward<TArgs>(args)...), OutputMode::Persistent);
-    }
-
-    template <typename... TArgs>
-    static void ok(std::string_view tag, std::format_string<TArgs...> format, TArgs&&... args) {
-        print(Level::Ok, tag, Text::format(format, std::forward<TArgs>(args)...), OutputMode::Persistent);
-    }
-
-    static void ok(std::string_view tag, const Text& text) {
-        print(Level::Ok, tag, text, OutputMode::Persistent);
-    }
-
-    static void exception(std::string_view tag, const Text& text) {
-        print(Level::Exception, tag, text, OutputMode::Persistent);
-    }
-
-    static void treeLine(std::string_view message);
-
-    template <typename... TArgs>
-    static void tree(std::format_string<TArgs...> format, TArgs&&... args) {
-        treeLine(std::format(format, std::forward<TArgs>(args)...));
-    }
-
-    static size_t& indent();
 private:
-    struct ScopeState {
-        size_t transientLines = 0;
-        bool eraseValid = true;   // остаётся ли наш transient-хвост всё ещё внизу экрана
+
+    static constexpr uint8_t MaxScopes = 32;
+
+    struct Scope {
+        uint32_t start = 0;
+        LogMode mode = LogModes::Default;
+        size_t maxDepth = LogModes::UnlimitedDepth;
+        bool hadProblem = false;
     };
 
-    // static bool& hasOutput() {
-    //     thread_local bool value = false;
-    //     return value;
-    // }
-
-    static std::vector<ScopeState>& scopes();
-    static std::mutex& mutex();
-
-    static void print(const Text& text, OutputMode mode);
-    static void print(Level level, std::string_view tag, const Text& text, OutputMode mode);
-
-    static void addScopeLines(size_t count) {
-        if (!scopes().empty())
-            scopes().back().transientLines += count;
-    }
-
-    static void eraseLines(size_t count) {
-        if (count == 0)
-            return;
-        for (size_t i = 0; i < count; ++i)
-            std::cout << "\033[1A\033[2K";
-        std::cout << '\r' << std::flush;
-    }
-
-    static bool& pendingGap() {
-        thread_local bool value = false;
-        return value;
-    }
-
-    static void invalidateErase(OutputMode mode) {
-        auto& s = scopes();
-        if (s.empty())
-            return;
-
-        // любой чужой вывод (не от самого верхнего скоупа) ломает
-        // erasability всех скоупов ниже по стеку
-        for (size_t i = 0; i + 1 < s.size(); ++i)
-            s[i].eraseValid = false;
-
-        // persistent-вывод ломает erasability даже для текущего (верхнего) скоупа
-        if (mode == OutputMode::Persistent)
-            s.back().eraseValid = false;
-    }
-
-public:
-    class Tree {
-    public:
-        class Node {
-        public:
-            explicit Node(std::string name)
-                : name_(std::move(name)) {}
-
-            Node& branch(std::string_view name) {
-                children_.push_back(std::make_unique<Node>(std::string(name)));
-                return *children_.back();
-            }
-
-            void node(std::string_view name) {
-                children_.push_back(std::make_unique<Node>(std::string(name)));
-            }
-
-        private:
-            friend class Tree;
-
-            std::string name_;
-            std::vector<std::unique_ptr<Node>> children_;
-        };
-
-        explicit Tree(std::string_view name)
-            : root_(std::string(name)) {}
-
-        Node& branch(std::string_view name) {
-            return root_.branch(name);
-        }
-
-        void node(std::string_view name) {
-            root_.node(name);
-        }
-
-        void node(std::string_view name, size_t depth) {
-            while (parents_.size() > depth)
-                parents_.pop_back();
-
-            Node* parent = parents_.empty()
-                ? &root_
-                : parents_.back();
-
-            Node& node = parent->branch(name);
-            parents_.push_back(&node);
-        }
-
-        void print() const {
-            Logger::treeLine(std::format("{}{}", Color::brightWhite, root_.name_));
-            printNode(root_, "");
-        }
-
-    private:
-        static void printNode(const Node& node, const std::string& prefix) {
-            for (size_t i = 0; i < node.children_.size(); ++i) {
-                const auto& child = node.children_[i];
-                const bool last = i + 1 == node.children_.size();
-
-                Logger::tree(
-                    "{}{}─ {}{}",
-                    prefix,
-                    last ? "└" : "├",
-                    Color::brightWhite,
-                    child->name_
-                );
-
-                printNode(
-                    *child,
-                    prefix + (last ? "   " : "│  ")
-                );
-            }
-        }
-
-        Node root_;
-        std::vector<Node*> parents_;
-    };
-
-    class Scope {
-    public:
-        template <typename... TArgs>
-        Scope(std::string_view tag, std::format_string<TArgs...> startFormat, TArgs&&... args)
-            : tag_(tag)
-            , finishMessage_("Initialized")
-            , startTime_(Clock::now())
-            , active_(true)
-        {
-            Logger::scopes().push_back({});
-            pendingGap() = false;
-            Logger::action(tag_, startFormat, std::forward<TArgs>(args)...);
-            ++Logger::indent();
-        }
-
-        template <typename... TArgs>
-        Scope(std::string_view tag, std::string_view finishMessage,
-              std::format_string<TArgs...> startFormat, TArgs&&... args)
-            : tag_(tag)
-            , finishMessage_(finishMessage)
-            , startTime_(Clock::now())
-            , active_(true)
-        {
-            Logger::scopes().push_back({});
-            if (Logger::consoleMode() == ConsoleMode::Default && pendingGap()) {
-                std::cout << '\n';
-                addScopeLines(1);      // если тест пройдёт — этот \n сотрётся вместе с ➜/•
-            }
-            pendingGap() = false;
-            Logger::action(tag_, startFormat, std::forward<TArgs>(args)...);
-            ++Logger::indent();
-        }
-
-        void finish() noexcept {
-            finish("{}", finishMessage_);
-        }
-
-        template <typename... TArgs>
-        void finish(std::format_string<TArgs...> format, TArgs&&... args) {
-            if (!active_)
-                return;
-
-            close(
-                Logger::Level::Ok,
-                Text::format(format, std::forward<TArgs>(args)...)
-            );
-        }
-
-        template <typename... TArgs>
-        void finishError(std::format_string<TArgs...> format, TArgs&&... args) {
-            if (!active_)
-                return;
-
-            close(
-                Logger::Level::Exception,
-                Text::format(format, std::forward<TArgs>(args)...)
-            );
-        }
-
-        void cancel() noexcept {
-            if (!active_)
-                return;
-
-            closeWithoutMessage();
-        }
-
-        ~Scope() {
-            if (active_)
-                finishError("aborted");
-        }
-
-    private:
-        using Clock = std::chrono::steady_clock;
-
-        void close(Level level, const Text& message) {
-            const size_t lineCount  = Logger::scopes().back().transientLines;
-            const bool eraseValid   = Logger::scopes().back().eraseValid;
-            --Logger::indent();
-
-            const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
-                Clock::now() - startTime_
-            ).count();
-
-            const bool success = level == Level::Ok;
-            const bool compact = Logger::consoleMode() == Logger::ConsoleMode::Default;
-
-            Logger::scopes().pop_back();
-
-            if (success) {
-                if (compact && eraseValid) {
-                    eraseLines(lineCount);
-                }
-
-                Logger::ok(tag_, message + Text::format("<gr> ({} us)</>", elapsed));
-                pendingGap() = compact;
-            } else {
-                Logger::exception(tag_, message + Text::format("<gr> ({} us)</>", elapsed));
-                pendingGap() = false;
-            }
-
-            if (Logger::consoleMode() == Logger::ConsoleMode::Verbose || (Logger::consoleMode() == Logger::ConsoleMode::Default && !success))
-                Logger::message("");
-
-            active_ = false;
-        }
-
-        void closeWithoutMessage() noexcept {
-            --Logger::indent();
-
-            const size_t lineCount = Logger::scopes().back().transientLines;
-            const bool eraseValid  = Logger::scopes().back().eraseValid;
-            Logger::scopes().pop_back();
-
-            if (Logger::consoleMode() == Logger::ConsoleMode::Default && eraseValid)
-                Logger::eraseLines(lineCount);
-
-            active_ = false;
-        }
-
-        std::string tag_;
-        std::string finishMessage_;
-        Clock::time_point startTime_;
-        bool active_;
-    };
+    size_t indent_ = 0;
+    uint8_t scopeCount_ = 0;
+    Scope scopes_[MaxScopes];
+    std::vector<uint8_t> lines_;
+    LogMode defaultMode_ = LogModes::Default;
+    size_t defaultMaxDepth_ = LogModes::UnlimitedDepth;
 };
+
+
+class LogSystem {
+public:
+    static LoggerImpl& current() { return logger_; }
+    static void write(Level level, const Text& text);
+    static void setPath(const std::filesystem::path& path);
+    static const std::filesystem::path& getPath() { return path_;}
+
+private:
+    inline static std::filesystem::path path_;
+    inline static std::ofstream file_;
+    inline static std::mutex mutex_;
+    inline static thread_local LoggerImpl logger_;
+};
+
+
+namespace Logger {
+
+inline void setDefaultMode(LogMode mode) {
+    LogSystem::current().setDefaultMode(mode);
+}
+
+inline void addDefaultMode(LogMode mode) {
+    LogSystem::current().addDefaultMode(mode);
+}
+
+inline void setMaxDepth(size_t depth) {
+    LogSystem::current().setMaxDepth(depth);
+}
+
+inline void print(Level level, std::string_view tag, const Text& message, bool isScopeFinal = false) {
+    LogSystem::current().print(
+        level,
+        Text::format(
+            "{} <gr><b>[<w>{}</>]<//> {}</>",
+            LogStyle::get(level).style,
+            tag,
+            message.markup()
+        ),
+        isScopeFinal
+    );
+}
+
+template <typename... Args>
+inline void print(Level level, std::string_view tag, std::format_string<Args...> format, Args&&... args) {
+    print(level, tag, Text::format(format, std::forward<Args>(args)...));
+}
+
+template <typename... Args>
+void message(std::format_string<Args...> format, Args&&... args) {
+    LogSystem::current().print(Level::Message, Text::format(format, std::forward<Args>(args)...));
+}
+
+template <typename... Args>
+void ok(std::string_view tag, std::format_string<Args...> format, Args&&... args) {
+    print(Level::Ok, tag, format, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void action(std::string_view tag, std::format_string<Args...> format, Args&&... args) {
+    print(Level::Action, tag, format, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void info(std::string_view tag, std::format_string<Args...> format, Args&&... args) {
+    print(Level::Info, tag, format, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void warning(std::string_view tag, std::format_string<Args...> format, Args&&... args) {
+    print(Level::Warning, tag, format, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void error(std::string_view tag, std::format_string<Args...> format, Args&&... args) {
+    print(Level::Error, tag, format, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void exception(std::string_view tag, std::format_string<Args...> format, Args&&... args) {
+    print(Level::Exception, tag, format, std::forward<Args>(args)...);
+}
+
+}

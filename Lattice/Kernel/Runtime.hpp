@@ -15,8 +15,12 @@
 #include <Lattice/Kernel/Settings.hpp>
 #include <Lattice/Tools/SystemInfo.hpp>
 #include "Lattice/Kernel/DLLoader.hpp"
+#include "Lattice/Tools/LogMode.hpp"
 #include "Lattice/Tools/Logger.hpp"
 #include "Lattice/Tools/Tests.hpp"
+
+#include "Lattice/Tools/Logger.hpp"
+#include "Lattice/Tools/LogScope.hpp"
 
 
 namespace Lattice {
@@ -25,7 +29,7 @@ class Runtime {
 public:
     Runtime() : root(globalRegistry, objectRegistry, nullptr)
               , pluginManager(globalRegistry, dlLoader) {
-        Logger::action(tag, "System launching");
+        LogScope scope(tag, "System launching");
         Lattice::CliSystemInfo::printSystemInfo(std::cout);
         // регистрация интерфейсов ядра
         globalRegistry.registerAPI<ServiceAPI>();
@@ -43,7 +47,7 @@ public:
     }
 
     void buildBranch(const StartupEntry& entry, std::string_view name = "default") {
-        Logger::Scope scope(tag, "Build branch '{}' with name '{}'", entry.name, name);
+        LogScope scope(tag, "Build branch '{}' with name '{}'", entry.name, name);
         if (globalRegistry.hasImpl<ServiceAPI>(entry.name)) {
             root.add<ServiceAPI>(entry.name, name);
 
@@ -85,17 +89,13 @@ public:
 
     void run(int argc, char** argv) {
         try {
-            Logger::ConsoleMode consoleMode = Logger::ConsoleMode::Default;
+            Logger::setDefaultMode(LogMode::Clean | LogMode::OnlyWarn);
             std::filesystem::path configPath = "lattice.toml";
-            bool testMode = true;
+            bool testMode = false;
             for (int i = 1; i < argc; ++i) {
                 const std::string_view arg = argv[i];
-                if (arg == "--trace") {
-                    consoleMode = Logger::ConsoleMode::Trace;
-                } else if (arg == "--verbose" || arg == "-v") {
-                    if (consoleMode != Logger::ConsoleMode::Trace) {
-                        consoleMode = Logger::ConsoleMode::Verbose;
-                    }
+                if (arg == "--verbose" || arg == "-v") {
+                    Logger::setDefaultMode(LogMode::Verbose);
                 } else if (arg == "--config" || arg == "-c") {
                     if (++i >= argc)
                         throw Lattice::Exception(tag, "missing path for {}", arg);
@@ -105,9 +105,7 @@ public:
                 }
             }
 
-            Logger::setConsoleMode(consoleMode);
             StartupConfig config(configPath);
-
 
             loadPlugins("Plugins");
             if (testMode) {
@@ -162,21 +160,21 @@ public:
         if (fatal) {
             Logger::exception(fatal->tag(), "{}", error.what());
             Logger::message("Dump components tree (failed node is red):");
-            root.dumpTree(fatal->tag());
+            // root.dumpTree(fatal->tag());
         } else {
             Logger::exception(tag, "Unhandled exception: {}", error.what());
             Logger::message("Dump components tree:");
-            root.dumpTree();
+            // root.dumpTree();
         }
         Logger::message("\n<r><b>Critical error. Application terminated.<//>");
-        Logger::message("Crash log: {}", std::string(Logger::logPath()));
+        Logger::message("Crash log: {}", std::string(LogSystem::getPath()));
         Logger::message("<r>~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</>\n");
     }
 
     void reportUnknownException() const {
         Logger::exception(tag, "Unhandled non-standard exception");
         Logger::message("Dump components tree (failed node is red):");
-        root.dumpTree();
+        // root.dumpTree();
     }
 
 private:
