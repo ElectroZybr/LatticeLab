@@ -2,8 +2,7 @@
 
 #include <filesystem>
 #include <string>
-#include <iostream>
-#include <thread>
+// #include <iostream>
 
 #include <Lattice/Kernel/ServiceAPI.hpp>
 #include <Lattice/Kernel/SubsystemAPI.hpp>
@@ -13,14 +12,12 @@
 #include <Lattice/Kernel/Node.hpp>
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/Settings.hpp>
-#include <Lattice/Tools/SystemInfo.hpp>
 #include "Lattice/Kernel/DLLoader.hpp"
+#include <Lattice/Tools/SystemInfo.hpp>
+#include "Lattice/Tools/LogScope.hpp"
 #include "Lattice/Tools/LogMode.hpp"
 #include "Lattice/Tools/Logger.hpp"
 #include "Lattice/Tools/Tests.hpp"
-
-#include "Lattice/Tools/Logger.hpp"
-#include "Lattice/Tools/LogScope.hpp"
 
 
 namespace Lattice {
@@ -29,14 +26,6 @@ class Runtime {
 public:
     Runtime() : root(globalRegistry, objectRegistry, nullptr)
               , pluginManager(globalRegistry, dlLoader) {}
-
-    bool loadPlugins(std::filesystem::path path) {
-        // загрузка внешних плагинов
-        pluginManager.scanDirectory(path);
-        pluginManager.checkCandidates();
-        pluginManager.loadCandidates();
-        return true;
-    }
 
     void buildBranch(const StartupEntry& entry, std::string_view name = "default") {
         LogScope scope(tag, "Build branch '{}' with name '{}'", entry.name, name);
@@ -82,16 +71,10 @@ public:
     void run(int argc, char** argv) {
         try {
             Logger::setDefaultMode(LogModes::Default);
-            Lattice::CliSystemInfo::printSystemInfo(std::cout);
-            LogScope scope(tag, "<b>System launching</>");
-            // регистрация интерфейсов ядра
-            globalRegistry.registerAPI<ServiceAPI>();
-            globalRegistry.registerAPI<SubsystemAPI>();
-            globalRegistry.registerComponent<Settings>();
-            root.add<Settings>();
-
+            Lattice::CliSystemInfo::printSystemInfo();
             std::filesystem::path configPath = "lattice.toml";
-            bool testMode = false;
+            bool testMode = false, benchMode = false;
+
             for (int i = 1; i < argc; ++i) {
                 const std::string_view arg = argv[i];
                 if (arg == "--verbose" || arg == "-v") {
@@ -107,22 +90,45 @@ public:
 
             StartupConfig config(configPath);
 
-            loadPlugins("Plugins");
-
-            scope.finish("<b>Cofiguration finished</>");
+            { // инициализация ядра
+                LogScope scope(tag, "<b>System launching</>");
+                // регистрация интерфейсов ядра
+                globalRegistry.registerAPI<ServiceAPI>();
+                globalRegistry.registerAPI<SubsystemAPI>();
+                globalRegistry.registerComponent<Settings>();
+                root.add<Settings>();
+                // загрузка плагинов
+                pluginManager.loadPlugins("Plugins");
+                scope.finish("<b>Launch finished</>");
+            }
             
-            if (testMode) {
+            if (testMode) { // режим прогона тестов
                 dlLoader.load("Lattice", ".tests");
                 dlLoader.load("Plugins", ".tests");
                 TestRegistry::instance().runAll();
                 return;
             }
+
+            if (benchMode) {}
             
-            for (const auto& entry : config.entries())
-                buildBranch(entry);
-            root.configureAll();
-            startServices(config);
+            { // Сборка дерева компонентов
+                LogScope scope(tag, "<b>System build</>");
+                for (const auto& entry : config.entries())
+                    buildBranch(entry);
+                root.dumpTree();
+                scope.finish("<b>Build finished</>");
+            }
+
+            { // связывание компонентов
+                LogScope scope(tag, "<b>System configuring</>");
+                root.configureAll();
+                startServices(config);
+                scope.finish("<b>Cofiguration finished</>");
+            }
+            
             root.dumpTree();
+            Logger::message("{}", objectRegistry.stringPath(3));
+
             if (!hostName.empty()) {
                 auto host = root.require<ServiceAPI>(hostName);
                 host->enter();

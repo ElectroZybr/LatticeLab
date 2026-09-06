@@ -60,6 +60,7 @@ public:
     void print() const {
         Logger::message("<b><w>{}<//>", root_.name_);
         printTreeNode(root_, "");
+        Logger::blank();
     }
 
 private:

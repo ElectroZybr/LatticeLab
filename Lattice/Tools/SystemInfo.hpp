@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <iosfwd>
 #include <string>
 #include <vector>
 
@@ -37,6 +36,5 @@ namespace Lattice::CliSystemInfo {
     };
 
     SystemInfo collectSystemInfo();
-    void printSystemInfo(std::ostream& out, const SystemInfo& info);
-    void printSystemInfo(std::ostream& out);
+    void printSystemInfo();
 }

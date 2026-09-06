@@ -9,7 +9,8 @@
 #include <algorithm>
 
 #include <Lattice/Kernel/TypeName.hpp>
-#include "Lattice/Kernel/Exception.hpp"
+#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/LogTree.hpp>
 #include <Lattice/Tools/Logger.hpp>
 
 namespace Lattice {
@@ -218,25 +219,25 @@ public:
         return types.at(std::string(id));
     }
 
-    // void printRegistryTree() const {
-    //     Logger::Tree tree{tag};
+    void printRegistryTree() const {
+        Logger::Tree tree{tag};
 
-    //     for (const auto& [api, impls] : apiToImpls) {
-    //         tree.node(api, 0);
+        for (const auto& [api, impls] : apiToImpls) {
+            tree.node(api, 0);
 
-    //         for (const auto& impl : impls)
-    //             tree.node(impl, 1);
-    //     }
+            for (const auto& impl : impls)
+                tree.node(impl, 1);
+        }
 
-    //     tree.node("Node", 0);
+        tree.node("Node", 0);
 
-    //     for (const auto& [name, entry] : types) {
-    //         if (entry.implements.empty())
-    //             tree.node(name, 1);
-    //     }
+        for (const auto& [name, entry] : types) {
+            if (entry.implements.empty())
+                tree.node(name, 1);
+        }
 
-    //     tree.print();
-    // }
+        tree.print();
+    }
 
 private:
     std::unordered_map<std::string, TypeEntry> types;

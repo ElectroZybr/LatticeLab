@@ -9,6 +9,14 @@
 #include <unordered_set>
 
 namespace Lattice {
+
+    uint16_t PluginManager::loadPlugins(std::filesystem::path path) {
+        // загрузка внешних плагинов
+        scanDirectory(path);
+        checkCandidates();
+        return loadCandidates();
+    }
+
     void PluginManager::scanDirectory(std::filesystem::path path) {
         for (const std::filesystem::directory_entry& entry : std::filesystem::recursive_directory_iterator(path)) {
             if (!entry.is_regular_file())
@@ -168,7 +176,7 @@ namespace Lattice {
         return true;
     }
 
-    void PluginManager::loadCandidates() {
+    uint16_t PluginManager::loadCandidates() {
         uint16_t loadedPlugins = 0; 
         for (Plugin* candidate : loadQueue) {
             LogScope scope(tag, "Loading '{}'", candidate->path.string());
@@ -184,6 +192,7 @@ namespace Lattice {
         } else {
             Logger::info(tag, "Loaded plugins: {}", loadedPlugins);
         }
+        return loadedPlugins;
     }
 
     bool PluginManager::loadPlugin(Plugin* candidate) {

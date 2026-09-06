@@ -856,7 +856,8 @@ namespace {
         return info;
     }
 
-    void printSystemInfo(std::ostream& out, const SystemInfo& info) {
+    void printSystemInfo() {
+        const SystemInfo info = collectSystemInfo();
         Logger::Tree tree("System");
 
         tree.node(std::format("{} {}", Color::paint("OS:", Color::brightBlue), Color::paint(info.os, Color::brightWhite)), 0);
@@ -893,9 +894,5 @@ namespace {
         }
 
         tree.print();
-    }
-
-    void printSystemInfo(std::ostream& out) {
-        printSystemInfo(out, collectSystemInfo());
     }
 }
