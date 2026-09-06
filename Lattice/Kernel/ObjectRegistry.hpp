@@ -1,7 +1,7 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
-#include <span>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -12,6 +12,7 @@
 namespace Lattice {
 
 using ObjectId = uint32_t;
+class ObjectRegistry;
 
 inline constexpr ObjectId InvalidObjectId =
     std::numeric_limits<ObjectId>::max();
@@ -24,15 +25,46 @@ struct Entry {
     void* object = nullptr;
     std::string type;
     std::string name;
+    ObjectId parent = InvalidObjectId;
 };
+
+class Path {
+public:
+    Path() = default;
+
+    explicit Path(ObjectId id, ObjectRegistry& objectRegistry);
+
+    std::span<const ObjectId> ids() const {
+        return ids_;
+    }
+
+    bool empty() const {
+        return ids_.empty();
+    }
+
+    size_t size() const {
+        return ids_.size();
+    }
+
+    ObjectId operator[](size_t index) const {
+        return ids_[index];
+    }
+
+    void push(ObjectId id) {
+        ids_.push_back(id);
+    }
+
+    void pop() {
+        ids_.pop_back();
+    }
+
+private:
+    std::vector<ObjectId> ids_;
+};
+
 
 class ObjectRegistry {
 public:
-    // ObjectRegistry() {
-    //     // нулевой индекс - invalid
-    //     objects.emplace_back();
-    // }
-
     ObjectId create(ObjectId parent, std::string_view type, std::string_view name, void* object) {
         ObjectId id;
 
@@ -45,6 +77,7 @@ public:
             entry.object = object;
             entry.type = type;
             entry.name = name;
+            entry.parent = parent;
         }
         else {
             id = static_cast<ObjectId>(objects.size());
@@ -53,6 +86,7 @@ public:
                 .object = object,
                 .type = std::string(type),
                 .name = std::string(name),
+                .parent = parent,
             });
         }
 
@@ -94,11 +128,11 @@ public:
         freeIds.push_back(id);
     }
 
-    Entry* get(ObjectId id) {
+    const Entry* get(ObjectId id) const {
         if (!valid(id) || id >= objects.size())
             return nullptr;
 
-        Entry& entry = objects[id];
+        const Entry& entry = objects[id];
 
         if (!entry.object)
             return nullptr;
@@ -106,8 +140,8 @@ public:
         return &entry;
     }
 
-    Entry& require(ObjectId id) {
-        Entry* entry = get(id);
+    const Entry& require(ObjectId id) const {
+        const Entry* entry = get(id);
 
         if (!entry)
             throw Lattice::Exception("ObjectRegistry", "Object with id {} not found", id);
@@ -115,7 +149,7 @@ public:
         return *entry;
     }
 
-    Entry& operator[](ObjectId id) {
+    const Entry& operator[](ObjectId id) const {
         return require(id);
     }
 
@@ -125,6 +159,36 @@ public:
         if (it == lookup.end() || !valid(it->second))
             return InvalidObjectId;
         return  it->second;
+    }
+
+    std::vector<ObjectId> path(ObjectId id) const {
+        std::vector<ObjectId> result;
+
+        while (valid(id)) {
+            result.push_back(id);
+            id = require(id).parent;
+        }
+
+        std::ranges::reverse(result);
+        return result;
+    }
+
+    const std::string stringPath(ObjectId id) const {
+        std::string result;
+
+        for (ObjectId current : path(id)) {
+            const auto& entry = require(current);
+
+            if (!result.empty())
+                result += '/';
+
+            if (entry.name.empty() || entry.name == "default" || entry.name == "Root")
+                result += std::format("{}", entry.type);
+            else
+                result += std::format("{}:{}", entry.type, entry.name);
+        }
+
+        return result;
     }
 
 private:
@@ -155,42 +219,6 @@ private:
     std::vector<ObjectId> freeIds;
 
     std::unordered_map<ObjectKey, ObjectId, ObjectKeyHash> lookup;
-};
-
-
-class Path {
-public:
-    Path() = default;
-
-    explicit Path(std::vector<ObjectId> ids)
-        : ids_(std::move(ids)) {}
-
-    std::span<const ObjectId> ids() const {
-        return ids_;
-    }
-
-    bool empty() const {
-        return ids_.empty();
-    }
-
-    size_t size() const {
-        return ids_.size();
-    }
-
-    ObjectId operator[](size_t index) const {
-        return ids_[index];
-    }
-
-    void push(ObjectId id) {
-        ids_.push_back(id);
-    }
-
-    void pop() {
-        ids_.pop_back();
-    }
-
-private:
-    std::vector<ObjectId> ids_;
 };
 
 }

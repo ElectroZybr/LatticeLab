@@ -35,7 +35,7 @@ std::vector<PluginCatalog>& pluginCatalogs();
 bool check(std::string_view name, const Registry& registry);
 std::vector<std::string> uniqueList( std::string_view name, const Registry& registry);
 std::vector<std::string> printUniqueList(std::string_view name, const Registry& registry);
-// void printCompositionTree( std::string_view name);
+void printCompositionTree( std::string_view name);
 void recordPluginCatalog(PluginCatalog catalog);
 
 inline constexpr std::string_view tag = "Requirements";

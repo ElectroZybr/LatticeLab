@@ -18,9 +18,11 @@ public:
     PluginManager(Registry& globalRegistry, DLLoader& dlLoader)
         : globalRegistry(globalRegistry), dlLoader(dlLoader) {}
 
+    uint16_t loadPlugins(std::filesystem::path path);
+    
     void scanDirectory(std::filesystem::path path);
     void checkCandidates();
-    void loadCandidates();
+    uint16_t loadCandidates();
 
     ~PluginManager();
 

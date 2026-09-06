@@ -11,7 +11,7 @@
 #include <Lattice/Kernel/Requirements.hpp>
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/RefSlot.hpp>
-#include <Lattice/Kernel/Path.hpp>
+#include <Lattice/Kernel/ObjectRegistry.hpp>
 #include <Lattice/Tools/LogStyle.hpp>
 #include <Lattice/Tools/Logger.hpp>
 #include <Lattice/Tools/LogTree.hpp>
@@ -225,7 +225,6 @@ public:
             child->children.clear();;
         } else {
             child = makeChild(instanceName, implName);
-            objectRegistry[child->id].type = std::string(typeName<API>());
             // добавляем алиас: <API>("name") -> Impl; <Impl>("name") -> Impl;
             objectRegistry.alias(child->id, id, typeName<API>(), instanceName);
             Logger::info(tag, "+ interface '{}'", typeName<API>());
