@@ -6,6 +6,8 @@
 #include <vector>
 #include <utility>
 
+#include <Lattice/Tools/LogMode.hpp>
+
 
 #define TEST2(name, Fixture) \
     TEST3(name, Fixture, "")
@@ -57,7 +59,7 @@ public:
         return tests_;
     }
 
-    int runAll();
+    int runAll(LogMode mode = LogMode::Clean | LogMode::SuppressError);
 
 private:
     std::vector<TestCase> tests_;

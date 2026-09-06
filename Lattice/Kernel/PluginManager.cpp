@@ -3,6 +3,7 @@
 #include <Lattice/Tools/Logger.hpp>
 #include <Lattice/Kernel/Plugin.hpp>
 #include <toml++/toml.h>
+#include "Lattice/Tools/LogScope.hpp"
 
 #include <cstddef>
 #include <unordered_set>
@@ -170,7 +171,7 @@ namespace Lattice {
     void PluginManager::loadCandidates() {
         uint16_t loadedPlugins = 0; 
         for (Plugin* candidate : loadQueue) {
-            Logger::Scope scope(tag, "Loading '{}'", candidate->path.string());
+            LogScope scope(tag, "Loading '{}'", candidate->path.string());
             if (loadPlugin(candidate)) {
                 scope.finish("Loaded plugin '{}'", candidate->manifest.id);
                 loadedPlugins++;
