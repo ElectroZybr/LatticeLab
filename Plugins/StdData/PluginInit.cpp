@@ -9,7 +9,7 @@
 // #include "include/CSR.hpp"
 
 
-extern "C" bool plugin_register(Lattice::Registry& reg) {
+extern "C" bool plugin_register(Lattice::Blueprints& reg) {
     reg.registerComponent<StdData::SoA>();
     reg.registerImpl<SoALoader, LoaderAPI>();
     // reg.registerComponent<CSR>();

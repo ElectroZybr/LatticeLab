@@ -12,7 +12,7 @@
 namespace Lattice {
 
 using ObjectId = uint32_t;
-class ObjectRegistry;
+class Objects;
 
 inline constexpr ObjectId InvalidObjectId =
     std::numeric_limits<ObjectId>::max();
@@ -46,7 +46,7 @@ class Path {
 public:
     Path() = default;
 
-    explicit Path(ObjectId id, ObjectRegistry& objectRegistry);
+    explicit Path(ObjectId id, Objects& objectBlueprints);
 
     std::span<const ObjectId> ids() const {
         return ids_;
@@ -77,7 +77,7 @@ private:
 };
 
 
-class ObjectRegistry {
+class Objects {
 public:
     ObjectId create(ObjectId parent, std::string_view type, std::string_view name, void* object) {
         ObjectId id;
@@ -162,7 +162,7 @@ public:
         const Entry* entry = get(id);
 
         if (!entry)
-            throw Lattice::Exception("ObjectRegistry", "Object with id {} not found", id);
+            throw Lattice::Exception("Objects", "Object with id {} not found", id);
 
         return *entry;
     }

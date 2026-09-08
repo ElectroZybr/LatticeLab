@@ -1,5 +1,5 @@
 #include <Lattice/Kernel/Requirements.hpp>
-#include <Lattice/Kernel/Registry.hpp>
+#include <Lattice/Kernel/Blueprints.hpp>
 #include <Lattice/Tools/Logger.hpp>
 #include "Lattice/Tools/LogTree.hpp"
 
@@ -70,8 +70,8 @@ std::vector<std::string> collectUniqueList(
 
 } // namespace
 
-std::vector<std::string> uniqueList( std::string_view name, const Registry& registry) {
-    if (!registry.has(name)) {
+std::vector<std::string> uniqueList( std::string_view name, const Blueprints& blueprints) {
+    if (!blueprints.has(name)) {
         Logger::error(tag, "unknown component '{}'", name);
         return {};
     }
@@ -107,14 +107,14 @@ void appendComposition(
     }
 }
 
-std::vector<std::string> printUniqueList(std::string_view name, const Registry& registry) {
+std::vector<std::string> printUniqueList(std::string_view name, const Blueprints& blueprints) {
     const auto index = indexProvided();
     const auto requirements = collectUniqueList(name, index);
 
     Logger::Tree tree{"Dependencies"};
 
     for (const auto& requirement : requirements) {
-        const bool exists = registry.has(requirement);
+        const bool exists = blueprints.has(requirement);
 
         tree.node(std::format("{}{}",
             exists ? Color::paint("✓ ", Color::ok)
@@ -142,8 +142,8 @@ void printCompositionTree(std::string_view name) {
     tree.print();
 }
 
-bool check(std::string_view name, const Registry& registry) {
-    if (!registry.has(name)) {
+bool check(std::string_view name, const Blueprints& blueprints) {
+    if (!blueprints.has(name)) {
         Logger::error(tag, "unknown component '{}'", name);
         return false;
     }
@@ -157,7 +157,7 @@ bool check(std::string_view name, const Registry& registry) {
     const auto requirements = collectUniqueList(name, index);
 
     for (const auto& requirement : requirements) {
-        if (!registry.has(requirement)) {
+        if (!blueprints.has(requirement)) {
             Logger::error(tag, "{} check failed", name);
             return false;
         }

@@ -9,7 +9,7 @@
 
 namespace Lattice {
 
-class Registry;
+class Blueprints;
 
 enum class DepKind : uint8_t {
     Require,
@@ -32,9 +32,9 @@ struct PluginCatalog {
 std::vector<CompileDep>& compileDepSink();
 std::vector<PluginCatalog>& pluginCatalogs();
 
-bool check(std::string_view name, const Registry& registry);
-std::vector<std::string> uniqueList( std::string_view name, const Registry& registry);
-std::vector<std::string> printUniqueList(std::string_view name, const Registry& registry);
+bool check(std::string_view name, const Blueprints& blueprints);
+std::vector<std::string> uniqueList( std::string_view name, const Blueprints& blueprints);
+std::vector<std::string> printUniqueList(std::string_view name, const Blueprints& blueprints);
 void printCompositionTree( std::string_view name);
 void recordPluginCatalog(PluginCatalog catalog);
 

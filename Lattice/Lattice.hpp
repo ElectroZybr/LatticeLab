@@ -2,7 +2,7 @@
 
 // Kernel
 #include <Lattice/Kernel/Node.hpp>
-#include <Lattice/Kernel/Registry.hpp>
+#include <Lattice/Kernel/Blueprints.hpp>
 #include <Lattice/Kernel/Runtime.hpp>
 #include <Lattice/Kernel/ServiceAPI.hpp>
 #include <Lattice/Kernel/SubsystemAPI.hpp>

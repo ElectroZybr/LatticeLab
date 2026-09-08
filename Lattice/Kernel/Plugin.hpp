@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "Lattice/Kernel/DynamicLibrary.hpp"
-#include "Lattice/Kernel/Registry.hpp"
+#include "Lattice/Kernel/Blueprints.hpp"
 
 namespace Lattice {
     
@@ -109,7 +109,7 @@ enum class LoadStatus {
     Failed
 };
 
-using PluginRegisterFn = bool(*)(Registry&);
+using PluginRegisterFn = bool(*)(Blueprints&);
 using PluginShutdownFn = void(*)();
 
 struct Plugin {

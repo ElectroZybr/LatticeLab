@@ -33,12 +33,12 @@ void testCheck(bool condition, const char* expression, const char* file, int lin
     Logger::warning("Test", "CHECK failed: {} ({}:{})", expression, file, line);
 }
 
-TestRegistry& TestRegistry::instance() {
-    static TestRegistry registry;
-    return registry;
+TestBlueprints& TestBlueprints::instance() {
+    static TestBlueprints blueprints;
+    return blueprints;
 }
 
-int TestRegistry::runAll(LogMode mode) {
+int TestBlueprints::runAll(LogMode mode) {
     int failed = 0;
     Logger::message("<w>~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</>");
     LogScope testing("Tests", mode, "<w><b>Running<//>");

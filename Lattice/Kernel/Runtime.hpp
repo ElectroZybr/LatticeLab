@@ -27,11 +27,11 @@ class Runtime {
     static constexpr std::string_view tag = "Runtime";
 public:
     Runtime() : root(kernel, nullptr)
-              , pluginManager(kernel.registry, dlLoader) {}
+              , pluginManager(kernel.blueprints, dlLoader) {}
 
     void buildBranch(const StartupEntry& entry, std::string_view name = "default") {
         LogScope scope(tag, "Build branch '{}' with name '{}'", entry.name, name);
-        if (kernel.registry.hasImpl<ServiceAPI>(entry.name)) {
+        if (kernel.blueprints.hasImpl<ServiceAPI>(entry.name)) {
             root.add<ServiceAPI>(entry.name, name);
 
             if (entry.host) {
@@ -46,7 +46,7 @@ public:
             return;
         }
 
-        if (kernel.registry.hasImpl<SubsystemAPI>(entry.name)) {
+        if (kernel.blueprints.hasImpl<SubsystemAPI>(entry.name)) {
             root.add<SubsystemAPI>(entry.name, name);
             scope.finish("Build '{}' done", entry.name);
             return;
@@ -60,7 +60,7 @@ public:
             if (!entry.enabled || entry.host)
                 continue;
 
-            if (!kernel.registry.hasImpl<ServiceAPI>(entry.name))
+            if (!kernel.blueprints.hasImpl<ServiceAPI>(entry.name))
                 continue;
 
             auto service = root.require<ServiceAPI>(entry.name);
@@ -95,9 +95,9 @@ public:
             { // инициализация ядра
                 LogScope scope(tag, "<b>System launching</>");
                 // регистрация интерфейсов ядра
-                kernel.registry.registerAPI<ServiceAPI>();
-                kernel.registry.registerAPI<SubsystemAPI>();
-                // kernel.registry.registerImpl<SubsystemAPI, Model>();
+                kernel.blueprints.registerAPI<ServiceAPI>();
+                kernel.blueprints.registerAPI<SubsystemAPI>();
+                // kernel.blueprints.registerImpl<SubsystemAPI, Model>();
                 // загрузка плагинов
                 pluginManager.loadPlugins("Plugins");
                 scope.finish("<b>Launch finished</>");
@@ -106,7 +106,7 @@ public:
             if (testMode) { // режим прогона тестов
                 dlLoader.load("Lattice", ".tests");
                 dlLoader.load("Plugins", ".tests");
-                TestRegistry::instance().runAll();
+                TestBlueprints::instance().runAll();
                 return;
             }
 
@@ -130,7 +130,7 @@ public:
             }
             
             root.dumpTree();
-            kernel.registry.printRegistryTree();
+            kernel.blueprints.dumpTree();
             Logger::message("{}", kernel.objects.stringPath(17));
 
             if (!hostName.empty()) {
@@ -166,7 +166,7 @@ public:
         stopAll();
     }
 
-    Registry& registry() noexcept { return kernel.registry; }
+    Blueprints& blueprints() noexcept { return kernel.blueprints; }
 
     void reportException(const std::exception& error) const {
         auto* fatal = dynamic_cast<const Lattice::Exception*>(&error);
@@ -175,7 +175,7 @@ public:
             Logger::exception(fatal->tag(), "{}", error.what());
             Logger::message("Dump components tree (failed node is red):");
             root.dumpTree(fatal->tag());
-            kernel.registry.printRegistryTree();
+            kernel.blueprints.dumpTree();
         } else {
             Logger::exception(tag, "Unhandled exception: {}", error.what());
             Logger::message("Dump components tree:");

@@ -9,7 +9,7 @@
 
 namespace ParticleDynamics {
 
-extern "C" bool plugin_register(Lattice::Registry& reg) {
+extern "C" bool plugin_register(Lattice::Blueprints& reg) {
     reg.registerAPI<IntegratorAPI>();
     reg.registerAPI<ForceFieldAPI>();
     reg.registerAPI<SpatialIndexAPI>();

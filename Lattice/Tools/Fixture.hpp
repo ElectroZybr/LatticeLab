@@ -12,10 +12,10 @@ struct RuntimeFixture : public TestFixture {
     Node root;
 
     RuntimeFixture() : root(kernel) 
-                     , pluginManager(kernel.registry, dlLoader) {
-        kernel.registry.registerAPI<ServiceAPI>();
-        kernel.registry.registerAPI<SubsystemAPI>();
-        kernel.registry.registerComponent<Settings>();
+                     , pluginManager(kernel.blueprints, dlLoader) {
+        kernel.blueprints.registerAPI<ServiceAPI>();
+        kernel.blueprints.registerAPI<SubsystemAPI>();
+        kernel.blueprints.registerComponent<Settings>();
     }
 };
 }

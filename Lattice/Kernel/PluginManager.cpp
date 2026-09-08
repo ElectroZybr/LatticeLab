@@ -233,15 +233,15 @@ namespace Lattice {
             return false;
         }
 
-        auto before = globalRegistry.listProvided();
+        auto before = globalBlueprints.listProvided();
 
-        if (!regFn(globalRegistry)) {
+        if (!regFn(globalBlueprints)) {
             Logger::error(tag, "plugin_register failed for '{}'", candidate->manifest.id);
             candidate->status = LoadStatus::Failed;
             return false;
         }
 
-        auto after = globalRegistry.listProvided();
+        auto after = globalBlueprints.listProvided();
 
         PluginCatalog catalog{.pluginId = candidate->manifest.id};
 
