@@ -47,9 +47,9 @@ struct TestCase {
     std::unique_ptr<TestFixture> (*createFixture)();
 };
 
-class TestRegistry {
+class TestBlueprints {
 public:
-    static TestRegistry& instance();
+    static TestBlueprints& instance();
 
     void add(TestCase test) {
         tests_.push_back(std::move(test));
@@ -73,7 +73,7 @@ public:
         void (*function)(TestFixture&),
         std::unique_ptr<TestFixture> (*createFixture)()
     ) {
-        TestRegistry::instance().add({
+        TestBlueprints::instance().add({
             std::string(name),
             std::string(description),
             function,

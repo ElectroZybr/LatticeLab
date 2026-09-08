@@ -3,7 +3,7 @@
 
 namespace ForceFields {
 
-extern "C" bool plugin_register(Lattice::Registry& reg) {
+extern "C" bool plugin_register(Lattice::Blueprints& reg) {
     return true;
 }
 

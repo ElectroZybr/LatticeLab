@@ -61,10 +61,10 @@ void ActionMap::tick() {
             Logger::info("ActionMap", "fire: {}", b.verb);
             if (b.target == Target::Action) {
                 Lattice::ObjectId id = kernel.objects.resolve(kernel.context, "action", b.verb);
-                if (Lattice::ObjectRegistry::valid(id)) kernel.settings.fire(id);
+                if (Lattice::Objects::valid(id)) kernel.settings.fire(id);
             } else {
                 Lattice::ObjectId id = kernel.objects.resolve(kernel.context, "param", b.verb);
-                if (!Lattice::ObjectRegistry::valid(id)) continue;
+                if (!Lattice::Objects::valid(id)) continue;
                 if (b.target == Target::Toggle)
                     kernel.settings.set(id, !kernel.settings.get<bool>(id));
                 else

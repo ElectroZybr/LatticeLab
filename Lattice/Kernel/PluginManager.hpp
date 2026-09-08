@@ -5,7 +5,7 @@
 #include <vector>
 
 #include <Lattice/Kernel/DLLoader.hpp>
-#include <Lattice/Kernel/Registry.hpp>
+#include <Lattice/Kernel/Blueprints.hpp>
 #include <Lattice/Kernel/Plugin.hpp>
 
 namespace Lattice {
@@ -15,8 +15,8 @@ struct PluginManifest;
 class PluginManager {
     static constexpr std::string_view tag = "PluginManager";
 public:
-    PluginManager(Registry& globalRegistry, DLLoader& dlLoader)
-        : globalRegistry(globalRegistry), dlLoader(dlLoader) {}
+    PluginManager(Blueprints& globalBlueprints, DLLoader& dlLoader)
+        : globalBlueprints(globalBlueprints), dlLoader(dlLoader) {}
 
     uint16_t loadPlugins(std::filesystem::path path);
     
@@ -38,7 +38,7 @@ private:
     std::unordered_map<std::string, Plugin> candidates;
     std::vector<Plugin*> loadQueue;
 
-    Registry& globalRegistry;
+    Blueprints& globalBlueprints;
     DLLoader& dlLoader;
 };
 }

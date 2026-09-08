@@ -22,9 +22,9 @@ concept HasConfigure = requires(T& obj, Node& branch) {
     obj.configure(branch);
 };
 
-class Registry {
+class Blueprints {
 public:
-    static constexpr std::string_view tag = "Registry";
+    static constexpr std::string_view tag = "Blueprints";
     using CreateFn     = void* (*)(Node*);
     using DestroyFn    = void  (*)(void*);
     using GetAPIFn     = void* (*)(void*);
@@ -34,7 +34,6 @@ public:
         std::string name;
         CreateFn    create    = nullptr;
         DestroyFn   destroy   = nullptr;
-        // GetAPIFn    getAPI    = nullptr;
         ConfigureFn configure = nullptr;
         std::vector<std::string> implements;
     };
@@ -209,7 +208,7 @@ public:
         return types.at(std::string(id));
     }
 
-    void printRegistryTree() const {
+    void dumpTree() const {
         Logger::Tree tree{tag};
 
         for (const auto& [api, impls] : apiToImpls) {

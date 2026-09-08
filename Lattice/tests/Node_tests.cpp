@@ -66,7 +66,7 @@ TEST(Node_RequireMissing, RuntimeFixture) {
 }
 
 TEST(Node_RegisterAndAdd, RuntimeFixture) {
-    fixture.kernel.registry.registerComponent<TestComponent>();
+    fixture.kernel.blueprints.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>();
 
@@ -75,7 +75,7 @@ TEST(Node_RegisterAndAdd, RuntimeFixture) {
 }
 
 TEST(Node_Configure, RuntimeFixture) {
-    fixture.kernel.registry.registerComponent<TestComponent>();
+    fixture.kernel.blueprints.registerComponent<TestComponent>();
     fixture.root.add<TestComponent>();
 
     auto component = fixture.root.require<TestComponent>();
@@ -88,7 +88,7 @@ TEST(Node_Configure, RuntimeFixture) {
 }
 
 TEST(Node_GlobalCollect, RuntimeFixture) {
-    fixture.kernel.registry.registerComponent<TestComponent>();
+    fixture.kernel.blueprints.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>("first");
     fixture.root.add<TestComponent>("second");
@@ -99,7 +99,7 @@ TEST(Node_GlobalCollect, RuntimeFixture) {
 }
 
 TEST(Node_folderCollect, RuntimeFixture) {
-    fixture.kernel.registry.registerComponent<TestComponent>();
+    fixture.kernel.blueprints.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -113,7 +113,7 @@ TEST(Node_folderCollect, RuntimeFixture) {
 }
 
 TEST(Node_ChildVisibility, RuntimeFixture) {
-    fixture.kernel.registry.registerComponent<TestComponent>();
+    fixture.kernel.blueprints.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>();
 
@@ -123,7 +123,7 @@ TEST(Node_ChildVisibility, RuntimeFixture) {
 }
 
 TEST(Node_ParentLookup, RuntimeFixture) {
-    fixture.kernel.registry.registerComponent<TestComponent>();
+    fixture.kernel.blueprints.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>();
 
@@ -134,7 +134,7 @@ TEST(Node_ParentLookup, RuntimeFixture) {
 }
 
 TEST(Node_Shadowing, RuntimeFixture) {
-    fixture.kernel.registry.registerComponent<TestComponent>();
+    fixture.kernel.blueprints.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>();
 
@@ -151,7 +151,7 @@ TEST(Node_Shadowing, RuntimeFixture) {
 }
 
 TEST(Node_ChildInstanceLookup, RuntimeFixture) {
-    fixture.kernel.registry.registerComponent<TestComponent>();
+    fixture.kernel.blueprints.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -164,7 +164,7 @@ TEST(Node_ChildInstanceLookup, RuntimeFixture) {
 }
 
 TEST(Node_GlobalCollectNested, RuntimeFixture) {
-    fixture.kernel.registry.registerComponent<TestComponent>();
+    fixture.kernel.blueprints.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -177,7 +177,7 @@ TEST(Node_GlobalCollectNested, RuntimeFixture) {
 }
 
 TEST(Node_folderCollectNested, RuntimeFixture) {
-    fixture.kernel.registry.registerComponent<TestComponent>();
+    fixture.kernel.blueprints.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 

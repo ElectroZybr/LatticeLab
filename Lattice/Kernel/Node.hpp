@@ -7,12 +7,12 @@
 #include <vector>
 #include <utility>
 
-#include <Lattice/Kernel/Registry.hpp>
+#include <Lattice/Kernel/Blueprints.hpp>
 #include <Lattice/Kernel/ServiceAPI.hpp>
 #include <Lattice/Kernel/Requirements.hpp>
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/RefSlot.hpp>
-#include <Lattice/Kernel/ObjectRegistry.hpp>
+#include <Lattice/Kernel/Objects.hpp>
 #include <Lattice/Kernel/Settings.hpp>
 #include <Lattice/Tools/LogStyle.hpp>
 #include <Lattice/Tools/Logger.hpp>
@@ -22,7 +22,7 @@
 
 namespace Lattice {
 
-class Registry;
+class Blueprints;
 
 class Node {
     static constexpr std::string_view tag = "Node";
@@ -49,7 +49,7 @@ class Node {
         return raw;
     }
 
-    void applyRoles(Node* child, const Registry::TypeEntry& entry) {
+    void applyRoles(Node* child, const Blueprints::TypeEntry& entry) {
         child->instance  = entry.create(child);
         child->api       = child->instance; // каст в use/find шаблоном
         child->destroy   = entry.destroy;
@@ -108,10 +108,10 @@ public:
 
     Kernel& kernel() noexcept { return kernel_; }
 
-    // создает и возвращает объекты интерфейса <T> найденные в глобальном registry
+    // создает и возвращает объекты интерфейса <T> найденные в глобальном blueprints
     template<typename T>
     void addImpls() {
-        for (const auto& implName : kernel_.registry.implementationsOf<T>())
+        for (const auto& implName : kernel_.blueprints.implementationsOf<T>())
             add<T>(implName, implName);
     }
 
@@ -165,7 +165,7 @@ public:
     void add(std::string_view implName, std::string_view instanceName) {
         noteAdd<T>();
 
-        const auto& entry = kernel_.registry.requireImpl<T>(implName);
+        const auto& entry = kernel_.blueprints.requireImpl<T>(implName);
         Node* child = makeChild(instanceName, implName);
         applyRoles(child, entry);
 
@@ -176,7 +176,7 @@ public:
     void add(std::string_view instanceName = "default") {
         noteAdd<T>();
 
-        const auto& entry = kernel_.registry.requireImpl<T>(typeName<Impl>());
+        const auto& entry = kernel_.blueprints.requireImpl<T>(typeName<Impl>());
         Node* child = makeChild(instanceName, typeName<Impl>());
         applyRoles(child, entry);
 
@@ -191,7 +191,7 @@ public:
             return;
         }
 
-        const auto& entry = kernel_.registry.require<T>();
+        const auto& entry = kernel_.blueprints.require<T>();
         Node* child = makeChild(instanceName, typeName<T>());
         applyRoles(child, entry);
 
@@ -208,15 +208,15 @@ public:
     Slot<API> use(std::string_view implName, std::string_view instanceName = "default") {
         noteUse<API>();
 
-        if (!kernel_.registry.hasImpl<API>(implName)) {
+        if (!kernel_.blueprints.hasImpl<API>(implName)) {
             throw Lattice::Exception(tag, "unknown implementation '{}' for '{}'", implName, typeName<API>());
         }
 
-        const auto& entry = kernel_.registry.requireImpl<API>(implName);
+        const auto& entry = kernel_.blueprints.requireImpl<API>(implName);
         Node* child = nullptr;
         ObjectId objectId = kernel_.objects.find(id, typeName<API>(), instanceName);
 
-        if (ObjectRegistry::valid(objectId)) {
+        if (Objects::valid(objectId)) {
             auto* entry = kernel_.objects.get(objectId);
             child = static_cast<Node*>(entry->object);
             if (child->api) {
@@ -251,7 +251,7 @@ public:
         const auto apiType = typeName<API>();
         ObjectId objectId = kernel_.objects.find(id, apiType, instanceName);
 
-        if (ObjectRegistry::valid(objectId)) {
+        if (Objects::valid(objectId)) {
             if (auto* entry = kernel_.objects.get(objectId)) {
                 Node* node = static_cast<Node*>(entry->object);
 
@@ -265,14 +265,14 @@ public:
         //     ↓
         // ClassicMD("default")
         // То есть instanceName может фактически быть именем реализации.
-        if (kernel_.registry.hasImpl<API>(instanceName)) {
+        if (kernel_.blueprints.hasImpl<API>(instanceName)) {
             ObjectId objectId = kernel_.objects.find(
                 id,
                 instanceName,
                 "default"
             );
 
-            if (ObjectRegistry::valid(objectId)) {
+            if (Objects::valid(objectId)) {
                 if (auto* entry = kernel_.objects.get(objectId)) {
                     Node* node = static_cast<Node*>(entry->object);
 
@@ -289,7 +289,7 @@ public:
     }
 
     bool has(std::string_view type, std::string_view name) const {
-        return ObjectRegistry::valid(kernel_.objects.find(id, type, name));
+        return Objects::valid(kernel_.objects.find(id, type, name));
     }
 
     // ищет компонент <T> в текущем узле и родительских
@@ -320,7 +320,7 @@ public:
     template<typename API>
     void remove(std::string_view instanceName = "default") {
         ObjectId objectId = kernel_.objects.find(id, typeName<API>(), instanceName);
-        if (!ObjectRegistry::valid(objectId))
+        if (!Objects::valid(objectId))
             return;
 
         auto* entry = kernel_.objects.get(objectId);
@@ -416,14 +416,14 @@ public:
 
     ObjectId param(std::string_view name) const {
         ObjectId pid = kernel_.objects.find(id, "param", name);
-        if (!ObjectRegistry::valid(pid))
+        if (!Objects::valid(pid))
             throw Exception(tag, "param '{}' not found", name);
         return pid;
     }
 
     ObjectId action(std::string_view name) const {
         ObjectId aid = kernel_.objects.find(id, "action", name);
-        if (!ObjectRegistry::valid(aid))
+        if (!Objects::valid(aid))
             throw Exception(tag, "action '{}' not found", name);
         return aid;
     }

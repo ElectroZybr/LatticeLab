@@ -14,7 +14,7 @@
 #include "Keyboard.hpp"
 
 
-extern "C" bool plugin_register(Lattice::Registry& reg) {
+extern "C" bool plugin_register(Lattice::Blueprints& reg) {
     reg.registerAPI<WindowAPI>();
     reg.registerImpl<glfwWindow, WindowAPI>();
     reg.registerImpl<Window, ServiceAPI>();

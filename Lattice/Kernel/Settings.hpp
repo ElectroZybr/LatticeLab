@@ -5,7 +5,7 @@
 #include <unordered_map>
 
 #include <Lattice/Kernel/Exception.hpp>
-#include <Lattice/Kernel/ObjectRegistry.hpp>
+#include <Lattice/Kernel/Objects.hpp>
 #include <Lattice/Kernel/Value.hpp>
 
 namespace Lattice {
