@@ -15,10 +15,10 @@
 
 
 extern "C" bool plugin_register(Lattice::Registry& reg) {
-    reg.registerImpl<SubsystemAPI, IOSubsystem>();
+    reg.registerImpl<IOSubsystem, SubsystemAPI>();
     reg.registerAPI<LoaderAPI>();
     reg.registerAPI<ParserAPI>();
-    reg.registerImpl<ParserAPI, TomlParser>();
+    reg.registerImpl<TomlParser, ParserAPI>();
     return true;
 }
 

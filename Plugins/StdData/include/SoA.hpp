@@ -11,8 +11,7 @@
 
 #include <Lattice/Kernel/TypeName.hpp>
 #include <Lattice/Kernel/Exception.hpp>
-
-#include "StdIo/include/Document.hpp"
+#include <Lattice/Kernel/Value.hpp>
 
 
 namespace StdData {

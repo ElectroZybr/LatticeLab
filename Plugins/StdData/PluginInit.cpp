@@ -11,7 +11,7 @@
 
 extern "C" bool plugin_register(Lattice::Registry& reg) {
     reg.registerComponent<StdData::SoA>();
-    reg.registerImpl<LoaderAPI, SoALoader>();
+    reg.registerImpl<SoALoader, LoaderAPI>();
     // reg.registerComponent<CSR>();
     return true;
 }

@@ -6,7 +6,6 @@
 #include <ParticleDynamics/include/ParticleStorage.hpp>
 
 #include <Lattice/Kernel/Node.hpp>
-#include <Lattice/Kernel/Settings.hpp>
 
 namespace Integrators {
 
@@ -16,13 +15,12 @@ public:
     struct PrevForceY {using type = float;};
     struct PrevForceZ {using type = float;};
 
-    Verlet(Lattice::Node& components) {}
+    Verlet(Lattice::Node& branch) {}
 
-    void configure(Lattice::Node& components) {
+    void configure(Lattice::Node& branch) {
         // интегратор требует для работы буфер. Если нет - исключение
-        particles = components.require<ParticleDynamics::ParticleStorage>();
-        settings = components.require<Lattice::Settings>();
-        settings->bind("verlet", "dt", &dt, 0, 0.1, true);
+        particles = branch.require<ParticleDynamics::ParticleStorage>();
+        branch.bind("dt", &dt, 0, 0.1, true);
         particles->addCol<PrevForceX>();
         particles->addCol<PrevForceY>();
         particles->addCol<PrevForceZ>();
@@ -32,8 +30,8 @@ public:
     void step() override;
 
     ~Verlet () {
-        if (settings)
-            settings->unbind("verlet", "dt");
+        // if (settings)
+        //     settings->unbind("verlet", "dt");
         if (configured && particles) {
             particles->removeCol<PrevForceX>();
             particles->removeCol<PrevForceY>();
@@ -50,6 +48,5 @@ private:
     bool configured = false;
 
     Ref<ParticleDynamics::ParticleStorage> particles;
-    Ref<Lattice::Settings> settings;
 };
 }

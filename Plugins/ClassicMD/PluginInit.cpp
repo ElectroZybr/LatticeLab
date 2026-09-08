@@ -1,6 +1,6 @@
 // Kernel dependences
 #include <Lattice/Kernel/Plugin.hpp>
-#include <Lattice/Kernel/ServiceAPI.hpp>
+#include <Lattice/Kernel/Model.hpp>
 
 // Plugin dependences
 #include <ParticleDynamics/include/ParticleAPI.hpp>
@@ -11,7 +11,7 @@
 namespace ClassicMD {
 
 extern "C" bool plugin_register(Lattice::Registry& reg) {
-    reg.registerImpl<ServiceAPI, ClassicMD>();
+    reg.registerImpl<ClassicMD, Model, ServiceAPI>();
     return true;
 }
 

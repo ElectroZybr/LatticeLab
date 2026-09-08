@@ -9,8 +9,8 @@
 namespace Integrators {
 
 extern "C" bool plugin_register(Lattice::Registry& reg) {
-    reg.registerImpl<ParticleDynamics::IntegratorAPI, Verlet>();
-    reg.registerImpl<ParticleDynamics::IntegratorAPI, KDK>();
+    reg.registerImpl<Verlet, ParticleDynamics::IntegratorAPI>();
+    reg.registerImpl<KDK, ParticleDynamics::IntegratorAPI>();
     return true;
 }
 

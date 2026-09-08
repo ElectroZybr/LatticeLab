@@ -6,7 +6,7 @@
 namespace Lattice {
 
 Path::Path(ObjectId id, ObjectRegistry& objectRegistry) {
-    while (valid(id)) {
+    while (ObjectRegistry::valid(id)) {
         ids_.push_back(id);
         id = objectRegistry.require(id).parent;
     }

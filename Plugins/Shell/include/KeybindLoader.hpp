@@ -3,7 +3,6 @@
 #include <Lattice/Kernel/Node.hpp>
 #include <Lattice/Kernel/Exception.hpp>
 
-#include "Document.hpp"
 #include "LoaderAPI.hpp"
 #include "ActionMap.hpp"
 

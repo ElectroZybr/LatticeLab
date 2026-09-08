@@ -4,7 +4,6 @@
 #include <Lattice/Kernel/Plugin.hpp>
 #include <Lattice/Kernel/ServiceAPI.hpp>
 #include <Lattice/Kernel/Node.hpp>
-#include <Lattice/Kernel/Settings.hpp>
 
 // Plugin dependences
 
@@ -31,7 +30,6 @@ private:
     void resize(uint32_t w, uint32_t h);
     void releaseFrameResources();
 
-    Ref<Lattice::Settings> settings_;
     Slot<WindowAPI> window_;
     Ref<GPU::WGPU> gpu_;
 };

@@ -1,283 +1,100 @@
 #pragma once
 
-#include <type_traits>
-#include <unordered_map>
-#include <cstdint>
-#include <string>
 #include <functional>
-#include <variant>
-#include <vector>
-
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
+#include <string_view>
+#include <unordered_map>
 
 #include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Kernel/ObjectRegistry.hpp>
+#include <Lattice/Kernel/Value.hpp>
 
 namespace Lattice {
 
-enum class ParamType { Bool, Int, Double, Vec2, Vec3, Vec4, String, Action };
-
-struct ParamInfo {
-    std::string key;
-    std::string group;
-    std::string name;
-    ParamType   type{};
-
-    double min = 0, max = 0;
-    bool hasRange = false;
-};
-
 class Settings {
-public:
-    using Value = std::variant<bool, int64_t, double, glm::vec2, glm::vec3, glm::vec4, std::string>;
-private:
     static constexpr std::string_view tag = "Settings";
-    struct Entry {
-        ParamInfo info;
-        std::function<Value()>            get = nullptr;
-        std::function<void(const Value&)> set = nullptr;
-        std::function<void()>         handler = nullptr;
+
+    struct Property {
+        double min = 0;
+        double max = 0;
+        bool hasRange = false;
+        std::function<Value()> get;
+        std::function<void(const Value&)> set;
     };
 
-    std::unordered_map<std::string, Entry> entries_;
+    struct Action {
+        std::function<void()> handler;
+    };
+
+    std::unordered_map<ObjectId, Property> properties_;
+    std::unordered_map<ObjectId, Action>   actions_;
 
 public:
     template<typename T>
-    void bind(std::string_view group, std::string_view name, T* ptr,
-              double min = 0, double max = 0, bool hasRange = false) {
-        const std::string key = makeKey(group, name);
-        Entry& entry = entries_[key];
-        entry.info = { key, std::string(group), std::string(name), typeOf<T>(), min, max, hasRange };
-        entry.get = [ptr]() -> Value { return valueMake(*ptr); };
-        entry.set = [ptr](const Value& v) { *ptr = valueCast<T>(v); };
+    void bind(ObjectId id, T* ptr, double min = 0, double max = 0, bool hasRange = false) {
+        Property p;
+        p.min = min;
+        p.max = max;
+        p.hasRange = hasRange;
+        p.get = [ptr] { return Value{*ptr}; };
+        p.set = [ptr](const Value& v) { *ptr = v.get<T>(); };
+        properties_[id] = std::move(p);
     }
 
     template<typename T, typename F>
-    void bind(std::string_view group, std::string_view name, T* ptr, F&& onChange) {
-        const std::string key = makeKey(group, name);
-        Entry& entry = entries_[key];
-        entry.info = { key, std::string(group), std::string(name), typeOf<T>() };
-        entry.get = [ptr]() -> Value { return valueMake(*ptr); };
-        entry.set = makeSetter(ptr, std::forward<F>(onChange));
-    }
-
-    void on(std::string_view group, std::string_view name, std::function<void()> fn) {
-        const std::string key = makeKey(group, name);
-        Entry& entry = entries_[key];
-        entry.info = { key, std::string(group), std::string(name), ParamType::Action };
-        entry.handler = std::move(fn);
-    }
-
-    // для редкого вызова из gui, не использовать для частых событий (поиск по мапе)
-    void fire(std::string_view key) {
-        if (auto h = handler(key))
-            h();
-    }
-
-    std::function<void()> handler(std::string_view key) const {
-        const auto& e = find(std::string(key));
-        if (e.info.type != ParamType::Action)
-            throw Lattice::Exception(tag, "Settings: not an action: ", std::string(key));
-        if (!e.handler)
-            throw Lattice::Exception(tag, "Settings: action has no handler: ", std::string(key));
-        return e.handler;
-    }
-
-    std::function<void()> tryHandler(std::string_view key) const {
-        auto it = entries_.find(std::string(key));
-        if (it == entries_.end()) return {};
-        if (it->second.info.type != ParamType::Action) return {};
-        return it->second.handler;
-    }
-
-    void unbind(std::string_view group, std::string_view name) {
-        entries_.erase(makeKey(group, name));
-    }
-
-    void unbindGroup(std::string_view group) {
-        for (auto it = entries_.begin(); it != entries_.end(); ) {
-            if (it->second.info.group == group)
-                it = entries_.erase(it);
+    void bind(ObjectId id, T* ptr, F&& onChange,
+            double min = 0, double max = 0, bool hasRange = false) {
+        Property p;
+        p.min = min;
+        p.max = max;
+        p.hasRange = hasRange;
+        p.get = [ptr] {
+            if constexpr (std::is_floating_point_v<T>)
+                return Value{static_cast<double>(*ptr)};
+            else if constexpr (std::is_same_v<T, bool>)
+                return Value{*ptr};
+            else if constexpr (std::is_integral_v<T> && !std::is_same_v<T, bool>)
+                return Value{static_cast<int64_t>(*ptr)};
             else
-                ++it;
-        }
-    }
-
-    bool hasValue(std::string_view key) const {
-        auto it = entries_.find(std::string(key));
-        return it != entries_.end()
-            && it->second.info.type != ParamType::Action
-            && static_cast<bool>(it->second.set);
-    }
-
-    ParamType type(std::string_view key) const;
-
-    std::function<void()> makeToggle(std::string_view key) {
-        const std::string k{key};
-        return [this, k] {
-            auto& e = find(k);
-            if (e.info.type != ParamType::Bool)
-                throw Lattice::Exception(tag, "toggle expects bool: ", k);
-            const bool v = std::get<bool>(e.get());
-            e.set(Value{!v});
+                return Value{*ptr};
         };
-    }
-
-    std::function<void()> makeAdd(std::string_view key, double delta) {
-        const std::string k{key};
-        return [this, k, delta] {
-            auto& e = find(k);
-            if (e.info.type == ParamType::Double) {
-                double v = std::get<double>(e.get());
-                e.set(Value{v + delta});
-            } else if (e.info.type == ParamType::Int) {
-                int64_t v = std::get<int64_t>(e.get());
-                e.set(Value{v + static_cast<int64_t>(delta)});
-            } else {
-                throw Lattice::Exception(tag, "add expects int/double: ", k);
-            }
+        p.set = [ptr, onChange = std::forward<F>(onChange)](const Value& v) mutable {
+            *ptr = v.get<T>();
+            onChange(*ptr);
         };
+        properties_[id] = std::move(p);
+    }
+
+    void on(ObjectId id, std::function<void()> handler) {
+        actions_[id] = Action{std::move(handler)};
     }
 
     template<typename T>
-    T getByKey(std::string_view key) const {
-        return std::get<T>(find(std::string(key)).get());
+    T get(ObjectId id) const {
+        auto it = properties_.find(id);
+        if (it == properties_.end() || !it->second.get)
+            throw Exception(tag, "no property {}", id);
+        return it->second.get().get<T>();
     }
 
     template<typename T>
-    void setByKey(std::string_view key, T value) {
-        find(std::string(key)).set(Value{std::move(value)});
+    void set(ObjectId id, T value) {
+        auto it = properties_.find(id);
+        if (it == properties_.end() || !it->second.set)
+            throw Exception(tag, "no property {}", id);
+        it->second.set(Value{std::move(value)});
     }
 
-    template<typename T>
-    T get(std::string_view group, std::string_view name) const {
-        return std::get<T>(find(makeKey(group, name)).get());
+    void fire(ObjectId id) const {
+        auto it = actions_.find(id);
+        if (it == actions_.end() || !it->second.handler)
+            throw Exception(tag, "no action {}", id);
+        it->second.handler();
     }
 
-    template<typename T>
-    void set(std::string_view group, std::string_view name, T value) {
-        auto& entry = find(makeKey(group, name));
-        entry.set(Value{std::move(value)});
-    }
-
-    template<typename T>
-    void set(std::string_view key, T value) {
-        auto& entry = find(std::string(key));
-        entry.set(Value{std::move(value)});
-    }
-
-    void setFromString(std::string_view key, std::string_view str) {
-        auto& e = find(std::string(key));
-        switch (e.info.type) {
-        case ParamType::Bool:
-            e.set(Value{str == "true" || str == "1"});
-            break;
-        case ParamType::Int:
-            e.set(Value{static_cast<int64_t>(std::stoll(std::string(str)))});
-            break;
-        case ParamType::Double:
-            e.set(Value{std::stod(std::string(str))});
-            break;
-        case ParamType::String:
-            e.set(Value{std::string(str)});
-            break;
-        default:
-            throw Lattice::Exception(tag, "unsupported type for string set");
-        }
-    }
-
-    std::vector<ParamInfo> list() const {
-        std::vector<ParamInfo> out;
-        out.reserve(entries_.size());
-        for (auto& [_, entry] : entries_)
-            out.push_back(entry.info);
-        return out;
-    }
-
-    std::vector<ParamInfo> listGroup(std::string_view group) const {
-        std::vector<ParamInfo> out;
-        for (auto& [_, entry] : entries_)
-            if (entry.info.group == group)
-                out.push_back(entry.info);
-        return out;
-    }
-    
-private:
-    template<typename>
-    inline static constexpr bool always_false = false;
-
-    static std::string makeKey(std::string_view group, std::string_view name) {
-        return std::string(group) + "." + std::string(name);
-    }
-
-    Entry& find(const std::string& key) {
-        auto it = entries_.find(key);
-        if (it == entries_.end())
-            throw Lattice::Exception(tag, "Settings: unknown param '{}'", key);
-        return it->second;
-    }
-
-    const Entry& find(const std::string& key) const {
-        return const_cast<Settings*>(this)->find(key);
-    }
-
-    template<typename T, typename F>
-    static std::function<void(const Value&)>
-    makeSetter(T* ptr, F&& onChange) {
-        return [ptr, onChange = std::forward<F>(onChange)](const Value& v) mutable {
-            T value = valueCast<T>(v);
-            *ptr = value;
-            onChange(value);
-        };
-    }
-
-    template<typename T>
-    static ParamType typeOf() {
-        if constexpr (std::is_same_v<T, bool>)
-            return ParamType::Bool;
-        else if constexpr (std::is_integral_v<T>)
-            return ParamType::Int;
-        else if constexpr (std::is_floating_point_v<T>)
-            return ParamType::Double;
-        else if constexpr (std::is_same_v<T, glm::vec2>)
-            return ParamType::Vec2;
-        else if constexpr (std::is_same_v<T, glm::vec3>)
-            return ParamType::Vec3;
-        else if constexpr (std::is_same_v<T, glm::vec4>)
-            return ParamType::Vec4;
-        else if constexpr (std::is_same_v<T, std::string>)
-            return ParamType::String;
-        else
-            static_assert(always_false<T>, "Unsupported Settings type");
-    }
-
-    template<typename T>
-    static Value valueMake(T value) {
-        if constexpr (std::is_same_v<T, bool>)
-            return value;
-        else if constexpr (std::is_integral_v<T>)
-            return static_cast<int64_t>(value);
-        else if constexpr (std::is_floating_point_v<T>)
-            return static_cast<double>(value);
-        else
-            return value;
-    }
-
-    template<typename T>
-    static T valueCast(const Value& value) {
-        if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
-            return static_cast<T>(std::get<double>(value));
-        }
-        else if constexpr (std::is_same_v<T, bool>) {
-            return std::get<bool>(value);
-        }
-        else if constexpr (std::is_integral_v<T>) {
-            return static_cast<T>(std::get<int64_t>(value));
-        }
-        else {
-            return std::get<T>(value);
-        }
+    void unbind(ObjectId id) {
+        properties_.erase(id);
+        actions_.erase(id);
     }
 };
-}
+
+} // namespace Lattice

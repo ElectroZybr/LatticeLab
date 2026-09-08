@@ -36,7 +36,7 @@ TEST(Node_DeepTreeLookup, RuntimeFixture,
 "Поиск компонента должен подниматься по дереву родителей, но не заходить в соседние ветки. \
 Child-ветка должна видеть свои компоненты и компоненты предков.")
 {
-    fixture.registry.registerComponent<TestComponent>();
+    fixture.kernel.registry.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -65,7 +65,7 @@ TEST(Node_Shadowing, RuntimeFixture,
 "Компонент в дочерней ветке должен скрывать компонент с тем же именем из родительской ветки. \
 При этом оба объекта должны оставаться независимыми экземплярами.")
 {
-    fixture.registry.registerComponent<TestComponent>();
+    fixture.kernel.registry.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>("shared");
 
@@ -84,7 +84,7 @@ TEST(Node_ShadowingDoesNotLeak, RuntimeFixture,
 "Одинаковые имена компонентов в соседних ветках не должны влиять друг на друга. \
 Поиск из одной ветки не должен случайно находить локальный компонент другой ветки.")
  {
-    fixture.registry.registerComponent<TestComponent>();
+    fixture.kernel.registry.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>("shared");
 
@@ -103,7 +103,7 @@ TEST(Node_ShadowingDoesNotLeak, RuntimeFixture,
 
 TEST(Node_folderCollect, RuntimeFixture,
     "Поиск в папке должен возвращать компоненты из текущей папки и всех вложенных папок.") {
-    fixture.registry.registerComponent<TestComponent>();
+    fixture.kernel.registry.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -131,7 +131,7 @@ TEST(Node_folderCollect, RuntimeFixture,
 
 TEST(Node_directCollect, RuntimeFixture,
     "Поиск в папке должен возвращать только компоненты непосредственно принадлежащие текущей папке.") {
-    fixture.registry.registerComponent<TestComponent>();
+    fixture.kernel.registry.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -157,10 +157,9 @@ TEST(Node_directCollect, RuntimeFixture,
 }
 
 TEST(Node_GlobalCollectDeepTree, RuntimeFixture,
-    "Глобальный поиск должен обходить всё дерево компонентов независимо от глубины вложенности. "
-    "В результат должны попасть компоненты из всех веток и дочерних узлов.") {
-
-    fixture.registry.registerComponent<TestComponent>();
+    "globalCollect должен найти каждый компонент во всём дереве независимо от глубины и ветки.")
+{
+    fixture.kernel.registry.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -176,15 +175,144 @@ TEST(Node_GlobalCollectDeepTree, RuntimeFixture,
     Node& childB = branchB.addFolder("ChildB");
     childB.add<TestComponent>("bb");
 
-    auto Node = childA.globalCollect<TestComponent>();
+    Node& deep = childA.addFolder("Deep");
+    deep.add<TestComponent>("aaa");
 
-    REQUIRE(Node.size() == 5);
+    auto rootComponent = fixture.root.require<TestComponent>("root");
+    auto a = branchA.require<TestComponent>("a");
+    auto b = branchB.require<TestComponent>("b");
+    auto aa = childA.require<TestComponent>("aa");
+    auto bb = childB.require<TestComponent>("bb");
+    auto aaa = deep.require<TestComponent>("aaa");
+
+    auto result = deep.globalCollect<TestComponent>();
+
+    REQUIRE(result.size() == 6);
+
+    REQUIRE(std::ranges::find(result, rootComponent.getPtr()) != result.end());
+    REQUIRE(std::ranges::find(result, a.getPtr()) != result.end());
+    REQUIRE(std::ranges::find(result, b.getPtr()) != result.end());
+    REQUIRE(std::ranges::find(result, aa.getPtr()) != result.end());
+    REQUIRE(std::ranges::find(result, bb.getPtr()) != result.end());
+    REQUIRE(std::ranges::find(result, aaa.getPtr()) != result.end());
+}
+
+TEST(Node_GlobalCollectDifferentInstances, RuntimeFixture,
+    "globalCollect должен возвращать все экземпляры одного типа независимо от их имён.")
+{
+    fixture.kernel.registry.registerComponent<TestComponent>();
+
+    fixture.root.add<TestComponent>("one");
+    fixture.root.add<TestComponent>("two");
+    fixture.root.add<TestComponent>("three");
+
+    Node& branch = fixture.root.addFolder("branch");
+
+    branch.add<TestComponent>("four");
+    branch.add<TestComponent>("five");
+
+    auto one = fixture.root.require<TestComponent>("one");
+    auto two = fixture.root.require<TestComponent>("two");
+    auto three = fixture.root.require<TestComponent>("three");
+    auto four = branch.require<TestComponent>("four");
+    auto five = branch.require<TestComponent>("five");
+
+    auto result = fixture.root.globalCollect<TestComponent>();
+
+    REQUIRE(result.size() == 5);
+
+    REQUIRE(std::ranges::find(result, one.getPtr()) != result.end());
+    REQUIRE(std::ranges::find(result, two.getPtr()) != result.end());
+    REQUIRE(std::ranges::find(result, three.getPtr()) != result.end());
+    REQUIRE(std::ranges::find(result, four.getPtr()) != result.end());
+    REQUIRE(std::ranges::find(result, five.getPtr()) != result.end());
+}
+
+TEST(Node_GlobalCollectSameNames, RuntimeFixture,
+    "globalCollect должен различать объекты с одинаковыми именами в разных ветках.")
+{
+    fixture.kernel.registry.registerComponent<TestComponent>();
+
+    Node& branchA = fixture.root.addFolder("A");
+    Node& branchB = fixture.root.addFolder("B");
+
+    branchA.add<TestComponent>("shared");
+    branchB.add<TestComponent>("shared");
+
+    auto a = branchA.require<TestComponent>("shared");
+    auto b = branchB.require<TestComponent>("shared");
+
+    auto result = fixture.root.globalCollect<TestComponent>();
+
+    REQUIRE(result.size() == 2);
+
+    REQUIRE(std::ranges::find(result, a.getPtr()) != result.end());
+    REQUIRE(std::ranges::find(result, b.getPtr()) != result.end());
+
+    REQUIRE(a.getPtr() != b.getPtr());
+}
+
+TEST(Node_GlobalCollectFromDeepNode, RuntimeFixture,
+    "globalCollect должен искать от корня независимо от того, из какого узла он вызван.")
+{
+    fixture.kernel.registry.registerComponent<TestComponent>();
+
+    fixture.root.add<TestComponent>("root");
+
+    Node& branchA = fixture.root.addFolder("A");
+    branchA.add<TestComponent>("a");
+
+    Node& branchB = fixture.root.addFolder("B");
+    branchB.add<TestComponent>("b");
+
+    Node& deep = branchA.addFolder("Deep");
+    deep.add<TestComponent>("deep");
+
+    auto rootComponent = fixture.root.require<TestComponent>("root");
+    auto a = branchA.require<TestComponent>("a");
+    auto b = branchB.require<TestComponent>("b");
+    auto deepComponent = deep.require<TestComponent>("deep");
+
+    auto result = deep.globalCollect<TestComponent>();
+
+    REQUIRE(result.size() == 4);
+
+    REQUIRE(std::ranges::find(result, rootComponent.getPtr()) != result.end());
+    REQUIRE(std::ranges::find(result, a.getPtr()) != result.end());
+    REQUIRE(std::ranges::find(result, b.getPtr()) != result.end());
+    REQUIRE(std::ranges::find(result, deepComponent.getPtr()) != result.end());
+}
+
+TEST(Node_GlobalCollectByRole, RuntimeFixture,
+    "globalCollect должен находить все объекты, реализующие интерфейс, независимо от concrete-типа.")
+{
+    fixture.kernel.registry.registerAPI<TestAPI>();
+    fixture.kernel.registry.registerImpl<TestImplA, TestAPI>();
+    fixture.kernel.registry.registerImpl<TestImplB, TestAPI>();
+
+    fixture.root.add<TestAPI, TestImplA>("a");
+    fixture.root.add<TestAPI, TestImplB>("b");
+
+    Node& branch = fixture.root.addFolder("branch");
+    branch.add<TestAPI, TestImplA>("c");
+
+    auto a = fixture.root.require<TestAPI>("a");
+    auto b = fixture.root.require<TestAPI>("b");
+    auto c = branch.require<TestAPI>("c");
+
+    auto result = fixture.root.globalCollect<TestAPI>();
+
+    REQUIRE(result.size() == 3);
+
+    REQUIRE(std::ranges::find(result, a.getPtr()) != result.end());
+    REQUIRE(std::ranges::find(result, b.getPtr()) != result.end());
+    REQUIRE(std::ranges::find(result, c.getPtr()) != result.end());
 }
 
 TEST(Node_GlobalCollectIgnoresInstanceName, RuntimeFixture, 
 "Глобальный поиск должен находить все экземпляры компонента независимо от имени реализации.")
  {
-    fixture.registry.registerComponent<TestComponent>();
+    fixture.kernel.registry.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>("one");
     fixture.root.add<TestComponent>("two");
@@ -202,7 +330,7 @@ TEST(Node_GlobalCollectIgnoresInstanceName, RuntimeFixture,
 TEST(Node_RemoveDoesNotAffectParent, RuntimeFixture,
     "Удаление компонента из дочерней ветки не должно удалять компонент родителя.") {
 
-    fixture.registry.registerComponent<TestComponent>();
+    fixture.kernel.registry.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>("shared");
 
@@ -218,7 +346,7 @@ TEST(Node_RemoveShadowDoesNotRevealWrongComponent, RuntimeFixture,
 "После удаления локального компонента поиск должен корректно продолжить поиск у родителя. \
 Удаление индекса дочернего компонента не должно повреждать или скрывать родительский объект.")
 {
-    fixture.registry.registerComponent<TestComponent>();
+    fixture.kernel.registry.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>("shared");
 
@@ -236,7 +364,7 @@ TEST(Node_ConfigureDeepTree, RuntimeFixture,
 "configureAll должен вызвать configure для каждого компонента во всей ветке.\
 Вызов должен корректно проходить через произвольную глубину дерева.") 
 {
-    fixture.registry.registerComponent<TestComponent>();
+    fixture.kernel.registry.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -257,7 +385,7 @@ TEST(Node_ConfigureDoesNotConfigureTwice, RuntimeFixture,
 "Повторный вызов configureAll не должен приводить к неконтролируемому состоянию компонента. \
 Компонент должен сохранять корректное сконфигурированное состояние.")
 {
-    fixture.registry.registerComponent<TestComponent>();
+    fixture.kernel.registry.registerComponent<TestComponent>();
 
     fixture.root.add<TestComponent>();
 

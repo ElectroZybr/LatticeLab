@@ -6,8 +6,8 @@
 // Sources
 #include "glfwWindow/glfwWindow.hpp"
 #include "InputAPI.hpp"
-#include "KeybindLoader.hpp"
-#include "LoaderAPI.hpp"
+// #include "KeybindLoader.hpp"
+// #include "LoaderAPI.hpp"
 #include "WindowAPI.hpp"
 #include "Window.hpp"
 #include "Mouse.hpp"
@@ -16,13 +16,13 @@
 
 extern "C" bool plugin_register(Lattice::Registry& reg) {
     reg.registerAPI<WindowAPI>();
-    reg.registerImpl<WindowAPI, glfwWindow>();
-    reg.registerImpl<ServiceAPI, Window>();
+    reg.registerImpl<glfwWindow, WindowAPI>();
+    reg.registerImpl<Window, ServiceAPI>();
 
-    reg.registerImpl<InputAPI, Input::Keyboard>();
-    reg.registerImpl<InputAPI, Input::Mouse>();
+    reg.registerImpl<Input::Keyboard, InputAPI>();
+    reg.registerImpl<Input::Mouse, InputAPI>();
 
-    reg.registerImpl<LoaderAPI, KeybindsLoader>();
+    // reg.registerImpl<LoaderAPI, KeybindsLoader>();
     return true;
 }
 

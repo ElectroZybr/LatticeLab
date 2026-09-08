@@ -4,11 +4,8 @@
 #include <Lattice/Kernel/Plugin.hpp>
 #include <Lattice/Kernel/ServiceAPI.hpp>
 #include <Lattice/Kernel/Node.hpp>
-#include <Lattice/Kernel/Settings.hpp>
 
 // Plugin dependences
-// #include "Document.hpp"
-// #include "TomlParser.hpp"
 #include "ActionMap.hpp"
 
 // Source
@@ -22,30 +19,27 @@ public:
     explicit Window(Lattice::Node& branch) {
         branch.use<WindowAPI, glfwWindow>();
         branch.add<Render>();
-        Logger::info("Window", "window created");
     }
 
     void configure(Lattice::Node& branch) {
-        settings = branch.require<Lattice::Settings>();
         actionMap = branch.require<ActionMap>();
         render = branch.require<Render>();
         window = branch.find<WindowAPI>();
 
-        settings->on("actions", "print", [&]() { print(); });
+        branch.on("print", [&]() { print(); });
 
         window->show();
         window->setTitle("LatticeLab");
-
-
     }
 
     void run() override {
-        actionMap->set("verlet.dt");
-        actionMap->set("actions.print");
-        actionMap->set("io.load");
-        actionMap->bindAdd("verlet.dt", "MouseLeft", +0.001);
-        actionMap->bind("actions.print", "Ctrl+S");
-        actionMap->bind("io.load", "Ctrl+O");
+        // actionMap->set("verlet.dt");
+        // actionMap->set("actions.print");
+        // actionMap->set("io.load");
+        // actionMap->bindAdd("dt", "MouseLeft", +0.001);
+        actionMap->bind("print", "MouseLeft");
+        actionMap->bind("load", "Ctrl+O");
+
         render->setup();
         while (!stopRequested()) {
             window->pollEvents();
