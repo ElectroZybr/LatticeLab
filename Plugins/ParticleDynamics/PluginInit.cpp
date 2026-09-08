@@ -14,7 +14,7 @@ extern "C" bool plugin_register(Lattice::Registry& reg) {
     reg.registerAPI<ForceFieldAPI>();
     reg.registerAPI<SpatialIndexAPI>();
 
-    reg.registerImpl<SpatialIndexAPI, SpatialGrid>();
+    reg.registerImpl<SpatialGrid, SpatialIndexAPI>();
     reg.registerComponent<ParticleStorage>();
     return true;
 }

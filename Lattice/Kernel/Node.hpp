@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <string>
 #include <string_view>
 #include <memory>
@@ -12,9 +13,11 @@
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/RefSlot.hpp>
 #include <Lattice/Kernel/ObjectRegistry.hpp>
+#include <Lattice/Kernel/Settings.hpp>
 #include <Lattice/Tools/LogStyle.hpp>
 #include <Lattice/Tools/Logger.hpp>
 #include <Lattice/Tools/LogTree.hpp>
+#include "Lattice/Kernel/Kernel.hpp"
 
 
 namespace Lattice {
@@ -24,8 +27,7 @@ class Registry;
 class Node {
     static constexpr std::string_view tag = "Node";
 
-    Registry& registry;
-    ObjectRegistry& objectRegistry;
+    Kernel& kernel_;
     Node* parent = nullptr;
     ObjectId id = 0;
 
@@ -40,16 +42,26 @@ class Node {
     ConfigureFn configure = nullptr;
 
     Node* makeChild(std::string_view name, std::string_view type) {
-        auto node = std::make_unique<Node>(registry, objectRegistry, this);
+        auto node = std::make_unique<Node>(kernel_, this);
         Node* raw = node.get();
-        raw->id = objectRegistry.create(id, type, name, raw);
+        raw->id = kernel_.objects.create(id, type, name, raw);
         children.push_back(std::move(node));
         return raw;
     }
 
+    void applyRoles(Node* child, const Registry::TypeEntry& entry) {
+        child->instance  = entry.create(child);
+        child->api       = child->instance; // каст в use/find шаблоном
+        child->destroy   = entry.destroy;
+        child->configure = entry.configure;
+
+        for (const auto& role : entry.implements)
+            kernel_.objects.alias(child->id, id, role, kernel_.objects[child->id].name);
+    }
+
     void appendTree(Logger::Tree& tree, size_t depth, const ObjectId highlighted) const {
         for (const auto& child : children) {
-            const Entry& entry = objectRegistry.require(child->id);
+            const Entry& entry = kernel_.objects.require(child->id);
             std::string label = entry.type;
             if (child->id == highlighted)
                 label = std::format("<b><r>{} 🡸<//>", label);
@@ -60,12 +72,9 @@ class Node {
     }
 
     template<typename T>
-    void collectInto(std::vector<T*>& out) const {
-        if (void* object = getObject();
-            object && objectRegistry[id].type == typeName<T>())
-        {
-            out.push_back(static_cast<T*>(object));
-        }
+    void collectInto(std::vector<ObjectId>& out) const {
+        if (kernel_.objects.hasRole(id, typeName<T>()))
+            out.push_back(id);
 
         for (const auto& child : children)
             child->collectInto<T>(out);
@@ -86,10 +95,10 @@ class Node {
     }
 
 public:
-    explicit Node(Registry& registry, ObjectRegistry& objectRegistry, Node* parent = nullptr)
-        : registry(registry), objectRegistry(objectRegistry), parent(parent) {
+    Node(Kernel& kernel_, Node* parent = nullptr)
+        : kernel_(kernel_), parent(parent) {
             if (!parent)
-                id = objectRegistry.create(InvalidObjectId, "Root", "Root", this);
+                id = kernel_.objects.create(InvalidObjectId, "Root", "Root", this);
     }
 
     Node(const Node&) = delete;
@@ -97,10 +106,12 @@ public:
     Node(Node&&) = delete;
     Node& operator=(Node&&) = delete;
 
+    Kernel& kernel() noexcept { return kernel_; }
+
     // создает и возвращает объекты интерфейса <T> найденные в глобальном registry
     template<typename T>
     void addImpls() {
-        for (const auto& implName : registry.implementationsOf<T>())
+        for (const auto& implName : kernel_.registry.implementationsOf<T>())
             add<T>(implName, implName);
     }
 
@@ -109,11 +120,11 @@ public:
         std::vector<T*> out;
 
         for (const auto& child : children) {
-            if (void* object = child->getObject();
-                object && objectRegistry[child->id].type == typeName<T>())
-            {
+            if (!kernel_.objects.hasRole(child->id, typeName<T>()))
+                continue;
+
+            if (void* object = child->getObject())
                 out.push_back(static_cast<T*>(object));
-            }
         }
 
         return out;
@@ -122,8 +133,20 @@ public:
     // возвращает объекты интерфейса <T> из текущего узла и его потомков
     template<typename T>
     std::vector<T*> folderCollect() const {
+        std::vector<ObjectId> ids;
+        collectInto<T>(ids);
+
         std::vector<T*> out;
-        collectInto<T>(out);
+        out.reserve(ids.size());
+
+        for (ObjectId id : ids) {
+            const auto& entry = kernel_.objects.require(id);
+            auto* node = static_cast<Node*>(entry.object);
+
+            if (void* object = node->getObject())
+                out.push_back(static_cast<T*>(object));
+        }
+
         return out;
     }
 
@@ -142,15 +165,9 @@ public:
     void add(std::string_view implName, std::string_view instanceName) {
         noteAdd<T>();
 
-        const auto& entry = registry.requireImpl<T>(implName);
+        const auto& entry = kernel_.registry.requireImpl<T>(implName);
         Node* child = makeChild(instanceName, implName);
-
-        void* newInstance = entry.create(child);
-
-        child->instance = newInstance;
-        child->api = entry.getAPI(newInstance);
-        child->destroy = entry.destroy;
-        child->configure = entry.configure;
+        applyRoles(child, entry);
 
         Logger::info(tag, "+ {} '{}' ({})", typeName<T>(), instanceName, implName);
     }
@@ -159,15 +176,9 @@ public:
     void add(std::string_view instanceName = "default") {
         noteAdd<T>();
 
-        const auto& entry = registry.requireImpl<T>(typeName<Impl>());
+        const auto& entry = kernel_.registry.requireImpl<T>(typeName<Impl>());
         Node* child = makeChild(instanceName, typeName<Impl>());
-
-        void* newInstance = entry.create(child);
-
-        child->instance = newInstance;
-        child->api = entry.getAPI(newInstance);
-        child->destroy = entry.destroy;
-        child->configure = entry.configure;
+        applyRoles(child, entry);
 
         Logger::info(tag, "+ {} '{}' ({})", typeName<T>(), instanceName, typeName<Impl>());
     }
@@ -180,13 +191,9 @@ public:
             return;
         }
 
-        const auto& entry = registry.require<T>();
+        const auto& entry = kernel_.registry.require<T>();
         Node* child = makeChild(instanceName, typeName<T>());
-
-        child->instance = entry.create(child);
-        child->api = nullptr;
-        child->destroy = entry.destroy;
-        child->configure = entry.configure;
+        applyRoles(child, entry);
 
         Logger::info(tag, "+ {}", typeName<T>());
     }
@@ -201,16 +208,16 @@ public:
     Slot<API> use(std::string_view implName, std::string_view instanceName = "default") {
         noteUse<API>();
 
-        if (!registry.hasImpl<API>(implName)) {
+        if (!kernel_.registry.hasImpl<API>(implName)) {
             throw Lattice::Exception(tag, "unknown implementation '{}' for '{}'", implName, typeName<API>());
         }
 
-        const auto& entry = registry.requireImpl<API>(implName);
+        const auto& entry = kernel_.registry.requireImpl<API>(implName);
         Node* child = nullptr;
-        ObjectId objectId = objectRegistry.find(id, typeName<API>(), instanceName);
+        ObjectId objectId = kernel_.objects.find(id, typeName<API>(), instanceName);
 
-        if (valid(objectId)) {
-            auto* entry = objectRegistry.get(objectId);
+        if (ObjectRegistry::valid(objectId)) {
+            auto* entry = kernel_.objects.get(objectId);
             child = static_cast<Node*>(entry->object);
             if (child->api) {
                 if constexpr (std::is_same_v<API, ServiceAPI>) {
@@ -226,16 +233,11 @@ public:
         } else {
             child = makeChild(instanceName, implName);
             // добавляем алиас: <API>("name") -> Impl; <Impl>("name") -> Impl;
-            objectRegistry.alias(child->id, id, typeName<API>(), instanceName);
+            kernel_.objects.alias(child->id, id, typeName<API>(), instanceName);
             Logger::info(tag, "+ interface '{}'", typeName<API>());
         }
 
-        void* newInstance = entry.create(child);
-
-        child->instance = newInstance;
-        child->api = entry.getAPI(newInstance);
-        child->destroy = entry.destroy;
-        child->configure = entry.configure;
+        applyRoles(child, entry);
 
         Logger::info(tag, "> use '{}' = '{}'", typeName<API>(), implName);
         return child;
@@ -247,10 +249,10 @@ public:
     Slot<API> find(std::string_view instanceName = "default") {
         noteRequire<API>();
         const auto apiType = typeName<API>();
-        ObjectId objectId = objectRegistry.find(id, apiType, instanceName);
+        ObjectId objectId = kernel_.objects.find(id, apiType, instanceName);
 
-        if (valid(objectId)) {
-            if (auto* entry = objectRegistry.get(objectId)) {
+        if (ObjectRegistry::valid(objectId)) {
+            if (auto* entry = kernel_.objects.get(objectId)) {
                 Node* node = static_cast<Node*>(entry->object);
 
                 if (node && node->getObject())
@@ -263,15 +265,15 @@ public:
         //     ↓
         // ClassicMD("default")
         // То есть instanceName может фактически быть именем реализации.
-        if (registry.hasImpl<API>(instanceName)) {
-            ObjectId objectId = objectRegistry.find(
+        if (kernel_.registry.hasImpl<API>(instanceName)) {
+            ObjectId objectId = kernel_.objects.find(
                 id,
                 instanceName,
                 "default"
             );
 
-            if (valid(objectId)) {
-                if (auto* entry = objectRegistry.get(objectId)) {
+            if (ObjectRegistry::valid(objectId)) {
+                if (auto* entry = kernel_.objects.get(objectId)) {
                     Node* node = static_cast<Node*>(entry->object);
 
                     if (node && node->getObject())
@@ -287,7 +289,7 @@ public:
     }
 
     bool has(std::string_view type, std::string_view name) const {
-        return valid(objectRegistry.find(id, type, name));
+        return ObjectRegistry::valid(kernel_.objects.find(id, type, name));
     }
 
     // ищет компонент <T> в текущем узле и родительских
@@ -304,10 +306,10 @@ public:
     // вызывает метод configure() у всех компонентов ветки
     void configureAll() {
         if (configure) {
-            Logger::info(tag, "Configuring '{}'", objectRegistry[id].type);
+            Logger::info(tag, "Configuring '{}'", kernel_.objects[id].type);
             configure(instance, *this);
         } else if (instance) {
-            Logger::warning(tag, "Component '{}' has no configure callback", objectRegistry[id].type);
+            Logger::warning(tag, "Component '{}' has no configure callback", kernel_.objects[id].type);
         }
 
         for (auto& child : children)
@@ -317,11 +319,11 @@ public:
     // удаляет компонент <T> из ветки
     template<typename API>
     void remove(std::string_view instanceName = "default") {
-        ObjectId objectId = objectRegistry.find(id, typeName<API>(), instanceName);
-        if (!valid(objectId))
+        ObjectId objectId = kernel_.objects.find(id, typeName<API>(), instanceName);
+        if (!ObjectRegistry::valid(objectId))
             return;
 
-        auto* entry = objectRegistry.get(objectId);
+        auto* entry = kernel_.objects.get(objectId);
         if (!entry)
             return;
 
@@ -345,7 +347,7 @@ public:
 
     // останавливает все сервисы
     void stopServices() {
-        if (objectRegistry[id].type == typeName<ServiceAPI>() && api) {
+        if (kernel_.objects[id].type == typeName<ServiceAPI>() && api) {
             static_cast<ServiceAPI*>(api)->stop();
         }
         
@@ -363,7 +365,7 @@ public:
         configure = nullptr;
         children.clear();
         if (id)
-            objectRegistry.destroy(id);
+            kernel_.objects.destroy(id);
     }
 
     Path path() const {
@@ -386,6 +388,67 @@ public:
 
     void* getObject() const noexcept {
         return api ? api : instance;
+    }
+
+    
+    template<typename T>
+    ObjectId bind(std::string_view name, T* ptr,
+                double min = 0, double max = 0, bool hasRange = false) {
+        Node* child = makeChild(name, "param");
+        kernel_.settings.bind(child->id, ptr, min, max, hasRange);
+        return child->id;
+    }
+
+    template<typename T, typename F>
+    requires std::invocable<F&, T>
+    ObjectId bind(std::string_view name, T* ptr, F&& onChange,
+                double min = 0, double max = 0, bool hasRange = false) {
+        Node* child = makeChild(name, "param");
+        kernel_.settings.bind(child->id, ptr, std::forward<F>(onChange), min, max, hasRange);
+        return child->id;
+    }
+
+    ObjectId on(std::string_view name, std::function<void()> handler) {
+        Node* child = makeChild(name, "action");
+        kernel_.settings.on(child->id, std::move(handler));
+        return child->id;
+    }
+
+    ObjectId param(std::string_view name) const {
+        ObjectId pid = kernel_.objects.find(id, "param", name);
+        if (!ObjectRegistry::valid(pid))
+            throw Exception(tag, "param '{}' not found", name);
+        return pid;
+    }
+
+    ObjectId action(std::string_view name) const {
+        ObjectId aid = kernel_.objects.find(id, "action", name);
+        if (!ObjectRegistry::valid(aid))
+            throw Exception(tag, "action '{}' not found", name);
+        return aid;
+    }
+
+    template<typename T>
+    T get(std::string_view name) const {
+        return kernel_.settings.get<T>(param(name));
+    }
+
+    template<typename T>
+    void set(std::string_view name, T value) {
+        kernel_.settings.set(param(name), std::move(value));
+    }
+
+    void fire(std::string_view name) const {
+        kernel_.settings.fire(action(name));
+    }
+
+    void activate(std::string_view role) {
+        kernel_.context.set(role, id);
+    }
+
+    void onActivate(std::string_view role) {
+        on("activate", [this, r = std::string(role)] { activate(r); });
+        activate(role);
     }
 };
 

@@ -17,9 +17,22 @@ class ObjectRegistry;
 inline constexpr ObjectId InvalidObjectId =
     std::numeric_limits<ObjectId>::max();
 
-constexpr bool valid(ObjectId id) noexcept {
-    return id != InvalidObjectId;
-}
+
+struct Context {
+public:
+    void set(std::string_view role, ObjectId id) {
+        map[std::string(role)] = id;
+    }
+
+    ObjectId get(std::string_view role) const {
+        auto it = map.find(std::string(role));
+        return it == map.end() ? InvalidObjectId : it->second;
+    }
+
+private:
+    std::unordered_map<std::string, ObjectId> map;
+};
+
 
 struct Entry {
     void* object = nullptr;
@@ -27,6 +40,7 @@ struct Entry {
     std::string name;
     ObjectId parent = InvalidObjectId;
 };
+
 
 class Path {
 public:
@@ -94,6 +108,10 @@ public:
         lookup.insert_or_assign(key, id);
 
         return id;
+    }
+
+    static constexpr bool valid(ObjectId id) noexcept {
+        return id != InvalidObjectId;
     }
 
     void alias(ObjectId id, ObjectId parent, std::string_view type, std::string_view name) {
@@ -189,6 +207,29 @@ public:
         }
 
         return result;
+    }
+
+    ObjectId resolve(const Context& context, std::string_view type, std::string_view name) {
+        auto tryFrom = [&](ObjectId start) -> ObjectId {
+            ObjectId id = start;
+            while (valid(id)) {
+                if (ObjectId found = find(id, type, name); valid(found))
+                    return found;
+                id = require(id).parent;
+            }
+            return InvalidObjectId;
+        };
+
+        // for (ObjectId start : context.chain)
+        //     if (ObjectId found = tryFrom(start); valid(found))
+        //         return found;
+
+        return InvalidObjectId;
+    }
+
+    bool hasRole(ObjectId id, std::string_view role) const {
+        const Entry& entry = require(id);
+        return find(entry.parent, role, entry.name) == id;
     }
 
 private:

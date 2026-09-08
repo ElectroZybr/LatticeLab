@@ -2,7 +2,6 @@
 
 #include <filesystem>
 #include <string>
-// #include <iostream>
 
 #include <Lattice/Kernel/ServiceAPI.hpp>
 #include <Lattice/Kernel/SubsystemAPI.hpp>
@@ -13,6 +12,8 @@
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/Settings.hpp>
 #include "Lattice/Kernel/DLLoader.hpp"
+#include <Lattice/Kernel/Kernel.hpp>
+#include <Lattice/Kernel/Model.hpp>
 #include <Lattice/Tools/SystemInfo.hpp>
 #include "Lattice/Tools/LogScope.hpp"
 #include "Lattice/Tools/LogMode.hpp"
@@ -21,15 +22,16 @@
 
 
 namespace Lattice {
+
 class Runtime {
     static constexpr std::string_view tag = "Runtime";
 public:
-    Runtime() : root(globalRegistry, objectRegistry, nullptr)
-              , pluginManager(globalRegistry, dlLoader) {}
+    Runtime() : root(kernel, nullptr)
+              , pluginManager(kernel.registry, dlLoader) {}
 
     void buildBranch(const StartupEntry& entry, std::string_view name = "default") {
         LogScope scope(tag, "Build branch '{}' with name '{}'", entry.name, name);
-        if (globalRegistry.hasImpl<ServiceAPI>(entry.name)) {
+        if (kernel.registry.hasImpl<ServiceAPI>(entry.name)) {
             root.add<ServiceAPI>(entry.name, name);
 
             if (entry.host) {
@@ -44,7 +46,7 @@ public:
             return;
         }
 
-        if (globalRegistry.hasImpl<SubsystemAPI>(entry.name)) {
+        if (kernel.registry.hasImpl<SubsystemAPI>(entry.name)) {
             root.add<SubsystemAPI>(entry.name, name);
             scope.finish("Build '{}' done", entry.name);
             return;
@@ -58,7 +60,7 @@ public:
             if (!entry.enabled || entry.host)
                 continue;
 
-            if (!globalRegistry.hasImpl<ServiceAPI>(entry.name))
+            if (!kernel.registry.hasImpl<ServiceAPI>(entry.name))
                 continue;
 
             auto service = root.require<ServiceAPI>(entry.name);
@@ -70,7 +72,7 @@ public:
 
     void run(int argc, char** argv) {
         try {
-            Logger::setDefaultMode(LogModes::Default);
+            Logger::setDefaultMode(LogMode::Clean);
             Lattice::CliSystemInfo::printSystemInfo();
             std::filesystem::path configPath = "lattice.toml";
             bool testMode = false, benchMode = false;
@@ -93,10 +95,9 @@ public:
             { // инициализация ядра
                 LogScope scope(tag, "<b>System launching</>");
                 // регистрация интерфейсов ядра
-                globalRegistry.registerAPI<ServiceAPI>();
-                globalRegistry.registerAPI<SubsystemAPI>();
-                globalRegistry.registerComponent<Settings>();
-                root.add<Settings>();
+                kernel.registry.registerAPI<ServiceAPI>();
+                kernel.registry.registerAPI<SubsystemAPI>();
+                // kernel.registry.registerImpl<SubsystemAPI, Model>();
                 // загрузка плагинов
                 pluginManager.loadPlugins("Plugins");
                 scope.finish("<b>Launch finished</>");
@@ -113,8 +114,10 @@ public:
             
             { // Сборка дерева компонентов
                 LogScope scope(tag, "<b>System build</>");
-                for (const auto& entry : config.entries())
-                    buildBranch(entry);
+                for (const auto& entry : config.entries()) {
+                    if (entry.enabled)
+                        buildBranch(entry);
+                }
                 root.dumpTree();
                 scope.finish("<b>Build finished</>");
             }
@@ -127,7 +130,8 @@ public:
             }
             
             root.dumpTree();
-            Logger::message("{}", objectRegistry.stringPath(3));
+            kernel.registry.printRegistryTree();
+            Logger::message("{}", kernel.objects.stringPath(17));
 
             if (!hostName.empty()) {
                 auto host = root.require<ServiceAPI>(hostName);
@@ -162,7 +166,7 @@ public:
         stopAll();
     }
 
-    Registry& registry() noexcept { return globalRegistry; }
+    Registry& registry() noexcept { return kernel.registry; }
 
     void reportException(const std::exception& error) const {
         auto* fatal = dynamic_cast<const Lattice::Exception*>(&error);
@@ -171,12 +175,13 @@ public:
             Logger::exception(fatal->tag(), "{}", error.what());
             Logger::message("Dump components tree (failed node is red):");
             root.dumpTree(fatal->tag());
+            kernel.registry.printRegistryTree();
         } else {
             Logger::exception(tag, "Unhandled exception: {}", error.what());
             Logger::message("Dump components tree:");
             root.dumpTree();
         }
-        Logger::message("\n<r><b>Critical error. Application terminated.<//>");
+        Logger::message("<r><b>Critical error. Application terminated.<//>");
         Logger::message("Crash log: {}", std::string(LogSystem::getPath()));
         Logger::message("<r>~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</>\n");
     }
@@ -193,10 +198,10 @@ private:
         root.stopServices();
     }
 
+    Kernel kernel;
+
     DLLoader dlLoader;
     PluginManager pluginManager;
-    Registry globalRegistry;
-    ObjectRegistry objectRegistry;
     Node root;
 
     bool running = true;

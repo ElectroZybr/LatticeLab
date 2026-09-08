@@ -8,7 +8,6 @@
 #include "Lattice/Kernel/SubsystemAPI.hpp"
 #include "Lattice/Tools/Logger.hpp"
 #include <Lattice/Kernel/Node.hpp>
-#include <Lattice/Kernel/Settings.hpp>
 
 // Plugin dependences
 
@@ -27,8 +26,7 @@ public:
     }
 
     void configure(Lattice::Node& ioBranch) {
-        Ref<Lattice::Settings> settings = ioBranch.require<Lattice::Settings>(); 
-        settings->on("io", "load", [this]() { load("keybinds.toml"); } );
+        ioBranch.on("load", [this]() { load("keybinds.toml"); } );
         loaders = ioBranch.directCollect<LoaderAPI>();
         parsers = ioBranch.directCollect<ParserAPI>();
     }

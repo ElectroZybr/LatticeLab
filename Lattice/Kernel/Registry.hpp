@@ -34,9 +34,9 @@ public:
         std::string name;
         CreateFn    create    = nullptr;
         DestroyFn   destroy   = nullptr;
-        GetAPIFn    getAPI    = nullptr;
+        // GetAPIFn    getAPI    = nullptr;
         ConfigureFn configure = nullptr;
-        std::string implements; // имя API, который реализует (пустое = обычный компонент)
+        std::vector<std::string> implements;
     };
 
     // -------------------------------------------------------------------------
@@ -76,50 +76,40 @@ public:
     // -------------------------------------------------------------------------
     // Регистрация реализации интерфейса
     // -------------------------------------------------------------------------
-    template<typename API, typename Impl>
+    template<typename Impl, typename... APIs>
     void registerImpl() {
-        std::string name       = std::string(typeName<Impl>());
-        std::string implements = std::string(typeName<API>());
+        static_assert((std::is_base_of_v<APIs, Impl> && ...),
+                    "Impl must inherit every API");
+
+        const std::string name{typeName<Impl>()};
+
         TypeEntry entry;
-        entry.name       = name;
-        entry.implements = implements;
+        entry.name = name;
+        entry.implements = { std::string(typeName<APIs>())... };
+
         entry.create = [](Node* ctx) -> void* {
-            if constexpr (std::is_constructible_v<Impl, Node&>) {
+            if constexpr (std::is_constructible_v<Impl, Node&>)
                 return new Impl(*ctx);
-            } else if constexpr (std::is_default_constructible_v<Impl>) {
+            else if constexpr (std::is_default_constructible_v<Impl>)
                 return new Impl();
-            } else {
-                static_assert(false, "Impl must be constructible");
+            else {
+                static_assert(always_false<Impl>, "Impl must be constructible");
                 return nullptr;
             }
         };
-
         entry.destroy = [](void* p) { delete static_cast<Impl*>(p); };
-        entry.getAPI  = [](void* p) -> void* {
-            return static_cast<API*>(static_cast<Impl*>(p));
-        };
-        if constexpr (HasConfigure<Impl>) {
-            entry.configure = [](void* p, Node& branch) { static_cast<Impl*>(p)->configure(branch); };
-        }
+        if constexpr (HasConfigure<Impl>)
+            entry.configure = [](void* p, Node& b) {
+                static_cast<Impl*>(p)->configure(b);
+            };
 
-        auto [it, inserted] = types.emplace(entry.name, std::move(entry));
+        auto [it, inserted] = types.emplace(name, std::move(entry));
         if (!inserted)
-            throw Lattice::Exception(tag, "Implementation '{}' already registered", name);
+            throw Exception(tag, "Implementation '{}' already registered", name);
 
-        // Запоминаем, что этот тип реализует API
-        apiToImpls[implements].push_back(name);
+        (apiToImpls[std::string(typeName<APIs>())].push_back(name), ...);
 
-        Logger::info(tag, "+ impl {} -> {}", name, implements);
-        Logger::info(
-            tag,
-            "REGISTER {} -> {} | create={} destroy={} getAPI={} configure={}",
-            name,
-            implements,
-            reinterpret_cast<const void*>(entry.create),
-            reinterpret_cast<const void*>(entry.destroy),
-            reinterpret_cast<const void*>(entry.getAPI),
-            reinterpret_cast<const void*>(entry.configure)
-        );
+        Logger::info(tag, "+ impl {} -> [{}]", name, fmtJoin(it->second.implements));
     }
 
     template<typename API>
@@ -240,6 +230,19 @@ public:
     }
 
 private:
+    template<typename>
+    static constexpr bool always_false = false;
+
+    static std::string fmtJoin(std::vector<std::string> implements) {
+        std::string res;
+        for (auto impl : implements) {
+            if (!res.empty())
+                res += ' ';
+            res += impl;
+        }
+        return res;
+    }
+
     std::unordered_map<std::string, TypeEntry> types;
     std::unordered_map<std::string, std::vector<std::string>> apiToImpls;
 };

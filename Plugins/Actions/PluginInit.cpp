@@ -3,18 +3,14 @@
 #include "Lattice/Kernel/Registry.hpp"
 #include "Lattice/Kernel/SubsystemAPI.hpp"
 
-// Plugin dependences
-
 // Sources
 #include "InputAPI.hpp"
 #include "ActionMap.hpp"
-#include "CommandSlots.hpp"
 
 
 extern "C" bool plugin_register(Lattice::Registry& reg) {
     reg.registerAPI<InputAPI>();
-    reg.registerImpl<SubsystemAPI, ActionMap>();
-    reg.registerComponent<CommandSlots>();
+    reg.registerImpl<ActionMap, SubsystemAPI>();
     return true;
 }
 

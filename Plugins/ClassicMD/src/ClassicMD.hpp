@@ -6,7 +6,7 @@
 #include <Lattice/Kernel/Plugin.hpp>
 #include <Lattice/Kernel/ServiceAPI.hpp>
 #include <Lattice/Kernel/Node.hpp>
-#include <Lattice/Kernel/Settings.hpp>
+#include <Lattice/Kernel/Model.hpp>
 
 // Plugin dependences
 #include <ParticleDynamics/include/ParticleAPI.hpp>
@@ -14,12 +14,11 @@
 
 // Source
 #include <Lattice/Engine/physics/Atom/AtomData.h>
-#include "Lattice/Kernel/Exception.hpp"
 #include "StdData/include/SoA.hpp"
 
 namespace ClassicMD {
 
-class ClassicMD final : public ServiceAPI {
+class ClassicMD final : public Model {
 public:
     struct Energy {using type = float;};
     struct Charge {using type = float;};
@@ -40,7 +39,6 @@ public:
     }
 
     void configure(Lattice::Node& universe) {
-        settings = universe.require<Lattice::Settings>();
         atomData = universe.require<StdData::SoA>("atomData");
         atoms = universe.require<ParticleDynamics::ParticleStorage>();
         spatialGrid = universe.find<ParticleDynamics::SpatialIndexAPI>();
@@ -55,12 +53,14 @@ public:
         atomData->addCol<Element>();
         atomData->addCol<Mass>();
         atomData->addCol<Valence>();
+
+        universe.activate("Model");
     }
 
     void run() override {
         while (!stopRequested()) {
             integrator->step();
-            settings->set("SpatialGrid", "size", glm::vec3(10, 10, 10));
+            // settings->set("SpatialGrid", "size", glm::vec3(10, 10, 10));
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
     }
@@ -79,7 +79,6 @@ public:
 
 private:
     Ref<StdData::SoA> atomData;
-    Ref<Lattice::Settings> settings;
     Ref<ParticleDynamics::ParticleStorage> atoms;
     Slot<ParticleDynamics::IntegratorAPI> integrator;
     Slot<ParticleDynamics::SpatialIndexAPI> spatialGrid;

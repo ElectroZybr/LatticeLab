@@ -1,167 +1,94 @@
 #include "ActionMap.hpp"
-#include "CommandSlots.hpp"
 
 #include <Lattice/Kernel/Node.hpp>
 #include <Lattice/Kernel/Settings.hpp>
 #include <Lattice/Tools/Logger.hpp>
 
 
-ActionMap::ActionMap(Lattice::Node& branch) {
-    branch.add<CommandSlots>();
-}
-
 void ActionMap::configure(Lattice::Node& branch) {
-    settings_ = branch.require<Lattice::Settings>();
-    slots_ = branch.require<CommandSlots>();
+    node_ = &branch;
     // находим все инпуты (устройства ввода)
     inputs_ = branch.globalCollect<InputAPI>();
 }
 
-ActionMap::ActionState& ActionMap::ensureAction(std::string_view id) {
-    return actions_[std::string(id)];
+ActionMap::ActionState& ActionMap::ensure(std::string_view verb) {
+    return actions_[std::string(verb)];
 }
 
-const ActionMap::ActionState* ActionMap::findAction(std::string_view id) const {
-    auto it = actions_.find(std::string(id));
+const ActionMap::ActionState* ActionMap::find(std::string_view verb) const {
+    auto it = actions_.find(std::string(verb));
     return it == actions_.end() ? nullptr : &it->second;
 }
 
-bool ActionMap::pushBinding(std::string id, std::string_view trigger, ActionMode mode, CommandSlot& slot) {
-    ensureAction(id);
-    bindings_.push_back({std::move(id), std::string(trigger), mode, slot});
-    return true;
-}
-
-void ActionMap::set(std::string_view group, std::string_view action) {
-    set(std::string(group) + "." + std::string(action));
-}
-
-void ActionMap::set(std::string_view id) {
-    auto cb = settings_->tryHandler(id);
-
-    if (!cb) {
-        Logger::warning("ActionMap", "no handler for '{}'", id);
-        return;
-    }
-
-    slots_->set(id, std::move(cb));
-
-    Logger::info("ActionMap", "set '{}'", id);
-}
-
-void ActionMap::bind(std::string_view id, std::string_view trigger, ActionMode mode) {
-    auto* slot = slots_->getSlot(id);
-    if (!slot) {
-        Logger::warning("ActionMap", "slot '{}' not found", id);
-        return;
-    }
-
-    if (pushBinding(std::string(id), trigger, mode, *slot))
-        Logger::ok("ActionMap", "bound '{}' -> '{}'", id, trigger);
-}
-
-void ActionMap::bindToggle(std::string_view id, std::string_view trigger, ActionMode mode) {
-    if (!settings_->hasValue(id)) {
-        Logger::warning("ActionMap", "toggle target missing '{}'", id);
-        return;
-    }
-
-    try {
-        slots_->addSlot(id).set(settings_->makeToggle(id));
-        bind(id, trigger, mode);
-    } catch (const std::exception& e) {
-        Logger::warning("ActionMap", "toggle '{}': {}", id, e.what());
-    }
-}
-
-void ActionMap::bindAdd(std::string_view id, std::string_view trigger, double delta, ActionMode mode) {
-    try {
-        slots_->addSlot(id).set(settings_->makeAdd(id, delta));
-        bind(id, trigger, mode);
-    } catch (const std::exception& e) {
-        Logger::warning("ActionMap", "add '{}': {}", id, e.what());
-    }
+void ActionMap::bind(std::string_view verb, std::string_view trigger, ActionMode mode) {
+    ensure(verb);
+    bindings_.push_back({std::string(verb), std::string(trigger), mode});
+    Logger::ok("ActionMap", "bound '{}' -> '{}'", verb, trigger);
 }
 
 void ActionMap::tick() {
-    for (auto& [_, state] : actions_) {
-        state.down = false;
-        state.pressed = false;
-        state.released = false;
-    }
+    for (auto& [_, s] : actions_)
+        s = {};
 
-    for (auto& binding : bindings_) {
+    if (!node_)
+        return;
+
+    auto& kernel = node_->kernel();
+
+    for (auto& b : bindings_) {
         bool now = false;
-
         for (auto* input : inputs_) {
-            if (input && input->down(binding.trigger)) {
+            if (input && input->down(b.trigger)) {
                 now = true;
                 break;
             }
         }
 
-        const bool pressed = now && !binding.wasDown;
-        const bool released = !now && binding.wasDown;
+        const bool pressed  = now && !b.wasDown;
+        const bool released = !now && b.wasDown;
 
-        // Logger::info("ActionMap",
-        //     "binding '{}' <- '{}' now={} pressed={} released={}",
-        //     binding.id, binding.trigger, now, pressed, released);
+        auto& s = ensure(b.verb);
+        s.down |= now;
+        s.pressed |= pressed;
+        s.released |= released;
 
-        auto& state = ensureAction(binding.id);
+        const bool fire =
+            (b.mode == ActionMode::OnPress   && pressed) ||
+            (b.mode == ActionMode::OnHold    && now) ||
+            (b.mode == ActionMode::OnRelease && released);
 
-        state.down |= now;
-        state.pressed |= pressed;
-        state.released |= released;
-
-        switch (binding.mode) {
-        case ActionMode::OnPress:
-            if (pressed) {
-                Logger::info("ActionMap",
-                    "invoke '{}' <- '{}' [OnPress]",
-                    binding.id, binding.trigger);
-                binding.slot.invoke();
+        if (fire) {
+            Logger::info("ActionMap", "fire: {}", b.verb);
+            if (b.target == Target::Action) {
+                Lattice::ObjectId id = kernel.objects.resolve(kernel.context, "action", b.verb);
+                if (Lattice::ObjectRegistry::valid(id)) kernel.settings.fire(id);
+            } else {
+                Lattice::ObjectId id = kernel.objects.resolve(kernel.context, "param", b.verb);
+                if (!Lattice::ObjectRegistry::valid(id)) continue;
+                if (b.target == Target::Toggle)
+                    kernel.settings.set(id, !kernel.settings.get<bool>(id));
+                else
+                    kernel.settings.set(id, kernel.settings.get<double>(id) + b.delta);
             }
-            break;
-
-        case ActionMode::OnHold:
-            if (now) {
-                Logger::info("ActionMap",
-                    "invoke '{}' <- '{}' [OnHold]",
-                    binding.id, binding.trigger);
-                binding.slot.invoke();
-            }
-            break;
-
-        case ActionMode::OnRelease:
-            if (released) {
-                Logger::info("ActionMap",
-                    "invoke '{}' <- '{}' [OnRelease]",
-                    binding.id, binding.trigger);
-                binding.slot.invoke();
-            }
-            break;
         }
 
-        binding.wasDown = now;
+        b.wasDown = now;
     }
 }
 
-bool ActionMap::down(std::string_view id) const {
-    if (const auto* state = findAction(id))
-        return state->down;
-    return false;
+bool ActionMap::down(std::string_view verb) const {
+    const auto* s = find(verb);
+    return s && s->down;
 }
 
-bool ActionMap::pressed(std::string_view id) const {
-    if (const auto* state = findAction(id))
-        return state->pressed;
-    return false;
+bool ActionMap::pressed(std::string_view verb) const {
+    const auto* s = find(verb);
+    return s && s->pressed;
 }
 
-bool ActionMap::released(std::string_view id) const {
-    if (const auto* state = findAction(id))
-        return state->released;
-    return false;
+bool ActionMap::released(std::string_view verb) const {
+    const auto* s = find(verb);
+    return s && s->released;
 }
 
 void ActionMap::clearBinds() {

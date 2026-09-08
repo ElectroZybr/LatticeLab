@@ -66,7 +66,7 @@ int TestRegistry::runAll(LogMode mode) {
         if (currentTestFailed) {
             ++failed;
             if (!test.description.empty()) {
-                Logger::warning("Desc", "<r><b>{}<//>", test.description);
+                Logger::warning("Desc", "<y><b>{}<//>", test.description);
             }
             testScope.finishError("<r><b>'{}' failed<//>", test.name);
         } else {

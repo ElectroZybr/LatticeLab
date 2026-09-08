@@ -25,7 +25,6 @@ Render::Render(Lattice::Node& renderer)
 }
 
 void Render::configure(Lattice::Node& renderer) {
-    settings_ = renderer.require<Lattice::Settings>();
     gpu_ = renderer.require<GPU::WGPU>();
     window_ = renderer.find<WindowAPI>();
 }

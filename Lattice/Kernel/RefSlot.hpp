@@ -42,6 +42,7 @@ struct Ref {
     T* operator->() const noexcept { return ptr; }
     T& operator*() const noexcept { return *ptr; }
     T& get() const noexcept { return *ptr; }
+    T* getPtr() const noexcept { return ptr; }
     bool exists() const noexcept { return ptr != nullptr; }
 
     explicit operator bool() const noexcept { return ptr != nullptr; }

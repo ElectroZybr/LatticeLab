@@ -3,8 +3,6 @@
 #include "SoA.hpp"
 #include <Lattice/Kernel/Node.hpp>
 #include <Lattice/Kernel/Exception.hpp>
-
-#include "StdIo/include/Document.hpp"
 #include "StdIo/include/LoaderAPI.hpp"
 
 
