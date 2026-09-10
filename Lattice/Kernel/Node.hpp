@@ -7,7 +7,6 @@
 #include <vector>
 #include <utility>
 
-#include <Lattice/Kernel/Blueprints.hpp>
 #include <Lattice/Kernel/ServiceAPI.hpp>
 #include <Lattice/Kernel/Requirements.hpp>
 #include <Lattice/Kernel/Exception.hpp>
@@ -17,67 +16,131 @@
 #include <Lattice/Tools/LogStyle.hpp>
 #include <Lattice/Tools/Logger.hpp>
 #include <Lattice/Tools/LogTree.hpp>
-#include "Lattice/Kernel/Kernel.hpp"
+#include <Lattice/Kernel/RuntimeContext.hpp>
 
 
 namespace Lattice {
 
-class Blueprints;
+class Path {
+public:
+    Path() = default;
+
+    explicit Path(ObjectId id, Objects& objectBlueprints) {
+        while (Objects::valid(id)) {
+            ids_.push_back(id);
+            id = objectBlueprints.require(id).parent;
+        }
+
+        std::ranges::reverse(ids_);
+    }
+
+    std::span<const ObjectId> ids() const {
+        return ids_;
+    }
+
+    bool empty() const {
+        return ids_.empty();
+    }
+
+    size_t size() const {
+        return ids_.size();
+    }
+
+    ObjectId operator[](size_t index) const {
+        return ids_[index];
+    }
+
+    void push(ObjectId id) {
+        ids_.push_back(id);
+    }
+
+    void pop() {
+        ids_.pop_back();
+    }
+
+private:
+    std::vector<ObjectId> ids_;
+};
+
+template<typename T>
+concept HasConfigure = requires(T& obj, Node& branch) {
+    obj.configure(branch);
+};
 
 class Node {
     static constexpr std::string_view tag = "Node";
 
-    Kernel& kernel_;
-    Node* parent = nullptr;
+    RuntimeContext& run_ctx;
+
     ObjectId id = 0;
+    Node* parent = nullptr;
+    Node* bp     = nullptr;
+    void* object = nullptr; // для чертежей meta
 
-    std::vector<std::unique_ptr<Node>> children;
+    std::vector<std::unique_ptr<Node>> children_;
 
-    using DestroyFn   = void(*)(void*);
-    using ConfigureFn = void(*)(void*, Node&);
-
-    void* instance        = nullptr;
-    void* api             = nullptr;
-    DestroyFn destroy     = nullptr;
-    ConfigureFn configure = nullptr;
-
-    Node* makeChild(std::string_view name, std::string_view type) {
-        auto node = std::make_unique<Node>(kernel_, this);
+    Node* makeChild(std::string_view name, Node* blueprint = nullptr) {
+        auto node = std::make_unique<Node>(run_ctx, this);
         Node* raw = node.get();
-        raw->id = kernel_.objects.create(id, type, name, raw);
-        children.push_back(std::move(node));
+        raw->id = run_ctx.objects.create(name, id, raw);
+        raw->bp = blueprint;
+        children_.push_back(std::move(node));
         return raw;
     }
 
-    void applyRoles(Node* child, const Blueprints::TypeEntry& entry) {
-        child->instance  = entry.create(child);
-        child->api       = child->instance; // каст в use/find шаблоном
-        child->destroy   = entry.destroy;
-        child->configure = entry.configure;
-
-        for (const auto& role : entry.implements)
-            kernel_.objects.alias(child->id, id, role, kernel_.objects[child->id].name);
+    Meta* getMeta() const noexcept {
+        return bp ? static_cast<Meta*>(bp->object) : nullptr;
     }
 
-    void appendTree(Logger::Tree& tree, size_t depth, const ObjectId highlighted) const {
-        for (const auto& child : children) {
-            const Entry& entry = kernel_.objects.require(child->id);
-            std::string label = entry.type;
-            if (child->id == highlighted)
-                label = std::format("<b><r>{} 🡸<//>", label);
+    std::string_view name() const {
+        return run_ctx.objects[id].name;
+    }
 
-            tree.node(std::format("{} <gr>({}) #{}</>", label, entry.name, child->id), depth);
+    template<typename T>
+    bool isType() const {
+        return bp && bp->name() == typeName<T>();
+    }
+
+    bool isImplement(ObjectId apiId) const noexcept {
+        return bp && bp->isUnder(apiId);
+    }
+
+    void appendTree(Logger::Tree& tree, size_t depth, ObjectId highlighted) const {
+        for (const auto& child : children_) {
+            const std::string type = child->bp
+                ? std::string(child->bp->name())
+                : std::string(child->name());
+            const std::string name = std::string(child->name());
+
+            const std::string mark =
+                child->bp      ? "(O)" :
+                child->object  ? "(B)" :
+                                 "(F)" ;
+            
+            std::string line;
+
+            if (mark == "(F)")
+                line = std::format("{} <m>(F)</>", name);
+            else if (mark == "(B)")
+                line = std::format("{} <c>(B)</>", name);
+            else
+                line = std::format("{}<gr>:{}</> <g>(O)</>", child->bp->name(), name);
+
+            if (child->id == highlighted)
+                line = std::format("<b><r>{} 🡸<//>", line);
+
+            line += std::format(" <gr>#{}</>", child->id);
+            tree.node(line, depth);
             child->appendTree(tree, depth + 1, highlighted);
         }
     }
 
-    template<typename T>
-    void collectInto(std::vector<ObjectId>& out) const {
-        if (kernel_.objects.hasRole(id, typeName<T>()))
+    void collectInto(ObjectId apiId, std::vector<ObjectId>& out) const {
+        if (isImplement(apiId))
             out.push_back(id);
 
-        for (const auto& child : children)
-            child->collectInto<T>(out);
+        for (const auto& child : children_)
+            child->collectInto(apiId, out);
     }
 
     const Node* rootNode() const {
@@ -94,11 +157,29 @@ class Node {
         return n;
     }
 
+    ObjectId findRecursive(std::string_view name, ObjectId from) const {
+        ObjectId id = run_ctx.objects.find(name, from);
+
+        if (Objects::valid(id))
+            return id;
+
+        const auto* node = static_cast<const Node*>(run_ctx.objects[from].object);
+
+        for (const auto& child : node->children_) {
+            id = findRecursive(name, child->id);
+            if (Objects::valid(id))
+                return id;
+        }
+
+        return InvalidObjectId;
+    }
+
 public:
-    Node(Kernel& kernel_, Node* parent = nullptr)
-        : kernel_(kernel_), parent(parent) {
-            if (!parent)
-                id = kernel_.objects.create(InvalidObjectId, "Root", "Root", this);
+    Node(RuntimeContext& run_ctx, Node* parent = nullptr)
+        : run_ctx(run_ctx), parent(parent) {
+            if (!parent) {
+                id = run_ctx.objects.create("Root", InvalidObjectId, this);
+            }
     }
 
     Node(const Node&) = delete;
@@ -106,21 +187,94 @@ public:
     Node(Node&&) = delete;
     Node& operator=(Node&&) = delete;
 
-    Kernel& kernel() noexcept { return kernel_; }
+    RuntimeContext& get_ctx() noexcept { return run_ctx; }
+    Node* getBlueprint() noexcept { return bp; }
+
+    template<typename T>
+    void blueprint() {
+        const std::string name = std::string(typeName<T>());
+
+        if (run_ctx.objects.has(name, id))
+            throw Exception(tag, "blueprint '{}' already registered", name);
+
+        auto meta = std::make_unique<Meta>();
+
+        if constexpr (std::is_constructible_v<T, Node&> || std::is_default_constructible_v<T>) {
+            meta->create = [](Node& ctx) -> void* {
+                if constexpr (std::is_constructible_v<T, Node&>)
+                    return new T(ctx);
+                else
+                    return new T();
+            };
+
+            meta->destroy = [](Node& ctx) {
+                delete static_cast<T*>(ctx.getObject());
+            };
+
+            if constexpr (HasConfigure<T>)
+                meta->configure = [](Node& ctx) {
+                    static_cast<T*>(ctx.getObject())->configure(ctx);
+                };
+        }
+
+        Meta* metaPtr = meta.get();
+        run_ctx.metas.push_back(std::move(meta));
+
+        Node* child = makeChild(name);
+        child->object = metaPtr;
+
+        Logger::info(tag, "+ blueprint {}", name);
+    }
+
+    template<typename Impl, typename API>
+    void blueprint(std::string_view blueprintsPath = DefaultBlueprintsPath) {
+        ObjectId apiId = findBlueprint<API>(blueprintsPath);
+
+        if (!Objects::valid(apiId))
+            throw Exception(tag, "API '{}' is not registered", typeName<API>());
+
+        Node* api = static_cast<Node*>(run_ctx.objects.require(apiId).object);
+        api->blueprint<Impl>();
+    }
+
+    ObjectId primitive(std::string_view name) {
+        Node* child = makeChild(name);
+        return child->id;
+    }
+
+    ObjectId findBlueprint(std::string_view name, std::string_view blueprintsPath = DefaultBlueprintsPath) const {
+        ObjectId folderId = resolvePath(blueprintsPath, rootNode()->id);
+        if (!Objects::valid(folderId))
+            return InvalidObjectId;
+
+        return findRecursive(name, folderId);
+    }
+
+    template<typename T>
+    ObjectId findBlueprint(std::string_view blueprintsPath = DefaultBlueprintsPath) const {
+        return findBlueprint(typeName<T>(), blueprintsPath);
+    }
 
     // создает и возвращает объекты интерфейса <T> найденные в глобальном blueprints
-    template<typename T>
-    void addImpls() {
-        for (const auto& implName : kernel_.blueprints.implementationsOf<T>())
-            add<T>(implName, implName);
+    template<typename API>
+    void addImpls(std::string_view blueprintsPath = DefaultBlueprintsPath) {
+        ObjectId apiId = findBlueprint<API>(blueprintsPath);
+
+        if (!Objects::valid(apiId))
+            throw Exception(tag, "API '{}' is not registered", typeName<API>());
+
+        Node* api = static_cast<Node*>(run_ctx.objects.require(apiId).object);
+
+        for (const auto& child : api->children_)
+            add(child->name(), child->name(), blueprintsPath);
     }
 
     template<typename T>
     std::vector<T*> directCollect() const {
         std::vector<T*> out;
 
-        for (const auto& child : children) {
-            if (!kernel_.objects.hasRole(child->id, typeName<T>()))
+        for (const auto& child : children_) {
+            if (!child->isType<T>())
                 continue;
 
             if (void* object = child->getObject())
@@ -131,20 +285,25 @@ public:
     }
 
     // возвращает объекты интерфейса <T> из текущего узла и его потомков
-    template<typename T>
-    std::vector<T*> folderCollect() const {
-        std::vector<ObjectId> ids;
-        collectInto<T>(ids);
+    template<typename API>
+    std::vector<API*> folderCollect() const {
+        ObjectId apiId = findBlueprint<API>();
 
-        std::vector<T*> out;
+        if (!Objects::valid(apiId))
+            return {};
+
+        std::vector<ObjectId> ids;
+        collectInto(apiId, ids);
+
+        std::vector<API*> out;
         out.reserve(ids.size());
 
         for (ObjectId id : ids) {
-            const auto& entry = kernel_.objects.require(id);
+            const auto& entry = run_ctx.objects.require(id);
             auto* node = static_cast<Node*>(entry.object);
 
             if (void* object = node->getObject())
-                out.push_back(static_cast<T*>(object));
+                out.push_back(static_cast<API*>(object));
         }
 
         return out;
@@ -157,215 +316,251 @@ public:
     }
 
     Node& addFolder(std::string_view name) {
-        Node* raw = makeChild(name, "Folder");
-        return *raw;
+        return *makeChild(name);
     }
-
+    
     template<typename T>
-    void add(std::string_view implName, std::string_view instanceName) {
+    void add(std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
         noteAdd<T>();
-
-        const auto& entry = kernel_.blueprints.requireImpl<T>(implName);
-        Node* child = makeChild(instanceName, implName);
-        applyRoles(child, entry);
-
-        Logger::info(tag, "+ {} '{}' ({})", typeName<T>(), instanceName, implName);
+        add(typeName<T>(), instanceName, blueprintsPath);
     }
 
-    template<typename T, typename Impl>
-    void add(std::string_view instanceName = "default") {
-        noteAdd<T>();
+    void add(std::string_view parent, std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
+        ObjectId folderId = resolvePath(blueprintsPath, rootNode()->id);
+        if (!Objects::valid(folderId))
+            throw Exception(tag, "blueprint folder '{}' not found", blueprintsPath);
 
-        const auto& entry = kernel_.blueprints.requireImpl<T>(typeName<Impl>());
-        Node* child = makeChild(instanceName, typeName<Impl>());
-        applyRoles(child, entry);
+        ObjectId blueprintId = findBlueprint(parent, blueprintsPath);
+        if (!Objects::valid(blueprintId))
+            throw Exception(tag, "blueprint '{}' not found in '{}'", parent, blueprintsPath);
 
-        Logger::info(tag, "+ {} '{}' ({})", typeName<T>(), instanceName, typeName<Impl>());
-    }
+        Node* blueprint = static_cast<Node*>(run_ctx.objects.require(blueprintId).object);
 
-    template<typename T>
-    void add(std::string_view instanceName = "default") {
-        noteAdd<T>();
-
-        if (has(typeName<T>(), instanceName)) {
-            return;
+        for (const auto& child : children_) {
+            if (child->name() == instanceName && child->bp == blueprint) {
+                Logger::warning(tag, "object '{}' with instance '{}' already exists", parent, instanceName);
+                return;
+            }
         }
 
-        const auto& entry = kernel_.blueprints.require<T>();
-        Node* child = makeChild(instanceName, typeName<T>());
-        applyRoles(child, entry);
+        Node* child = makeChild(instanceName, blueprint);
+        child->object = static_cast<Meta*>(blueprint->object)->create(*child);
 
-        Logger::info(tag, "+ {}", typeName<T>());
+        Logger::info(tag, "+ {}", instanceName);
     }
 
     template<typename API, typename Impl>
-    Slot<API> use(std::string_view instanceName = "default") {
+    Slot<API> use(std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
         noteUseImpl<API, Impl>();
-        return use<API>(typeName<Impl>(), instanceName);
+        return use<API>(typeName<Impl>(), instanceName, blueprintsPath);
     }
 
     template<typename API>
-    Slot<API> use(std::string_view implName, std::string_view instanceName = "default") {
+    Slot<API> use(std::string_view implName, std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
         noteUse<API>();
 
-        if (!kernel_.blueprints.hasImpl<API>(implName)) {
-            throw Lattice::Exception(tag, "unknown implementation '{}' for '{}'", implName, typeName<API>());
+        ObjectId folderId = resolvePath(blueprintsPath, rootNode()->id);
+        if (!Objects::valid(folderId))
+            throw Exception(tag, "blueprint folder '{}' not found", blueprintsPath);
+
+        const ObjectId apiId = findBlueprint<API>(blueprintsPath);
+        const ObjectId implId = findBlueprint(implName, blueprintsPath);
+
+        if (!Objects::valid(apiId))
+            throw Exception(tag, "unknown API '{}' in '{}'", typeName<API>(), blueprintsPath);
+
+        if (!Objects::valid(implId))
+            throw Exception(tag, "unknown implementation '{}' in '{}'", implName, blueprintsPath);
+
+        Node* blueprint = static_cast<Node*>(run_ctx.objects.require(implId).object);
+
+        if (!blueprint->isUnder(apiId))
+            throw Exception(tag, "implementation '{}' does not provide '{}'", implName, typeName<API>());
+
+        ObjectId objectId = run_ctx.objects.find(instanceName, id);
+        Node* child = nullptr;
+
+        for (auto& node : children_) {
+            if (node->name() == instanceName && node->bp && node->bp->isUnder(apiId)) {
+                child = node.get();
+                break;
+            }
         }
 
-        const auto& entry = kernel_.blueprints.requireImpl<API>(implName);
-        Node* child = nullptr;
-        ObjectId objectId = kernel_.objects.find(id, typeName<API>(), instanceName);
-
-        if (Objects::valid(objectId)) {
-            auto* entry = kernel_.objects.get(objectId);
-            child = static_cast<Node*>(entry->object);
-            if (child->api) {
-                if constexpr (std::is_same_v<API, ServiceAPI>) {
-                    static_cast<ServiceAPI*>(child->api)->stop();
-                    child->destroy(child->instance);
-                    child->instance = nullptr;
-                    child->api = nullptr;
-                    child->destroy = nullptr;
-                    child->configure = nullptr;
-                }
+        if (child) {
+            if (child->object) {
+                Meta* meta = static_cast<Meta*>(child->bp->object);
+                if (meta && meta->destroy)
+                    meta->destroy(*child);
             }
-            child->children.clear();;
+
+            child->children_.clear();
+            child->object = nullptr;
         } else {
-            child = makeChild(instanceName, implName);
-            // добавляем алиас: <API>("name") -> Impl; <Impl>("name") -> Impl;
-            kernel_.objects.alias(child->id, id, typeName<API>(), instanceName);
+            child = makeChild(instanceName);
             Logger::info(tag, "+ interface '{}'", typeName<API>());
         }
 
-        applyRoles(child, entry);
+        child->bp = blueprint;
+
+        Meta* meta = static_cast<Meta*>(blueprint->object);
+        if (!meta || !meta->create)
+            throw Exception(tag, "blueprint '{}' has no create callback", implName);
+
+        child->object = meta->create(*child);
 
         Logger::info(tag, "> use '{}' = '{}'", typeName<API>(), implName);
-        return child;
+        return Slot<API>(child);
     }
 
     // ищет компонент <T> в текущем узле и родительских
     // если компонент не найден возвращает nullptr
     template<typename API>
-    Slot<API> find(std::string_view instanceName = "default") {
+    Slot<API> find(std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
         noteRequire<API>();
-        const auto apiType = typeName<API>();
-        ObjectId objectId = kernel_.objects.find(id, apiType, instanceName);
 
-        if (Objects::valid(objectId)) {
-            if (auto* entry = kernel_.objects.get(objectId)) {
-                Node* node = static_cast<Node*>(entry->object);
+        ObjectId apiId = findBlueprint<API>(blueprintsPath);
 
-                if (node && node->getObject())
-                    return Slot<API>(node);
-            }
+        if (!Objects::valid(apiId))
+            return {};
+
+        for (const auto& child : children_) {
+            if (child->name() != instanceName)
+                continue;
+
+            if (child->bp && child->bp->isUnder(apiId))
+                return Slot<API>(child.get());
         }
 
-        // Для runtime-конфигурации допускаем:
-        // ServiceAPI("ClassicMD")
-        //     ↓
-        // ClassicMD("default")
-        // То есть instanceName может фактически быть именем реализации.
-        if (kernel_.blueprints.hasImpl<API>(instanceName)) {
-            ObjectId objectId = kernel_.objects.find(
-                id,
-                instanceName,
-                "default"
-            );
-
-            if (Objects::valid(objectId)) {
-                if (auto* entry = kernel_.objects.get(objectId)) {
-                    Node* node = static_cast<Node*>(entry->object);
-
-                    if (node && node->getObject())
-                        return Slot<API>(node);
-                }
-            }
-        }
-
-        if (parent)
-            return parent->find<API>(instanceName);
-
-        return {};
-    }
-
-    bool has(std::string_view type, std::string_view name) const {
-        return Objects::valid(kernel_.objects.find(id, type, name));
+        return parent ? parent->find<API>(instanceName, blueprintsPath) : Slot<API>{};
     }
 
     // ищет компонент <T> в текущем узле и родительских
     // если компонент не найден кидает исключение
     template<typename T>
-    Ref<T> require(std::string_view instanceName = "default") {
+    Ref<T> require(std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
         noteRequire<T>();
-        if (auto slot = find<T>(instanceName); slot.exists())
+
+        if (auto slot = find<T>(instanceName, blueprintsPath); slot.exists())
             return Ref<T>(slot.get());
 
-        throw Lattice::Exception(tag, "Component '{}' with instance '{}' not found", typeName<T>(), instanceName);
+        throw Lattice::Exception(tag, "Object '{}' with instance '{}' not found", typeName<T>(), instanceName);
+    }
+
+    Node& require(std::string_view type, std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
+        ObjectId blueprintId = findBlueprint(type, blueprintsPath);
+        if (!Objects::valid(blueprintId))
+            throw Lattice::Exception(tag, "Blueprint '{}' not found", type);
+
+        for (const auto& child : children_) {
+            if (child->name() == instanceName && child->bp && child->bp->id == blueprintId)
+                return *child.get();
+        }
+
+        if (parent)
+            return parent->require(type, instanceName, blueprintsPath);
+
+        throw Lattice::Exception(tag, "Object '{}.{}' not found", type, instanceName);
+    }
+
+    bool isUnder(ObjectId ancestorId) const noexcept {
+        const Node* node = this;
+        while (node) {
+            if (node->id == ancestorId)
+                return true;
+            node = node->parent;
+        }
+        return false;
+    }
+
+    ObjectId resolvePath(std::string_view path, ObjectId from) const {
+        ObjectId current = from;
+
+        size_t begin = 0;
+        while (begin < path.size()) {
+            size_t end = path.find('/', begin);
+            if (end == std::string_view::npos)
+                end = path.size();
+
+            std::string_view name = path.substr(begin, end - begin);
+
+            if (!name.empty()) {
+                current = run_ctx.objects.find(name, current);
+                if (!Objects::valid(current))
+                    return InvalidObjectId;
+            }
+
+            begin = end + 1;
+        }
+
+        return current;
     }
 
     // вызывает метод configure() у всех компонентов ветки
     void configureAll() {
-        if (configure) {
-            Logger::info(tag, "Configuring '{}'", kernel_.objects[id].type);
-            configure(instance, *this);
-        } else if (instance) {
-            Logger::warning(tag, "Component '{}' has no configure callback", kernel_.objects[id].type);
+        if (bp && object) {
+            Meta* meta = static_cast<Meta*>(bp->object);
+
+            if (meta && meta->configure) {
+                Logger::info(tag, "Configuring '{}'", name());
+                meta->configure(*this);
+            } else {
+                Logger::warning(tag, "Object '{}' has no configure callback", name());
+            }
         }
 
-        for (auto& child : children)
+        for (auto& child : children_)
             child->configureAll();
     }
 
     // удаляет компонент <T> из ветки
     template<typename API>
-    void remove(std::string_view instanceName = "default") {
-        ObjectId objectId = kernel_.objects.find(id, typeName<API>(), instanceName);
-        if (!Objects::valid(objectId))
-            return;
+    void remove(std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
+        ObjectId apiId = findBlueprint<API>(blueprintsPath);
 
-        auto* entry = kernel_.objects.get(objectId);
-        if (!entry)
-            return;
-
-        Node* node = static_cast<Node*>(entry->object);
-        if (!node)
+        if (!Objects::valid(apiId))
             return;
 
         auto child = std::find_if(
-            children.begin(),
-            children.end(),
-            [node](const std::unique_ptr<Node>& p) {
-                return p.get() == node;
+            children_.begin(),
+            children_.end(),
+            [&](const std::unique_ptr<Node>& node) {
+                return node->name() == instanceName &&
+                    node->bp &&
+                    node->bp->isUnder(apiId);
             }
         );
 
-        if (child == children.end())
-            return;
-
-        children.erase(child);
+        if (child != children_.end())
+            children_.erase(child);
     }
 
     // останавливает все сервисы
-    void stopServices() {
-        if (kernel_.objects[id].type == typeName<ServiceAPI>() && api) {
-            static_cast<ServiceAPI*>(api)->stop();
+    void stopServices(std::string_view blueprintsPath = DefaultBlueprintsPath) {
+        ObjectId folderId = resolvePath(blueprintsPath, rootNode()->id);
+        ObjectId serviceId = run_ctx.objects.find(typeName<ServiceAPI>(), folderId);
+
+        if (Objects::valid(serviceId) && bp && bp->isUnder(serviceId) && object) {
+            auto* service = static_cast<ServiceAPI*>(object);
+            service->stop();
         }
-        
-        for (auto& child : children)
-            child->stopServices();
+
+        for (auto& child : children_)
+            child->stopServices(blueprintsPath);
     }
 
     ~Node() {
-        stopServices();
-        if (destroy)
-            destroy(instance);
-        instance = nullptr;
-        api = nullptr;
-        destroy = nullptr;
-        configure = nullptr;
-        children.clear();
+        if (bp && object) {
+            Meta* meta = static_cast<Meta*>(bp->object);
+
+            if (meta && meta->destroy)
+                meta->destroy(*this);
+        }
+
+        children_.clear();
+
         if (id)
-            kernel_.objects.destroy(id);
+            run_ctx.objects.destroy(id);
     }
 
     Path path() const {
@@ -380,49 +575,66 @@ public:
         return path;
     }
 
-    void dumpTree(std::string_view componentName = "Unknown") const {
-        Logger::Tree tree("Root");
-        appendTree(tree, 0, 7);
-        tree.print();
+    void dumpTree(std::string_view path = "") const {
+        ObjectId startId = resolvePath(path, id);
+        if (Objects::valid(startId)) {
+            Node* startNode = static_cast<Node*>(run_ctx.objects[startId].object);
+            Logger::Tree tree(run_ctx.objects[startId].name);
+            startNode->appendTree(tree, 0, 7);
+            tree.print();
+        } else {
+            Logger::warning(tag, "not found path at '{}'", path);
+        }
     }
 
     void* getObject() const noexcept {
-        return api ? api : instance;
+        return object;
     }
 
+    std::vector<ObjectId> collectTree() const {
+        std::vector<ObjectId> ids;
+
+        std::function<void(const Node&)> collect = [&](const Node& node) {
+            for (const auto& child : node.children_) {
+                ids.push_back(child->id);
+                collect(*child);
+            }
+        };
+
+        collect(*this);
+        return ids;
+    }
     
     template<typename T>
-    ObjectId bind(std::string_view name, T* ptr,
-                double min = 0, double max = 0, bool hasRange = false) {
-        Node* child = makeChild(name, "param");
-        kernel_.settings.bind(child->id, ptr, min, max, hasRange);
+    ObjectId bind(std::string_view name, T* ptr, double min = 0, double max = 0, bool hasRange = false) {
+        Node* child = makeChild(name, static_cast<Node*>(run_ctx.objects.require(run_ctx.primitives.param).object));
+        run_ctx.settings.bind(child->id, ptr, min, max, hasRange);
         return child->id;
     }
 
     template<typename T, typename F>
     requires std::invocable<F&, T>
-    ObjectId bind(std::string_view name, T* ptr, F&& onChange,
-                double min = 0, double max = 0, bool hasRange = false) {
-        Node* child = makeChild(name, "param");
-        kernel_.settings.bind(child->id, ptr, std::forward<F>(onChange), min, max, hasRange);
+    ObjectId bind(std::string_view name, T* ptr, F&& onChange, double min = 0, double max = 0, bool hasRange = false) {
+        Node* child = makeChild(name, static_cast<Node*>(run_ctx.objects.require(run_ctx.primitives.param).object));
+        run_ctx.settings.bind(child->id, ptr, std::forward<F>(onChange), min, max, hasRange);
         return child->id;
     }
 
     ObjectId on(std::string_view name, std::function<void()> handler) {
-        Node* child = makeChild(name, "action");
-        kernel_.settings.on(child->id, std::move(handler));
+        Node* child = makeChild(name, static_cast<Node*>(run_ctx.objects.require(run_ctx.primitives.action).object));
+        run_ctx.settings.on(child->id, std::move(handler));
         return child->id;
     }
 
     ObjectId param(std::string_view name) const {
-        ObjectId pid = kernel_.objects.find(id, "param", name);
+        ObjectId pid = run_ctx.objects.find(name, id);
         if (!Objects::valid(pid))
             throw Exception(tag, "param '{}' not found", name);
         return pid;
     }
 
     ObjectId action(std::string_view name) const {
-        ObjectId aid = kernel_.objects.find(id, "action", name);
+        ObjectId aid = run_ctx.objects.find(name, id);
         if (!Objects::valid(aid))
             throw Exception(tag, "action '{}' not found", name);
         return aid;
@@ -430,25 +642,60 @@ public:
 
     template<typename T>
     T get(std::string_view name) const {
-        return kernel_.settings.get<T>(param(name));
+        return run_ctx.settings.get<T>(param(name));
     }
 
     template<typename T>
     void set(std::string_view name, T value) {
-        kernel_.settings.set(param(name), std::move(value));
+        run_ctx.settings.set(param(name), std::move(value));
     }
 
     void fire(std::string_view name) const {
-        kernel_.settings.fire(action(name));
+        run_ctx.settings.fire(action(name));
     }
 
     void activate(std::string_view role) {
-        kernel_.context.set(role, id);
+        run_ctx.context.set(role, id);
     }
 
     void onActivate(std::string_view role) {
         on("activate", [this, r = std::string(role)] { activate(r); });
         activate(role);
+    }
+
+    std::vector<ObjectId> path(ObjectId id) const {
+        std::vector<ObjectId> result;
+
+        while (Objects::valid(id)) {
+            result.push_back(id);
+            id = run_ctx.objects[id].parent;
+        }
+
+        std::ranges::reverse(result);
+        return result;
+    }
+
+    const std::string stringPath(ObjectId id) const {
+        std::string result;
+
+        for (ObjectId current : path(id)) {
+            const auto& entry = run_ctx.objects[current];
+            const auto* node = static_cast<const Node*>(entry.object);
+
+            if (!result.empty())
+                result += '/';
+
+            if (entry.name.empty() || entry.name == "default" || entry.name == "Root")
+                result += std::format("{}", node->bp->name());
+            else
+                result += std::format("{}:{}", node->bp->name(), entry.name);
+        }
+
+        return result;
+    }
+
+    ObjectId getId() {
+        return id;
     }
 };
 

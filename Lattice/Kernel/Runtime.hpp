@@ -12,9 +12,10 @@
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/Settings.hpp>
 #include "Lattice/Kernel/DLLoader.hpp"
-#include <Lattice/Kernel/Kernel.hpp>
+#include <Lattice/Kernel/RuntimeContext.hpp>
 #include <Lattice/Kernel/Model.hpp>
 #include <Lattice/Tools/SystemInfo.hpp>
+#include "Lattice/Kernel/Objects.hpp"
 #include "Lattice/Tools/LogScope.hpp"
 #include "Lattice/Tools/LogMode.hpp"
 #include "Lattice/Tools/Logger.hpp"
@@ -26,48 +27,50 @@ namespace Lattice {
 class Runtime {
     static constexpr std::string_view tag = "Runtime";
 public:
-    Runtime() : root(kernel, nullptr)
-              , pluginManager(kernel.blueprints, dlLoader) {}
-
-    void buildBranch(const StartupEntry& entry, std::string_view name = "default") {
-        LogScope scope(tag, "Build branch '{}' with name '{}'", entry.name, name);
-        if (kernel.blueprints.hasImpl<ServiceAPI>(entry.name)) {
-            root.add<ServiceAPI>(entry.name, name);
-
-            if (entry.host) {
-                if (!hostName.empty())
-                    throw Lattice::Exception(tag, "Runtime already has a host service");
-
-                hostName = entry.name;
-                Logger::info(tag, "Host service '{}'", entry.name);
-            }
-
-            scope.finish("Build '{}' done", entry.name);
-            return;
-        }
-
-        if (kernel.blueprints.hasImpl<SubsystemAPI>(entry.name)) {
-            root.add<SubsystemAPI>(entry.name, name);
-            scope.finish("Build '{}' done", entry.name);
-            return;
-        }
-
-        throw Lattice::Exception(tag, "unknown component '{}'", entry.name);
+    Runtime() : root(run_ctx, nullptr)
+              , blueprints(root.addFolder(DefaultBlueprintsPath))
+              , pluginManager(blueprints, dlLoader) {
+        run_ctx.primitives.param = blueprints.primitive("Param");
+        run_ctx.primitives.action = blueprints.primitive("Action");
+        // регистрация интерфейсов ядра
+        blueprints.blueprint<ServiceAPI>();
+        blueprints.blueprint<SubsystemAPI>();
+        blueprints.blueprint<Model, ServiceAPI>();
     }
 
-    void startServices(const StartupConfig& config) {
-        for (const auto& entry : config.entries()) {
-            if (!entry.enabled || entry.host)
-                continue;
+    void buildBranch(const StartupEntry& entry) {
+        LogScope scope(tag, "Build branch '{}' with name '{}'", entry.type, entry.name);
 
-            if (!kernel.blueprints.hasImpl<ServiceAPI>(entry.name))
-                continue;
+        root.add(entry.type, entry.name);
 
-            auto service = root.require<ServiceAPI>(entry.name);
-            service->start();
+        if (entry.host) {
+            if (host)
+                throw Lattice::Exception(tag, "Runtime already has a host service");
 
-            Logger::info(tag, "Started service '{}'", entry.name);
+            host = &root.require(entry.type, entry.name);
+            Logger::info(tag, "Host service '{}'", entry.type);
         }
+
+        scope.finish("Build '{}' done", entry.type);
+    }
+
+    void startService(const StartupEntry& entry) {
+        if (!entry.enabled || entry.host)
+            return;
+
+        Node& service = root.require(entry.type, entry.name);
+
+        const ObjectId serviceApiId = root.findBlueprint<ServiceAPI>();
+        if (!service.getBlueprint()->isUnder(serviceApiId))
+            return;
+
+        auto* api = static_cast<ServiceAPI*>(service.getObject());
+        if (!api)
+            throw Lattice::Exception(tag, "Service '{}' has no object", entry.type);
+
+        api->start();
+
+        Logger::info(tag, "Started service '{}.{}'", entry.type, entry.name);
     }
 
     void run(int argc, char** argv) {
@@ -93,14 +96,10 @@ public:
             StartupConfig config(configPath);
 
             { // инициализация ядра
-                LogScope scope(tag, "<b>System launching</>");
-                // регистрация интерфейсов ядра
-                kernel.blueprints.registerAPI<ServiceAPI>();
-                kernel.blueprints.registerAPI<SubsystemAPI>();
-                // kernel.blueprints.registerImpl<SubsystemAPI, Model>();
+                LogScope scope(tag, "<b>System loading</>");
                 // загрузка плагинов
-                pluginManager.loadPlugins("Plugins");
-                scope.finish("<b>Launch finished</>");
+                pluginManager.load("Plugins");
+                scope.finish("<b>Loaded</>");
             }
             
             if (testMode) { // режим прогона тестов
@@ -125,17 +124,18 @@ public:
             { // связывание компонентов
                 LogScope scope(tag, "<b>System configuring</>");
                 root.configureAll();
-                startServices(config);
+                for (const auto& entry : config.entries())
+                    if (entry.enabled)
+                        startService(entry);
                 scope.finish("<b>Cofiguration finished</>");
             }
             
             root.dumpTree();
-            kernel.blueprints.dumpTree();
-            Logger::message("{}", kernel.objects.stringPath(17));
+            // root.dumpTree(DefaultBlueprintsPath);
+            // Logger::message("{}", kernel.objects.stringPath(17));
 
-            if (!hostName.empty()) {
-                auto host = root.require<ServiceAPI>(hostName);
-                host->enter();
+            if (host) {
+                static_cast<ServiceAPI*>(host->getObject())->enter();
             } else {
                 while (running) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -156,17 +156,16 @@ public:
             return;
 
         service->stop();
-        root.remove<ServiceAPI>(instanceName);
 
-        if (instanceName == hostName)
-            hostName.clear();
+        if (service.node == host)
+            host = nullptr;
+
+        root.remove<ServiceAPI>(instanceName);
     }
 
     ~Runtime() {
         stopAll();
     }
-
-    Blueprints& blueprints() noexcept { return kernel.blueprints; }
 
     void reportException(const std::exception& error) const {
         auto* fatal = dynamic_cast<const Lattice::Exception*>(&error);
@@ -174,8 +173,8 @@ public:
         if (fatal) {
             Logger::exception(fatal->tag(), "{}", error.what());
             Logger::message("Dump components tree (failed node is red):");
-            root.dumpTree(fatal->tag());
-            kernel.blueprints.dumpTree();
+            root.dumpTree();
+            // run_ctx.blueprints.dumpTree();
         } else {
             Logger::exception(tag, "Unhandled exception: {}", error.what());
             Logger::message("Dump components tree:");
@@ -188,7 +187,7 @@ public:
 
     void reportUnknownException() const {
         Logger::exception(tag, "Unhandled non-standard exception");
-        Logger::message("Dump components tree (failed node is red):");
+        Logger::message("Dump components tree");
         root.dumpTree();
     }
 
@@ -198,13 +197,13 @@ private:
         root.stopServices();
     }
 
-    Kernel kernel;
-
     DLLoader dlLoader;
-    PluginManager pluginManager;
+    RuntimeContext run_ctx;
     Node root;
+    Node& blueprints;
+    PluginManager pluginManager;
 
     bool running = true;
-    std::string hostName;
+    Node* host = nullptr;
 };
 }

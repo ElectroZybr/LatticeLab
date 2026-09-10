@@ -169,8 +169,8 @@ bool monitorWorkArea(GLFWmonitor* monitor, int& x, int& y, int& w, int& h) {
 // ============================================================
 
 glfwWindow::glfwWindow(Lattice::Node& branch) {
-    branch.add<InputAPI, Input::Keyboard>();
-    branch.add<InputAPI, Input::Mouse>();
+    branch.add<Input::Keyboard>();
+    branch.add<Input::Mouse>();
 }
 
 void glfwWindow::configure(Lattice::Node& branch) {

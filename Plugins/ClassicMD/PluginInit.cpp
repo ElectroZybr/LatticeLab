@@ -10,8 +10,8 @@
 
 namespace ClassicMD {
 
-extern "C" bool plugin_register(Lattice::Blueprints& reg) {
-    reg.registerImpl<ClassicMD, Model, ServiceAPI>();
+extern "C" bool plugin_register(Lattice::Node& blueprints) {
+    blueprints.blueprint<ClassicMD, Model>();
     return true;
 }
 

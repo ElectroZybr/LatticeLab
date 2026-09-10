@@ -36,7 +36,7 @@ TEST(Node_DeepTreeLookup, RuntimeFixture,
 "Поиск компонента должен подниматься по дереву родителей, но не заходить в соседние ветки. \
 Child-ветка должна видеть свои компоненты и компоненты предков.")
 {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -65,7 +65,7 @@ TEST(Node_Shadowing, RuntimeFixture,
 "Компонент в дочерней ветке должен скрывать компонент с тем же именем из родительской ветки. \
 При этом оба объекта должны оставаться независимыми экземплярами.")
 {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("shared");
 
@@ -84,7 +84,7 @@ TEST(Node_ShadowingDoesNotLeak, RuntimeFixture,
 "Одинаковые имена компонентов в соседних ветках не должны влиять друг на друга. \
 Поиск из одной ветки не должен случайно находить локальный компонент другой ветки.")
  {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("shared");
 
@@ -103,7 +103,7 @@ TEST(Node_ShadowingDoesNotLeak, RuntimeFixture,
 
 TEST(Node_folderCollect, RuntimeFixture,
     "Поиск в папке должен возвращать компоненты из текущей папки и всех вложенных папок.") {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -131,7 +131,7 @@ TEST(Node_folderCollect, RuntimeFixture,
 
 TEST(Node_directCollect, RuntimeFixture,
     "Поиск в папке должен возвращать только компоненты непосредственно принадлежащие текущей папке.") {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -159,7 +159,7 @@ TEST(Node_directCollect, RuntimeFixture,
 TEST(Node_GlobalCollectDeepTree, RuntimeFixture,
     "globalCollect должен найти каждый компонент во всём дереве независимо от глубины и ветки.")
 {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -200,7 +200,7 @@ TEST(Node_GlobalCollectDeepTree, RuntimeFixture,
 TEST(Node_GlobalCollectDifferentInstances, RuntimeFixture,
     "globalCollect должен возвращать все экземпляры одного типа независимо от их имён.")
 {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("one");
     fixture.root.add<TestComponent>("two");
@@ -231,7 +231,7 @@ TEST(Node_GlobalCollectDifferentInstances, RuntimeFixture,
 TEST(Node_GlobalCollectSameNames, RuntimeFixture,
     "globalCollect должен различать объекты с одинаковыми именами в разных ветках.")
 {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     Node& branchA = fixture.root.addFolder("A");
     Node& branchB = fixture.root.addFolder("B");
@@ -255,7 +255,7 @@ TEST(Node_GlobalCollectSameNames, RuntimeFixture,
 TEST(Node_GlobalCollectFromDeepNode, RuntimeFixture,
     "globalCollect должен искать от корня независимо от того, из какого узла он вызван.")
 {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -286,15 +286,15 @@ TEST(Node_GlobalCollectFromDeepNode, RuntimeFixture,
 TEST(Node_GlobalCollectByRole, RuntimeFixture,
     "globalCollect должен находить все объекты, реализующие интерфейс, независимо от concrete-типа.")
 {
-    fixture.kernel.blueprints.registerAPI<TestAPI>();
-    fixture.kernel.blueprints.registerImpl<TestImplA, TestAPI>();
-    fixture.kernel.blueprints.registerImpl<TestImplB, TestAPI>();
+    fixture.blueprints.blueprint<TestAPI>();
+    fixture.blueprints.blueprint<TestImplA, TestAPI>();
+    fixture.blueprints.blueprint<TestImplB, TestAPI>();
 
-    fixture.root.add<TestAPI, TestImplA>("a");
-    fixture.root.add<TestAPI, TestImplB>("b");
+    fixture.root.add<TestImplA>("a");
+    fixture.root.add<TestImplB>("b");
 
     Node& branch = fixture.root.addFolder("branch");
-    branch.add<TestAPI, TestImplA>("c");
+    branch.add<TestImplA>("c");
 
     auto a = fixture.root.require<TestAPI>("a");
     auto b = fixture.root.require<TestAPI>("b");
@@ -312,7 +312,7 @@ TEST(Node_GlobalCollectByRole, RuntimeFixture,
 TEST(Node_GlobalCollectIgnoresInstanceName, RuntimeFixture, 
 "Глобальный поиск должен находить все экземпляры компонента независимо от имени реализации.")
  {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("one");
     fixture.root.add<TestComponent>("two");
@@ -330,7 +330,7 @@ TEST(Node_GlobalCollectIgnoresInstanceName, RuntimeFixture,
 TEST(Node_RemoveDoesNotAffectParent, RuntimeFixture,
     "Удаление компонента из дочерней ветки не должно удалять компонент родителя.") {
 
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("shared");
 
@@ -346,7 +346,7 @@ TEST(Node_RemoveShadowDoesNotRevealWrongComponent, RuntimeFixture,
 "После удаления локального компонента поиск должен корректно продолжить поиск у родителя. \
 Удаление индекса дочернего компонента не должно повреждать или скрывать родительский объект.")
 {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("shared");
 
@@ -364,7 +364,7 @@ TEST(Node_ConfigureDeepTree, RuntimeFixture,
 "configureAll должен вызвать configure для каждого компонента во всей ветке.\
 Вызов должен корректно проходить через произвольную глубину дерева.") 
 {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -385,7 +385,7 @@ TEST(Node_ConfigureDoesNotConfigureTwice, RuntimeFixture,
 "Повторный вызов configureAll не должен приводить к неконтролируемому состоянию компонента. \
 Компонент должен сохранять корректное сконфигурированное состояние.")
 {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>();
 

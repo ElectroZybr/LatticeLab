@@ -6,23 +6,23 @@
 // Sources
 #include "glfwWindow/glfwWindow.hpp"
 #include "InputAPI.hpp"
-// #include "KeybindLoader.hpp"
-// #include "LoaderAPI.hpp"
+#include "KeybindLoader.hpp"
+#include "LoaderAPI.hpp"
 #include "WindowAPI.hpp"
 #include "Window.hpp"
 #include "Mouse.hpp"
 #include "Keyboard.hpp"
 
 
-extern "C" bool plugin_register(Lattice::Blueprints& reg) {
-    reg.registerAPI<WindowAPI>();
-    reg.registerImpl<glfwWindow, WindowAPI>();
-    reg.registerImpl<Window, ServiceAPI>();
+extern "C" bool plugin_register(Lattice::Node& blueprints) {
+    blueprints.blueprint<WindowAPI>();
+    blueprints.blueprint<glfwWindow, WindowAPI>();
+    blueprints.blueprint<Window, ServiceAPI>();
 
-    reg.registerImpl<Input::Keyboard, InputAPI>();
-    reg.registerImpl<Input::Mouse, InputAPI>();
+    blueprints.blueprint<Input::Keyboard, InputAPI>();
+    blueprints.blueprint<Input::Mouse, InputAPI>();
 
-    // reg.registerImpl<LoaderAPI, KeybindsLoader>();
+    blueprints.blueprint<KeybindsLoader, LoaderAPI>();
     return true;
 }
 

@@ -9,13 +9,13 @@
 
 namespace ParticleDynamics {
 
-extern "C" bool plugin_register(Lattice::Blueprints& reg) {
-    reg.registerAPI<IntegratorAPI>();
-    reg.registerAPI<ForceFieldAPI>();
-    reg.registerAPI<SpatialIndexAPI>();
+extern "C" bool plugin_register(Lattice::Node& blueprints) {
+    blueprints.blueprint<IntegratorAPI>();
+    blueprints.blueprint<ForceFieldAPI>();
+    blueprints.blueprint<SpatialIndexAPI>();
 
-    reg.registerImpl<SpatialGrid, SpatialIndexAPI>();
-    reg.registerComponent<ParticleStorage>();
+    blueprints.blueprint<SpatialGrid, SpatialIndexAPI>();
+    blueprints.blueprint<ParticleStorage>();
     return true;
 }
 

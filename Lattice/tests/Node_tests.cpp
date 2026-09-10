@@ -16,39 +16,46 @@ public:
 };
 
 TEST(Node_Add, RuntimeFixture) {
-    REQUIRE(!fixture.root.find<Settings>().exists());
+    fixture.blueprints.blueprint<TestComponent>();
 
-    fixture.root.add<Settings>();
+    REQUIRE(!fixture.root.find<TestComponent>().exists());
 
-    REQUIRE(fixture.root.find<Settings>().exists());
-    REQUIRE(fixture.root.require<Settings>().exists());
+    fixture.root.add<TestComponent>();
+
+    REQUIRE(fixture.root.find<TestComponent>().exists());
+    REQUIRE(fixture.root.require<TestComponent>().exists());
 }
 
 TEST(Node_AddDuplicate, RuntimeFixture) {
-    fixture.root.add<Settings>();
-    fixture.root.add<Settings>();
+    fixture.blueprints.blueprint<TestComponent>();
 
-    auto settings = fixture.root.globalCollect<Settings>();
+    fixture.root.add<TestComponent>();
+    fixture.root.add<TestComponent>();
 
+    auto settings = fixture.root.globalCollect<TestComponent>();
     REQUIRE(settings.size() == 1);
 }
 
 TEST(Node_CustomInstance, RuntimeFixture) {
-    fixture.root.add<Settings>("custom");
+    fixture.blueprints.blueprint<TestComponent>();
 
-    REQUIRE(fixture.root.find<Settings>("custom").exists());
-    REQUIRE(!fixture.root.find<Settings>("default").exists());
+    fixture.root.add<TestComponent>("custom");
+
+    REQUIRE(fixture.root.find<TestComponent>("custom").exists());
+    REQUIRE(!fixture.root.find<TestComponent>("default").exists());
 }
 
 TEST(Node_InstanceIsolation, RuntimeFixture) {
-    fixture.root.add<Settings>("first");
-    fixture.root.add<Settings>("second");
+    fixture.blueprints.blueprint<TestComponent>();
 
-    REQUIRE(fixture.root.find<Settings>("first").exists());
-    REQUIRE(fixture.root.find<Settings>("second").exists());
-    REQUIRE(!fixture.root.find<Settings>("default").exists());
+    fixture.root.add<TestComponent>("first");
+    fixture.root.add<TestComponent>("second");
 
-    auto settings = fixture.root.globalCollect<Settings>();
+    REQUIRE(fixture.root.find<TestComponent>("first").exists());
+    REQUIRE(fixture.root.find<TestComponent>("second").exists());
+    REQUIRE(!fixture.root.find<TestComponent>("default").exists());
+
+    auto settings = fixture.root.globalCollect<TestComponent>();
 
     REQUIRE(settings.size() == 2);
 }
@@ -57,7 +64,7 @@ TEST(Node_RequireMissing, RuntimeFixture) {
     bool thrown = false;
 
     try {
-        fixture.root.require<Settings>();
+        fixture.root.require<TestComponent>();
     } catch (const Exception&) {
         thrown = true;
     }
@@ -66,7 +73,7 @@ TEST(Node_RequireMissing, RuntimeFixture) {
 }
 
 TEST(Node_RegisterAndAdd, RuntimeFixture) {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>();
 
@@ -75,7 +82,7 @@ TEST(Node_RegisterAndAdd, RuntimeFixture) {
 }
 
 TEST(Node_Configure, RuntimeFixture) {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
     fixture.root.add<TestComponent>();
 
     auto component = fixture.root.require<TestComponent>();
@@ -88,7 +95,7 @@ TEST(Node_Configure, RuntimeFixture) {
 }
 
 TEST(Node_GlobalCollect, RuntimeFixture) {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("first");
     fixture.root.add<TestComponent>("second");
@@ -99,7 +106,7 @@ TEST(Node_GlobalCollect, RuntimeFixture) {
 }
 
 TEST(Node_folderCollect, RuntimeFixture) {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -113,7 +120,7 @@ TEST(Node_folderCollect, RuntimeFixture) {
 }
 
 TEST(Node_ChildVisibility, RuntimeFixture) {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>();
 
@@ -123,7 +130,7 @@ TEST(Node_ChildVisibility, RuntimeFixture) {
 }
 
 TEST(Node_ParentLookup, RuntimeFixture) {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>();
 
@@ -134,7 +141,7 @@ TEST(Node_ParentLookup, RuntimeFixture) {
 }
 
 TEST(Node_Shadowing, RuntimeFixture) {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>();
 
@@ -146,12 +153,10 @@ TEST(Node_Shadowing, RuntimeFixture) {
 
     REQUIRE(parent.exists());
     REQUIRE(child.exists());
-
-    // REQUIRE(parent.data != child.data);
 }
 
 TEST(Node_ChildInstanceLookup, RuntimeFixture) {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -164,7 +169,7 @@ TEST(Node_ChildInstanceLookup, RuntimeFixture) {
 }
 
 TEST(Node_GlobalCollectNested, RuntimeFixture) {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -177,7 +182,7 @@ TEST(Node_GlobalCollectNested, RuntimeFixture) {
 }
 
 TEST(Node_folderCollectNested, RuntimeFixture) {
-    fixture.kernel.blueprints.registerComponent<TestComponent>();
+    fixture.blueprints.blueprint<TestComponent>();
 
     fixture.root.add<TestComponent>("root");
 
@@ -190,35 +195,41 @@ TEST(Node_folderCollectNested, RuntimeFixture) {
 }
 
 TEST(Node_Remove, RuntimeFixture) {
-    fixture.root.add<Settings>();
+    fixture.blueprints.blueprint<TestComponent>();
 
-    REQUIRE(fixture.root.find<Settings>().exists());
+    fixture.root.add<TestComponent>();
 
-    fixture.root.remove<Settings>();
+    REQUIRE(fixture.root.find<TestComponent>().exists());
 
-    REQUIRE(!fixture.root.find<Settings>().exists());
+    fixture.root.remove<TestComponent>();
+
+    REQUIRE(!fixture.root.find<TestComponent>().exists());
 }
 
 TEST(Node_RemoveInstance, RuntimeFixture) {
-    fixture.root.add<Settings>("first");
-    fixture.root.add<Settings>("second");
+    fixture.blueprints.blueprint<TestComponent>();
 
-    fixture.root.remove<Settings>("first");
+    fixture.root.add<TestComponent>("first");
+    fixture.root.add<TestComponent>("second");
 
-    REQUIRE(!fixture.root.find<Settings>("first").exists());
-    REQUIRE(fixture.root.find<Settings>("second").exists());
+    fixture.root.remove<TestComponent>("first");
 
-    auto settings = fixture.root.globalCollect<Settings>();
+    REQUIRE(!fixture.root.find<TestComponent>("first").exists());
+    REQUIRE(fixture.root.find<TestComponent>("second").exists());
+
+    auto settings = fixture.root.globalCollect<TestComponent>();
 
     REQUIRE(settings.size() == 1);
 }
 
 TEST(Node_RemoveMissing, RuntimeFixture) {
-    fixture.root.add<Settings>();
+    fixture.blueprints.blueprint<TestComponent>();
 
-    fixture.root.remove<Settings>("missing");
+    fixture.root.add<TestComponent>();
 
-    REQUIRE(fixture.root.find<Settings>().exists());
+    fixture.root.remove<TestComponent>("missing");
+
+    REQUIRE(fixture.root.find<TestComponent>().exists());
 }
 
 }

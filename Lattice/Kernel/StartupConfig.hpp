@@ -10,11 +10,11 @@
 namespace Lattice {
 
 struct StartupEntry {
-    std::string name;
+    std::string type;
+    std::string name = "default";
     bool enabled = false;
     bool host = false;
 };
-
 class StartupConfig {
 public:
     explicit StartupConfig(const std::filesystem::path& path) {
@@ -25,9 +25,9 @@ public:
         return entries_;
     }
 
-    const StartupEntry* find(std::string_view name) const noexcept {
+    const StartupEntry* find(std::string_view type) const noexcept {
         for (const auto& entry : entries_)
-            if (entry.name == name)
+            if (entry.type == type)
                 return &entry;
         return nullptr;
     }
@@ -70,7 +70,17 @@ private:
             trim(value);
 
             StartupEntry entry;
-            entry.name = std::move(name);
+
+            const size_t dot = name.rfind('.');
+            if (dot == std::string::npos) {
+                entry.type = std::move(name);
+            } else {
+                entry.type = name.substr(0, dot);
+                entry.name = name.substr(dot + 1);
+
+                if (entry.type.empty() || entry.name.empty())
+                    throw std::runtime_error("Invalid startup name: " + name);
+            }
 
             if (value.front() == '[') {
                 if (value.back() != ']')

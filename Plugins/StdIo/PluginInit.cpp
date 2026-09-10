@@ -1,6 +1,5 @@
 // Kernel dependences
 #include <Lattice/Kernel/Plugin.hpp>
-#include "Lattice/Kernel/Blueprints.hpp"
 #include "Lattice/Kernel/SubsystemAPI.hpp"
 
 // Plugin dependences
@@ -14,11 +13,11 @@
 // #include "YamlParser.hpp"
 
 
-extern "C" bool plugin_register(Lattice::Blueprints& reg) {
-    reg.registerImpl<IOSubsystem, SubsystemAPI>();
-    reg.registerAPI<LoaderAPI>();
-    reg.registerAPI<ParserAPI>();
-    reg.registerImpl<TomlParser, ParserAPI>();
+extern "C" bool plugin_register(Lattice::Node& blueprints) {
+    blueprints.blueprint<IOSubsystem, SubsystemAPI>();
+    blueprints.blueprint<LoaderAPI>();
+    blueprints.blueprint<ParserAPI>();
+    blueprints.blueprint<TomlParser, ParserAPI>();
     return true;
 }
 

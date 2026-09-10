@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <Lattice/Kernel/TypeName.hpp>
+#include "Lattice/Kernel/Objects.hpp"
 
 namespace Lattice {
 
@@ -26,16 +27,15 @@ struct CompileDep {
 struct PluginCatalog {
     std::string pluginId;
     std::vector<CompileDep> deps;
-    std::vector<std::string> provided;
+    std::vector<ObjectId> provided;
 };
 
 std::vector<CompileDep>& compileDepSink();
 std::vector<PluginCatalog>& pluginCatalogs();
-
-bool check(std::string_view name, const Blueprints& blueprints);
-std::vector<std::string> uniqueList( std::string_view name, const Blueprints& blueprints);
-std::vector<std::string> printUniqueList(std::string_view name, const Blueprints& blueprints);
-void printCompositionTree( std::string_view name);
+bool check(std::string_view name, ObjectId blueprintsId);
+std::vector<std::string> uniqueList(std::string_view name, ObjectId blueprintsId);
+std::vector<std::string> printUniqueList(std::string_view name, ObjectId blueprintsId);
+void printCompositionTree(std::string_view name, ObjectId blueprintsId);
 void recordPluginCatalog(PluginCatalog catalog);
 
 inline constexpr std::string_view tag = "Requirements";

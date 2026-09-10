@@ -1,6 +1,5 @@
 // Kernel dependences
 #include <Lattice/Kernel/Plugin.hpp>
-#include "Lattice/Kernel/Blueprints.hpp"
 #include "Lattice/Kernel/SubsystemAPI.hpp"
 
 // Sources
@@ -8,9 +7,9 @@
 #include "ActionMap.hpp"
 
 
-extern "C" bool plugin_register(Lattice::Blueprints& reg) {
-    reg.registerAPI<InputAPI>();
-    reg.registerImpl<ActionMap, SubsystemAPI>();
+extern "C" bool plugin_register(Lattice::Node& blueprints) {
+    blueprints.blueprint<InputAPI>();
+    blueprints.blueprint<ActionMap, SubsystemAPI>();
     return true;
 }
 
