@@ -1,6 +1,5 @@
 #pragma once
 
-#include <algorithm>
 #include <cstdint>
 #include <string>
 #include <unordered_map>
@@ -14,9 +13,7 @@ namespace Lattice {
 using ObjectId = uint32_t;
 class Objects;
 
-inline constexpr ObjectId InvalidObjectId =
-    std::numeric_limits<ObjectId>::max();
-
+inline constexpr ObjectId InvalidObjectId = std::numeric_limits<ObjectId>::max();
 
 struct Context {
 public:
@@ -33,80 +30,38 @@ private:
     std::unordered_map<std::string, ObjectId> map;
 };
 
-
-struct Entry {
-    void* object = nullptr;
-    std::string type;
+struct Object {
     std::string name;
     ObjectId parent = InvalidObjectId;
+    void* object = nullptr;
+    bool exists = false;
 };
-
-
-class Path {
-public:
-    Path() = default;
-
-    explicit Path(ObjectId id, Objects& objectBlueprints);
-
-    std::span<const ObjectId> ids() const {
-        return ids_;
-    }
-
-    bool empty() const {
-        return ids_.empty();
-    }
-
-    size_t size() const {
-        return ids_.size();
-    }
-
-    ObjectId operator[](size_t index) const {
-        return ids_[index];
-    }
-
-    void push(ObjectId id) {
-        ids_.push_back(id);
-    }
-
-    void pop() {
-        ids_.pop_back();
-    }
-
-private:
-    std::vector<ObjectId> ids_;
-};
-
 
 class Objects {
 public:
-    ObjectId create(ObjectId parent, std::string_view type, std::string_view name, void* object) {
+    ObjectId create(std::string_view name, ObjectId parent, void* object) {
         ObjectId id;
 
         if (!freeIds.empty()) {
             id = freeIds.back();
             freeIds.pop_back();
 
-            Entry& entry = objects[id];
-
-            entry.object = object;
-            entry.type = type;
+            Object& entry = objects[id];
             entry.name = name;
             entry.parent = parent;
-        }
-        else {
+            entry.object = object;
+            entry.exists = true;
+        } else {
             id = static_cast<ObjectId>(objects.size());
-
-            objects.push_back(Entry{
-                .object = object,
-                .type = std::string(type),
+            objects.push_back(Object{
                 .name = std::string(name),
                 .parent = parent,
+                .object = object,
+                .exists = true
             });
         }
 
-        ObjectKey key = {parent, std::string(type), std::string(name)};
-        lookup.insert_or_assign(key, id);
-
+        lookup.insert_or_assign(ObjectKey{std::string(name), parent}, id);
         return id;
     }
 
@@ -114,11 +69,11 @@ public:
         return id != InvalidObjectId;
     }
 
-    void alias(ObjectId id, ObjectId parent, std::string_view type, std::string_view name) {
+    void alias(ObjectId id, std::string_view name, ObjectId parent) {
         if (!get(id))
             return;
 
-        ObjectKey key = {parent, std::string(type), std::string(name)};
+        ObjectKey key = {std::string(name), parent};
         lookup.insert_or_assign(key, id);
     }
 
@@ -126,10 +81,7 @@ public:
         if (id >= objects.size())
             return;
 
-        Entry& entry = objects[id];
-
-        if (!entry.object)
-            return;
+        Object& entry = objects[id];
 
         // Удаляем все имена/алиасы, указывающие на этот объект.
         for (auto it = lookup.begin(); it != lookup.end();) {
@@ -139,27 +91,27 @@ public:
                 ++it;
         }
 
+        entry.exists = false;
         entry.object = nullptr;
-        entry.type.clear();
         entry.name.clear();
 
         freeIds.push_back(id);
     }
 
-    const Entry* get(ObjectId id) const {
+    const Object* get(ObjectId id) const {
         if (!valid(id) || id >= objects.size())
             return nullptr;
 
-        const Entry& entry = objects[id];
+        const Object& entry = objects[id];
 
-        if (!entry.object)
+        if (!entry.exists)
             return nullptr;
 
         return &entry;
     }
 
-    const Entry& require(ObjectId id) const {
-        const Entry* entry = get(id);
+    const Object& require(ObjectId id) const {
+        const Object* entry = get(id);
 
         if (!entry)
             throw Lattice::Exception("Objects", "Object with id {} not found", id);
@@ -167,76 +119,26 @@ public:
         return *entry;
     }
 
-    const Entry& operator[](ObjectId id) const {
+    const Object& operator[](ObjectId id) const {
         return require(id);
     }
 
-    ObjectId find(ObjectId parent, std::string_view type, std::string_view name) const {
-        ObjectKey key = {parent, std::string(type), std::string(name)};
+    ObjectId find(std::string_view name, ObjectId parent) const {
+        ObjectKey key = {std::string(name), parent};
         auto it = lookup.find(key);
         if (it == lookup.end() || !valid(it->second))
             return InvalidObjectId;
         return  it->second;
     }
 
-    std::vector<ObjectId> path(ObjectId id) const {
-        std::vector<ObjectId> result;
-
-        while (valid(id)) {
-            result.push_back(id);
-            id = require(id).parent;
-        }
-
-        std::ranges::reverse(result);
-        return result;
-    }
-
-    const std::string stringPath(ObjectId id) const {
-        std::string result;
-
-        for (ObjectId current : path(id)) {
-            const auto& entry = require(current);
-
-            if (!result.empty())
-                result += '/';
-
-            if (entry.name.empty() || entry.name == "default" || entry.name == "Root")
-                result += std::format("{}", entry.type);
-            else
-                result += std::format("{}:{}", entry.type, entry.name);
-        }
-
-        return result;
-    }
-
-    ObjectId resolve(const Context& context, std::string_view type, std::string_view name) {
-        auto tryFrom = [&](ObjectId start) -> ObjectId {
-            ObjectId id = start;
-            while (valid(id)) {
-                if (ObjectId found = find(id, type, name); valid(found))
-                    return found;
-                id = require(id).parent;
-            }
-            return InvalidObjectId;
-        };
-
-        // for (ObjectId start : context.chain)
-        //     if (ObjectId found = tryFrom(start); valid(found))
-        //         return found;
-
-        return InvalidObjectId;
-    }
-
-    bool hasRole(ObjectId id, std::string_view role) const {
-        const Entry& entry = require(id);
-        return find(entry.parent, role, entry.name) == id;
+    bool has(std::string_view name, ObjectId parent) const {
+        return valid(find(name, parent));
     }
 
 private:
     struct ObjectKey {
-        ObjectId parent;
-        std::string type;
         std::string name;
+        ObjectId parent;
 
         bool operator==(const ObjectKey&) const = default;
     };
@@ -244,10 +146,6 @@ private:
     struct ObjectKeyHash {
         size_t operator()(const ObjectKey& key) const noexcept {
             size_t h = std::hash<ObjectId>{}(key.parent);
-            h ^= std::hash<std::string>{}(key.type)
-                + 0x9e3779b9
-                + (h << 6)
-                + (h >> 2);
             h ^= std::hash<std::string>{}(key.name)
                 + 0x9e3779b9
                 + (h << 6)
@@ -256,7 +154,7 @@ private:
         }
     };
 
-    std::vector<Entry> objects;
+    std::vector<Object> objects;
     std::vector<ObjectId> freeIds;
 
     std::unordered_map<ObjectKey, ObjectId, ObjectKeyHash> lookup;

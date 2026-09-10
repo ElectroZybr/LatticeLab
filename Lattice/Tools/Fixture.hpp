@@ -7,15 +7,15 @@ namespace Lattice {
 
 struct RuntimeFixture : public TestFixture {
     DLLoader dlLoader;
-    PluginManager pluginManager;
-    Kernel kernel;
+    RuntimeContext run_ctx;
     Node root;
+    Node& blueprints;
+    PluginManager pluginManager;
 
-    RuntimeFixture() : root(kernel) 
-                     , pluginManager(kernel.blueprints, dlLoader) {
-        kernel.blueprints.registerAPI<ServiceAPI>();
-        kernel.blueprints.registerAPI<SubsystemAPI>();
-        kernel.blueprints.registerComponent<Settings>();
+    RuntimeFixture()
+            : root(run_ctx, nullptr)
+            , blueprints(root.addFolder(DefaultBlueprintsPath))
+            , pluginManager(blueprints, dlLoader) {
     }
 };
 }

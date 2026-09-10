@@ -10,7 +10,7 @@
 
 namespace Lattice {
 
-    uint16_t PluginManager::loadPlugins(std::filesystem::path path) {
+    uint16_t PluginManager::load(std::filesystem::path path) {
         // загрузка внешних плагинов
         scanDirectory(path);
         checkCandidates();
@@ -233,25 +233,27 @@ namespace Lattice {
             return false;
         }
 
-        auto before = globalBlueprints.listProvided();
+        auto before = blueprints.collectTree();
 
-        if (!regFn(globalBlueprints)) {
+        if (!regFn(blueprints)) {
             Logger::error(tag, "plugin_register failed for '{}'", candidate->manifest.id);
             candidate->status = LoadStatus::Failed;
             return false;
         }
 
-        auto after = globalBlueprints.listProvided();
+        auto after = blueprints.collectTree();
 
         PluginCatalog catalog{.pluginId = candidate->manifest.id};
 
         const auto& sink = compileDepSink();
         catalog.deps.assign(sink.begin() + depsBefore, sink.end());
 
-        std::unordered_set<std::string> beforeSet(before.begin(), before.end());
-        for (const auto& name : after)
-            if (!beforeSet.contains(name))
-                catalog.provided.push_back(name);
+        std::unordered_set<ObjectId> beforeSet(before.begin(), before.end());
+
+        for (ObjectId id : after) {
+            if (!beforeSet.contains(id))
+                catalog.provided.push_back(id);
+        }
 
         if (after.size() == before.size())
             Logger::warning(tag, "Plugin '{}' does not provide anything", candidate->manifest.id);

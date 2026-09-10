@@ -9,9 +9,9 @@
 // #include "include/CSR.hpp"
 
 
-extern "C" bool plugin_register(Lattice::Blueprints& reg) {
-    reg.registerComponent<StdData::SoA>();
-    reg.registerImpl<SoALoader, LoaderAPI>();
+extern "C" bool plugin_register(Lattice::Node& blueprints) {
+    blueprints.blueprint<StdData::SoA>();
+    blueprints.blueprint<SoALoader, LoaderAPI>();
     // reg.registerComponent<CSR>();
     return true;
 }

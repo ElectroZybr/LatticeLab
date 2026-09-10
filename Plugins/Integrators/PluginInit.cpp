@@ -8,9 +8,9 @@
 
 namespace Integrators {
 
-extern "C" bool plugin_register(Lattice::Blueprints& reg) {
-    reg.registerImpl<Verlet, ParticleDynamics::IntegratorAPI>();
-    reg.registerImpl<KDK, ParticleDynamics::IntegratorAPI>();
+extern "C" bool plugin_register(Lattice::Node& blueprints) {
+    blueprints.blueprint<Verlet, ParticleDynamics::IntegratorAPI>();
+    blueprints.blueprint<KDK, ParticleDynamics::IntegratorAPI>();
     return true;
 }
 

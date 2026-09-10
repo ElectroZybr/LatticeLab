@@ -33,7 +33,7 @@ void ActionMap::tick() {
     if (!node_)
         return;
 
-    auto& kernel = node_->kernel();
+    auto& run_ctx = node_->get_ctx();
 
     for (auto& b : bindings_) {
         bool now = false;
@@ -59,16 +59,13 @@ void ActionMap::tick() {
 
         if (fire) {
             Logger::info("ActionMap", "fire: {}", b.verb);
+
             if (b.target == Target::Action) {
-                Lattice::ObjectId id = kernel.objects.resolve(kernel.context, "action", b.verb);
-                if (Lattice::Objects::valid(id)) kernel.settings.fire(id);
+                node_->fire(b.verb);
+            } else if (b.target == Target::Toggle) {
+                node_->set(b.verb, !node_->get<bool>(b.verb));
             } else {
-                Lattice::ObjectId id = kernel.objects.resolve(kernel.context, "param", b.verb);
-                if (!Lattice::Objects::valid(id)) continue;
-                if (b.target == Target::Toggle)
-                    kernel.settings.set(id, !kernel.settings.get<bool>(id));
-                else
-                    kernel.settings.set(id, kernel.settings.get<double>(id) + b.delta);
+                node_->set(b.verb, node_->get<double>(b.verb) + b.delta);
             }
         }
 
