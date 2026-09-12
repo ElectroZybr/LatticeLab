@@ -6,6 +6,9 @@
 #include <vector>
 
 #include <Lattice/Kernel/SubsystemAPI.hpp>
+#include <Lattice/Kernel/Context.hpp>
+#include <Lattice/Kernel/RefSlot.hpp>
+
 #include "InputAPI.hpp"
 
 namespace Lattice { class Node; }
@@ -16,6 +19,7 @@ enum class Target { Action, Toggle, Add };
 class ActionMap final : public SubsystemAPI {
 public:
     explicit ActionMap(Lattice::Node& branch) {}
+
     void configure(Lattice::Node& branch);
 
     void bind(std::string_view verb, std::string_view trigger, ActionMode mode = ActionMode::OnPress);
@@ -24,15 +28,16 @@ public:
 
     void tick();
 
-    bool down(std::string_view verb) const;
-    bool pressed(std::string_view verb) const;
-    bool released(std::string_view verb) const;
+    bool down(Lattice::SlotId slot) const;
+    bool pressed(Lattice::SlotId slot) const;
+    bool released(Lattice::SlotId slot) const;
 
     void clearBinds();
+    Ref<Lattice::Context> run_ctx;
 
 private:
     struct Binding {
-        std::string verb;
+        Lattice::SlotId slot;
         std::string trigger;
         ActionMode mode = ActionMode::OnPress;
         Target target = Target::Action;
@@ -46,11 +51,11 @@ private:
         bool released = false;
     };
 
-    Lattice::Node* node_ = nullptr;
     std::vector<InputAPI*> inputs_;
     std::vector<Binding> bindings_;
-    std::unordered_map<std::string, ActionState> actions_;
+    std::unordered_map<Lattice::SlotId, ActionState> actions_;
 
-    ActionState& ensure(std::string_view verb);
-    const ActionState* find(std::string_view verb) const;
+    ActionState& ensure(Lattice::SlotId slot);
+    const ActionState* find(Lattice::SlotId slot) const;
+    Lattice::SlotId resolve(std::string_view verb) const;
 };

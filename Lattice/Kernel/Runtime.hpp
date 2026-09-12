@@ -10,9 +10,9 @@
 #include <Lattice/Kernel/Requirements.hpp>
 #include <Lattice/Kernel/Node.hpp>
 #include <Lattice/Kernel/Exception.hpp>
-#include <Lattice/Kernel/Settings.hpp>
+#include <Lattice/Kernel/Bindings.hpp>
 #include "Lattice/Kernel/DLLoader.hpp"
-#include <Lattice/Kernel/RuntimeContext.hpp>
+#include <Lattice/Kernel/Context.hpp>
 #include <Lattice/Kernel/Model.hpp>
 #include <Lattice/Tools/SystemInfo.hpp>
 #include "Lattice/Kernel/Objects.hpp"
@@ -75,7 +75,7 @@ public:
 
     void run(int argc, char** argv) {
         try {
-            Logger::setDefaultMode(LogMode::Clean);
+            Logger::setDefaultMode(LogMode::Clean | LogMode::OnlyWarn);
             Lattice::CliSystemInfo::printSystemInfo();
             std::filesystem::path configPath = "lattice.toml";
             bool testMode = false, benchMode = false;
@@ -131,6 +131,7 @@ public:
             }
             
             root.dumpTree();
+            // root.get_ctx().activate(0, 65);
             // root.dumpTree(DefaultBlueprintsPath);
             // Logger::message("{}", kernel.objects.stringPath(17));
 
@@ -198,7 +199,7 @@ private:
     }
 
     DLLoader dlLoader;
-    RuntimeContext run_ctx;
+    Context run_ctx;
     Node root;
     Node& blueprints;
     PluginManager pluginManager;

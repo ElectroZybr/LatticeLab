@@ -12,34 +12,20 @@ namespace Lattice {
 
 using ObjectId = uint32_t;
 class Objects;
+class Node;
 
 inline constexpr ObjectId InvalidObjectId = std::numeric_limits<ObjectId>::max();
-
-struct Context {
-public:
-    void set(std::string_view role, ObjectId id) {
-        map[std::string(role)] = id;
-    }
-
-    ObjectId get(std::string_view role) const {
-        auto it = map.find(std::string(role));
-        return it == map.end() ? InvalidObjectId : it->second;
-    }
-
-private:
-    std::unordered_map<std::string, ObjectId> map;
-};
 
 struct Object {
     std::string name;
     ObjectId parent = InvalidObjectId;
-    void* object = nullptr;
+    Node* node = nullptr;
     bool exists = false;
 };
 
 class Objects {
 public:
-    ObjectId create(std::string_view name, ObjectId parent, void* object) {
+    ObjectId create(std::string_view name, ObjectId parent, Node* node) {
         ObjectId id;
 
         if (!freeIds.empty()) {
@@ -49,14 +35,14 @@ public:
             Object& entry = objects[id];
             entry.name = name;
             entry.parent = parent;
-            entry.object = object;
+            entry.node = node;
             entry.exists = true;
         } else {
             id = static_cast<ObjectId>(objects.size());
             objects.push_back(Object{
                 .name = std::string(name),
                 .parent = parent,
-                .object = object,
+                .node = node,
                 .exists = true
             });
         }
@@ -92,7 +78,7 @@ public:
         }
 
         entry.exists = false;
-        entry.object = nullptr;
+        entry.node = nullptr;
         entry.name.clear();
 
         freeIds.push_back(id);

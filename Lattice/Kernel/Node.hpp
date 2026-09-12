@@ -12,11 +12,11 @@
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/RefSlot.hpp>
 #include <Lattice/Kernel/Objects.hpp>
-#include <Lattice/Kernel/Settings.hpp>
+#include <Lattice/Kernel/Bindings.hpp>
 #include <Lattice/Tools/LogStyle.hpp>
 #include <Lattice/Tools/Logger.hpp>
 #include <Lattice/Tools/LogTree.hpp>
-#include <Lattice/Kernel/RuntimeContext.hpp>
+#include <Lattice/Kernel/Context.hpp>
 
 
 namespace Lattice {
@@ -25,10 +25,10 @@ class Path {
 public:
     Path() = default;
 
-    explicit Path(ObjectId id, Objects& objectBlueprints) {
+    explicit Path(ObjectId id, Objects& objects) {
         while (Objects::valid(id)) {
             ids_.push_back(id);
-            id = objectBlueprints.require(id).parent;
+            id = objects.require(id).parent;
         }
 
         std::ranges::reverse(ids_);
@@ -70,7 +70,7 @@ concept HasConfigure = requires(T& obj, Node& branch) {
 class Node {
     static constexpr std::string_view tag = "Node";
 
-    RuntimeContext& run_ctx;
+    Context& run_ctx;
 
     ObjectId id = 0;
     Node* parent = nullptr;
@@ -120,11 +120,11 @@ class Node {
             std::string line;
 
             if (mark == "(F)")
-                line = std::format("{} <m>(F)</>", name);
+                line = std::format("{} <m>F</>", name);
             else if (mark == "(B)")
-                line = std::format("{} <c>(B)</>", name);
+                line = std::format("{} <c>B</>", name);
             else
-                line = std::format("{}<gr>:{}</> <g>(O)</>", child->bp->name(), name);
+                line = std::format("{}<gr>:{}</> <g>O</>", child->bp->name(), name);
 
             if (child->id == highlighted)
                 line = std::format("<b><r>{} 🡸<//>", line);
@@ -163,7 +163,7 @@ class Node {
         if (Objects::valid(id))
             return id;
 
-        const auto* node = static_cast<const Node*>(run_ctx.objects[from].object);
+        const auto* node = run_ctx.objects[from].node;
 
         for (const auto& child : node->children_) {
             id = findRecursive(name, child->id);
@@ -175,7 +175,7 @@ class Node {
     }
 
 public:
-    Node(RuntimeContext& run_ctx, Node* parent = nullptr)
+    Node(Context& run_ctx, Node* parent = nullptr)
         : run_ctx(run_ctx), parent(parent) {
             if (!parent) {
                 id = run_ctx.objects.create("Root", InvalidObjectId, this);
@@ -187,8 +187,9 @@ public:
     Node(Node&&) = delete;
     Node& operator=(Node&&) = delete;
 
-    RuntimeContext& get_ctx() noexcept { return run_ctx; }
+    Context& requireContext() noexcept { return run_ctx; }
     Node* getBlueprint() noexcept { return bp; }
+    ObjectId getId() { return id; }
 
     template<typename T>
     void blueprint() {
@@ -233,7 +234,7 @@ public:
         if (!Objects::valid(apiId))
             throw Exception(tag, "API '{}' is not registered", typeName<API>());
 
-        Node* api = static_cast<Node*>(run_ctx.objects.require(apiId).object);
+        Node* api = run_ctx.objects.require(apiId).node;
         api->blueprint<Impl>();
     }
 
@@ -263,7 +264,7 @@ public:
         if (!Objects::valid(apiId))
             throw Exception(tag, "API '{}' is not registered", typeName<API>());
 
-        Node* api = static_cast<Node*>(run_ctx.objects.require(apiId).object);
+        Node* api = run_ctx.objects.require(apiId).node;
 
         for (const auto& child : api->children_)
             add(child->name(), child->name(), blueprintsPath);
@@ -299,8 +300,7 @@ public:
         out.reserve(ids.size());
 
         for (ObjectId id : ids) {
-            const auto& entry = run_ctx.objects.require(id);
-            auto* node = static_cast<Node*>(entry.object);
+            auto* node = run_ctx.objects.require(id).node;
 
             if (void* object = node->getObject())
                 out.push_back(static_cast<API*>(object));
@@ -334,7 +334,7 @@ public:
         if (!Objects::valid(blueprintId))
             throw Exception(tag, "blueprint '{}' not found in '{}'", parent, blueprintsPath);
 
-        Node* blueprint = static_cast<Node*>(run_ctx.objects.require(blueprintId).object);
+        Node* blueprint = run_ctx.objects.require(blueprintId).node;
 
         for (const auto& child : children_) {
             if (child->name() == instanceName && child->bp == blueprint) {
@@ -372,7 +372,7 @@ public:
         if (!Objects::valid(implId))
             throw Exception(tag, "unknown implementation '{}' in '{}'", implName, blueprintsPath);
 
-        Node* blueprint = static_cast<Node*>(run_ctx.objects.require(implId).object);
+        Node* blueprint = run_ctx.objects.require(implId).node;
 
         if (!blueprint->isUnder(apiId))
             throw Exception(tag, "implementation '{}' does not provide '{}'", implName, typeName<API>());
@@ -563,22 +563,10 @@ public:
             run_ctx.objects.destroy(id);
     }
 
-    Path path() const {
-        Path path;
-
-        const Node* node = this;
-        while (node && node->parent) {
-            path.push(node->id);
-            node = node->parent;
-        }
-
-        return path;
-    }
-
     void dumpTree(std::string_view path = "") const {
         ObjectId startId = resolvePath(path, id);
         if (Objects::valid(startId)) {
-            Node* startNode = static_cast<Node*>(run_ctx.objects[startId].object);
+            Node* startNode = run_ctx.objects.require(startId).node;
             Logger::Tree tree(run_ctx.objects[startId].name);
             startNode->appendTree(tree, 0, 7);
             tree.print();
@@ -607,95 +595,48 @@ public:
     
     template<typename T>
     ObjectId bind(std::string_view name, T* ptr, double min = 0, double max = 0, bool hasRange = false) {
-        Node* child = makeChild(name, static_cast<Node*>(run_ctx.objects.require(run_ctx.primitives.param).object));
-        run_ctx.settings.bind(child->id, ptr, min, max, hasRange);
+        Node* child = makeChild(name, run_ctx.objects.require(run_ctx.primitives.param).node);
+        run_ctx.bindings.bind(child->id, ptr, min, max, hasRange);
         return child->id;
     }
 
     template<typename T, typename F>
     requires std::invocable<F&, T>
     ObjectId bind(std::string_view name, T* ptr, F&& onChange, double min = 0, double max = 0, bool hasRange = false) {
-        Node* child = makeChild(name, static_cast<Node*>(run_ctx.objects.require(run_ctx.primitives.param).object));
-        run_ctx.settings.bind(child->id, ptr, std::forward<F>(onChange), min, max, hasRange);
+        Node* child = makeChild(name, run_ctx.objects.require(run_ctx.primitives.param).node);
+        run_ctx.bindings.bind(child->id, ptr, std::forward<F>(onChange), min, max, hasRange);
         return child->id;
     }
 
     ObjectId on(std::string_view name, std::function<void()> handler) {
-        Node* child = makeChild(name, static_cast<Node*>(run_ctx.objects.require(run_ctx.primitives.action).object));
-        run_ctx.settings.on(child->id, std::move(handler));
+        Node* child = makeChild(name, run_ctx.objects.require(run_ctx.primitives.action).node);
+        run_ctx.bindings.on(child->id, std::move(handler));
         return child->id;
     }
 
-    ObjectId param(std::string_view name) const {
-        ObjectId pid = run_ctx.objects.find(name, id);
-        if (!Objects::valid(pid))
-            throw Exception(tag, "param '{}' not found", name);
-        return pid;
-    }
-
-    ObjectId action(std::string_view name) const {
-        ObjectId aid = run_ctx.objects.find(name, id);
-        if (!Objects::valid(aid))
-            throw Exception(tag, "action '{}' not found", name);
-        return aid;
-    }
-
-    template<typename T>
-    T get(std::string_view name) const {
-        return run_ctx.settings.get<T>(param(name));
-    }
-
-    template<typename T>
-    void set(std::string_view name, T value) {
-        run_ctx.settings.set(param(name), std::move(value));
-    }
-
-    void fire(std::string_view name) const {
-        run_ctx.settings.fire(action(name));
-    }
-
-    void activate(std::string_view role) {
-        run_ctx.context.set(role, id);
-    }
-
-    void onActivate(std::string_view role) {
-        on("activate", [this, r = std::string(role)] { activate(r); });
-        activate(role);
-    }
-
-    std::vector<ObjectId> path(ObjectId id) const {
-        std::vector<ObjectId> result;
-
-        while (Objects::valid(id)) {
-            result.push_back(id);
-            id = run_ctx.objects[id].parent;
-        }
-
-        std::ranges::reverse(result);
-        return result;
-    }
-
-    const std::string stringPath(ObjectId id) const {
+    std::string stringPath() const {
         std::string result;
+        Path path{id, run_ctx.objects};
 
-        for (ObjectId current : path(id)) {
+        for (ObjectId current : path.ids()) {
             const auto& entry = run_ctx.objects[current];
-            const auto* node = static_cast<const Node*>(entry.object);
+            const Node* node = entry.node;
 
             if (!result.empty())
                 result += '/';
 
+            if (!node->bp) {
+                result += entry.name;
+                continue;
+            }
+
             if (entry.name.empty() || entry.name == "default" || entry.name == "Root")
-                result += std::format("{}", node->bp->name());
+                result += std::string(node->bp->name());
             else
                 result += std::format("{}:{}", node->bp->name(), entry.name);
         }
 
         return result;
-    }
-
-    ObjectId getId() {
-        return id;
     }
 };
 

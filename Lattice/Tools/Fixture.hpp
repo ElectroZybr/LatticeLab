@@ -7,7 +7,7 @@ namespace Lattice {
 
 struct RuntimeFixture : public TestFixture {
     DLLoader dlLoader;
-    RuntimeContext run_ctx;
+    Context run_ctx;
     Node root;
     Node& blueprints;
     PluginManager pluginManager;

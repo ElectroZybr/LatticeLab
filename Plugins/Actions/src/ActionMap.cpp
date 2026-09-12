@@ -1,42 +1,72 @@
 #include "ActionMap.hpp"
 
 #include <Lattice/Kernel/Node.hpp>
-#include <Lattice/Kernel/Settings.hpp>
 #include <Lattice/Tools/Logger.hpp>
 
 
 void ActionMap::configure(Lattice::Node& branch) {
-    node_ = &branch;
-    // находим все инпуты (устройства ввода)
+    run_ctx = &branch.requireContext();
     inputs_ = branch.globalCollect<InputAPI>();
 }
 
-ActionMap::ActionState& ActionMap::ensure(std::string_view verb) {
-    return actions_[std::string(verb)];
+ActionMap::ActionState& ActionMap::ensure(Lattice::SlotId slot) {
+    return actions_[slot];
 }
 
-const ActionMap::ActionState* ActionMap::find(std::string_view verb) const {
-    auto it = actions_.find(std::string(verb));
+const ActionMap::ActionState* ActionMap::find(Lattice::SlotId slot) const {
+    auto it = actions_.find(slot);
     return it == actions_.end() ? nullptr : &it->second;
 }
 
+Lattice::SlotId ActionMap::resolve(std::string_view verb) const {
+    return run_ctx->getSlot(verb);
+}
+
 void ActionMap::bind(std::string_view verb, std::string_view trigger, ActionMode mode) {
-    ensure(verb);
-    bindings_.push_back({std::string(verb), std::string(trigger), mode});
-    Logger::ok("ActionMap", "bound '{}' -> '{}'", verb, trigger);
+    const auto slot = resolve(verb);
+
+    ensure(slot);
+    bindings_.push_back({slot, std::string(trigger), mode});
+
+    Logger::ok("ActionMap", "bound '{}' ➜ '{}'", trigger, verb);
+}
+
+void ActionMap::bindToggle(std::string_view param, std::string_view trigger, ActionMode mode) {
+    const auto slot = resolve(param);
+
+    ensure(slot);
+    bindings_.push_back({
+        slot,
+        std::string(trigger),
+        mode,
+        Target::Toggle
+    });
+
+    Logger::ok("ActionMap", "bound toggle '{}' ➜ '{}'", trigger, param);
+}
+
+void ActionMap::bindAdd(std::string_view param, std::string_view trigger, double delta, ActionMode mode) {
+    const auto slot = resolve(param);
+
+    ensure(slot);
+    bindings_.push_back({
+        slot,
+        std::string(trigger),
+        mode,
+        Target::Add,
+        delta
+    });
+
+    Logger::ok("ActionMap", "bound add '{}' ➜ '{}' ({})", trigger, param, delta);
 }
 
 void ActionMap::tick() {
-    for (auto& [_, s] : actions_)
-        s = {};
-
-    if (!node_)
-        return;
-
-    auto& run_ctx = node_->get_ctx();
+    for (auto& [_, state] : actions_)
+        state = {};
 
     for (auto& b : bindings_) {
         bool now = false;
+
         for (auto* input : inputs_) {
             if (input && input->down(b.trigger)) {
                 now = true;
@@ -47,10 +77,11 @@ void ActionMap::tick() {
         const bool pressed  = now && !b.wasDown;
         const bool released = !now && b.wasDown;
 
-        auto& s = ensure(b.verb);
-        s.down |= now;
-        s.pressed |= pressed;
-        s.released |= released;
+        auto& state = ensure(b.slot);
+
+        state.down |= now;
+        state.pressed |= pressed;
+        state.released |= released;
 
         const bool fire =
             (b.mode == ActionMode::OnPress   && pressed) ||
@@ -58,14 +89,13 @@ void ActionMap::tick() {
             (b.mode == ActionMode::OnRelease && released);
 
         if (fire) {
-            Logger::info("ActionMap", "fire: {}", b.verb);
-
+            Logger::info("ActionMap", "fire from: {}", b.trigger);
             if (b.target == Target::Action) {
-                node_->fire(b.verb);
+                run_ctx->invoke(b.slot);
             } else if (b.target == Target::Toggle) {
-                node_->set(b.verb, !node_->get<bool>(b.verb));
+                run_ctx->set(b.slot, !run_ctx->getValue<bool>(b.slot));
             } else {
-                node_->set(b.verb, node_->get<double>(b.verb) + b.delta);
+                run_ctx->set(b.slot, run_ctx->getValue<double>(b.slot) + b.delta);
             }
         }
 
@@ -73,19 +103,19 @@ void ActionMap::tick() {
     }
 }
 
-bool ActionMap::down(std::string_view verb) const {
-    const auto* s = find(verb);
-    return s && s->down;
+bool ActionMap::down(Lattice::SlotId slot) const {
+    const auto* state = find(slot);
+    return state && state->down;
 }
 
-bool ActionMap::pressed(std::string_view verb) const {
-    const auto* s = find(verb);
-    return s && s->pressed;
+bool ActionMap::pressed(Lattice::SlotId slot) const {
+    const auto* state = find(slot);
+    return state && state->pressed;
 }
 
-bool ActionMap::released(std::string_view verb) const {
-    const auto* s = find(verb);
-    return s && s->released;
+bool ActionMap::released(Lattice::SlotId slot) const {
+    const auto* state = find(slot);
+    return state && state->released;
 }
 
 void ActionMap::clearBinds() {

@@ -54,7 +54,7 @@ public:
         atomData->addCol<Mass>();
         atomData->addCol<Valence>();
 
-        universe.activate("Model");
+        // auto slot = universe.get_ctx().addSlot("print");
     }
 
     void run() override {
