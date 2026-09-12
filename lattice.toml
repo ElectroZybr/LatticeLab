@@ -1,5 +1,7 @@
 [Startup]
-ClassicMD = "on"
-Window = ["on", "host"]
+ClassicMD.Universe1 = "on"
+# ClassicMD.Universe2 = "on"
+Window.1 = ["on", "host"]
+# Window.2 = "on"
 IOSubsystem = "on"
 ActionMap = "on"

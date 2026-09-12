@@ -26,7 +26,7 @@ public:
         render = branch.require<Render>();
         window = branch.find<WindowAPI>();
 
-        branch.on("print", [&]() { print(); });
+        branch.on("print", [this]() { print(); });
 
         window->show();
         window->setTitle("LatticeLab");
@@ -39,6 +39,8 @@ public:
         // actionMap->bindAdd("dt", "MouseLeft", +0.001);
         actionMap->bind("print", "MouseLeft");
         actionMap->bind("load", "Ctrl+O");
+        actionMap->run_ctx->activate(0, 50);
+        actionMap->run_ctx->activate(1, 51);
 
         render->setup();
         while (!stopRequested()) {
@@ -59,7 +61,6 @@ public:
     }
 
 private:
-    Ref<Lattice::Settings> settings;
     Ref<ActionMap> actionMap;
     Ref<Render> render;
     Slot<WindowAPI> window;
