@@ -156,6 +156,24 @@ TEST(Node_directCollect, RuntimeFixture,
     REQUIRE(nestedNode.size() == 1);
 }
 
+TEST(Node_directCollectImpls, RuntimeFixture,
+    "directCollect по API должен находить реализации, добавленные addImpls, а не только точное имя типа.")
+{
+    fixture.blueprints.blueprint<TestAPI>();
+    fixture.blueprints.blueprint<TestImplA, TestAPI>();
+    fixture.blueprints.blueprint<TestImplB, TestAPI>();
+
+    fixture.root.addImpls<TestAPI>();
+
+    auto impls = fixture.root.directCollect<TestAPI>();
+    auto exactA = fixture.root.directCollect<TestImplA>();
+    auto nested = fixture.root.addFolder("nested").directCollect<TestAPI>();
+
+    REQUIRE(impls.size() == 2);
+    REQUIRE(exactA.size() == 1);
+    REQUIRE(nested.empty());
+}
+
 TEST(Node_GlobalCollectDeepTree, RuntimeFixture,
     "globalCollect должен найти каждый компонент во всём дереве независимо от глубины и ветки.")
 {

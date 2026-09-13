@@ -39,8 +39,8 @@ public:
         // actionMap->bindAdd("dt", "MouseLeft", +0.001);
         actionMap->bind("print", "MouseLeft");
         actionMap->bind("load", "Ctrl+O");
-        actionMap->run_ctx->activate(0, 50);
-        actionMap->run_ctx->activate(1, 51);
+        // actionMap->run_ctx->activate(0, 48);
+        // actionMap->run_ctx->activate(1, 49);
 
         render->setup();
         while (!stopRequested()) {

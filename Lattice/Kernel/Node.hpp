@@ -21,6 +21,13 @@
 
 namespace Lattice {
 
+enum class NodeKind : uint8_t {
+    Folder,
+    Blueprint,
+    Component,
+    Binding
+};
+
 class Path {
 public:
     Path() = default;
@@ -76,16 +83,17 @@ class Node {
     Node* parent = nullptr;
     Node* bp     = nullptr;
     void* object = nullptr; // для чертежей meta
+    NodeKind kind = NodeKind::Folder;
 
     std::vector<std::unique_ptr<Node>> children_;
 
     Node* makeChild(std::string_view name, Node* blueprint = nullptr) {
         auto node = std::make_unique<Node>(run_ctx, this);
-        Node* raw = node.get();
-        raw->id = run_ctx.objects.create(name, id, raw);
-        raw->bp = blueprint;
+        Node* child = node.get();; 
+        child->id = run_ctx.objects.create(name, id, child);
+        child->bp = blueprint;
         children_.push_back(std::move(node));
-        return raw;
+        return child;
     }
 
     Meta* getMeta() const noexcept {
@@ -107,24 +115,26 @@ class Node {
 
     void appendTree(Logger::Tree& tree, size_t depth, ObjectId highlighted) const {
         for (const auto& child : children_) {
-            const std::string type = child->bp
-                ? std::string(child->bp->name())
-                : std::string(child->name());
             const std::string name = std::string(child->name());
-
-            const std::string mark =
-                child->bp      ? "(O)" :
-                child->object  ? "(B)" :
-                                 "(F)" ;
-            
             std::string line;
 
-            if (mark == "(F)")
-                line = std::format("{} <m>F</>", name);
-            else if (mark == "(B)")
-                line = std::format("{} <c>B</>", name);
-            else
-                line = std::format("{}<gr>:{}</> <g>O</>", child->bp->name(), name);
+            switch (child->kind) {
+                case NodeKind::Folder:
+                    line = std::format("{} <m>F</>", name);
+                    break;
+
+                case NodeKind::Blueprint:
+                    line = std::format("{} <c>B</>", name);
+                    break;
+
+                case NodeKind::Component:
+                    line = std::format("{}<gr>:{}</> <g>С</>", child->bp->name(), name);
+                    break;
+
+                case NodeKind::Binding:
+                    line = std::format("{} <y>λ</>", name);
+                    break;
+            }
 
             if (child->id == highlighted)
                 line = std::format("<b><r>{} 🡸<//>", line);
@@ -172,6 +182,12 @@ class Node {
         }
 
         return InvalidObjectId;
+    }
+
+    void activate(Node* child, std::string_view name) {
+        SlotId slot = run_ctx.getSlot(name);
+        if (run_ctx.get(slot) == InvalidObjectId)
+            run_ctx.activate(slot, child->id);
     }
 
 public:
@@ -223,6 +239,7 @@ public:
 
         Node* child = makeChild(name);
         child->object = metaPtr;
+        child->kind = NodeKind::Blueprint;
 
         Logger::info(tag, "+ blueprint {}", name);
     }
@@ -236,11 +253,6 @@ public:
 
         Node* api = run_ctx.objects.require(apiId).node;
         api->blueprint<Impl>();
-    }
-
-    ObjectId primitive(std::string_view name) {
-        Node* child = makeChild(name);
-        return child->id;
     }
 
     ObjectId findBlueprint(std::string_view name, std::string_view blueprintsPath = DefaultBlueprintsPath) const {
@@ -274,8 +286,12 @@ public:
     std::vector<T*> directCollect() const {
         std::vector<T*> out;
 
+        ObjectId apiId = findBlueprint<T>();
+        if (!Objects::valid(apiId))
+            return out;
+
         for (const auto& child : children_) {
-            if (!child->isType<T>())
+            if (!child->isImplement(apiId))
                 continue;
 
             if (void* object = child->getObject())
@@ -345,8 +361,11 @@ public:
 
         Node* child = makeChild(instanceName, blueprint);
         child->object = static_cast<Meta*>(blueprint->object)->create(*child);
+        child->kind = NodeKind::Component;
+        
+        Logger::info(tag, "added '{}:{}'", blueprint->name(), instanceName);
 
-        Logger::info(tag, "+ {}", instanceName);
+        activate(child, blueprint->name());
     }
 
     template<typename API, typename Impl>
@@ -408,8 +427,10 @@ public:
             throw Exception(tag, "blueprint '{}' has no create callback", implName);
 
         child->object = meta->create(*child);
+        child->kind = NodeKind::Component;
 
         Logger::info(tag, "> use '{}' = '{}'", typeName<API>(), implName);
+        activate(child, blueprint->name());
         return Slot<API>(child);
     }
 
@@ -550,7 +571,10 @@ public:
     }
 
     ~Node() {
-        if (bp && object) {
+        if (kind == NodeKind::Binding)
+            run_ctx.bindings.unbind(id);
+
+        if (kind == NodeKind::Component && bp && object) {
             Meta* meta = static_cast<Meta*>(bp->object);
 
             if (meta && meta->destroy)
@@ -595,22 +619,28 @@ public:
     
     template<typename T>
     ObjectId bind(std::string_view name, T* ptr, double min = 0, double max = 0, bool hasRange = false) {
-        Node* child = makeChild(name, run_ctx.objects.require(run_ctx.primitives.param).node);
-        run_ctx.bindings.bind(child->id, ptr, min, max, hasRange);
+        Node* child = makeChild(name);
+        child->kind = NodeKind::Binding;
+        child->object = &run_ctx.bindings.bind(child->id, ptr, min, max, hasRange);
+        activate(child, name);
         return child->id;
     }
 
     template<typename T, typename F>
     requires std::invocable<F&, T>
     ObjectId bind(std::string_view name, T* ptr, F&& onChange, double min = 0, double max = 0, bool hasRange = false) {
-        Node* child = makeChild(name, run_ctx.objects.require(run_ctx.primitives.param).node);
-        run_ctx.bindings.bind(child->id, ptr, std::forward<F>(onChange), min, max, hasRange);
+        Node* child = makeChild(name);
+        child->kind = NodeKind::Binding;
+        child->object = &run_ctx.bindings.bind(child->id, ptr, std::forward<F>(onChange), min, max, hasRange);
+        activate(child, name);
         return child->id;
     }
 
     ObjectId on(std::string_view name, std::function<void()> handler) {
-        Node* child = makeChild(name, run_ctx.objects.require(run_ctx.primitives.action).node);
-        run_ctx.bindings.on(child->id, std::move(handler));
+        Node* child = makeChild(name);
+        child->kind = NodeKind::Binding;
+        child->object = &run_ctx.bindings.on(child->id, std::move(handler));
+        activate(child, name);
         return child->id;
     }
 

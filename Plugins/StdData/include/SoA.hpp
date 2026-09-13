@@ -1,9 +1,12 @@
 #pragma once
 
+#include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstring>
 #include <span>
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -15,6 +18,12 @@
 
 
 namespace StdData {
+
+template<typename T>
+constexpr bool isCharArray = false;
+
+template<std::size_t N>
+constexpr bool isCharArray<std::array<char, N>> = true;
 
 class SoA {
     static constexpr std::string_view tag = "SoA";
@@ -95,8 +104,7 @@ public:
         col.active      = true;
 
         col.assign = [](std::byte* storage, size_t index, const Value& value) {
-            auto* data = reinterpret_cast<T*>(storage);
-            data[index] = value.as<T>();
+            assignCell(reinterpret_cast<T*>(storage)[index], value);
         };
 
         relayout(capacity_);
@@ -153,6 +161,10 @@ public:
         return nullptr;
     }
 
+    [[nodiscard]] bool has(std::string_view name) const noexcept {
+        return findColumn(name) != nullptr;
+    }
+
     // -------
     // require
     template<class Tag>
@@ -160,7 +172,7 @@ public:
         using T = typename Tag::type;
         auto* column = findColumn<Tag>();
         if (!column) {
-            throw Lattice::Exception(tag, "Column '{}' not found", Tag::name);
+            throw Lattice::Exception(tag, "Column '{}' not found", Lattice::typeName<Tag>());
         }
         return reinterpret_cast<T*>(storage_ + column->offset);
     }
@@ -170,7 +182,7 @@ public:
         using T = typename Tag::type;
         const auto* column = findColumn<Tag>();
         if (!column) {
-            throw Lattice::Exception(tag, "Column '{}' not found", Tag::name);
+            throw Lattice::Exception(tag, "Column '{}' not found", Lattice::typeName<Tag>());
         }
         return reinterpret_cast<const T*>(storage_ + column->offset);
     }
@@ -272,6 +284,32 @@ private:
         return &token;
     }
 
+    template<typename T>
+    static void assignCell(T& dst, const Value& value) {
+        if constexpr (isCharArray<T>) {
+            const auto text = value.as<std::string>();
+            dst = {};
+            const size_t n = std::min(text.size(), dst.size() ? dst.size() - 1 : 0);
+            std::memcpy(dst.data(), text.data(), n);
+        } else if constexpr (std::is_floating_point_v<T>) {
+            if (value.is<double>())
+                dst = static_cast<T>(value.get<double>());
+            else if (value.is<int64_t>())
+                dst = static_cast<T>(value.get<int64_t>());
+            else
+                throw Lattice::Exception(tag, "expected a number");
+        } else if constexpr (std::is_integral_v<T> && !std::is_same_v<T, bool>) {
+            if (value.is<int64_t>())
+                dst = static_cast<T>(value.get<int64_t>());
+            else if (value.is<double>())
+                dst = static_cast<T>(value.get<double>());
+            else
+                throw Lattice::Exception(tag, "expected an integer");
+        } else {
+            dst = value.as<T>();
+        }
+    }
+
     static size_t alignUp(size_t value, size_t alignment) noexcept {
         return (value + alignment - 1) & ~(alignment - 1);
     }
@@ -294,7 +332,11 @@ private:
     }
 
     Column* findColumn(std::string_view name) noexcept {
-        for (auto& col : columns_) {
+        return const_cast<Column*>(std::as_const(*this).findColumn(name));
+    }
+
+    const Column* findColumn(std::string_view name) const noexcept {
+        for (const auto& col : columns_) {
             if (col.active && col.name == name)
                 return &col;
         }

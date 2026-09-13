@@ -13,8 +13,7 @@
 #include <ParticleDynamics/include/ParticleStorage.hpp>
 
 // Source
-#include <Lattice/Engine/physics/Atom/AtomData.h>
-#include "StdData/include/SoA.hpp"
+#include "AtomData.hpp"
 
 namespace ClassicMD {
 
@@ -32,14 +31,14 @@ public:
     struct Mass {using type = float;};
 
     explicit ClassicMD(Lattice::Node& universe) {
-        universe.add<StdData::SoA>("atomData");
+        universe.add<AtomData>();
         universe.add<ParticleDynamics::ParticleStorage>();
         universe.use<ParticleDynamics::SpatialIndexAPI>("SpatialGrid");
         universe.use<ParticleDynamics::IntegratorAPI>("Verlet");
     }
 
     void configure(Lattice::Node& universe) {
-        atomData = universe.require<StdData::SoA>("atomData");
+        atomData = universe.require<AtomData>();
         atoms = universe.require<ParticleDynamics::ParticleStorage>();
         spatialGrid = universe.find<ParticleDynamics::SpatialIndexAPI>();
         integrator = universe.find<ParticleDynamics::IntegratorAPI>();
@@ -49,12 +48,6 @@ public:
         atoms->addCol<Valence>();
         // atoms->addCol<Hybridization>();
         atoms->addCol<Id>();
-
-        atomData->addCol<Element>();
-        atomData->addCol<Mass>();
-        atomData->addCol<Valence>();
-
-        // auto slot = universe.get_ctx().addSlot("print");
     }
 
     void run() override {
@@ -78,7 +71,7 @@ public:
     }
 
 private:
-    Ref<StdData::SoA> atomData;
+    Ref<AtomData> atomData;
     Ref<ParticleDynamics::ParticleStorage> atoms;
     Slot<ParticleDynamics::IntegratorAPI> integrator;
     Slot<ParticleDynamics::SpatialIndexAPI> spatialGrid;
