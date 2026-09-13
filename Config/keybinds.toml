@@ -1,0 +1,5 @@
+[keybinds]
+print = "P"
+quit = ["Ctrl+Q", 12]
+dt.add = ["]", 0.001, "hold"]
+dt.sub = ["[", -0.001, "hold"]

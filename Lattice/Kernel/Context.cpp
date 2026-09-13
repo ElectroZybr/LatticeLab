@@ -12,11 +12,19 @@ SlotId Context::addSlot(std::string_view name) {
 }
 
 SlotId Context::getSlot(std::string_view name) {
+    const SlotId id = findSlot(name);
+    if (id != InvalidSlotId)
+        return id;
+
+    return addSlot(name);
+}
+
+SlotId Context::findSlot(std::string_view name) const {
     for (SlotId i = 0; i < ctx_slots.size(); ++i)
         if (ctx_slots[i].name == name)
             return i;
 
-    return addSlot(name);
+    return InvalidSlotId;
 }
 
 ObjectId Context::get(SlotId id) {
@@ -27,12 +35,11 @@ ObjectId Context::get(SlotId id) {
 }
 
 ObjectId Context::active(std::string_view name) const {
-    for (const auto& slot : ctx_slots) {
-        if (slot.name == name)
-            return slot.object;
-    }
+    const SlotId id = findSlot(name);
+    if (id == InvalidSlotId)
+        return InvalidObjectId;
 
-    return InvalidObjectId;
+    return ctx_slots[id].object;
 }
 
 void Context::activate(SlotId slot, ObjectId object) {

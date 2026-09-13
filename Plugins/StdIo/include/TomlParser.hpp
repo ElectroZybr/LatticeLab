@@ -36,43 +36,27 @@ private:
         Table& output
     ) {
         for (const auto& [key, node] : table) {
-            const std::string keyName = std::string(key.str());
-
-            if (const auto* child = node.as_table()) {
-                Table childTable;
-                parseTable(*child, childTable);
-
-                output.emplace(
-                    keyName,
-                    std::move(childTable)
-                );
-
-                continue;
-            }
-
-            if (const auto* array = node.as_array()) {
-                Array parameters;
-                parameters.reserve(array->size());
-
-                for (const auto& element : *array)
-                    parameters.emplace_back(parseValue(element));
-
-                output.emplace(
-                    keyName,
-                    std::move(parameters)
-                );
-
-                continue;
-            }
-
-            output.emplace(
-                keyName,
-                parseValue(node)
-            );
+            output.emplace(std::string(key.str()), parseValue(node));
         }
     }
 
     static Value parseValue(const toml::node& node) {
+        if (const auto* table = node.as_table()) {
+            Table child;
+            parseTable(*table, child);
+            return child;
+        }
+
+        if (const auto* array = node.as_array()) {
+            Array values;
+            values.reserve(array->size());
+
+            for (const auto& element : *array)
+                values.emplace_back(parseValue(element));
+
+            return values;
+        }
+
         if (const auto* value = node.as_string())
             return std::string(value->get());
 

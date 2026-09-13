@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -8,9 +9,6 @@
 #include "Lattice/Kernel/SubsystemAPI.hpp"
 #include "Lattice/Tools/Logger.hpp"
 #include <Lattice/Kernel/Node.hpp>
-
-// Plugin dependences
-
 
 // Source
 #include "Document.hpp"
@@ -26,13 +24,29 @@ public:
     }
 
     void configure(Lattice::Node& ioBranch) {
-        ioBranch.on("load", [this]() { load("keybinds.toml"); } );
+        ioBranch.on("load", [this]() { loadDir("Config"); } );
         loaders = ioBranch.directCollect<LoaderAPI>();
         parsers = ioBranch.directCollect<ParserAPI>();
     }
 
+    void loadDir(const std::filesystem::path& dir) {
+        if (!std::filesystem::is_directory(dir)) {
+            Logger::warning("IOSubsystem", "config directory '{}' not found", dir.string());
+            return;
+        }
+
+        for (const std::filesystem::directory_entry& entry :
+             std::filesystem::recursive_directory_iterator(dir))
+        {
+            if (!entry.is_regular_file())
+                continue;
+
+            load(entry.path());
+        }
+    }
+
     void load(const std::filesystem::path& path ) {
-        Logger::ok("IOSubsystem", "загрузка отсюда: {}", std::string(path));
+        Logger::ok("IOSubsystem", "load from: {}", std::string(path));
         ParserAPI* parser = findParser(path);
         Document doc;
         if (parser)

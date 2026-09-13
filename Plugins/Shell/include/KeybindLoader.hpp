@@ -1,12 +1,19 @@
 #pragma once
 
-#include <Lattice/Kernel/Node.hpp>
-#include <Lattice/Kernel/Exception.hpp>
+#include <string>
+#include <string_view>
+#include <utility>
 
-#include "LoaderAPI.hpp"
+#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Kernel/Node.hpp>
+#include <Lattice/Kernel/Value.hpp>
+
 #include "ActionMap.hpp"
+#include "LoaderAPI.hpp"
 
 class KeybindsLoader final : public LoaderAPI {
+    static constexpr std::string_view tag = "KeybindsLoader";
+
 public:
     void configure(Lattice::Node& branch) {
         actionMap = branch.require<ActionMap>();
@@ -17,90 +24,104 @@ public:
     }
 
     void load(const Value* keybinds) override {
-        // throw Lattice::Exception("KeybindsLoader", "загрузка: о нет всему пизда!!!");
-        // const auto* keybinds = doc.get("keybinds");
-
         if (!keybinds || !keybinds->is<Table>())
             return;
 
-        const auto applyTable =
-            [this](const Table& table, const std::string& prefix,
-                auto&& self) -> void
-        {
-            for (const auto& [key, value] : table) {
+        if (!actionMap)
+            throw Lattice::Exception(tag, "loader is not configured");
 
-                const std::string path =
-                    prefix.empty()
-                        ? key
-                        : prefix + "." + key;
-
-                if (value.is<Table>()) {
-                    self(value.as<Table>(), path, self);
-                    continue;
-                }
-
-                std::vector<Value> args;
-
-                if (value.is<Array>())
-                    args = value.as<Array>();
-                else
-                    args.push_back(value);
-
-                if (args.empty())
-                    continue;
-
-                const auto* trigger =
-                    std::get_if<std::string>(&args[0]);
-
-                if (!trigger)
-                    continue;
-
-                std::string op = "action";
-                double delta = 0.0;
-                ActionMode mode = ActionMode::OnPress;
-
-                for (size_t i = 1; i < args.size(); ++i) {
-
-                    const auto* arg =
-                        std::get_if<std::string>(&args[i]);
-
-                    if (!arg)
-                        continue;
-
-                    if (*arg == "toggle") {
-                        op = "toggle";
-                    }
-                    else if (*arg == "add") {
-                        op = "add";
-
-                        if (i + 1 < args.size()) {
-                            if (const auto* number =
-                                    std::get_if<double>(&args[++i]))
-                            {
-                                delta = *number;
-                            }
-                        }
-                    }
-                    else if (*arg == "hold") {
-                        mode = ActionMode::OnHold;
-                    }
-                    else if (*arg == "press") {
-                        mode = ActionMode::OnPress;
-                    }
-                }
-
-                if (op == "toggle")
-                    actionMap->bindToggle(path, *trigger, mode);
-                else if (op == "add")
-                    actionMap->bindAdd(path, *trigger, delta, mode);
-                else
-                    actionMap->bind(path, *trigger, mode);
-            }
-        };
-
-        applyTable(keybinds->as<Table>(), "", applyTable);
+        loadTable(std::get<Table>(*keybinds), "");
     }
 
 private:
     Ref<ActionMap> actionMap;
+
+    static bool isOp(std::string_view name) {
+        return name == "add" || name == "sub" || name == "toggle";
+    }
+
+    static bool asNumber(const Value& value, double& out) {
+        if (value.is<double>()) {
+            out = value.get<double>();
+            return true;
+        }
+
+        if (value.is<int64_t>()) {
+            out = static_cast<double>(value.get<int64_t>());
+            return true;
+        }
+
+        return false;
+    }
+
+    static std::pair<std::string, std::string> splitVerb(std::string path) {
+        const auto pos = path.rfind('.');
+        if (pos == std::string::npos || pos + 1 >= path.size())
+            return {std::move(path), "action"};
+
+        std::string last = path.substr(pos + 1);
+        if (!isOp(last))
+            return {std::move(path), "action"};
+
+        path.resize(pos);
+        return {std::move(path), std::move(last)};
+    }
+
+    void loadTable(const Table& table, const std::string& prefix) {
+        for (const auto& [key, value] : table) {
+            const std::string path = prefix.empty() ? key : prefix + "." + key;
+
+            if (value.is<Table>()) {
+                loadTable(std::get<Table>(value), path);
+                continue;
+            }
+
+            bindEntry(path, value);
+        }
+    }
+
+    void bindEntry(std::string path, const Value& value) {
+        auto [verb, op] = splitVerb(std::move(path));
+        if (verb.empty())
+            return;
+
+        Array args;
+        if (value.is<Array>())
+            args = std::get<Array>(value);
+        else
+            args.push_back(value);
+
+        if (args.empty() || !args[0].is<std::string>())
+            throw Lattice::Exception(tag, "bind '{}' needs a trigger string", verb);
+
+        const auto& trigger = std::get<std::string>(args[0]);
+        ActionMode mode = ActionMode::OnPress;
+        double delta = 0.0;
+
+        for (size_t i = 1; i < args.size(); ++i) {
+            const auto& arg = args[i];
+
+            if (arg.is<std::string>()) {
+                const auto& token = std::get<std::string>(arg);
+
+                if (isOp(token))
+                    op = token;
+                else if (token == "hold")
+                    mode = ActionMode::OnHold;
+                else if (token == "press")
+                    mode = ActionMode::OnPress;
+                else if (token == "release")
+                    mode = ActionMode::OnRelease;
+            } else {
+                asNumber(arg, delta);
+            }
+        }
+
+        if (op == "toggle")
+            actionMap->bindToggle(verb, trigger, mode);
+        else if (op == "add" || op == "sub")
+            actionMap->bindAdd(verb, trigger, delta, mode);
+        else
+            actionMap->bind(verb, trigger, mode);
+    }
 };

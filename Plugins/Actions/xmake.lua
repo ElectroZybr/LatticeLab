@@ -17,5 +17,9 @@ target("Actions.tests")
     set_targetdir(".")
 
     add_files("tests/*.cpp")
+    add_files("src/ActionMap.cpp")
+
+    add_includedirs("include")
+    add_includedirs("..")
 
     add_deps("Lattice")

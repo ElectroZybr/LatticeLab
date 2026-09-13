@@ -85,6 +85,7 @@ public:
         }
 
         Logger::ok(tag, "loaded {} rows into '{}'", rowData.size(), target);
+        soa->inspect(target);
     }
 
 private:

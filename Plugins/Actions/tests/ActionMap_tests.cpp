@@ -1,14 +1,186 @@
 #include <Lattice/Tools/Fixture.hpp>
 #include <Lattice/Tools/Tests.hpp>
-
 #include <Lattice/Lattice.hpp>
+
+#include "ActionMap.hpp"
+#include "InputAPI.hpp"
 
 using Lattice::RuntimeFixture;
 
-TEST(Action_test, RuntimeFixture) {
-    REQUIRE(true);
+class TestInput final : public InputAPI {
+public:
+    std::string held;
+
+    bool down(std::string_view trigger) const override {
+        return trigger == held;
+    }
+
+    bool pressed(std::string_view) const override {
+        return false;
+    }
+
+    bool released(std::string_view) const override {
+        return false;
+    }
+};
+
+struct ActionMapFixture : RuntimeFixture {
+    TestInput* input = nullptr;
+    ActionMap* map = nullptr;
+
+    ActionMapFixture() {
+        blueprints.blueprint<InputAPI>();
+        blueprints.blueprint<TestInput, InputAPI>();
+        blueprints.blueprint<ActionMap>();
+
+        root.add<TestInput>();
+        root.add<ActionMap>();
+        root.configureAll();
+
+        input = root.require<TestInput>().getPtr();
+        map = root.require<ActionMap>().getPtr();
+    }
+};
+
+TEST(ActionMap_BindIsIdempotent, ActionMapFixture,
+    "Повторная загрузка одинакового бинда не должна дублировать его.")
+{
+    fixture.map->bind("print", "P");
+    fixture.map->bind("print", "P");
+    fixture.map->bind("print", "P");
+
+    REQUIRE(fixture.map->bindCount() == 1);
+    REQUIRE(fixture.map->hasBind("print", "P"));
 }
 
-TEST(djsaklfjsdlakjf, RuntimeFixture) {
-    REQUIRE(true);
+TEST(ActionMap_DifferentTriggers, ActionMapFixture,
+    "Один глагол может иметь несколько разных триггеров.")
+{
+    fixture.map->bind("print", "P");
+    fixture.map->bind("print", "MouseLeft");
+
+    REQUIRE(fixture.map->bindCount() == 2);
+    REQUIRE(fixture.map->hasBind("print", "P"));
+    REQUIRE(fixture.map->hasBind("print", "MouseLeft"));
+}
+
+TEST(ActionMap_ReloadDoesNotDoubleFire, ActionMapFixture,
+    "После повторного bind действие должно сработать один раз на нажатие.")
+{
+    int fires = 0;
+    fixture.root.on("print", [&] { ++fires; });
+
+    fixture.map->bind("print", "P");
+    fixture.map->bind("print", "P");
+
+    fixture.input->held = "P";
+    fixture.map->tick();
+    fixture.map->tick();
+
+    REQUIRE(fixture.map->bindCount() == 1);
+    REQUIRE(fires == 1);
+}
+
+TEST(ActionMap_ReboundMode, ActionMapFixture,
+    "Повторный bind с другим режимом должен заменить старый, а не добавить второй.")
+{
+    int fires = 0;
+    fixture.root.on("print", [&] { ++fires; });
+
+    fixture.map->bind("print", "P");
+    fixture.map->bind("print", "P", ActionMode::OnHold);
+
+    REQUIRE(fixture.map->bindCount() == 1);
+
+    fixture.input->held = "P";
+    fixture.map->tick();
+    fixture.map->tick();
+
+    REQUIRE(fires == 2);
+}
+
+TEST(ActionMap_Toggle, ActionMapFixture,
+    "bindToggle должен переключать bool-биндинг.")
+{
+    bool flag = false;
+    fixture.root.bind("flag", &flag);
+
+    fixture.map->bindToggle("flag", "T");
+    fixture.map->bindToggle("flag", "T");
+
+    REQUIRE(fixture.map->bindCount() == 1);
+
+    fixture.input->held = "T";
+    fixture.map->tick();
+    REQUIRE(flag);
+
+    fixture.input->held.clear();
+    fixture.map->tick();
+    fixture.input->held = "T";
+    fixture.map->tick();
+    REQUIRE(!flag);
+}
+
+TEST(ActionMap_Add, ActionMapFixture,
+    "bindAdd должен прибавлять delta к числу.")
+{
+    double dt = 1.0;
+    fixture.root.bind("dt", &dt);
+
+    fixture.map->bindAdd("dt", "]", 0.5);
+    fixture.map->bindAdd("dt", "]", 0.5);
+
+    REQUIRE(fixture.map->bindCount() == 1);
+
+    fixture.input->held = "]";
+    fixture.map->tick();
+
+    REQUIRE(dt == 1.5);
+}
+
+TEST(ActionMap_PressHoldRelease, ActionMapFixture,
+    "tick должен различать press, hold и release.")
+{
+    fixture.root.on("print", [] {});
+    fixture.map->bind("print", "P");
+
+    const auto slot = fixture.run_ctx.findSlot("print");
+    REQUIRE(slot != Lattice::InvalidSlotId);
+
+    fixture.input->held = "P";
+    fixture.map->tick();
+    REQUIRE(fixture.map->pressed(slot));
+    REQUIRE(fixture.map->down(slot));
+    REQUIRE(!fixture.map->released(slot));
+
+    fixture.map->tick();
+    REQUIRE(!fixture.map->pressed(slot));
+    REQUIRE(fixture.map->down(slot));
+    REQUIRE(!fixture.map->released(slot));
+
+    fixture.input->held.clear();
+    fixture.map->tick();
+    REQUIRE(!fixture.map->pressed(slot));
+    REQUIRE(!fixture.map->down(slot));
+    REQUIRE(fixture.map->released(slot));
+}
+
+TEST(ActionMap_ClearBinds, ActionMapFixture,
+    "clearBinds должен удалить все бинды.")
+{
+    fixture.map->bind("print", "P");
+    fixture.map->bind("load", "Ctrl+O");
+    REQUIRE(fixture.map->bindCount() == 2);
+
+    fixture.map->clearBinds();
+
+    REQUIRE(fixture.map->bindCount() == 0);
+    REQUIRE(!fixture.map->hasBind("print", "P"));
+}
+
+TEST(ActionMap_HasBindMissing, ActionMapFixture,
+    "hasBind не должен создавать слот для неизвестного глагола.")
+{
+    REQUIRE(!fixture.map->hasBind("missing", "P"));
+    REQUIRE(fixture.run_ctx.findSlot("missing") == Lattice::InvalidSlotId);
 }
