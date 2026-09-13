@@ -30,8 +30,6 @@ public:
     Runtime() : root(run_ctx, nullptr)
               , blueprints(root.addFolder(DefaultBlueprintsPath))
               , pluginManager(blueprints, dlLoader) {
-        run_ctx.primitives.param = blueprints.primitive("Param");
-        run_ctx.primitives.action = blueprints.primitive("Action");
         // регистрация интерфейсов ядра
         blueprints.blueprint<ServiceAPI>();
         blueprints.blueprint<SubsystemAPI>();
@@ -130,6 +128,7 @@ public:
                 scope.finish("<b>Cofiguration finished</>");
             }
             
+            run_ctx.printTree();
             root.dumpTree();
             // root.get_ctx().activate(0, 65);
             // root.dumpTree(DefaultBlueprintsPath);

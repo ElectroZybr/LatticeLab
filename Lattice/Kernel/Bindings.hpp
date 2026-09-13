@@ -8,14 +8,14 @@
 #include <Lattice/Kernel/Objects.hpp>
 #include <Lattice/Kernel/Value.hpp>
 
-
 namespace Lattice {
 
 struct Binding {
-    ObjectId id;
     void* object = nullptr;
+
     Value (*get)(void*) = nullptr;
     void (*set)(Binding*, const Value&) = nullptr;
+
     std::function<void(const Value&)> invoke;
 
     double min = 0;
@@ -25,13 +25,13 @@ struct Binding {
 
 class Bindings {
     static constexpr std::string_view tag = "Bindings";
+
     std::unordered_map<ObjectId, Binding> bindings;
 
 public:
     template<typename T>
-    void bind(ObjectId id, T* ptr, double min = 0, double max = 0, bool hasRange = false) {
+    Binding& bind(ObjectId id, T* ptr, double min = 0, double max = 0, bool hasRange = false) {
         Binding binding;
-        binding.id = id;
         binding.object = ptr;
         binding.min = min;
         binding.max = max;
@@ -46,16 +46,17 @@ public:
         };
 
         bindings[id] = std::move(binding);
+        return bindings[id];
     }
 
     template<typename T, typename F>
-    void bind(ObjectId id, T* ptr, F&& onChange, double min = 0, double max = 0, bool hasRange = false) {
+    Binding& bind(ObjectId id, T* ptr, F&& onChange, double min = 0, double max = 0, bool hasRange = false) {
         Binding binding;
-        binding.id = id;
         binding.object = ptr;
         binding.min = min;
         binding.max = max;
         binding.hasRange = hasRange;
+
         binding.invoke = [callback = std::forward<F>(onChange)](const Value& value) mutable {
             callback(value.get<T>());
         };
@@ -73,23 +74,77 @@ public:
         };
 
         bindings[id] = std::move(binding);
+        return bindings[id];
     }
 
-    void on(ObjectId id, std::function<void()> handler) {
+    Binding& on(ObjectId id, std::function<void()> handler) {
         Binding binding;
-        binding.id = id;
+
         binding.invoke = [handler = std::move(handler)](const Value&) {
             handler();
         };
+
         bindings[id] = std::move(binding);
+        return bindings[id];
     }
 
-    Binding& get(ObjectId id) {
-        return bindings[id];
+    Binding* get(ObjectId id) {
+        auto it = bindings.find(id);
+        return it == bindings.end() ? nullptr : &it->second;
+    }
+
+    const Binding* get(ObjectId id) const {
+        auto it = bindings.find(id);
+        return it == bindings.end() ? nullptr : &it->second;
+    }
+
+    bool has(ObjectId id) const {
+        return bindings.contains(id);
+    }
+
+    Value getValue(ObjectId id) const {
+        const auto* binding = get(id);
+
+        if (!binding || !binding->get)
+            throw Exception("Bindings", "binding for object {} is not readable", id);
+
+        return binding->get(binding->object);
+    }
+
+    template<typename T>
+    T get(ObjectId id) const {
+        return getValue(id).get<T>();
+    }
+
+    void set(ObjectId id, const Value& value) {
+        auto* binding = get(id);
+
+        if (!binding || !binding->set)
+            throw Exception("Bindings", "binding for object {} is not writable", id);
+
+        binding->set(binding, value);
+    }
+
+    template<typename T>
+    void set(ObjectId id, T value) {
+        set(id, Value{std::move(value)});
+    }
+
+    void invoke(ObjectId id) {
+        auto* binding = get(id);
+
+        if (!binding || !binding->invoke)
+            return;
+
+        binding->invoke(Value{});
     }
 
     void unbind(ObjectId id) {
         bindings.erase(id);
+    }
+
+    void clear() {
+        bindings.clear();
     }
 };
 

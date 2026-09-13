@@ -90,12 +90,15 @@ void ActionMap::tick() {
 
         if (fire) {
             Logger::info("ActionMap", "fire from: {}", b.trigger);
+
+            const Lattice::ObjectId object = run_ctx->get(b.slot);
+
             if (b.target == Target::Action) {
-                run_ctx->invoke(b.slot);
+                run_ctx->bindings.invoke(object);
             } else if (b.target == Target::Toggle) {
-                run_ctx->set(b.slot, !run_ctx->getValue<bool>(b.slot));
+                run_ctx->bindings.set(object, !run_ctx->bindings.get<bool>(object));
             } else {
-                run_ctx->set(b.slot, run_ctx->getValue<double>(b.slot) + b.delta);
+                run_ctx->bindings.set(object, run_ctx->bindings.get<double>(object) + b.delta);
             }
         }
 

@@ -43,7 +43,7 @@ public:
             if (!data)
                 continue;
 
-            loader->load(data);//*data, context
+            loader->load(data);
         }
     }
 

@@ -17,7 +17,7 @@ public:
     }
 
     void load(const Value* keybinds) override {
-        throw Lattice::Exception("KeybindsLoader", "загрузка: о нет всему пизда!!!");
+        // throw Lattice::Exception("KeybindsLoader", "загрузка: о нет всему пизда!!!");
         // const auto* keybinds = doc.get("keybinds");
 
         if (!keybinds || !keybinds->is<Table>())
