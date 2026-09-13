@@ -122,10 +122,21 @@ public:
             { // связывание компонентов
                 LogScope scope(tag, "<b>System configuring</>");
                 root.configureAll();
+                scope.finish("<b>Configuration finished</>");
+            }
+
+            { // стартовые данные после configure всех веток
+                LogScope scope(tag, "<b>System boot</>");
+                loadStartup();
+                scope.finish("<b>Boot finished</>");
+            }
+
+            { // запуск сервисов
+                LogScope scope(tag, "<b>System start</>");
                 for (const auto& entry : config.entries())
                     if (entry.enabled)
                         startService(entry);
-                scope.finish("<b>Cofiguration finished</>");
+                scope.finish("<b>Start finished</>");
             }
             
             run_ctx.printTree();
@@ -192,6 +203,17 @@ public:
     }
 
 private:
+    void loadStartup() {
+        const ObjectId id = run_ctx.active("load");
+        if (!Objects::valid(id)) {
+            Logger::info(tag, "no load action, skip startup config");
+            return;
+        }
+
+        Logger::info(tag, "loading startup config");
+        run_ctx.bindings.invoke(id);
+    }
+
     void stopAll() {
         running = false;
         root.stopServices();

@@ -5,8 +5,10 @@
 #include <Lattice/Tools/Tests.hpp>
 #include <Lattice/Lattice.hpp>
 
+#include "Document.hpp"
 #include "SoA.hpp"
 #include "SoALoader.hpp"
+#include "TomlParser.hpp"
 
 using Lattice::RuntimeFixture;
 
@@ -19,6 +21,19 @@ struct Valence { using type = uint8_t; };
 class Wrapper {
 public:
     explicit Wrapper(Lattice::Node& branch) {
+        branch.add<StdData::SoA>();
+        soa = branch.require<StdData::SoA>();
+        soa->addCol<Name>();
+        soa->addCol<Mass>();
+        soa->addCol<Valence>();
+    }
+
+    Ref<StdData::SoA> soa;
+};
+
+class AtomData {
+public:
+    explicit AtomData(Lattice::Node& branch) {
         branch.add<StdData::SoA>();
         soa = branch.require<StdData::SoA>();
         soa->addCol<Name>();
@@ -136,4 +151,50 @@ TEST(SoALoader_MissingColumn, RuntimeFixture,
     }
 
     REQUIRE(thrown);
+}
+
+TEST(SoALoader_InspectEmpty, RuntimeFixture,
+    "inspect пустого SoA не должен падать.")
+{
+    fixture.blueprints.blueprint<StdData::SoA>();
+    fixture.root.add<StdData::SoA>();
+
+    auto soa = fixture.root.require<StdData::SoA>();
+    REQUIRE(soa->size() == 0);
+    soa->inspect("empty");
+}
+
+TEST(SoALoader_LoadAtomDataFile, RuntimeFixture,
+    "Config/atomData.toml должен заполнить SoA у AtomData.")
+{
+    fixture.blueprints.blueprint<StdData::SoA>();
+    fixture.blueprints.blueprint<AtomData>();
+    fixture.root.add<AtomData>();
+
+    TomlParser parser;
+    const Document doc = parser.parseFile("Config/atomData.toml");
+    const Value* data = doc.get("SoAData");
+    REQUIRE(data);
+    REQUIRE(data->is<Table>());
+
+    const auto& table = std::get<Table>(*data);
+    const auto rowsIt = table.find("rows");
+    REQUIRE(rowsIt != table.end());
+    REQUIRE(rowsIt->second.is<Array>());
+    REQUIRE(std::get<Array>(rowsIt->second)[0].is<Array>());
+
+    SoALoader loader;
+    loader.configure(fixture.root);
+    loader.load(data);
+
+    auto soa = fixture.root.require<AtomData>()->soa;
+    REQUIRE(soa);
+    REQUIRE(soa->size() == 3);
+    REQUIRE(soa->columnCount() == 3);
+    REQUIRE(std::strcmp(soa->at<Name>(0).data(), "H") == 0);
+    REQUIRE(soa->at<Mass>(0) == static_cast<float>(1.008));
+    REQUIRE(soa->at<Valence>(0) == 1);
+    REQUIRE(std::strcmp(soa->at<Name>(2).data(), "Li") == 0);
+
+    soa->inspect("AtomData");
 }

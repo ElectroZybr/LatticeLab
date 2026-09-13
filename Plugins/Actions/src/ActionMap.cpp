@@ -1,5 +1,7 @@
 #include "ActionMap.hpp"
 
+#include <utility>
+
 #include <Lattice/Kernel/Node.hpp>
 #include <Lattice/Tools/Logger.hpp>
 
@@ -22,42 +24,75 @@ Lattice::SlotId ActionMap::resolve(std::string_view verb) const {
     return run_ctx->getSlot(verb);
 }
 
-void ActionMap::bind(std::string_view verb, std::string_view trigger, ActionMode mode) {
+ActionMap::Binding* ActionMap::findBind(Lattice::SlotId slot, std::string_view trigger) {
+    return const_cast<Binding*>(std::as_const(*this).findBind(slot, trigger));
+}
+
+const ActionMap::Binding* ActionMap::findBind(Lattice::SlotId slot, std::string_view trigger) const {
+    for (const auto& binding : bindings_) {
+        if (binding.slot == slot && binding.trigger == trigger)
+            return &binding;
+    }
+
+    return nullptr;
+}
+
+void ActionMap::upsert(
+    std::string_view verb,
+    std::string_view trigger,
+    ActionMode mode,
+    Target target,
+    double delta
+) {
     const auto slot = resolve(verb);
-
     ensure(slot);
-    bindings_.push_back({slot, std::string(trigger), mode});
 
-    Logger::ok("ActionMap", "bound '{}' ➜ '{}'", trigger, verb);
-}
+    if (auto* existing = findBind(slot, trigger)) {
+        existing->mode = mode;
+        existing->target = target;
+        existing->delta = delta;
+        existing->wasDown = false;
+        Logger::info("ActionMap", "rebound '{}' ➜ '{}'", trigger, verb);
+        return;
+    }
 
-void ActionMap::bindToggle(std::string_view param, std::string_view trigger, ActionMode mode) {
-    const auto slot = resolve(param);
-
-    ensure(slot);
     bindings_.push_back({
         slot,
         std::string(trigger),
         mode,
-        Target::Toggle
-    });
-
-    Logger::ok("ActionMap", "bound toggle '{}' ➜ '{}'", trigger, param);
-}
-
-void ActionMap::bindAdd(std::string_view param, std::string_view trigger, double delta, ActionMode mode) {
-    const auto slot = resolve(param);
-
-    ensure(slot);
-    bindings_.push_back({
-        slot,
-        std::string(trigger),
-        mode,
-        Target::Add,
+        target,
         delta
     });
 
-    Logger::ok("ActionMap", "bound add '{}' ➜ '{}' ({})", trigger, param, delta);
+    if (target == Target::Toggle)
+        Logger::ok("ActionMap", "bound toggle '{}' ➜ '{}'", trigger, verb);
+    else if (target == Target::Add)
+        Logger::ok("ActionMap", "bound add '{}' ➜ '{}' ({})", trigger, verb, delta);
+    else
+        Logger::ok("ActionMap", "bound '{}' ➜ '{}'", trigger, verb);
+}
+
+void ActionMap::bind(std::string_view verb, std::string_view trigger, ActionMode mode) {
+    upsert(verb, trigger, mode, Target::Action, 0);
+}
+
+void ActionMap::bindToggle(std::string_view param, std::string_view trigger, ActionMode mode) {
+    upsert(param, trigger, mode, Target::Toggle, 0);
+}
+
+void ActionMap::bindAdd(std::string_view param, std::string_view trigger, double delta, ActionMode mode) {
+    upsert(param, trigger, mode, Target::Add, delta);
+}
+
+bool ActionMap::hasBind(std::string_view verb, std::string_view trigger) const {
+    if (!run_ctx)
+        return false;
+
+    const auto slot = run_ctx->findSlot(verb);
+    if (slot == Lattice::InvalidSlotId)
+        return false;
+
+    return findBind(slot, trigger) != nullptr;
 }
 
 void ActionMap::tick() {

@@ -4,7 +4,9 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
+#include <format>
 #include <span>
 #include <string>
 #include <string_view>
@@ -15,6 +17,8 @@
 #include <Lattice/Kernel/TypeName.hpp>
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/Value.hpp>
+#include <Lattice/Tools/Logger.hpp>
+#include <Lattice/Tools/LogTree.hpp>
 
 
 namespace StdData {
@@ -106,6 +110,17 @@ public:
         col.assign = [](std::byte* storage, size_t index, const Value& value) {
             assignCell(reinterpret_cast<T*>(storage)[index], value);
         };
+
+        if constexpr (isCharArray<T>)
+            col.kind = CellKind::Chars;
+        else if constexpr (std::is_same_v<T, bool>)
+            col.kind = CellKind::Bool;
+        else if constexpr (std::is_floating_point_v<T>)
+            col.kind = CellKind::Float;
+        else if constexpr (std::is_integral_v<T>)
+            col.kind = CellKind::Int;
+        else
+            col.kind = CellKind::Bytes;
 
         relayout(capacity_);
 
@@ -249,7 +264,75 @@ public:
         return size_;
     }
 
+    [[nodiscard]] size_t columnCount() const noexcept {
+        size_t count = 0;
+        for (const auto& column : columns_)
+            if (column.active)
+                ++count;
+        return count;
+    }
+
+    void inspect(std::string_view label = "SoA") const {
+        Logger::Tree tree(std::format(
+            "{}  rows={} cols={} bytes={}",
+            label,
+            size_,
+            columnCount(),
+            storageBytes_
+        ));
+
+        std::vector<const Column*> cols;
+        for (const auto& column : columns_) {
+            if (column.active)
+                cols.push_back(&column);
+        }
+
+        if (cols.empty()) {
+            tree.node("<gr>(no columns)</>", 0);
+            tree.print();
+            return;
+        }
+
+        std::string header;
+        for (size_t i = 0; i < cols.size(); ++i) {
+            if (i)
+                header += " | ";
+            header += cols[i]->name;
+        }
+        tree.node(header, 0);
+
+        if (size_ == 0 || !storage_) {
+            tree.node("<gr>(empty)</>", 1);
+            tree.print();
+            return;
+        }
+
+        const size_t shown = std::min(size_, size_t{32});
+        for (size_t row = 0; row < shown; ++row) {
+            std::string line = std::format("{}: ", row);
+            for (size_t i = 0; i < cols.size(); ++i) {
+                if (i)
+                    line += " | ";
+                line += formatStored(*cols[i], row);
+            }
+            tree.node(line, 1);
+        }
+
+        if (size_ > shown)
+            tree.node(std::format("... {} more rows", size_ - shown), 1);
+
+        tree.print();
+    }
+
 private:
+    enum class CellKind : uint8_t {
+        Bytes,
+        Chars,
+        Bool,
+        Float,
+        Int
+    };
+
     struct Column {
         std::string name;
         size_t offset       = 0;
@@ -257,7 +340,8 @@ private:
         size_t alignment    = 0;
         const void* typeKey = nullptr;
         bool active         = false;
-        void (*assign)(std::byte*, size_t, const Value&);
+        CellKind kind       = CellKind::Bytes;
+        void (*assign)(std::byte*, size_t, const Value&) = nullptr;
     };
 
     size_t size_         = 0;
@@ -282,6 +366,38 @@ private:
     static const void* typeToken() noexcept {
         static int token;
         return &token;
+    }
+
+    std::string formatStored(const Column& col, size_t index) const {
+        const std::byte* cell = storage_ + col.offset + index * col.elementSize;
+
+        switch (col.kind) {
+            case CellKind::Chars: {
+                const char* text = reinterpret_cast<const char*>(cell);
+                const size_t n = strnlen(text, col.elementSize);
+                return std::string(text, n);
+            }
+            case CellKind::Bool:
+                return *reinterpret_cast<const bool*>(cell) ? "true" : "false";
+            case CellKind::Float:
+                if (col.elementSize == sizeof(double))
+                    return std::format("{:.6g}", *reinterpret_cast<const double*>(cell));
+                return std::format("{:.6g}", *reinterpret_cast<const float*>(cell));
+            case CellKind::Int:
+                if (col.elementSize == 1)
+                    return std::format("{}", static_cast<unsigned>(*cell));
+                if (col.elementSize == 2)
+                    return std::format("{}", *reinterpret_cast<const uint16_t*>(cell));
+                if (col.elementSize == 4)
+                    return std::format("{}", *reinterpret_cast<const uint32_t*>(cell));
+                if (col.elementSize == 8)
+                    return std::format("{}", *reinterpret_cast<const uint64_t*>(cell));
+                break;
+            case CellKind::Bytes:
+                break;
+        }
+
+        return std::format("{}B", col.elementSize);
     }
 
     template<typename T>
@@ -384,6 +500,8 @@ private:
                 );
             }
         }
+
+        Logger::info(tag, "relayout: capacity {} ➜ {}, storage {} B ➜ {} B", capacity_, newCapacity, storageBytes_, totalBytes);
 
         deallocate(oldStorage);
         storage_ = newStorage;

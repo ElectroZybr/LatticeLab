@@ -32,6 +32,9 @@ public:
     bool pressed(Lattice::SlotId slot) const;
     bool released(Lattice::SlotId slot) const;
 
+    size_t bindCount() const { return bindings_.size(); }
+    bool hasBind(std::string_view verb, std::string_view trigger) const;
+
     void clearBinds();
     Ref<Lattice::Context> run_ctx;
 
@@ -58,4 +61,14 @@ private:
     ActionState& ensure(Lattice::SlotId slot);
     const ActionState* find(Lattice::SlotId slot) const;
     Lattice::SlotId resolve(std::string_view verb) const;
+
+    Binding* findBind(Lattice::SlotId slot, std::string_view trigger);
+    const Binding* findBind(Lattice::SlotId slot, std::string_view trigger) const;
+    void upsert(
+        std::string_view verb,
+        std::string_view trigger,
+        ActionMode mode,
+        Target target,
+        double delta
+    );
 };

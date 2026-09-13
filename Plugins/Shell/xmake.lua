@@ -28,3 +28,17 @@ target("Shell")
     add_includedirs("../GPU/include")
 
     add_deps("Lattice")
+
+target("Shell.tests")
+    set_kind("shared")
+    set_targetdir(".")
+
+    add_files("tests/*.cpp")
+    add_files("../Actions/src/ActionMap.cpp")
+
+    add_includedirs("include")
+    add_includedirs("..")
+    add_includedirs("../Actions/include")
+    add_includedirs("../StdIo/include")
+
+    add_deps("Lattice")

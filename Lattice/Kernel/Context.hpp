@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+#include <limits>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -24,6 +26,7 @@ struct Meta {
 };
 
 using SlotId = uint32_t;
+inline constexpr SlotId InvalidSlotId = std::numeric_limits<SlotId>::max();
 
 struct ContextSlot {
     std::string name;
@@ -36,6 +39,8 @@ public:
     SlotId addSlot(std::string_view name);
 
     SlotId getSlot(std::string_view name);
+
+    SlotId findSlot(std::string_view name) const;
 
     ObjectId get(SlotId id);
 
