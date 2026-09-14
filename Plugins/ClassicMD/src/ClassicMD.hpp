@@ -48,6 +48,7 @@ public:
         atoms->addCol<Valence>();
         // atoms->addCol<Hybridization>();
         atoms->addCol<Id>();
+        universe.activateNamespace();
     }
 
     void run() override {

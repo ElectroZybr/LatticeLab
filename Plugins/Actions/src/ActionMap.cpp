@@ -4,6 +4,8 @@
 
 #include <Lattice/Kernel/Node.hpp>
 #include <Lattice/Tools/Logger.hpp>
+#include "Lattice/Kernel/Context.hpp"
+#include "Lattice/Kernel/Objects.hpp"
 
 
 void ActionMap::configure(Lattice::Node& branch) {
@@ -11,30 +13,36 @@ void ActionMap::configure(Lattice::Node& branch) {
     inputs_ = branch.globalCollect<InputAPI>();
 }
 
-ActionMap::ActionState& ActionMap::ensure(Lattice::SlotId slot) {
+ActionMap::ActionState& ActionMap::ensure(Lattice::ContextId slot) {
     return actions_[slot];
 }
 
-const ActionMap::ActionState* ActionMap::find(Lattice::SlotId slot) const {
+const ActionMap::ActionState* ActionMap::find(Lattice::ContextId slot) const {
     auto it = actions_.find(slot);
     return it == actions_.end() ? nullptr : &it->second;
 }
 
-Lattice::SlotId ActionMap::resolve(std::string_view verb) const {
-    return run_ctx->getSlot(verb);
-}
-
-ActionMap::Binding* ActionMap::findBind(Lattice::SlotId slot, std::string_view trigger) {
+ActionMap::Binding* ActionMap::findBind(Lattice::ContextId slot, std::string_view trigger) {
     return const_cast<Binding*>(std::as_const(*this).findBind(slot, trigger));
 }
 
-const ActionMap::Binding* ActionMap::findBind(Lattice::SlotId slot, std::string_view trigger) const {
+const ActionMap::Binding* ActionMap::findBind(Lattice::ContextId slot, std::string_view trigger) const {
     for (const auto& binding : bindings_) {
         if (binding.slot == slot && binding.trigger == trigger)
             return &binding;
     }
-
     return nullptr;
+}
+
+bool ActionMap::hasBind(std::string_view verb, std::string_view trigger) const {
+    if (!run_ctx)
+        return false;
+
+    const Lattice::ContextId slot = run_ctx->contexts.find(verb);
+    if (!Lattice::ContextRegistry::valid(slot))
+        return false;
+
+    return findBind(slot, trigger) != nullptr;
 }
 
 void ActionMap::upsert(
@@ -44,7 +52,7 @@ void ActionMap::upsert(
     Target target,
     double delta
 ) {
-    const auto slot = resolve(verb);
+    const Lattice::ContextId slot = run_ctx->getOrCreate(verb);
     ensure(slot);
 
     if (auto* existing = findBind(slot, trigger)) {
@@ -84,17 +92,6 @@ void ActionMap::bindAdd(std::string_view param, std::string_view trigger, double
     upsert(param, trigger, mode, Target::Add, delta);
 }
 
-bool ActionMap::hasBind(std::string_view verb, std::string_view trigger) const {
-    if (!run_ctx)
-        return false;
-
-    const auto slot = run_ctx->findSlot(verb);
-    if (slot == Lattice::InvalidSlotId)
-        return false;
-
-    return findBind(slot, trigger) != nullptr;
-}
-
 void ActionMap::tick() {
     for (auto& [_, state] : actions_)
         state = {};
@@ -124,16 +121,18 @@ void ActionMap::tick() {
             (b.mode == ActionMode::OnRelease && released);
 
         if (fire) {
-            Logger::info("ActionMap", "fire from: {}", b.trigger);
-
             const Lattice::ObjectId object = run_ctx->get(b.slot);
 
-            if (b.target == Target::Action) {
-                run_ctx->bindings.invoke(object);
-            } else if (b.target == Target::Toggle) {
-                run_ctx->bindings.set(object, !run_ctx->bindings.get<bool>(object));
-            } else {
-                run_ctx->bindings.set(object, run_ctx->bindings.get<double>(object) + b.delta);
+            if (Lattice::Objects::valid(object)) {
+                Logger::info("ActionMap", "fire from: {}", b.trigger);
+
+                if (b.target == Target::Action) {
+                    run_ctx->bindings.invoke(object);
+                } else if (b.target == Target::Toggle) {
+                    run_ctx->bindings.set(object, !run_ctx->bindings.get<bool>(object));
+                } else {
+                    run_ctx->bindings.set(object, run_ctx->bindings.get<double>(object) + b.delta);
+                }
             }
         }
 
@@ -141,17 +140,17 @@ void ActionMap::tick() {
     }
 }
 
-bool ActionMap::down(Lattice::SlotId slot) const {
+bool ActionMap::down(Lattice::ContextId slot) const {
     const auto* state = find(slot);
     return state && state->down;
 }
 
-bool ActionMap::pressed(Lattice::SlotId slot) const {
+bool ActionMap::pressed(Lattice::ContextId slot) const {
     const auto* state = find(slot);
     return state && state->pressed;
 }
 
-bool ActionMap::released(Lattice::SlotId slot) const {
+bool ActionMap::released(Lattice::ContextId slot) const {
     const auto* state = find(slot);
     return state && state->released;
 }

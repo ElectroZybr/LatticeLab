@@ -9,8 +9,8 @@
 
 #include <Lattice/Kernel/Bindings.hpp>
 #include <Lattice/Kernel/Objects.hpp>
-#include "Lattice/Tools/LogTree.hpp"
-
+#include <Lattice/Kernel/Registry.hpp>
+#include <Lattice/Tools/LogTree.hpp>
 
 namespace Lattice {
 
@@ -25,40 +25,44 @@ struct Meta {
     void (*configure)(Node&) = nullptr;
 };
 
-using SlotId = uint32_t;
-inline constexpr SlotId InvalidSlotId = std::numeric_limits<SlotId>::max();
+using ContextId = uint32_t;
+inline constexpr ContextId InvalidContextId = std::numeric_limits<ContextId>::max();
 
 struct ContextSlot {
     std::string name;
     ObjectId object = InvalidObjectId;
+    ObjectId ns = InvalidObjectId;
+    bool exists = true;
 };
 
+using ContextRegistry = Registry<ContextSlot, ContextId, std::string>;
+
 class Context {
-
 public:
-    SlotId addSlot(std::string_view name);
+    ContextId create(std::string_view name);
+    ContextId getOrCreate(std::string_view name);
+    ObjectId get(ContextId id) const;
+    ObjectId find(std::string_view name) const;
 
-    SlotId getSlot(std::string_view name);
+    ObjectId namespaceOf(ContextId id) const;
+    ObjectId namespaceOf(std::string_view name) const;
 
-    SlotId findSlot(std::string_view name) const;
+    // Ставит слот. Если object является корнем неймспейса, переключает и его экспорт.
+    void activate(ContextId id, ObjectId object);
 
-    ObjectId get(SlotId id);
+    // Ставит слот без переключения неймспейса.
+    void assign(ContextId id, ObjectId object, ObjectId ns = InvalidObjectId);
 
-    ObjectId active(std::string_view name) const;
-
-    void activate(SlotId slot, ObjectId id);
-
-    void clear() { ctx_slots.clear(); }
+    void clear();
 
     void printTree() const;
 
     Bindings bindings;
     Objects objects;
     std::vector<std::unique_ptr<Meta>> metas;
-
+    ContextRegistry contexts;
+    
 private:
-    std::vector<ContextSlot> ctx_slots;
-
     void appendTree(Logger::Tree& tree) const;
 };
 

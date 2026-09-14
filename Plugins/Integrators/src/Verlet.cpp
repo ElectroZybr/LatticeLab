@@ -1,7 +1,7 @@
 #include "Verlet.hpp"
 
 // #include "src/StepOps.hpp"
-#include "Lattice/Engine/restrict.h"
+#include "Lattice/Kernel/Restrict.hpp"
 
 namespace Integrators {
 

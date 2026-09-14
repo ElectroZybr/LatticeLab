@@ -1,71 +1,135 @@
 #include <Lattice/Kernel/Context.hpp>
 
-#include <Lattice/Tools/Logger.hpp>
-#include <Lattice/Kernel/Node.hpp>
+#include <format>
 
+#include <Lattice/Kernel/Node.hpp>
+#include <Lattice/Tools/Logger.hpp>
 
 namespace Lattice {
 
-SlotId Context::addSlot(std::string_view name) {
-    ctx_slots.push_back({std::string(name), InvalidObjectId});
-    return static_cast<SlotId>(ctx_slots.size() - 1);
+ContextId Context::create(std::string_view name) {
+    return contexts.create(ContextSlot{
+        .name = std::string(name),
+        .object = InvalidObjectId,
+        .ns = InvalidObjectId
+    });
 }
 
-SlotId Context::getSlot(std::string_view name) {
-    const SlotId id = findSlot(name);
-    if (id != InvalidSlotId)
+ContextId Context::getOrCreate(std::string_view name) {
+    const ContextId id = contexts.find(name);
+
+    if (ContextRegistry::valid(id))
         return id;
 
-    return addSlot(name);
+    return contexts.create(ContextSlot{
+        .name = std::string(name),
+        .object = InvalidObjectId,
+        .ns = InvalidObjectId
+    });
 }
 
-SlotId Context::findSlot(std::string_view name) const {
-    for (SlotId i = 0; i < ctx_slots.size(); ++i)
-        if (ctx_slots[i].name == name)
-            return i;
+ObjectId Context::get(ContextId id) const {
+    const ContextSlot* slot = contexts.get(id);
 
-    return InvalidSlotId;
-}
-
-ObjectId Context::get(SlotId id) {
-    if (id >= ctx_slots.size())
+    if (!slot)
         return InvalidObjectId;
 
-    return ctx_slots[id].object;
+    return slot->object;
 }
 
-ObjectId Context::active(std::string_view name) const {
-    const SlotId id = findSlot(name);
-    if (id == InvalidSlotId)
+ObjectId Context::find(std::string_view name) const {
+    const ContextId id = contexts.find(name);
+
+    if (!ContextRegistry::valid(id))
         return InvalidObjectId;
 
-    return ctx_slots[id].object;
+    return get(id);
 }
 
-void Context::activate(SlotId slot, ObjectId object) {
-    if (slot >= ctx_slots.size())
+ObjectId Context::namespaceOf(ContextId id) const {
+    const ContextSlot* slot = contexts.get(id);
+
+    if (!slot)
+        return InvalidObjectId;
+
+    return slot->ns;
+}
+
+ObjectId Context::namespaceOf(std::string_view name) const {
+    const ContextId id = contexts.find(name);
+
+    if (!ContextRegistry::valid(id))
+        return InvalidObjectId;
+
+    return namespaceOf(id);
+}
+
+void Context::assign(ContextId id, ObjectId object, ObjectId ns) {
+    ContextSlot* slot = contexts.get(id);
+
+    if (!slot)
         return;
 
-    auto& ctx_slot = ctx_slots[slot];
     const auto& entry = objects.require(object);
 
-    // if (entry.name != ctx_slot.name)
-    //     throw Exception("Context", "binding '{}' cannot be activated in slot '{}'", objects[object].name, ctx_slot.name);
+    slot->object = object;
 
-    ctx_slot.object = object;
-    Logger::info("Context", "activated slot '{}' ➜ '{}'", ctx_slot.name, objects[object].node->stringPath());
+    if (Objects::valid(ns))
+        slot->ns = ns;
+    else if (entry.node)
+        slot->ns = entry.node->nearestNamespaceRoot();
+
+    std::string nsLabel;
+
+    if (Objects::valid(slot->ns)) {
+        const auto& nsEntry = objects.require(slot->ns);
+        nsLabel = std::format(" <m>[{}]</>", nsEntry.node->stringPath());
+    }
+
+    Logger::info(
+        "Context",
+        "activated slot '{}' ➜ '{}'{}",
+        slot->name,
+        entry.node->stringPath(),
+        nsLabel
+    );
+}
+
+void Context::activate(ContextId id, ObjectId object) {
+    if (!contexts.get(id))
+        return;
+
+    assign(id, object);
+
+    Node* node = objects.require(object).node;
+
+    if (node && node->isNamespaceRoot())
+        node->applyNamespace();
+}
+
+void Context::clear() {
+    contexts.clear();
 }
 
 void Context::appendTree(Logger::Tree& tree) const {
-    for (int i = 0; i < ctx_slots.size(); ++i) {
-        const auto& slot = ctx_slots[i];
-        std::string line = std::format("id:{} <c>{}</>", i, slot.name);
+    for (ContextId id = 0; id < contexts.size(); ++id) {
+        const ContextSlot* slot = contexts.get(id);
 
-        if (!Objects::valid(slot.object)) {
+        if (!slot)
+            continue;
+
+        std::string line = std::format("id:{} <c>{}</>", id, slot->name);
+
+        if (!Objects::valid(slot->object)) {
             line += " <gr>➜ inactive</>";
         } else {
-            const auto& entry = objects.require(slot.object);
+            const auto& entry = objects.require(slot->object);
             line += std::format(" <gr>➜ {}</>", entry.node->stringPath());
+        }
+
+        if (Objects::valid(slot->ns)) {
+            const auto& nsEntry = objects.require(slot->ns);
+            line += std::format(" <m>[{}]</>", nsEntry.node->stringPath());
         }
 
         tree.node(line, 0);
@@ -77,4 +141,5 @@ void Context::printTree() const {
     appendTree(tree);
     tree.print();
 }
+
 }

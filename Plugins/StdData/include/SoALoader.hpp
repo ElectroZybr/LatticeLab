@@ -91,7 +91,7 @@ public:
 private:
     StdData::SoA* resolveTarget(std::string_view target) const {
         Lattice::Context& ctx = branch_->requireContext();
-        const Lattice::ObjectId id = ctx.active(target);
+        const Lattice::ObjectId id = ctx.find(target);
 
         if (!Lattice::Objects::valid(id))
             throw Lattice::Exception(tag, "SoA target '{}' is not active in context", target);

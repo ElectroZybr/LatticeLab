@@ -50,7 +50,7 @@ TEST(Runtime_LoadAfterConfigure, RuntimeFixture,
     REQUIRE(host->child->configured);
     REQUIRE(!host->loaded);
 
-    const ObjectId load = fixture.run_ctx.active("load");
+    const ObjectId load = fixture.run_ctx.find("load");
     REQUIRE(Objects::valid(load));
 
     fixture.run_ctx.bindings.invoke(load);
@@ -61,8 +61,8 @@ TEST(Runtime_LoadAfterConfigure, RuntimeFixture,
 TEST(Runtime_LoadMissingIsSafe, RuntimeFixture,
     "Если действия load нет, стартовая загрузка должна просто пропускаться.")
 {
-    REQUIRE(!Objects::valid(fixture.run_ctx.active("load")));
-    fixture.run_ctx.bindings.invoke(fixture.run_ctx.active("load"));
+    REQUIRE(!Objects::valid(fixture.run_ctx.find("load")));
+    fixture.run_ctx.bindings.invoke(fixture.run_ctx.find("load"));
 }
 
 } // namespace Lattice
