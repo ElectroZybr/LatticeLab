@@ -19,15 +19,16 @@ public:
         actionMap = branch.require<ActionMap>();
     }
 
-    void load(const Document& document) override {
-        const Lattice::Value* keybinds = document.get("keybinds");
-        if (!keybinds || !keybinds->is<Lattice::Table>())
+    std::string_view section() const override { return "keybinds"; }
+
+    void load(const Lattice::Value& section) override {
+        if (!section.is<Lattice::Table>())
             return;
 
         if (!actionMap)
             throw Lattice::Exception(tag, "loader is not configured");
 
-        loadTable(std::get<Lattice::Table>(*keybinds), "");
+        loadTable(std::get<Lattice::Table>(section), "");
     }
 
 private:

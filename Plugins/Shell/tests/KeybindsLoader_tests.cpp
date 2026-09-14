@@ -52,7 +52,9 @@ struct KeybindsFixture : RuntimeFixture {
     void load(const Lattice::Table& keybinds) {
         Document document;
         document.root().emplace("keybinds", keybinds);
-        loader->load(document);
+        const Lattice::Value* section = document.section(loader->section());
+        if (section)
+            loader->load(*section);
     }
 };
 
@@ -180,7 +182,9 @@ TEST(Keybinds_FileSignature, KeybindsFixture,
 
     TomlParser parser;
     const Document doc = parser.parseFile("Config/keybinds.toml");
-    fixture.loader->load(doc);
+    const Lattice::Value* section = doc.section(fixture.loader->section());
+        if (section)
+            fixture.loader->load(*section);
 
     REQUIRE(fixture.map->hasBind("print", "P"));
     REQUIRE(fixture.map->hasBind("quit", "Ctrl+Q"));

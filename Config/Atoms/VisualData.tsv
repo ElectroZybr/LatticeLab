@@ -1,4 +1,6 @@
+[NamedSoA]
 #target	AtomData
+
 Name	Color		Radius
 Z	#AAFF00	2.00
 H	#FFFFFF	2.40
