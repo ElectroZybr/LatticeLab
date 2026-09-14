@@ -36,7 +36,7 @@ public:
         }
 
         for (const std::filesystem::directory_entry& entry :
-             std::filesystem::recursive_directory_iterator(dir))
+            std::filesystem::recursive_directory_iterator(dir))
         {
             if (!entry.is_regular_file())
                 continue;
@@ -52,8 +52,12 @@ public:
         if (parser) {
             doc = parser->parseFile(path);
 
-            for (LoaderAPI* loader : loaders)
-                loader->load(doc);
+            for (LoaderAPI* loader : loaders) {
+                const Lattice::Value* section = doc.section(loader->section());
+
+                if (section)
+                    loader->load(*section);
+            }
         }
     }
 

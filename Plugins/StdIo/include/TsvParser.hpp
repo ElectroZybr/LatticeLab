@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cmath>
-#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -28,52 +27,61 @@ public:
         Lattice::Table dataset;
         std::string line;
         size_t lineNumber = 0;
+        std::string section = "Dataset";
 
-        while (std::getline(file, line)) {
+        if (!std::getline(file, line))
+            throw Lattice::Exception(tag, "TSV is empty");
+
+        ++lineNumber;
+        trimCR(line);
+
+        if (isSection(line)) {
+            section = parseSection(line, lineNumber);
+
+            if (!std::getline(file, line))
+                throw Lattice::Exception(tag, "TSV section '{}' contains no data", section);
+
             ++lineNumber;
-            if (line.empty())
-                continue;
-            if (line[0] != '#')
-                break;
-
-            const auto metadata = split(std::string_view(line).substr(1));
-            if (metadata.size() != 2 || metadata[0].empty())
-                throw Lattice::Exception(tag, "Invalid metadata at line {}: '{}'", lineNumber, line);
-
-            if (dataset.contains(metadata[0]))
-                throw Lattice::Exception(tag, "Duplicate metadata '{}' at line {}", metadata[0], lineNumber);
-
-            dataset.emplace(metadata[0], parseValue(metadata[1], lineNumber));
+            trimCR(line);
         }
 
-        if (file.bad())
-            throw Lattice::Exception(tag, "Failed while reading '{}'", path.string());
+        while (!line.empty() && line.front() == '#') {
+            const auto [key, value] = parseMetadata(line, lineNumber);
+
+            if (dataset.contains(key))
+                throw Lattice::Exception(tag, "Duplicate metadata '{}' at line {}", key, lineNumber);
+
+            dataset.emplace(key, parseValue(value, lineNumber));
+
+            if (!std::getline(file, line))
+                throw Lattice::Exception(tag, "TSV contains no table");
+
+            ++lineNumber;
+            trimCR(line);
+        }
 
         if (line.empty()) {
-            document.root().emplace("Dataset", std::move(dataset));
-            return document;
+            if (!std::getline(file, line))
+                throw Lattice::Exception(tag, "TSV contains no columns");
+
+            ++lineNumber;
+            trimCR(line);
         }
 
         const auto headers = split(line);
-        if (headers.empty() || (headers.size() == 1 && headers[0].empty()))
-            throw Lattice::Exception(tag, "TSV contains no columns at line {}", lineNumber);
-
-        for (size_t i = 0; i < headers.size(); ++i) {
-            if (headers[i].empty())
-                throw Lattice::Exception(tag, "Empty column name at line {}, column {}", lineNumber, i + 1);
-            for (size_t j = 0; j < i; ++j)
-                if (headers[i] == headers[j])
-                    throw Lattice::Exception(tag, "Duplicate column '{}' at line {}", headers[i], lineNumber);
-        }
+        validateHeaders(headers, lineNumber);
 
         Lattice::Array rows;
 
         while (std::getline(file, line)) {
             ++lineNumber;
+            trimCR(line);
+
             if (line.empty())
                 continue;
 
             const auto values = split(line);
+
             if (values.size() != headers.size())
                 throw Lattice::Exception(tag, "Invalid row at line {}: expected {} columns, got {}", lineNumber, headers.size(), values.size());
 
@@ -91,32 +99,74 @@ public:
 
         dataset.emplace("columns", toArray(headers));
         dataset.emplace("rows", std::move(rows));
-        document.root().emplace("Dataset", std::move(dataset));
+        document.root().emplace(std::move(section), std::move(dataset));
 
         return document;
     }
 
 private:
+    static bool isSection(std::string_view line) noexcept {
+        return line.size() >= 3 && line.front() == '[' && line.back() == ']';
+    }
+
+    static std::string parseSection(std::string_view line, size_t lineNumber) {
+        const auto name = line.substr(1, line.size() - 2);
+
+        if (name.empty())
+            throw Lattice::Exception(tag, "Empty section name at line {}", lineNumber);
+
+        return std::string(name);
+    }
+
+    static std::pair<std::string, std::string> parseMetadata(std::string_view line, size_t lineNumber) {
+        line.remove_prefix(1);
+
+        const size_t separator = line.find_first_of(" \t");
+
+        if (separator == std::string_view::npos)
+            throw Lattice::Exception(tag, "Invalid metadata at line {}: '{}'", lineNumber, line);
+
+        const auto key = line.substr(0, separator);
+
+        size_t begin = separator;
+        while (begin < line.size() && (line[begin] == ' ' || line[begin] == '\t'))
+            ++begin;
+
+        if (key.empty() || begin == line.size())
+            throw Lattice::Exception(tag, "Invalid metadata at line {}: '{}'", lineNumber, line);
+
+        return {std::string(key), std::string(line.substr(begin))};
+    }
+
+    static void validateHeaders(const std::vector<std::string>& headers, size_t lineNumber) {
+        if (headers.empty())
+            throw Lattice::Exception(tag, "TSV contains no columns at line {}", lineNumber);
+
+        for (size_t i = 0; i < headers.size(); ++i) {
+            if (headers[i].empty())
+                throw Lattice::Exception(tag, "Empty column name at line {}, column {}", lineNumber, i + 1);
+
+            for (size_t j = 0; j < i; ++j)
+                if (headers[i] == headers[j])
+                    throw Lattice::Exception(tag, "Duplicate column '{}' at line {}", headers[i], lineNumber);
+        }
+    }
+
+    static void trimCR(std::string& line) {
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
+    }
+
     static std::vector<std::string> split(std::string_view line) {
         std::vector<std::string> result;
-        size_t begin = 0;
+        size_t i = 0;
 
-        while (begin < line.size()) {
-            while (begin < line.size() && line[begin] == '\t')
-                ++begin;
-
-            if (begin == line.size())
-                break;
-
-            const size_t end = line.find('\t', begin);
-
-            if (end == std::string_view::npos) {
-                result.emplace_back(line.substr(begin));
-                break;
-            }
-
-            result.emplace_back(line.substr(begin, end - begin));
-            begin = end;
+        while (i < line.size()) {
+            while (i < line.size() && line[i] == '\t') ++i;
+            if (i == line.size()) break;
+            const size_t begin = i;
+            while (i < line.size() && line[i] != '\t') ++i;
+            result.emplace_back(line.substr(begin, i - begin));
         }
 
         return result;

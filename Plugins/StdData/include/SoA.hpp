@@ -29,6 +29,13 @@ constexpr bool isCharArray = false;
 template<std::size_t N>
 constexpr bool isCharArray<std::array<char, N>> = true;
 
+/**
+ @brief Контейнер табличных данных в формате Structure of Arrays.
+
+ Хранит данные по колонкам в общем непрерывном буфере и предоставляет
+ типизированный доступ к значениям, управление колонками и размером таблицы.
+*/
+
 class SoA {
     static constexpr std::string_view tag = "SoA";
 public:
@@ -322,25 +329,6 @@ public:
             tree.node(std::format("... {} more rows", size_ - shown), 1);
 
         tree.print();
-    }
-
-    std::optional<size_t> findString(std::string_view columnName, std::string_view value) const {
-        const Column* col = findColumn(columnName);
-
-        if (!col || col->kind != CellKind::Chars)
-            return std::nullopt;
-
-        const std::byte* base = storage_ + col->offset;
-
-        for (size_t i = 0; i < size_; ++i) {
-            const char* text = reinterpret_cast<const char*>(base + i * col->elementSize);
-            const size_t n = strnlen(text, col->elementSize);
-
-            if (std::string_view(text, n) == value)
-                return i;
-        }
-
-        return std::nullopt;
     }
 
 private:

@@ -17,15 +17,16 @@ public:
         branch_ = &branch;
     }
 
-    void load(const Document& document) override {
+    std::string_view section() const override { return "SoA"; }
+
+    void load(const Lattice::Value& section) override {
         if (!branch_.exists())
             throw Lattice::Exception(tag, "loader is not configured");
 
-        const Lattice::Value* data = document.get("Dataset");
-        if (!data || !data->is<Lattice::Table>())
+        if (!section.is<Lattice::Table>())
             return;
 
-        const auto& table = std::get<Lattice::Table>(*data);
+        const auto& table = std::get<Lattice::Table>(section);
 
         const auto targetIt = table.find("target");
         const auto columnsIt = table.find("columns");
@@ -85,7 +86,6 @@ public:
         // }
 
         Logger::ok(tag, "loaded {} rows into '{}'", rowData.size(), target);
-        soa->inspect(target);
     }
 
 private:

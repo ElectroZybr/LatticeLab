@@ -1,13 +1,12 @@
 #pragma once
 
-// #include "Lattice/Kernel/Node.hpp"
 
-#include "Document.hpp"
+#include "Lattice/Kernel/Value.hpp"
 
-class Value;
 
 class LoaderAPI {
 public:
     virtual ~LoaderAPI() = default;
-    virtual void load(const Document& document) = 0;
+    virtual std::string_view section() const = 0;
+    virtual void load(const Lattice::Value& section) = 0;
 };

@@ -63,7 +63,9 @@ TEST(SoALoader_LoadIntoWrapper, RuntimeFixture,
     loader.configure(fixture.root);
 
     const Document document = makeSoADocument("Wrapper");
-    loader.load(document);
+    const Lattice::Value* section = document.section(loader.section());
+    if (section)
+        loader.load(*section);
 
     auto soa = fixture.root.require<Wrapper>("default")->soa;
 
@@ -87,7 +89,9 @@ TEST(SoALoader_LoadNames, RuntimeFixture,
 
     Document document;
     document.root().emplace("SoAData", Lattice::Table{{"target", std::string("Wrapper")}, {"columns", Lattice::Array{std::string("Name"), std::string("Mass"), std::string("Valence")}}, {"rows", Lattice::Array{Lattice::Array{std::string("H"), Lattice::Value{1.008}, Lattice::Value{int64_t{1}}}, Lattice::Array{std::string("He"), Lattice::Value{4.003}, Lattice::Value{int64_t{0}}}}}});
-    loader.load(document);
+    const Lattice::Value* section = document.section(loader.section());
+    if (section)
+        loader.load(*section);
 
     auto soa = fixture.root.require<Wrapper>("default")->soa;
     REQUIRE(soa->size() == 2);
@@ -108,7 +112,9 @@ TEST(SoALoader_MissingTarget, RuntimeFixture,
     bool thrown = false;
     try {
         const Document document = makeSoADocument("AtomData");
-        loader.load(document);
+        const Lattice::Value* section = document.section(loader.section());
+        if (section)
+            loader.load(*section);
     } catch (const Lattice::Exception&) {
         thrown = true;
     }
@@ -131,7 +137,9 @@ TEST(SoALoader_MissingColumn, RuntimeFixture,
 
     bool thrown = false;
     try {
-        loader.load(document);
+        const Lattice::Value* section = document.section(loader.section());
+        if (section)
+            loader.load(*section);
     } catch (const Lattice::Exception&) {
         thrown = true;
     }
@@ -171,7 +179,9 @@ TEST(SoALoader_LoadAtomDataFile, RuntimeFixture,
 
     SoALoader loader;
     loader.configure(fixture.root);
-    loader.load(doc);
+    const Lattice::Value* section = doc.section(loader.section());
+    if (section)
+        loader.load(*section);
 
     auto soa = fixture.root.require<AtomData>()->soa;
     REQUIRE(soa);

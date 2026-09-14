@@ -3,7 +3,7 @@
 #include <array>
 
 #include <Lattice/Kernel/Node.hpp>
-#include "StdData/include/SoA.hpp"
+#include "StdData/include/NamedSoA.hpp"
 
 namespace ClassicMD {
 
@@ -14,8 +14,8 @@ struct Valence { using type = uint8_t; };
 class AtomData {
 public:
     explicit AtomData(Lattice::Node& branch) {
-        branch.add<StdData::SoA>();
-        soa_ = branch.require<StdData::SoA>();
+        branch.add<StdData::NamedSoA>();
+        soa_ = branch.require<StdData::NamedSoA>();
 
         soa_->addCol<Name>();
         soa_->addCol<Mass>();
@@ -23,7 +23,7 @@ public:
     }
 
 private:
-    Ref<StdData::SoA> soa_;
+    Ref<StdData::NamedSoA> soa_;
 };
 
 } // namespace ClassicMD

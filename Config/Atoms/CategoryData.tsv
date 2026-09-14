@@ -1,4 +1,6 @@
+[NamedSoA]
 #target	AtomData
+
 Name	FullName	Category
 Z	Zerium		Custom
 H	Hydrogen	ReactiveNonmetal

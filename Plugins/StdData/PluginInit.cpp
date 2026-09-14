@@ -1,18 +1,21 @@
 // Kernel dependences
-#include <Lattice/Kernel/Plugin.hpp>
+#include <Lattice/Kernel/Node.hpp>
 
+// Plugin dependences
 #include "LoaderAPI.hpp"
 
 // Sources
 #include "include/SoA.hpp"
 #include "include/SoALoader.hpp"
-// #include "include/CSR.hpp"
+#include "NamedSoA.hpp"
+#include "NamedSoALoader.hpp"
 
 
 extern "C" bool plugin_register(Lattice::Node& blueprints) {
     blueprints.blueprint<StdData::SoA>();
     blueprints.blueprint<SoALoader, LoaderAPI>();
-    // reg.registerComponent<CSR>();
+    blueprints.blueprint<StdData::NamedSoA>();
+    blueprints.blueprint<NamedSoALoader, LoaderAPI>();
     return true;
 }
 
