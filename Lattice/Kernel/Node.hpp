@@ -100,10 +100,6 @@ class Node {
         return bp ? static_cast<Meta*>(bp->object) : nullptr;
     }
 
-    std::string_view name() const {
-        return run_ctx.objects[id].name;
-    }
-
     template<typename T>
     bool isType() const {
         return bp && bp->name() == typeName<T>();
@@ -184,10 +180,34 @@ class Node {
         return InvalidObjectId;
     }
 
-    void activate(Node* child, std::string_view name) {
-        SlotId slot = run_ctx.getSlot(name);
-        if (run_ctx.get(slot) == InvalidObjectId)
-            run_ctx.activate(slot, child->id);
+    void activate(Node* child, std::string_view name, bool overwrite = false) {
+        const ContextId slot = run_ctx.getOrCreate(name);
+        if (overwrite || !Objects::valid(run_ctx.get(slot)))
+            run_ctx.assign(slot, child->id);
+    }
+
+    bool implementsService() const {
+        const ObjectId serviceId = findBlueprint<ServiceAPI>();
+        return Objects::valid(serviceId) && isImplement(serviceId);
+    }
+
+    void collectExportsInto(
+        std::vector<std::pair<std::string, ObjectId>>& out,
+        bool nested
+    ) const {
+        if (nested && isNamespaceRoot())
+            return;
+
+        if (kind == NodeKind::Binding) {
+            out.emplace_back(std::string(name()), id);
+            return;
+        }
+
+        if (kind == NodeKind::Component && bp)
+            out.emplace_back(std::string(bp->name()), id);
+
+        for (const auto& child : children_)
+            child->collectExportsInto(out, true);
     }
 
 public:
@@ -205,7 +225,72 @@ public:
 
     Context& requireContext() noexcept { return run_ctx; }
     Node* getBlueprint() noexcept { return bp; }
-    ObjectId getId() { return id; }
+    const Node* getBlueprint() const noexcept { return bp; }
+    Node* getParent() noexcept { return parent; }
+    const Node* getParent() const noexcept { return parent; }
+    NodeKind getKind() const noexcept { return kind; }
+    ObjectId getId() const noexcept { return id; }
+    std::string_view name() const {
+        return run_ctx.objects[id].name;
+    }
+
+    // Корень неймспейса: компонент без компонента-предка (ветки lattice.toml),
+    // либо вложенный ServiceAPI/Model — свой фокус, с родителем не едет.
+    bool isNamespaceRoot() const {
+        if (kind != NodeKind::Component || !parent)
+            return false;
+
+        for (const Node* ancestor = parent; ancestor; ancestor = ancestor->parent) {
+            if (ancestor->kind == NodeKind::Component)
+                return implementsService();
+        }
+
+        return true;
+    }
+
+    ObjectId nearestNamespaceRoot() const {
+        const Node* node = this;
+        while (node) {
+            if (node->isNamespaceRoot())
+                return node->id;
+            node = node->parent;
+        }
+        return InvalidObjectId;
+    }
+
+    ObjectId exported(std::string_view exportName) const {
+        std::vector<std::pair<std::string, ObjectId>> exports;
+        collectExportsInto(exports, false);
+
+        ObjectId found = InvalidObjectId;
+        for (const auto& [exportSlot, object] : exports) {
+            if (exportSlot == exportName)
+                found = object;
+        }
+        return found;
+    }
+
+    void applyNamespace() {
+        if (!isNamespaceRoot())
+            return;
+
+        std::vector<std::pair<std::string, ObjectId>> exports;
+        collectExportsInto(exports, false);
+
+        Logger::info(tag, "activate namespace '{}'", stringPath());
+
+        for (const auto& [exportName, object] : exports) {
+            const ContextId slot = run_ctx.getOrCreate(exportName);
+            run_ctx.assign(slot, object, id);
+        }
+    }
+
+    void activateNamespace() {
+        if (!isNamespaceRoot() || !bp)
+            return;
+
+        run_ctx.activate(run_ctx.getOrCreate(bp->name()), id);
+    }
 
     template<typename T>
     void blueprint() {
@@ -430,7 +515,7 @@ public:
         child->kind = NodeKind::Component;
 
         Logger::info(tag, "> use '{}' = '{}'", typeName<API>(), implName);
-        activate(child, blueprint->name());
+        activate(child, blueprint->name(), true);
         return Slot<API>(child);
     }
 

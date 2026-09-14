@@ -1,6 +1,7 @@
 #include <Lattice/Tools/Fixture.hpp>
 #include <Lattice/Tools/Tests.hpp>
 #include <Lattice/Lattice.hpp>
+#include "Lattice/Kernel/Objects.hpp"
 
 #include "ActionMap.hpp"
 #include "InputAPI.hpp"
@@ -144,8 +145,8 @@ TEST(ActionMap_PressHoldRelease, ActionMapFixture,
     fixture.root.on("print", [] {});
     fixture.map->bind("print", "P");
 
-    const auto slot = fixture.run_ctx.findSlot("print");
-    REQUIRE(slot != Lattice::InvalidSlotId);
+    const auto slot = fixture.run_ctx.contexts.find("print");
+    REQUIRE(slot != Lattice::InvalidContextId);
 
     fixture.input->held = "P";
     fixture.map->tick();
@@ -182,5 +183,5 @@ TEST(ActionMap_HasBindMissing, ActionMapFixture,
     "hasBind не должен создавать слот для неизвестного глагола.")
 {
     REQUIRE(!fixture.map->hasBind("missing", "P"));
-    REQUIRE(fixture.run_ctx.findSlot("missing") == Lattice::InvalidSlotId);
+    REQUIRE(fixture.run_ctx.find("missing") == Lattice::InvalidObjectId);
 }

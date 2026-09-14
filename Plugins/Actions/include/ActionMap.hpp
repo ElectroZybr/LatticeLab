@@ -8,6 +8,7 @@
 #include <Lattice/Kernel/SubsystemAPI.hpp>
 #include <Lattice/Kernel/Context.hpp>
 #include <Lattice/Kernel/RefSlot.hpp>
+#include "Lattice/Kernel/Objects.hpp"
 
 #include "InputAPI.hpp"
 
@@ -28,9 +29,9 @@ public:
 
     void tick();
 
-    bool down(Lattice::SlotId slot) const;
-    bool pressed(Lattice::SlotId slot) const;
-    bool released(Lattice::SlotId slot) const;
+    bool down(Lattice::ContextId slot) const;
+    bool pressed(Lattice::ContextId slot) const;
+    bool released(Lattice::ContextId slot) const;
 
     size_t bindCount() const { return bindings_.size(); }
     bool hasBind(std::string_view verb, std::string_view trigger) const;
@@ -40,7 +41,7 @@ public:
 
 private:
     struct Binding {
-        Lattice::SlotId slot;
+        Lattice::ContextId slot = Lattice::InvalidContextId;
         std::string trigger;
         ActionMode mode = ActionMode::OnPress;
         Target target = Target::Action;
@@ -55,15 +56,15 @@ private:
     };
 
     std::vector<InputAPI*> inputs_;
+
     std::vector<Binding> bindings_;
-    std::unordered_map<Lattice::SlotId, ActionState> actions_;
+    std::unordered_map<Lattice::ContextId, ActionState> actions_;
 
-    ActionState& ensure(Lattice::SlotId slot);
-    const ActionState* find(Lattice::SlotId slot) const;
-    Lattice::SlotId resolve(std::string_view verb) const;
+    ActionState& ensure(Lattice::ContextId slot);
+    const ActionState* find(Lattice::ContextId slot) const;
 
-    Binding* findBind(Lattice::SlotId slot, std::string_view trigger);
-    const Binding* findBind(Lattice::SlotId slot, std::string_view trigger) const;
+    Binding* findBind(Lattice::ContextId slot, std::string_view trigger);
+    const Binding* findBind(Lattice::ContextId slot, std::string_view trigger) const;
     void upsert(
         std::string_view verb,
         std::string_view trigger,

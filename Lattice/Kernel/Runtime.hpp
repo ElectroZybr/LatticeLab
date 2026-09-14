@@ -141,7 +141,7 @@ public:
             
             run_ctx.printTree();
             root.dumpTree();
-            // root.get_ctx().activate(0, 65);
+            // root.requireContext().(0, 65);
             // root.dumpTree(DefaultBlueprintsPath);
             // Logger::message("{}", kernel.objects.stringPath(17));
 
@@ -204,7 +204,7 @@ public:
 
 private:
     void loadStartup() {
-        const ObjectId id = run_ctx.active("load");
+        const ObjectId id = run_ctx.find("load");
         if (!Objects::valid(id)) {
             Logger::info(tag, "no load action, skip startup config");
             return;
