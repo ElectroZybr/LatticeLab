@@ -1,25 +1,21 @@
 #include "ActionMap.hpp"
 
+#include <format>
 #include <utility>
 
+#include <Lattice/Kernel/Context.hpp>
 #include <Lattice/Kernel/Node.hpp>
+#include <Lattice/Kernel/Objects.hpp>
 #include <Lattice/Tools/Logger.hpp>
-#include "Lattice/Kernel/Context.hpp"
-#include "Lattice/Kernel/Objects.hpp"
 
+
+std::string ActionMap::bindName(Lattice::ContextId slot, std::string_view trigger) {
+    return std::format("{}:{}", slot, trigger);
+}
 
 void ActionMap::configure(Lattice::Node& branch) {
     run_ctx = &branch.requireContext();
     inputs_ = branch.globalCollect<InputAPI>();
-}
-
-ActionMap::ActionState& ActionMap::ensure(Lattice::ContextId slot) {
-    return actions_[slot];
-}
-
-const ActionMap::ActionState* ActionMap::find(Lattice::ContextId slot) const {
-    auto it = actions_.find(slot);
-    return it == actions_.end() ? nullptr : &it->second;
 }
 
 ActionMap::Binding* ActionMap::findBind(Lattice::ContextId slot, std::string_view trigger) {
@@ -27,11 +23,25 @@ ActionMap::Binding* ActionMap::findBind(Lattice::ContextId slot, std::string_vie
 }
 
 const ActionMap::Binding* ActionMap::findBind(Lattice::ContextId slot, std::string_view trigger) const {
-    for (const auto& binding : bindings_) {
-        if (binding.slot == slot && binding.trigger == trigger)
-            return &binding;
+    return bindings_.get(bindings_.find(bindName(slot, trigger)));
+}
+
+bool ActionMap::any(Lattice::ContextId slot, bool Binding::* field) const {
+    for (BindId id = 0; id < bindings_.size(); ++id) {
+        const Binding* binding = bindings_.get(id);
+        if (binding && binding->slot == slot && binding->*field)
+            return true;
     }
-    return nullptr;
+    return false;
+}
+
+size_t ActionMap::bindCount() const {
+    size_t count = 0;
+    for (BindId id = 0; id < bindings_.size(); ++id) {
+        if (bindings_.get(id))
+            ++count;
+    }
+    return count;
 }
 
 bool ActionMap::hasBind(std::string_view verb, std::string_view trigger) const {
@@ -53,9 +63,8 @@ void ActionMap::upsert(
     double delta
 ) {
     const Lattice::ContextId slot = run_ctx->getOrCreate(verb);
-    ensure(slot);
 
-    if (auto* existing = findBind(slot, trigger)) {
+    if (Binding* existing = findBind(slot, trigger)) {
         existing->mode = mode;
         existing->target = target;
         existing->delta = delta;
@@ -64,12 +73,13 @@ void ActionMap::upsert(
         return;
     }
 
-    bindings_.push_back({
-        slot,
-        std::string(trigger),
-        mode,
-        target,
-        delta
+    bindings_.create({
+        .name = bindName(slot, trigger),
+        .slot = slot,
+        .trigger = std::string(trigger),
+        .mode = mode,
+        .target = target,
+        .delta = delta
     });
 
     if (target == Target::Toggle)
@@ -93,71 +103,76 @@ void ActionMap::bindAdd(std::string_view param, std::string_view trigger, double
 }
 
 void ActionMap::tick() {
-    for (auto& [_, state] : actions_)
-        state = {};
+    for (BindId id = 0; id < bindings_.size(); ++id) {
+        Binding* binding = bindings_.get(id);
+        if (!binding)
+            continue;
 
-    for (auto& b : bindings_) {
+        binding->down = false;
+        binding->pressed = false;
+        binding->released = false;
+    }
+
+    for (BindId id = 0; id < bindings_.size(); ++id) {
+        Binding* binding = bindings_.get(id);
+        if (!binding)
+            continue;
+
         bool now = false;
-
         for (auto* input : inputs_) {
-            if (input && input->down(b.trigger)) {
+            if (input && input->down(binding->trigger)) {
                 now = true;
                 break;
             }
         }
 
-        const bool pressed  = now && !b.wasDown;
-        const bool released = !now && b.wasDown;
+        const bool pressed = now && !binding->wasDown;
+        const bool released = !now && binding->wasDown;
 
-        auto& state = ensure(b.slot);
-
-        state.down |= now;
-        state.pressed |= pressed;
-        state.released |= released;
+        binding->down = now;
+        binding->pressed = pressed;
+        binding->released = released;
 
         const bool fire =
-            (b.mode == ActionMode::OnPress   && pressed) ||
-            (b.mode == ActionMode::OnHold    && now) ||
-            (b.mode == ActionMode::OnRelease && released);
+            (binding->mode == ActionMode::OnPress && pressed) ||
+            (binding->mode == ActionMode::OnHold && now) ||
+            (binding->mode == ActionMode::OnRelease && released);
 
         if (fire) {
-            const Lattice::ObjectId object = run_ctx->get(b.slot);
+            const Lattice::ObjectId object = run_ctx->get(binding->slot);
 
             if (Lattice::Objects::valid(object)) {
-                Logger::info("ActionMap", "fire from: {}", b.trigger);
+                Logger::info("ActionMap", "fire from: {}", binding->trigger);
 
-                if (b.target == Target::Action) {
+                if (binding->target == Target::Action) {
                     run_ctx->bindings.invoke(object);
-                } else if (b.target == Target::Toggle) {
+                } else if (binding->target == Target::Toggle) {
                     run_ctx->bindings.set(object, !run_ctx->bindings.get<bool>(object));
                 } else {
-                    run_ctx->bindings.set(object, run_ctx->bindings.get<double>(object) + b.delta);
+                    run_ctx->bindings.set(
+                        object,
+                        run_ctx->bindings.get<double>(object) + binding->delta
+                    );
                 }
             }
         }
 
-        b.wasDown = now;
+        binding->wasDown = now;
     }
 }
 
 bool ActionMap::down(Lattice::ContextId slot) const {
-    const auto* state = find(slot);
-    return state && state->down;
+    return any(slot, &Binding::down);
 }
 
 bool ActionMap::pressed(Lattice::ContextId slot) const {
-    const auto* state = find(slot);
-    return state && state->pressed;
+    return any(slot, &Binding::pressed);
 }
 
 bool ActionMap::released(Lattice::ContextId slot) const {
-    const auto* state = find(slot);
-    return state && state->released;
+    return any(slot, &Binding::released);
 }
 
 void ActionMap::clearBinds() {
     bindings_.clear();
-
-    for (auto& [_, state] : actions_)
-        state = {};
 }

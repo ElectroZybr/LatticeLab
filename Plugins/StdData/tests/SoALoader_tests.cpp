@@ -44,15 +44,10 @@ public:
     Ref<StdData::SoA> soa;
 };
 
-Value makeSoAData(std::string target) {
-    return Table{
-        {"target", std::move(target)},
-        {"columns", Array{std::string("Mass"), std::string("Valence")}},
-        {"rows", Array{
-            Array{Value{1.008}, Value{int64_t{1}}},
-            Array{Value{4.003}, Value{int64_t{0}}},
-        }},
-    };
+Document makeSoADocument(std::string target) {
+    Document document;
+    document.root().emplace("SoAData", Lattice::Table{{"target", std::move(target)}, {"columns", Lattice::Array{std::string("Mass"), std::string("Valence")}}, {"rows", Lattice::Array{Lattice::Array{Lattice::Value{1.008}, Lattice::Value{int64_t{1}}}, Lattice::Array{Lattice::Value{4.003}, Lattice::Value{int64_t{0}}}}}});
+    return document;
 }
 
 } // namespace
@@ -67,8 +62,8 @@ TEST(SoALoader_LoadIntoWrapper, RuntimeFixture,
     SoALoader loader;
     loader.configure(fixture.root);
 
-    const Value data = makeSoAData("Wrapper");
-    loader.load(&data);
+    const Document document = makeSoADocument("Wrapper");
+    loader.load(document);
 
     auto soa = fixture.root.require<Wrapper>("default")->soa;
 
@@ -90,15 +85,9 @@ TEST(SoALoader_LoadNames, RuntimeFixture,
     SoALoader loader;
     loader.configure(fixture.root);
 
-    const Value data = Table{
-        {"target", std::string("Wrapper")},
-        {"columns", Array{std::string("Name"), std::string("Mass"), std::string("Valence")}},
-        {"rows", Array{
-            Array{std::string("H"), Value{1.008}, Value{int64_t{1}}},
-            Array{std::string("He"), Value{4.003}, Value{int64_t{0}}},
-        }},
-    };
-    loader.load(&data);
+    Document document;
+    document.root().emplace("SoAData", Lattice::Table{{"target", std::string("Wrapper")}, {"columns", Lattice::Array{std::string("Name"), std::string("Mass"), std::string("Valence")}}, {"rows", Lattice::Array{Lattice::Array{std::string("H"), Lattice::Value{1.008}, Lattice::Value{int64_t{1}}}, Lattice::Array{std::string("He"), Lattice::Value{4.003}, Lattice::Value{int64_t{0}}}}}});
+    loader.load(document);
 
     auto soa = fixture.root.require<Wrapper>("default")->soa;
     REQUIRE(soa->size() == 2);
@@ -118,8 +107,8 @@ TEST(SoALoader_MissingTarget, RuntimeFixture,
 
     bool thrown = false;
     try {
-        const Value data = makeSoAData("AtomData");
-        loader.load(&data);
+        const Document document = makeSoADocument("AtomData");
+        loader.load(document);
     } catch (const Lattice::Exception&) {
         thrown = true;
     }
@@ -137,15 +126,12 @@ TEST(SoALoader_MissingColumn, RuntimeFixture,
     SoALoader loader;
     loader.configure(fixture.root);
 
-    const Value data = Table{
-        {"target", std::string("Wrapper")},
-        {"columns", Array{std::string("Charge")}},
-        {"rows", Array{Array{Value{1.0}}}},
-    };
+    Document document;
+    document.root().emplace("SoAData", Lattice::Table{{"target", std::string("Wrapper")}, {"columns", Lattice::Array{std::string("Charge")}}, {"rows", Lattice::Array{Lattice::Array{Lattice::Value{1.0}}}}});
 
     bool thrown = false;
     try {
-        loader.load(&data);
+        loader.load(document);
     } catch (const Lattice::Exception&) {
         thrown = true;
     }
@@ -173,19 +159,19 @@ TEST(SoALoader_LoadAtomDataFile, RuntimeFixture,
 
     TomlParser parser;
     const Document doc = parser.parseFile("Config/atomData.toml");
-    const Value* data = doc.get("SoAData");
+    const Lattice::Value* data = doc.get("SoAData");
     REQUIRE(data);
-    REQUIRE(data->is<Table>());
+    REQUIRE(data->is<Lattice::Table>());
 
-    const auto& table = std::get<Table>(*data);
+    const auto& table = std::get<Lattice::Table>(*data);
     const auto rowsIt = table.find("rows");
     REQUIRE(rowsIt != table.end());
-    REQUIRE(rowsIt->second.is<Array>());
-    REQUIRE(std::get<Array>(rowsIt->second)[0].is<Array>());
+    REQUIRE(rowsIt->second.is<Lattice::Array>());
+    REQUIRE(std::get<Lattice::Array>(rowsIt->second)[0].is<Lattice::Array>());
 
     SoALoader loader;
     loader.configure(fixture.root);
-    loader.load(data);
+    loader.load(doc);
 
     auto soa = fixture.root.require<AtomData>()->soa;
     REQUIRE(soa);

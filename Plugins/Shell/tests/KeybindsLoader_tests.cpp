@@ -49,9 +49,10 @@ struct KeybindsFixture : RuntimeFixture {
         loader = root.require<KeybindsLoader>().getPtr();
     }
 
-    void load(const Table& keybinds) {
-        const Value data = keybinds;
-        loader->load(&data);
+    void load(const Lattice::Table& keybinds) {
+        Document document;
+        document.root().emplace("keybinds", keybinds);
+        loader->load(document);
     }
 };
 
@@ -61,7 +62,7 @@ TEST(Keybinds_SimpleAction, KeybindsFixture,
     int fires = 0;
     fixture.root.on("print", [&] { ++fires; });
 
-    fixture.load(Table{
+    fixture.load(Lattice::Table{
         {"print", std::string("P")},
     });
 
@@ -79,8 +80,8 @@ TEST(Keybinds_ArrayTriggerIgnoresExtraNumber, KeybindsFixture,
     int fires = 0;
     fixture.root.on("quit", [&] { ++fires; });
 
-    fixture.load(Table{
-        {"quit", Array{std::string("Ctrl+Q"), int64_t{12}}},
+    fixture.load(Lattice::Table{
+        {"quit", Lattice::Array{std::string("Ctrl+Q"), int64_t{12}}},
     });
 
     REQUIRE(fixture.map->hasBind("quit", "Ctrl+Q"));
@@ -97,9 +98,9 @@ TEST(Keybinds_OpInKey, KeybindsFixture,
     double dt = 1.0;
     fixture.root.bind("dt", &dt);
 
-    fixture.load(Table{
-        {"dt.add", Array{std::string("]"), 0.5, std::string("hold")}},
-        {"dt.sub", Array{std::string("["), -0.5, std::string("hold")}},
+    fixture.load(Lattice::Table{
+        {"dt.add", Lattice::Array{std::string("]"), 0.5, std::string("hold")}},
+        {"dt.sub", Lattice::Array{std::string("["), -0.5, std::string("hold")}},
     });
 
     REQUIRE(fixture.map->bindCount() == 2);
@@ -124,9 +125,9 @@ TEST(Keybinds_NestedTable, KeybindsFixture,
     double dt = 0.0;
     fixture.root.bind("dt", &dt);
 
-    fixture.load(Table{
-        {"dt", Table{
-            {"add", Array{std::string("]"), 0.5}},
+    fixture.load(Lattice::Table{
+        {"dt", Lattice::Table{
+            {"add", Lattice::Array{std::string("]"), 0.5}},
         }},
     });
 
@@ -143,7 +144,7 @@ TEST(Keybinds_ToggleInKey, KeybindsFixture,
     bool flag = false;
     fixture.root.bind("flag", &flag);
 
-    fixture.load(Table{
+    fixture.load(Lattice::Table{
         {"flag.toggle", std::string("Space")},
     });
 
@@ -157,10 +158,10 @@ TEST(Keybinds_ToggleInKey, KeybindsFixture,
 TEST(Keybinds_ReloadDoesNotDuplicate, KeybindsFixture,
     "Повторная загрузка той же таблицы не должна плодить бинды.")
 {
-    const Table keybinds{
+    const Lattice::Table keybinds{
         {"print", std::string("P")},
-        {"dt.add", Array{std::string("]"), 0.001, std::string("hold")}},
-        {"dt.sub", Array{std::string("["), -0.001, std::string("hold")}},
+        {"dt.add", Lattice::Array{std::string("]"), 0.001, std::string("hold")}},
+        {"dt.sub", Lattice::Array{std::string("["), -0.001, std::string("hold")}},
     };
 
     fixture.load(keybinds);
@@ -179,7 +180,7 @@ TEST(Keybinds_FileSignature, KeybindsFixture,
 
     TomlParser parser;
     const Document doc = parser.parseFile("Config/keybinds.toml");
-    fixture.loader->load(doc.get("keybinds"));
+    fixture.loader->load(doc);
 
     REQUIRE(fixture.map->hasBind("print", "P"));
     REQUIRE(fixture.map->hasBind("quit", "Ctrl+Q"));

@@ -1,39 +1,37 @@
 #pragma once
 
-#include <string>
 #include <string_view>
-#include <unordered_map>
 #include <vector>
-#include <limits>
 
 #include <Lattice/Kernel/Exception.hpp>
+#include "Lattice/Kernel/NamedRegistry.hpp"
 
 namespace Lattice {
 
+/**
+ @file ObjectRegistry.hpp
+ @brief Хранилище объектов с идентификацией по имени.
+
+ ObjectRegistry предоставляет операции для создания, поиска, получения,
+ удаления и управления объектами, связанными с идентификаторами.
+
+ Для сопоставления имён с идентификаторами используется NamedRegistry.
+*/
+
 template<typename Object, typename Id, typename Key, typename Hash = std::hash<Key>>
-class Registry {
+class ObjectRegistry {
 public:
     Id create(Object object) {
-        const Key key{object.name};
-
-        if (has(key))
-            throw Lattice::Exception("Registry", "Object '{}' already exists", object.name);
-
         const Id id = allocate();
+
+        names_.add(object.name, id);
 
         if (id == static_cast<Id>(objects_.size()))
             objects_.push_back(std::move(object));
         else
             objects_[id] = std::move(object);
 
-        lookup_.emplace(key, id);
         return id;
-    }
-
-    static constexpr Id InvalidId = std::numeric_limits<Id>::max();
-
-    static constexpr bool valid(Id id) noexcept {
-        return id != InvalidId;
     }
 
     // добавляет псевдоним к слоту
@@ -41,12 +39,7 @@ public:
         if (!get(id))
             return;
 
-        const Key key{std::string(name)};
-
-        if (lookup_.contains(key))
-            throw Lattice::Exception("Registry", "Name '{}' already exists", name);
-
-        lookup_.emplace(key, id);
+        names_.alias(id, name);
     }
 
     // уничтожает слот
@@ -54,12 +47,7 @@ public:
         if (!get(id))
             return;
 
-        for (auto it = lookup_.begin(); it != lookup_.end();) {
-            if (it->second == id)
-                it = lookup_.erase(it);
-            else
-                ++it;
-        }
+        names_.remove(id);
 
         objects_[id].exists = false;
         objects_[id].node = nullptr;
@@ -105,27 +93,28 @@ public:
 
     // ищет id в реестре по строковому имени
     Id find(std::string_view name) const {
-        const auto it = lookup_.find(Key{std::string(name)});
-
-        if (it == lookup_.end())
-            return InvalidId;
-
-        return it->second;
+        return names_.find(name);
     }
 
     // проверяет наличие имени в реестре
     bool has(std::string_view name) const {
-        return lookup_.contains(Key{std::string(name)});
+        return names_.has(name);
     }
 
     void clear() {
         objects_.clear();
         freeIds_.clear();
-        lookup_.clear();
+        names_.clear();
     }
 
     Id size() const {
         return static_cast<Id>(objects_.size());
+    }
+
+    static constexpr Id InvalidId = NamedRegistry<Id, Key, Hash>::InvalidId;
+
+    static constexpr bool valid(Id id) noexcept {
+        return NamedRegistry<Id, Key, Hash>::valid(id);
     }
 
 private:
@@ -142,7 +131,7 @@ private:
 private:
     std::vector<Object> objects_;
     std::vector<Id> freeIds_;
-    std::unordered_map<Key, Id, Hash> lookup_;
+    NamedRegistry<Id, Key, Hash> names_;
 };
 
 }

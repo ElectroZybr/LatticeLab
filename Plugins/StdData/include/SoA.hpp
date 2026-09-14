@@ -107,7 +107,7 @@ public:
         col.typeKey     = typeToken<T>();
         col.active      = true;
 
-        col.assign = [](std::byte* storage, size_t index, const Value& value) {
+        col.assign = [](std::byte* storage, size_t index, const Lattice::Value& value) {
             assignCell(reinterpret_cast<T*>(storage)[index], value);
         };
 
@@ -224,7 +224,7 @@ public:
         return get<Tag>()[index];
     }
 
-    void set(std::string_view name, size_t index, const Value& value) {
+    void set(std::string_view name, size_t index, const Lattice::Value& value) {
         Column* col = findColumn(name);
 
         if (!col)
@@ -324,6 +324,25 @@ public:
         tree.print();
     }
 
+    std::optional<size_t> findString(std::string_view columnName, std::string_view value) const {
+        const Column* col = findColumn(columnName);
+
+        if (!col || col->kind != CellKind::Chars)
+            return std::nullopt;
+
+        const std::byte* base = storage_ + col->offset;
+
+        for (size_t i = 0; i < size_; ++i) {
+            const char* text = reinterpret_cast<const char*>(base + i * col->elementSize);
+            const size_t n = strnlen(text, col->elementSize);
+
+            if (std::string_view(text, n) == value)
+                return i;
+        }
+
+        return std::nullopt;
+    }
+
 private:
     enum class CellKind : uint8_t {
         Bytes,
@@ -341,7 +360,7 @@ private:
         const void* typeKey = nullptr;
         bool active         = false;
         CellKind kind       = CellKind::Bytes;
-        void (*assign)(std::byte*, size_t, const Value&) = nullptr;
+        void (*assign)(std::byte*, size_t, const Lattice::Value&) = nullptr;
     };
 
     size_t size_         = 0;
@@ -401,7 +420,7 @@ private:
     }
 
     template<typename T>
-    static void assignCell(T& dst, const Value& value) {
+    static void assignCell(T& dst, const Lattice::Value& value) {
         if constexpr (isCharArray<T>) {
             const auto text = value.as<std::string>();
             dst = {};

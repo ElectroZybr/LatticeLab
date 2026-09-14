@@ -2,12 +2,12 @@
 
 // #include "Lattice/Kernel/Node.hpp"
 
-#include <string_view>
+#include "Document.hpp"
 
 class Value;
 
 class LoaderAPI {
 public:
-    virtual std::string_view section() const = 0;
-    virtual void load(const Value* data) = 0;//, Lattice::Node ctx
+    virtual ~LoaderAPI() = default;
+    virtual void load(const Document& document) = 0;
 };
