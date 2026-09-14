@@ -9,6 +9,7 @@
 #include "LoaderAPI.hpp"
 #include "ParserAPI.hpp"
 #include "TomlParser.hpp"
+#include "TsvParser.hpp"
 // #include "JsonParser.hpp"
 // #include "YamlParser.hpp"
 
@@ -18,6 +19,7 @@ extern "C" bool plugin_register(Lattice::Node& blueprints) {
     blueprints.blueprint<LoaderAPI>();
     blueprints.blueprint<ParserAPI>();
     blueprints.blueprint<TomlParser, ParserAPI>();
+    blueprints.blueprint<TsvParser, ParserAPI>();
     return true;
 }
 

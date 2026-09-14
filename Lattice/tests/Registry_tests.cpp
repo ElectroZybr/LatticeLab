@@ -1,4 +1,4 @@
-#include <Lattice/Kernel/Registry.hpp>
+#include <Lattice/Kernel/ObjectRegistry.hpp>
 #include <Lattice/Tools/Fixture.hpp>
 #include <Lattice/Tools/Tests.hpp>
 
@@ -13,7 +13,7 @@ struct RegistryDummy {
     void* node = nullptr;
 };
 
-using TestRegistry = Registry<RegistryDummy, uint32_t, std::string>;
+using TestRegistry = ObjectRegistry<RegistryDummy, uint32_t, std::string>;
 
 TEST(Registry_Create, RuntimeFixture,
     "create должен добавлять объект и возвращать его id.")

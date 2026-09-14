@@ -33,22 +33,22 @@ public:
 private:
     static void parseTable(
         const toml::table& table,
-        Table& output
+        Lattice::Table& output
     ) {
         for (const auto& [key, node] : table) {
             output.emplace(std::string(key.str()), parseValue(node));
         }
     }
 
-    static Value parseValue(const toml::node& node) {
+    static Lattice::Value parseValue(const toml::node& node) {
         if (const auto* table = node.as_table()) {
-            Table child;
+            Lattice::Table child;
             parseTable(*table, child);
             return child;
         }
 
         if (const auto* array = node.as_array()) {
-            Array values;
+            Lattice::Array values;
             values.reserve(array->size());
 
             for (const auto& element : *array)

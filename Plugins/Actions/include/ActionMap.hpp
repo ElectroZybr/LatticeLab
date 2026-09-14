@@ -1,14 +1,14 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <vector>
 
-#include <Lattice/Kernel/SubsystemAPI.hpp>
 #include <Lattice/Kernel/Context.hpp>
 #include <Lattice/Kernel/RefSlot.hpp>
-#include "Lattice/Kernel/Objects.hpp"
+#include <Lattice/Kernel/ObjectRegistry.hpp>
+#include <Lattice/Kernel/SubsystemAPI.hpp>
 
 #include "InputAPI.hpp"
 
@@ -19,6 +19,25 @@ enum class Target { Action, Toggle, Add };
 
 class ActionMap final : public SubsystemAPI {
 public:
+    using BindId = uint32_t;
+
+    struct Binding {
+        std::string name;
+        bool exists = true;
+
+        Lattice::ContextId slot = Lattice::InvalidContextId;
+        std::string trigger;
+        ActionMode mode = ActionMode::OnPress;
+        Target target = Target::Action;
+        double delta = 0;
+        bool wasDown = false;
+        bool down = false;
+        bool pressed = false;
+        bool released = false;
+    };
+
+    using BindRegistry = Lattice::ObjectRegistry<Binding, BindId, std::string>;
+
     explicit ActionMap(Lattice::Node& branch) {}
 
     void configure(Lattice::Node& branch);
@@ -33,38 +52,21 @@ public:
     bool pressed(Lattice::ContextId slot) const;
     bool released(Lattice::ContextId slot) const;
 
-    size_t bindCount() const { return bindings_.size(); }
+    size_t bindCount() const;
     bool hasBind(std::string_view verb, std::string_view trigger) const;
 
     void clearBinds();
-    Ref<Lattice::Context> run_ctx;
-
+    
 private:
-    struct Binding {
-        Lattice::ContextId slot = Lattice::InvalidContextId;
-        std::string trigger;
-        ActionMode mode = ActionMode::OnPress;
-        Target target = Target::Action;
-        double delta = 0;
-        bool wasDown = false;
-    };
-
-    struct ActionState {
-        bool down = false;
-        bool pressed = false;
-        bool released = false;
-    };
-
+    Ref<Lattice::Context> run_ctx;
     std::vector<InputAPI*> inputs_;
+    BindRegistry bindings_;
 
-    std::vector<Binding> bindings_;
-    std::unordered_map<Lattice::ContextId, ActionState> actions_;
-
-    ActionState& ensure(Lattice::ContextId slot);
-    const ActionState* find(Lattice::ContextId slot) const;
+    static std::string bindName(Lattice::ContextId slot, std::string_view trigger);
 
     Binding* findBind(Lattice::ContextId slot, std::string_view trigger);
     const Binding* findBind(Lattice::ContextId slot, std::string_view trigger) const;
+    bool any(Lattice::ContextId slot, bool Binding::* field) const;
     void upsert(
         std::string_view verb,
         std::string_view trigger,

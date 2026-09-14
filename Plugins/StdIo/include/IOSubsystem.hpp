@@ -49,15 +49,11 @@ public:
         Logger::ok("IOSubsystem", "load from: {}", std::string(path));
         ParserAPI* parser = findParser(path);
         Document doc;
-        if (parser)
+        if (parser) {
             doc = parser->parseFile(path);
 
-        for (LoaderAPI* loader : loaders) {
-            const Value* data = doc.get(loader->section());
-            if (!data)
-                continue;
-
-            loader->load(data);
+            for (LoaderAPI* loader : loaders)
+                loader->load(doc);
         }
     }
 

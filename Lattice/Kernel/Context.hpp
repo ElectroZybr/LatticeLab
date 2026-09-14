@@ -9,7 +9,7 @@
 
 #include <Lattice/Kernel/Bindings.hpp>
 #include <Lattice/Kernel/Objects.hpp>
-#include <Lattice/Kernel/Registry.hpp>
+#include <Lattice/Kernel/ObjectRegistry.hpp>
 #include <Lattice/Tools/LogTree.hpp>
 
 namespace Lattice {
@@ -35,7 +35,7 @@ struct ContextSlot {
     bool exists = true;
 };
 
-using ContextRegistry = Registry<ContextSlot, ContextId, std::string>;
+using ContextRegistry = ObjectRegistry<ContextSlot, ContextId, std::string>;
 
 class Context {
 public:

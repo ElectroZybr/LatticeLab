@@ -19,18 +19,15 @@ public:
         actionMap = branch.require<ActionMap>();
     }
 
-    std::string_view section() const override {
-        return "keybinds";
-    }
-
-    void load(const Value* keybinds) override {
-        if (!keybinds || !keybinds->is<Table>())
+    void load(const Document& document) override {
+        const Lattice::Value* keybinds = document.get("keybinds");
+        if (!keybinds || !keybinds->is<Lattice::Table>())
             return;
 
         if (!actionMap)
             throw Lattice::Exception(tag, "loader is not configured");
 
-        loadTable(std::get<Table>(*keybinds), "");
+        loadTable(std::get<Lattice::Table>(*keybinds), "");
     }
 
 private:
@@ -40,7 +37,7 @@ private:
         return name == "add" || name == "sub" || name == "toggle";
     }
 
-    static bool asNumber(const Value& value, double& out) {
+    static bool asNumber(const Lattice::Value& value, double& out) {
         if (value.is<double>()) {
             out = value.get<double>();
             return true;
@@ -67,12 +64,12 @@ private:
         return {std::move(path), std::move(last)};
     }
 
-    void loadTable(const Table& table, const std::string& prefix) {
+    void loadTable(const Lattice::Table& table, const std::string& prefix) {
         for (const auto& [key, value] : table) {
             const std::string path = prefix.empty() ? key : prefix + "." + key;
 
-            if (value.is<Table>()) {
-                loadTable(std::get<Table>(value), path);
+            if (value.is<Lattice::Table>()) {
+                loadTable(std::get<Lattice::Table>(value), path);
                 continue;
             }
 
@@ -80,14 +77,14 @@ private:
         }
     }
 
-    void bindEntry(std::string path, const Value& value) {
+    void bindEntry(std::string path, const Lattice::Value& value) {
         auto [verb, op] = splitVerb(std::move(path));
         if (verb.empty())
             return;
 
-        Array args;
-        if (value.is<Array>())
-            args = std::get<Array>(value);
+        Lattice::Array args;
+        if (value.is<Lattice::Array>())
+            args = std::get<Lattice::Array>(value);
         else
             args.push_back(value);
 
