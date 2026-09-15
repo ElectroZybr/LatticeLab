@@ -15,7 +15,7 @@ extern "C" bool plugin_register(Lattice::Node& blueprints) {
     blueprints.blueprint<SpatialIndexAPI>();
 
     blueprints.blueprint<SpatialGrid, SpatialIndexAPI>();
-    blueprints.blueprint<ParticleStorage>();
+    blueprints.blueprint<ParticleStorage, StdData::SoA>();
     return true;
 }
 

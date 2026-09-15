@@ -14,66 +14,42 @@
 
 // Source
 #include "AtomData.hpp"
+#include "AtomStorage.hpp"
 
 namespace ClassicMD {
 
 class ClassicMD final : public Model {
 public:
-    struct Energy {using type = float;};
-    struct Charge {using type = float;};
-
-    // struct Type {using type = AtomData::Type;};
-    struct Valence {using type = uint8_t;};
-    // struct Hybridization {using type = AtomData::Hybridization;};
-    struct Id {using type = uint32_t;};
-
-    struct Element {using type = float;};
-    struct Mass {using type = float;};
-
     explicit ClassicMD(Lattice::Node& universe) {
         universe.add<AtomData>();
-        universe.add<ParticleDynamics::ParticleStorage>();
-        universe.use<ParticleDynamics::SpatialIndexAPI>("SpatialGrid");
-        universe.use<ParticleDynamics::IntegratorAPI>("Verlet");
+        universe.add<AtomStorage>();
+        universe.slot<ParticleDynamics::SpatialIndexAPI>();
+        universe.slot<ParticleDynamics::IntegratorAPI>();
     }
 
     void configure(Lattice::Node& universe) {
         atomData = universe.require<AtomData>();
-        atoms = universe.require<ParticleDynamics::ParticleStorage>();
+        atoms = universe.require<AtomStorage>();
         spatialGrid = universe.find<ParticleDynamics::SpatialIndexAPI>();
         integrator = universe.find<ParticleDynamics::IntegratorAPI>();
-        atoms->addCol<Energy>();
-        atoms->addCol<Charge>();
-        // atoms->addCol<Type>();
-        atoms->addCol<Valence>();
-        // atoms->addCol<Hybridization>();
-        atoms->addCol<Id>();
+
         universe.activateNamespace();
     }
 
     void run() override {
         while (!stopRequested()) {
-            integrator->step();
-            // settings->set("SpatialGrid", "size", glm::vec3(10, 10, 10));
+            // integrator->step();
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
     }
 
     ~ClassicMD() {
-        if (atoms) {
-            atoms->removeCol<Energy>();
-            atoms->removeCol<Charge>();
-            // atoms->removeCol<Type>();
-            atoms->removeCol<Valence>();
-            // atoms->removeCol<Hybridization>();
-            atoms->removeCol<Id>();
-        }
         Logger::info("ClassicMD", "destroying object");
     }
 
 private:
     Ref<AtomData> atomData;
-    Ref<ParticleDynamics::ParticleStorage> atoms;
+    Ref<AtomStorage> atoms;
     Slot<ParticleDynamics::IntegratorAPI> integrator;
     Slot<ParticleDynamics::SpatialIndexAPI> spatialGrid;
 };

@@ -14,7 +14,7 @@
 extern "C" bool plugin_register(Lattice::Node& blueprints) {
     blueprints.blueprint<StdData::SoA>();
     blueprints.blueprint<SoALoader, LoaderAPI>();
-    blueprints.blueprint<StdData::NamedSoA>();
+    blueprints.blueprint<StdData::NamedSoA, StdData::SoA>();
     blueprints.blueprint<NamedSoALoader, LoaderAPI>();
     return true;
 }

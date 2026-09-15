@@ -1,7 +1,7 @@
 [NamedSoA]
 #target	AtomData
 
-Name	Mass	Valence
+Element	Mass	Valence
 Z	1.0000	1
 H	1.0080	1
 He	4.0026	0

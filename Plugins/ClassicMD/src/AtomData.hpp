@@ -1,29 +1,23 @@
 #pragma once
 
 #include <array>
-
 #include <Lattice/Kernel/Node.hpp>
 #include "StdData/include/NamedSoA.hpp"
 
+#include "AtomStorage.hpp"
+
 namespace ClassicMD {
 
-struct Name { using type = std::array<char, 8>; };
-struct Mass { using type = float; };
-struct Valence { using type = uint8_t; };
+struct Element {using type = std::array<char, 8>;};
+struct Mass    {using type = float;};
 
-class AtomData {
+class AtomData final : public StdData::NamedSoA {
 public:
     explicit AtomData(Lattice::Node& branch) {
-        branch.add<StdData::NamedSoA>();
-        soa_ = branch.require<StdData::NamedSoA>();
-
-        soa_->addCol<Name>();
-        soa_->addCol<Mass>();
-        soa_->addCol<Valence>();
+        addCol<Element>();
+        addCol<Mass>();
+        addCol<Valence>();
     }
-
-private:
-    Ref<StdData::NamedSoA> soa_;
 };
 
-} // namespace ClassicMD
+}
