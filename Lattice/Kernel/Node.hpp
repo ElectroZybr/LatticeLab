@@ -25,6 +25,7 @@ enum class NodeKind : uint8_t {
     Folder,
     Blueprint,
     Component,
+    Slot,
     Binding
 };
 
@@ -125,6 +126,10 @@ class Node {
 
                 case NodeKind::Component:
                     line = std::format("{}<gr>:{}</> <g>С</>", child->bp->name(), name);
+                    break;
+                
+                case NodeKind::Slot:
+                    line = std::format("{}<gr>:{}</> <bl>S</>", child->bp->name(), name);
                     break;
 
                 case NodeKind::Binding:
@@ -454,68 +459,62 @@ public:
     }
 
     template<typename API, typename Impl>
-    Slot<API> use(std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
+    void use(std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
         noteUseImpl<API, Impl>();
-        return use<API>(typeName<Impl>(), instanceName, blueprintsPath);
+        use<API>(typeName<Impl>(), instanceName, blueprintsPath);
     }
 
     template<typename API>
-    Slot<API> use(std::string_view implName, std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
-        noteUse<API>();
-
-        ObjectId folderId = resolvePath(blueprintsPath, rootNode()->id);
-        if (!Objects::valid(folderId))
-            throw Exception(tag, "blueprint folder '{}' not found", blueprintsPath);
-
-        const ObjectId apiId = findBlueprint<API>(blueprintsPath);
+    void use(std::string_view implName, std::string_view blueprintsPath = DefaultBlueprintsPath) {
         const ObjectId implId = findBlueprint(implName, blueprintsPath);
-
-        if (!Objects::valid(apiId))
-            throw Exception(tag, "unknown API '{}' in '{}'", typeName<API>(), blueprintsPath);
-
         if (!Objects::valid(implId))
-            throw Exception(tag, "unknown implementation '{}' in '{}'", implName, blueprintsPath);
+            throw Exception(tag, "unknown implementation '{}'", implName);
 
         Node* blueprint = run_ctx.objects.require(implId).node;
+        const ObjectId apiId = bp->id;
 
         if (!blueprint->isUnder(apiId))
             throw Exception(tag, "implementation '{}' does not provide '{}'", implName, typeName<API>());
 
-        ObjectId objectId = run_ctx.objects.find(instanceName, id);
-        Node* child = nullptr;
-
-        for (auto& node : children_) {
-            if (node->name() == instanceName && node->bp && node->bp->isUnder(apiId)) {
-                child = node.get();
-                break;
-            }
-        }
-
-        if (child) {
-            if (child->object) {
-                Meta* meta = static_cast<Meta*>(child->bp->object);
+        if (!children_.empty()) {
+            Node* old = children_.front().get();
+            if (old->object) {
+                Meta* meta = static_cast<Meta*>(old->bp->object);
                 if (meta && meta->destroy)
-                    meta->destroy(*child);
+                    meta->destroy(*old);
             }
-
-            child->children_.clear();
-            child->object = nullptr;
-        } else {
-            child = makeChild(instanceName);
-            Logger::info(tag, "+ interface '{}'", typeName<API>());
+            children_.clear();
         }
 
+        Node* child = makeChild(implName);
         child->bp = blueprint;
+        child->kind = NodeKind::Component;
 
         Meta* meta = static_cast<Meta*>(blueprint->object);
         if (!meta || !meta->create)
             throw Exception(tag, "blueprint '{}' has no create callback", implName);
 
         child->object = meta->create(*child);
-        child->kind = NodeKind::Component;
 
         Logger::info(tag, "> use '{}' = '{}'", typeName<API>(), implName);
         activate(child, blueprint->name(), true);
+    }
+
+    template<typename API>
+    Slot<API> slot(std::string_view instanceName = "default") {
+        noteUse<API>();
+
+        const ObjectId apiId = findBlueprint<API>(DefaultBlueprintsPath);
+        if (!Objects::valid(apiId))
+            throw Exception(tag, "unknown API '{}'", typeName<API>());
+
+        Node* blueprint = run_ctx.objects.require(apiId).node;
+
+        Node* child = makeChild(instanceName);
+        child->bp = blueprint;
+        child->kind = NodeKind::Slot;
+
+        Logger::info(tag, "+ slot '{}'", typeName<API>());
         return Slot<API>(child);
     }
 
@@ -611,7 +610,7 @@ public:
                 Logger::info(tag, "Configuring '{}'", name());
                 meta->configure(*this);
             } else {
-                Logger::warning(tag, "Object '{}' has no configure callback", name());
+                Logger::warning(tag, "Object '{}' has no configure callback", bp->name());
             }
         }
 
@@ -756,14 +755,18 @@ public:
 };
 
 template<typename T>
-T* Slot<T>::get() const noexcept {
-    return node
-        ? static_cast<T*>(node->getObject())
-        : nullptr;
+T* Lattice::Slot<T>::get() const noexcept {
+    return node ? static_cast<T*>(node->getObject()) : nullptr;
 }
 
 template<typename T>
-bool Slot<T>::exists() const noexcept {
+bool Lattice::Slot<T>::exists() const noexcept {
     return get() != nullptr;
 }
+
+template<typename T>
+void Lattice::Slot<T>::use(std::string_view implName) {
+    node->use<T>(implName);
+}
+
 } // namespace Lattice

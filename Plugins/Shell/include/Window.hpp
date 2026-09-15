@@ -17,7 +17,7 @@
 class Window final : public ServiceAPI {
 public:
     explicit Window(Lattice::Node& branch) {
-        branch.use<WindowAPI, glfwWindow>();
+        branch.slot<WindowAPI>();
         branch.add<Render>();
     }
 
@@ -25,11 +25,12 @@ public:
         actionMap = branch.require<ActionMap>();
         render = branch.require<Render>();
         window = branch.find<WindowAPI>();
+        window.use("glfwWindow");
 
         branch.on("print", [this]() { print(); });
 
-        window->show();
-        window->setTitle("LatticeLab");
+        // window->show();
+        // window->setTitle("LatticeLab");
     }
 
     void run() override {
@@ -44,12 +45,15 @@ public:
 
         render->setup();
         while (!stopRequested()) {
-            window->pollEvents();
-            actionMap->tick();
-            if (window->shouldClose()) {
-                requestStop();
-                break;
+            if (window) {
+                window->pollEvents();
+                if (window->shouldClose()) {
+                    requestStop();
+                    break;
+                }
             }
+
+            actionMap->tick();
             render->frame();
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }

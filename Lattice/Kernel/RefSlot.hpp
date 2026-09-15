@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdint>
-
+#include <string_view>
+#include <cstddef>
 namespace Lattice {
 
 class Node;
@@ -16,6 +16,8 @@ struct Slot {
     T* get() const noexcept;
     T* operator->() const noexcept { return get(); }
     T& operator*() const noexcept { return *get(); }
+
+    void use(std::string_view implName);
 
     bool exists() const noexcept;
 

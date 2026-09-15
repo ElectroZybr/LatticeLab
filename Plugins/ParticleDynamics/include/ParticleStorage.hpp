@@ -24,84 +24,32 @@ struct Force {
     struct Z { using type = float; };
 };
 
-struct InvMass {using type = float;};
+struct InvMass { using type = float; };
 
 
 namespace ParticleDynamics {
     
-class ParticleStorage {
+class ParticleStorage : public StdData::SoA {
 public:
     explicit ParticleStorage(Lattice::Node& branch) {
-        branch.add<StdData::SoA>();
-        soa_ = branch.require<StdData::SoA>();
 
-        soa_->addCol<Pos::X>();
-        soa_->addCol<Pos::Y>();
-        soa_->addCol<Pos::Z>();
+        addCol<Pos::X>();
+        addCol<Pos::Y>();
+        addCol<Pos::Z>();
 
-        soa_->addCol<Vel::X>();
-        soa_->addCol<Vel::Y>();
-        soa_->addCol<Vel::Z>();
+        addCol<Vel::X>();
+        addCol<Vel::Y>();
+        addCol<Vel::Z>();
 
-        soa_->addCol<Force::X>();
-        soa_->addCol<Force::Y>();
-        soa_->addCol<Force::Z>();
+        addCol<Force::X>();
+        addCol<Force::Y>();
+        addCol<Force::Z>();
 
-        soa_->addCol<InvMass>();
-    }
-
-    template<class Tag>
-    typename Tag::type* addCol() noexcept {
-        return soa_->addCol<Tag>();
-    }
-
-    template<class Tag>
-    void removeCol() {
-        soa_->remove<Tag>();
-    }
-
-    template<class Tag>
-    [[nodiscard]] typename Tag::type* getCol() noexcept {
-        return soa_->get<Tag>();
-    }
-
-    template<class Tag>
-    [[nodiscard]] const typename Tag::type* getCol() const noexcept {
-        return soa_->get<Tag>();
-    }
-
-    template<class Tag>
-    [[nodiscard]] typename Tag::type* requireCol() {
-        return soa_->require<Tag>();
-    }
-
-    template<class Tag>
-    [[nodiscard]] const typename Tag::type* requireCol() const {
-        return soa_->require<Tag>();
-    }
-
-    template<class Tag>
-    [[nodiscard]] std::span<typename Tag::type> spanCol() noexcept {
-        return soa_->span<Tag>();
-    }
-
-    template<class Tag>
-    [[nodiscard]] std::span<const typename Tag::type> spanCol() const noexcept {
-        return soa_->span<Tag>();
-    }
-
-    template<class Tag>
-    [[nodiscard]] typename Tag::type& at(size_t index) noexcept {
-        return soa_->at<Tag>(index);
-    }
-
-    template<class Tag>
-    [[nodiscard]] const typename Tag::type& at(size_t index) const noexcept {
-        return soa_->at<Tag>(index);
+        addCol<InvMass>();
     }
 
     size_t add(const glm::vec3& pos, const glm::vec3& vel, bool fixed = false) {
-        soa_->resize(size() + 1);
+        resize(size() + 1);
         const size_t i = size() - 1;
 
         set<Pos>(pos, i);
@@ -131,7 +79,7 @@ public:
             swap(index, last);
         }
 
-        soa_->resize(last);
+        resize(last);
     }
 
     void setFixed(size_t i, bool fixed) {
@@ -166,21 +114,18 @@ public:
         };
     }
 
-    size_t size() const { return soa_->size(); }
     size_t mobileCount() const { return mobileCount_; }
     bool empty() const { return size() == 0; }
-    bool isAtomFixed(size_t i) const { return i >= mobileCount_; }
-    size_t memoryBytes() const { return soa_->storageBytes(); }
+    bool isFixed(size_t i) const { return i >= mobileCount_; }
 
 private:
-    Ref<StdData::SoA> soa_;
     size_t mobileCount_ = 0;
 
     void swap(size_t a, size_t b) {
         if (a >= size() || b >= size() || a == b) {
             return;
         }
-        soa_->swapRows(a, b);
+        swapRows(a, b);
     }
 
 };

@@ -105,7 +105,7 @@ public:
         Column& col = columns_[id];
         if (col.active) {
             assert(col.typeKey == typeToken<T>());
-            return get<Tag>();
+            return getCol<Tag>();
         }
 
         col.name = Lattice::typeName<Tag>();
@@ -131,11 +131,11 @@ public:
 
         relayout(capacity_);
 
-        return get<Tag>();
+        return getCol<Tag>();
     }
 
     template<class Tag>
-    void remove() {
+    void removeCol() {
         const size_t id = typeId<Tag>();
 
         if (id >= columns_.size() || !columns_[id].active) {
@@ -148,7 +148,7 @@ public:
     // -------
     // Сырой указатель на колонку
     template<class Tag>
-    [[nodiscard]] typename Tag::type* get() noexcept {
+    [[nodiscard]] typename Tag::type* getCol() noexcept {
         using T = typename Tag::type;
         auto* column = findColumn<Tag>();
         if (!column)
@@ -157,7 +157,7 @@ public:
     }
 
     template<class Tag>
-    [[nodiscard]] const typename Tag::type* get() const noexcept {
+    [[nodiscard]] const typename Tag::type* getCol() const noexcept {
         using T = typename Tag::type;
         const auto* column = findColumn<Tag>();
         if (!column)
@@ -223,12 +223,12 @@ public:
     // доступ по индексу
     template<class Tag>
     [[nodiscard]] typename Tag::type& at(size_t index) noexcept {
-        return get<Tag>()[index];
+        return getCol<Tag>()[index];
     }
 
     template<class Tag>
     [[nodiscard]] const typename Tag::type& at(size_t index) const noexcept {
-        return get<Tag>()[index];
+        return getCol<Tag>()[index];
     }
 
     void set(std::string_view name, size_t index, const Lattice::Value& value) {
