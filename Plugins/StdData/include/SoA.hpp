@@ -454,6 +454,24 @@ private:
         return &col;
     }
 
+    template<class Tag>
+    const Column* findColumn() const noexcept {
+        const auto id = typeId<Tag>();
+
+        if (id >= columns_.size())
+            return nullptr;
+
+        const Column& col = columns_[id];
+
+        if (!col.active)
+            return nullptr;
+
+        if (col.typeKey != typeToken<typename Tag::type>())
+            return nullptr;
+
+        return &col;
+    }
+
     Column* findColumn(std::string_view name) noexcept {
         return const_cast<Column*>(std::as_const(*this).findColumn(name));
     }

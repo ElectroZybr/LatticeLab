@@ -16,7 +16,12 @@ class KeybindsLoader final : public LoaderAPI {
 
 public:
     void configure(Lattice::Node& branch) {
-        actionMap = branch.require<ActionMap>();
+        Lattice::Context& ctx = branch.requireContext();
+        const Lattice::ObjectId id = ctx.find(Lattice::typeName<ActionMap>());
+        if (!Lattice::Objects::valid(id))
+            throw Lattice::Exception(tag, "ActionMap is not active in context");
+
+        actionMap = static_cast<ActionMap*>(ctx.objects.require(id).node->getObject());
     }
 
     std::string_view section() const override { return "keybinds"; }

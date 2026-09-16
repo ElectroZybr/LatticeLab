@@ -2,6 +2,8 @@
 
 #include <string_view>
 #include <cstddef>
+#include <Lattice/Kernel/TypeName.hpp>
+
 namespace Lattice {
 
 class Node;
@@ -18,6 +20,11 @@ struct Slot {
     T& operator*() const noexcept { return *get(); }
 
     void use(std::string_view implName);
+
+    template<typename Impl>
+    void use() {
+        use(typeName<Impl>());
+    }
 
     bool exists() const noexcept;
 

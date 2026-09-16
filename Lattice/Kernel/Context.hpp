@@ -17,7 +17,7 @@ namespace Lattice {
 class Node;
 
 inline constexpr std::string_view DefaultBlueprintsPath = "Blueprints";
-inline constexpr std::string_view DefaultInstanceName = "default";
+inline constexpr std::string_view DefaultInstanceName = "";
 
 struct Meta {
     void* (*create)(Node&) = nullptr;
