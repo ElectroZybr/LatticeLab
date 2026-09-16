@@ -11,6 +11,7 @@
 // Plugin dependences
 #include <ParticleDynamics/include/ParticleAPI.hpp>
 #include <ParticleDynamics/include/ParticleStorage.hpp>
+#include "Integrators/src/Verlet.hpp"
 
 // Source
 #include "AtomData.hpp"
@@ -34,11 +35,15 @@ public:
         integrator = universe.find<ParticleDynamics::IntegratorAPI>();
 
         universe.activateNamespace();
+        // integrator.use<Integrators::Verlet>();
+        universe.on("CreateVerlet", [this]() { integrator.use("Verlet"); });
     }
 
     void run() override {
+        atoms->add({0, 0, 0}, {1, 10, 0});
         while (!stopRequested()) {
-            // integrator->step();
+            if (integrator)
+                integrator->step();
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
     }

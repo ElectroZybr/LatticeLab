@@ -70,6 +70,18 @@ private:
     std::vector<ObjectId> ids_;
 };
 
+inline bool unnamedInstance(std::string_view name) noexcept {
+    return name.empty() || name == "default";
+}
+
+inline std::string_view canonicalInstance(std::string_view name) noexcept {
+    return name == "default" ? DefaultInstanceName : name;
+}
+
+inline bool sameInstance(std::string_view a, std::string_view b) noexcept {
+    return unnamedInstance(a) ? unnamedInstance(b) : a == b;
+}
+
 template<typename T>
 concept HasConfigure = requires(T& obj, Node& branch) {
     obj.configure(branch);
@@ -83,22 +95,86 @@ class Node {
     ObjectId id = 0;
     Node* parent = nullptr;
     Node* bp     = nullptr;
+    Node* implBp = nullptr;
     void* object = nullptr; // для чертежей meta
     NodeKind kind = NodeKind::Folder;
+    bool configured = false;
 
     std::vector<std::unique_ptr<Node>> children_;
 
     Node* makeChild(std::string_view name, Node* blueprint = nullptr) {
         auto node = std::make_unique<Node>(run_ctx, this);
-        Node* child = node.get();; 
+        Node* child = node.get();
         child->id = run_ctx.objects.create(name, id, child);
         child->bp = blueprint;
         children_.push_back(std::move(node));
         return child;
     }
 
+    Node* findChild(std::string_view childName) const noexcept {
+        for (const auto& child : children_) {
+            if (child->name() == childName)
+                return child.get();
+        }
+        return nullptr;
+    }
+
+    Node* bindingChild(std::string_view childName) {
+        if (Node* child = findChild(childName); child && child->kind == NodeKind::Binding)
+            return child;
+
+        Node* child = makeChild(childName);
+        child->kind = NodeKind::Binding;
+        return child;
+    }
+
     Meta* getMeta() const noexcept {
+        if (kind == NodeKind::Slot)
+            return implBp ? static_cast<Meta*>(implBp->object) : nullptr;
         return bp ? static_cast<Meta*>(bp->object) : nullptr;
+    }
+
+    void destroyObject() {
+        if (!object)
+            return;
+
+        if (Meta* meta = getMeta(); meta && meta->destroy)
+            meta->destroy(*this);
+
+        object = nullptr;
+        implBp = nullptr;
+        configured = false;
+    }
+
+    void configure() {
+        if (!object)
+            return;
+
+        Meta* meta = getMeta();
+        if (meta && meta->configure) {
+            Logger::info(tag, "Configuring '{}'", name());
+            meta->configure(*this);
+        } else if (bp) {
+            Logger::warning(tag, "Object '{}' has no configure callback", bp->name());
+        }
+
+        configured = true;
+    }
+
+    void reconfigureFloor() {
+        if (!parent)
+            return;
+
+        std::vector<Node*> floor;
+        for (auto& child : parent->children_) {
+            if (child.get() != this && child->configured)
+                floor.push_back(child.get());
+        }
+
+        for (Node* node : floor) {
+            node->configured = false;
+            node->configure();
+        }
     }
 
     template<typename T>
@@ -125,11 +201,18 @@ class Node {
                     break;
 
                 case NodeKind::Component:
-                    line = std::format("{}<gr>:{}</> <g>С</>", child->bp->name(), name);
+                    if (unnamedInstance(name))
+                        line = std::format("{} <g>С</>", child->bp->name());
+                    else
+                        line = std::format("{}<gr>::{}</> <g>С</>", child->bp->name(), name);
                     break;
                 
                 case NodeKind::Slot:
-                    line = std::format("{}<gr>:{}</> <bl>S</>", child->bp->name(), name);
+                    if (unnamedInstance(name))
+                        line = child->bp->name();
+                    else
+                        line = std::format("{}<gr>::{}</>", child->bp->name(), name);
+                    line += std::format("<gr>::<c>{}<//> <bl>S</>", child->object ? child->implBp->name() : "empty");
                     break;
 
                 case NodeKind::Binding:
@@ -421,17 +504,26 @@ public:
         return rootNode()->folderCollect<T>();
     }
 
+    // объекты API на этаже: потомки родителя (соседи и их дети), не через Context
+    template<typename API>
+    std::vector<API*> collect() const {
+        const Node* floor = parent ? parent : this;
+        return floor->folderCollect<API>();
+    }
+
     Node& addFolder(std::string_view name) {
         return *makeChild(name);
     }
     
     template<typename T>
-    void add(std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
+    void add(std::string_view instanceName = DefaultInstanceName, std::string_view blueprintsPath = DefaultBlueprintsPath) {
         noteAdd<T>();
         add(typeName<T>(), instanceName, blueprintsPath);
     }
 
-    void add(std::string_view parent, std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
+    void add(std::string_view parent, std::string_view instanceName = DefaultInstanceName, std::string_view blueprintsPath = DefaultBlueprintsPath) {
+        instanceName = canonicalInstance(instanceName);
+
         ObjectId folderId = resolvePath(blueprintsPath, rootNode()->id);
         if (!Objects::valid(folderId))
             throw Exception(tag, "blueprint folder '{}' not found", blueprintsPath);
@@ -443,7 +535,7 @@ public:
         Node* blueprint = run_ctx.objects.require(blueprintId).node;
 
         for (const auto& child : children_) {
-            if (child->name() == instanceName && child->bp == blueprint) {
+            if (sameInstance(child->name(), instanceName) && child->bp == blueprint) {
                 Logger::warning(tag, "object '{}' with instance '{}' already exists", parent, instanceName);
                 return;
             }
@@ -452,63 +544,72 @@ public:
         Node* child = makeChild(instanceName, blueprint);
         child->object = static_cast<Meta*>(blueprint->object)->create(*child);
         child->kind = NodeKind::Component;
-        
-        Logger::info(tag, "added '{}:{}'", blueprint->name(), instanceName);
+
+        if (unnamedInstance(instanceName))
+            Logger::info(tag, "added '{}'", blueprint->name());
+        else
+            Logger::info(tag, "added '{}:{}'", blueprint->name(), instanceName);
 
         activate(child, blueprint->name());
     }
 
     template<typename API, typename Impl>
-    void use(std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
+    void use(std::string_view instanceName = DefaultInstanceName, std::string_view blueprintsPath = DefaultBlueprintsPath) {
         noteUseImpl<API, Impl>();
-        use<API>(typeName<Impl>(), instanceName, blueprintsPath);
+        auto found = find<API>(instanceName, blueprintsPath);
+        if (!found.node)
+            throw Exception(tag, "slot '{}' with instance '{}' not found", typeName<API>(), instanceName);
+        found.node->template use<API>(typeName<Impl>(), blueprintsPath);
     }
 
     template<typename API>
     void use(std::string_view implName, std::string_view blueprintsPath = DefaultBlueprintsPath) {
+        if (kind != NodeKind::Slot || !bp)
+            throw Exception(tag, "use() requires a slot node");
+
+        const ObjectId apiId = bp->id;
         const ObjectId implId = findBlueprint(implName, blueprintsPath);
         if (!Objects::valid(implId))
             throw Exception(tag, "unknown implementation '{}'", implName);
 
         Node* blueprint = run_ctx.objects.require(implId).node;
-        const ObjectId apiId = bp->id;
-
         if (!blueprint->isUnder(apiId))
             throw Exception(tag, "implementation '{}' does not provide '{}'", implName, typeName<API>());
-
-        if (!children_.empty()) {
-            Node* old = children_.front().get();
-            if (old->object) {
-                Meta* meta = static_cast<Meta*>(old->bp->object);
-                if (meta && meta->destroy)
-                    meta->destroy(*old);
-            }
-            children_.clear();
-        }
-
-        Node* child = makeChild(implName);
-        child->bp = blueprint;
-        child->kind = NodeKind::Component;
 
         Meta* meta = static_cast<Meta*>(blueprint->object);
         if (!meta || !meta->create)
             throw Exception(tag, "blueprint '{}' has no create callback", implName);
 
-        child->object = meta->create(*child);
+        destroyObject();
+        children_.clear();
+
+        implBp = blueprint;
+        object = meta->create(*this);
 
         Logger::info(tag, "> use '{}' = '{}'", typeName<API>(), implName);
-        activate(child, blueprint->name(), true);
+
+        configured = false;
+        configureAll();
+        reconfigureFloor();
     }
 
     template<typename API>
-    Slot<API> slot(std::string_view instanceName = "default") {
+    Slot<API> slot(std::string_view instanceName = DefaultInstanceName) {
         noteUse<API>();
+        instanceName = canonicalInstance(instanceName);
 
         const ObjectId apiId = findBlueprint<API>(DefaultBlueprintsPath);
         if (!Objects::valid(apiId))
             throw Exception(tag, "unknown API '{}'", typeName<API>());
 
         Node* blueprint = run_ctx.objects.require(apiId).node;
+
+        for (const auto& child : children_) {
+            if (child->kind == NodeKind::Slot &&
+                sameInstance(child->name(), instanceName) &&
+                child->bp && child->bp->id == apiId)
+                return Slot<API>(child.get());
+        }
 
         Node* child = makeChild(instanceName);
         child->bp = blueprint;
@@ -518,11 +619,11 @@ public:
         return Slot<API>(child);
     }
 
-    // ищет компонент <T> в текущем узле и родительских
-    // если компонент не найден возвращает nullptr
+    // ищет слот/импл на этаже: дети текущего узла, затем дети предков вверх. Не через Context.
     template<typename API>
-    Slot<API> find(std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
+    Slot<API> find(std::string_view instanceName = DefaultInstanceName, std::string_view blueprintsPath = DefaultBlueprintsPath) {
         noteRequire<API>();
+        instanceName = canonicalInstance(instanceName);
 
         ObjectId apiId = findBlueprint<API>(blueprintsPath);
 
@@ -530,7 +631,7 @@ public:
             return {};
 
         for (const auto& child : children_) {
-            if (child->name() != instanceName)
+            if (!sameInstance(child->name(), instanceName))
                 continue;
 
             if (child->bp && child->bp->isUnder(apiId))
@@ -540,25 +641,29 @@ public:
         return parent ? parent->find<API>(instanceName, blueprintsPath) : Slot<API>{};
     }
 
-    // ищет компонент <T> в текущем узле и родительских
-    // если компонент не найден кидает исключение
+    // ищет слот/импл на этаже. Пустой слот (нода есть, object == nullptr) — исключение.
     template<typename T>
-    Ref<T> require(std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
+    Ref<T> require(std::string_view instanceName = DefaultInstanceName, std::string_view blueprintsPath = DefaultBlueprintsPath) {
         noteRequire<T>();
 
-        if (auto slot = find<T>(instanceName, blueprintsPath); slot.exists())
-            return Ref<T>(slot.get());
+        auto found = find<T>(instanceName, blueprintsPath);
+        if (!found.node)
+            throw Lattice::Exception(tag, "Object '{}' with instance '{}' not found", typeName<T>(), instanceName);
 
-        throw Lattice::Exception(tag, "Object '{}' with instance '{}' not found", typeName<T>(), instanceName);
+        if (!found.get())
+            throw Lattice::Exception(tag, "Slot '{}' with instance '{}' is empty", typeName<T>(), instanceName);
+
+        return Ref<T>(found.get());
     }
 
-    Node& require(std::string_view type, std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
+    Node& require(std::string_view type, std::string_view instanceName = DefaultInstanceName, std::string_view blueprintsPath = DefaultBlueprintsPath) {
+        instanceName = canonicalInstance(instanceName);
         ObjectId blueprintId = findBlueprint(type, blueprintsPath);
         if (!Objects::valid(blueprintId))
             throw Lattice::Exception(tag, "Blueprint '{}' not found", type);
 
         for (const auto& child : children_) {
-            if (child->name() == instanceName && child->bp && child->bp->id == blueprintId)
+            if (sameInstance(child->name(), instanceName) && child->bp && child->bp->id == blueprintId)
                 return *child.get();
         }
 
@@ -603,16 +708,8 @@ public:
 
     // вызывает метод configure() у всех компонентов ветки
     void configureAll() {
-        if (bp && object) {
-            Meta* meta = static_cast<Meta*>(bp->object);
-
-            if (meta && meta->configure) {
-                Logger::info(tag, "Configuring '{}'", name());
-                meta->configure(*this);
-            } else {
-                Logger::warning(tag, "Object '{}' has no configure callback", bp->name());
-            }
-        }
+        if (!configured)
+            configure();
 
         for (auto& child : children_)
             child->configureAll();
@@ -620,7 +717,8 @@ public:
 
     // удаляет компонент <T> из ветки
     template<typename API>
-    void remove(std::string_view instanceName = "default", std::string_view blueprintsPath = DefaultBlueprintsPath) {
+    void remove(std::string_view instanceName = DefaultInstanceName, std::string_view blueprintsPath = DefaultBlueprintsPath) {
+        instanceName = canonicalInstance(instanceName);
         ObjectId apiId = findBlueprint<API>(blueprintsPath);
 
         if (!Objects::valid(apiId))
@@ -630,7 +728,7 @@ public:
             children_.begin(),
             children_.end(),
             [&](const std::unique_ptr<Node>& node) {
-                return node->name() == instanceName &&
+                return sameInstance(node->name(), instanceName) &&
                     node->bp &&
                     node->bp->isUnder(apiId);
             }
@@ -658,12 +756,8 @@ public:
         if (kind == NodeKind::Binding)
             run_ctx.bindings.unbind(id);
 
-        if (kind == NodeKind::Component && bp && object) {
-            Meta* meta = static_cast<Meta*>(bp->object);
-
-            if (meta && meta->destroy)
-                meta->destroy(*this);
-        }
+        if (kind == NodeKind::Component || kind == NodeKind::Slot)
+            destroyObject();
 
         children_.clear();
 
@@ -703,8 +797,7 @@ public:
     
     template<typename T>
     ObjectId bind(std::string_view name, T* ptr, double min = 0, double max = 0, bool hasRange = false) {
-        Node* child = makeChild(name);
-        child->kind = NodeKind::Binding;
+        Node* child = bindingChild(name);
         child->object = &run_ctx.bindings.bind(child->id, ptr, min, max, hasRange);
         activate(child, name);
         return child->id;
@@ -713,16 +806,14 @@ public:
     template<typename T, typename F>
     requires std::invocable<F&, T>
     ObjectId bind(std::string_view name, T* ptr, F&& onChange, double min = 0, double max = 0, bool hasRange = false) {
-        Node* child = makeChild(name);
-        child->kind = NodeKind::Binding;
+        Node* child = bindingChild(name);
         child->object = &run_ctx.bindings.bind(child->id, ptr, std::forward<F>(onChange), min, max, hasRange);
         activate(child, name);
         return child->id;
     }
 
     ObjectId on(std::string_view name, std::function<void()> handler) {
-        Node* child = makeChild(name);
-        child->kind = NodeKind::Binding;
+        Node* child = bindingChild(name);
         child->object = &run_ctx.bindings.on(child->id, std::move(handler));
         activate(child, name);
         return child->id;
@@ -766,7 +857,9 @@ bool Lattice::Slot<T>::exists() const noexcept {
 
 template<typename T>
 void Lattice::Slot<T>::use(std::string_view implName) {
-    node->use<T>(implName);
+    if (!node)
+        throw Exception("Node", "use() on empty slot handle");
+    node->template use<T>(implName);
 }
 
 } // namespace Lattice

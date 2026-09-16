@@ -30,7 +30,8 @@ void Render::configure(Lattice::Node& renderer) {
 }
 
 void Render::setup() {
-    auto& window = *window_;
+    if (!window_ || !gpu_)
+        return;
 
     ensureSurface(*window_);
     const auto fb = window_->framebufferSize();
@@ -102,7 +103,14 @@ void Render::resize(uint32_t w, uint32_t h) {
 }
 
 void Render::frame() {
-    if (!frameState->surface || !frameState->surfaceConfigured) return;
+    if (!window_)
+        return;
+
+    if (!frameState->surface || !frameState->surfaceConfigured) {
+        setup();
+        if (!frameState->surface || !frameState->surfaceConfigured)
+            return;
+    }
 
     WindowAPI& window = *window_;
     if (window.shouldClose()) return;

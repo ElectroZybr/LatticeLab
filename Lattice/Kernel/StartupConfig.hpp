@@ -11,7 +11,7 @@ namespace Lattice {
 
 struct StartupEntry {
     std::string type;
-    std::string name = "default";
+    std::string name;
     bool enabled = false;
     bool host = false;
 };

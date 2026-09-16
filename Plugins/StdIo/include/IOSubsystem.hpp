@@ -7,6 +7,8 @@
 // Kernel dependences
 #include <Lattice/Kernel/Plugin.hpp>
 #include "Lattice/Kernel/SubsystemAPI.hpp"
+#include "Lattice/Tools/LogMode.hpp"
+#include "Lattice/Tools/LogScope.hpp"
 #include "Lattice/Tools/Logger.hpp"
 #include <Lattice/Kernel/Node.hpp>
 
@@ -30,6 +32,7 @@ public:
     }
 
     void loadDir(const std::filesystem::path& dir) {
+        LogScope loadScope("IOSubsystem", LogMode::Verbose, "load dir: {}", std::string(dir));
         if (!std::filesystem::is_directory(dir)) {
             Logger::warning("IOSubsystem", "config directory '{}' not found", dir.string());
             return;
@@ -43,10 +46,11 @@ public:
 
             load(entry.path());
         }
+        loadScope.finish();
     }
 
     void load(const std::filesystem::path& path ) {
-        Logger::ok("IOSubsystem", "load from: {}", std::string(path));
+        Logger::info("IOSubsystem", "load from: {}", std::string(path));
         ParserAPI* parser = findParser(path);
         Document doc;
         if (parser) {

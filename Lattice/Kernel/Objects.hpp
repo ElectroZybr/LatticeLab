@@ -47,7 +47,8 @@ public:
             });
         }
 
-        lookup.insert_or_assign(ObjectKey{std::string(name), parent}, id);
+        if (!name.empty())
+            lookup.insert_or_assign(ObjectKey{std::string(name), parent}, id);
         return id;
     }
 

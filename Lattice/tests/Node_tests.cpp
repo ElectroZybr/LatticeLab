@@ -23,6 +23,7 @@ TEST(Node_Add, RuntimeFixture) {
     fixture.root.add<TestComponent>();
 
     REQUIRE(fixture.root.find<TestComponent>().exists());
+    REQUIRE(fixture.root.find<TestComponent>().node->name().empty());
     REQUIRE(fixture.root.require<TestComponent>().exists());
 }
 

@@ -15,7 +15,7 @@ std::string ActionMap::bindName(Lattice::ContextId slot, std::string_view trigge
 
 void ActionMap::configure(Lattice::Node& branch) {
     run_ctx = &branch.requireContext();
-    inputs_ = branch.globalCollect<InputAPI>();
+    inputs_ = branch.collect<InputAPI>();
 }
 
 ActionMap::Binding* ActionMap::findBind(Lattice::ContextId slot, std::string_view trigger) {
