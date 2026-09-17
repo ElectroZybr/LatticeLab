@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Lattice/Kernel/Component.hpp>
+
 #include <cstdint>
 #include <string_view>
 #include <string>
@@ -25,7 +27,7 @@ struct DeviceInfo {
     uint64_t memory = 0;
 };
 
-class Device {
+class Device : public Lattice::Component {
 public:
     static constexpr std::string_view tag = "Device";
 

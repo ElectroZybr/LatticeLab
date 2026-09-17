@@ -1,5 +1,7 @@
 #pragma once
 
+#include <concepts>
+#include <type_traits>
 #include <functional>
 #include <string>
 #include <string_view>
@@ -86,6 +88,10 @@ template<typename T>
 concept HasConfigure = requires(T& obj, Node& branch) {
     obj.configure(branch);
 };
+
+template<typename T, typename D>
+concept CreationDescriptor = requires { typename T::Desc; } &&
+    std::same_as<std::remove_cvref_t<D>, typename T::Desc>;
 
 class Node {
     static constexpr std::string_view tag = "Node";
@@ -474,7 +480,7 @@ public:
         Node* api = run_ctx.objects.require(apiId).node;
 
         for (const auto& child : api->children_)
-            add(child->name(), child->name(), nullptr);
+            add(child->name(), child->name());
     }
 
     template<typename T>
@@ -537,25 +543,29 @@ public:
         return *createNode(name);
     }
 
-    template<typename T, typename... Args>
-    T& add(std::string_view instanceName = DefaultInstanceName, Args&&... args) {
-        static_assert(sizeof...(Args) <= 1, "add() accepts at most one creation descriptor");
-
+    template<typename T>
+    T& add(std::string_view instanceName = DefaultInstanceName) {
         noteAdd<T>();
-
-        const void* desc = nullptr;
-        if constexpr (sizeof...(Args) == 1)
-            ((desc = static_cast<const void*>(&args)), ...);
-
-        Node& node = addNode(typeName<T>(), instanceName, desc);
-        return *static_cast<T*>(node.object);
+        return *static_cast<T*>(createComponent(typeName<T>(), instanceName, nullptr).object);
     }
 
-    void add(std::string_view parent, std::string_view instanceName, const void* desc = nullptr) {
-        addNode(parent, instanceName, desc);
+    template<typename T, typename D>
+    requires CreationDescriptor<T, D>
+    T& add(std::string_view instanceName, const D& desc) {
+        noteAdd<T>();
+        return *static_cast<T*>(createComponent(typeName<T>(), instanceName, &desc).object);
     }
 
-    Node& addNode(std::string_view parent, std::string_view instanceName, const void* desc = nullptr) {
+    void add(std::string_view type, std::string_view instanceName) {
+        addNode(type, instanceName);
+    }
+
+    Node& addNode(std::string_view type, std::string_view instanceName) {
+        return createComponent(type, instanceName, nullptr);
+    }
+
+private:
+    Node& createComponent(std::string_view parent, std::string_view instanceName, const void* desc) {
         instanceName = canonicalInstance(instanceName);
 
         ObjectId folderId = resolvePath(DefaultBlueprintsPath, rootNode()->id);
@@ -588,25 +598,35 @@ public:
         return *child;
     }
 
-    template<typename API, typename Impl, typename... Args>
-    void use(std::string_view instanceName = DefaultInstanceName, Args&&... args) {
-        static_assert(sizeof...(Args) <= 1, "use() accepts at most one creation descriptor");
+public:
+    template<typename API, typename Impl>
+    void use(std::string_view instanceName = DefaultInstanceName) {
+        useImplementation<API, Impl>(instanceName, nullptr);
+    }
 
-        noteUseImpl<API, Impl>();
-
-        const void* desc = nullptr;
-        if constexpr (sizeof...(Args) == 1)
-            ((desc = static_cast<const void*>(&args)), ...);
-
-        auto found = find<API>(instanceName, DefaultBlueprintsPath);
-        if (!found.node)
-            throw Exception(tag, "slot '{}' with instance '{}' not found", typeName<API>(), instanceName);
-
-        found.node->template use<API>(typeName<Impl>(), desc);
+    template<typename API, typename Impl, typename D>
+    requires CreationDescriptor<Impl, D>
+    void use(std::string_view instanceName, const D& desc) {
+        useImplementation<API, Impl>(instanceName, &desc);
     }
 
     template<typename API>
-    void use(std::string_view implName, const void* desc) {
+    void use(std::string_view implName) {
+        useSlot<API>(implName, nullptr);
+    }
+
+private:
+    template<typename API, typename Impl>
+    void useImplementation(std::string_view instanceName, const void* desc) {
+        noteUseImpl<API, Impl>();
+        auto found = find<API>(instanceName, DefaultBlueprintsPath);
+        if (!found.node)
+            throw Exception(tag, "slot '{}' with instance '{}' not found", typeName<API>(), instanceName);
+        found.node->template useSlot<API>(typeName<Impl>(), desc);
+    }
+
+    template<typename API>
+    void useSlot(std::string_view implName, const void* desc) {
         if (kind != NodeKind::Slot || !bp)
             throw Exception(tag, "use() requires a slot node");
 
@@ -636,6 +656,7 @@ public:
         reconfigureFloor();
     }
 
+public:
     template<typename API>
     Slot<API> slot(std::string_view instanceName = DefaultInstanceName) {
         noteUse<API>();
@@ -697,6 +718,17 @@ public:
             throw Lattice::Exception(tag, "Slot '{}' with instance '{}' is empty", typeName<T>(), instanceName);
 
         return Ref<T>(found.get());
+    }
+
+    // Resolve the direct owner, independent of its instance name or siblings.
+    template<typename T>
+    Ref<T> requireParent() {
+        noteRequire<T>();
+        const ObjectId apiId = findBlueprint<T>();
+        Node* implementation = parent ? (parent->implBp ? parent->implBp : parent->bp) : nullptr;
+        if (!Objects::valid(apiId) || !implementation || !implementation->isUnder(apiId) || !parent->object)
+            throw Exception(tag, "Parent does not provide '{}'", typeName<T>());
+        return Ref<T>(static_cast<T*>(parent->object));
     }
 
     Node& require(std::string_view type, std::string_view instanceName = DefaultInstanceName, std::string_view blueprintsPath = DefaultBlueprintsPath) {
@@ -902,7 +934,7 @@ template<typename T>
 void Lattice::Slot<T>::use(std::string_view implName) {
     if (!node)
         throw Exception("Node", "use() on empty slot handle");
-    node->template use<T>(implName, nullptr);
+    node->template use<T>(implName);
 }
 
 } // namespace Lattice

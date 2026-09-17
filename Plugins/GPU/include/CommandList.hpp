@@ -1,8 +1,10 @@
 #pragma once
 
+#include <Lattice/Kernel/Component.hpp>
+
 namespace GPU {
 
-struct CommandList {
+struct CommandList : public Lattice::Component {
     virtual ~CommandList() = default;
 
     virtual void begin() = 0;
