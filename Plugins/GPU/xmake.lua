@@ -2,6 +2,7 @@ add_requires("wgpu-native")
 
 target("GPU")
     set_kind("shared")
+    add_rules("lattice.plugin_codegen")
     set_targetdir(".")
 
     add_files("PluginInit.cpp")

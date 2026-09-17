@@ -1,4 +1,5 @@
 #include "WGPU.hpp"
+#include <atomic>
 
 #include <cstring>
 
@@ -279,5 +280,74 @@ WGPUAdapter WGPU::selectAdapter(std::span<WGPUAdapter> adapters) {
 
 //     initialized_ = false;
 // }
+
+
+std::string WGPU::deviceName() {
+    auto adapters = enumerateAdapters();
+    WGPUAdapterInfo info{};
+    wgpuAdapterGetInfo(selectAdapter(adapters), &info);
+    std::string name = info.device.length ? std::string(info.device.data, info.device.length) : "GPU";
+    wgpuAdapterInfoFreeMembers(info);
+    for (auto adapter : adapters)
+        wgpuAdapterRelease(adapter);
+    return name;
+}
+
+WGPUDevice WGPU::createDevice() {
+    auto adapters = enumerateAdapters();
+    struct AdapterCleanup {
+        std::vector<WGPUAdapter>& adapters;
+        ~AdapterCleanup() {
+            for (auto adapter : adapters)
+                wgpuAdapterRelease(adapter);
+        }
+    } cleanup{adapters};
+    const auto adapter = selectAdapter(adapters);
+    WGPUDeviceDescriptor desc = {};
+
+    desc.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
+    desc.deviceLostCallbackInfo.callback =
+        [](WGPUDevice const*, WGPUDeviceLostReason reason, WGPUStringView message, void*, void*) {
+            Logger::error("WGPU", "device lost ({}): {}", static_cast<int>(reason), std::string_view(message.data, message.length));
+        };
+
+    desc.uncapturedErrorCallbackInfo.callback =
+        [](WGPUDevice const*, WGPUErrorType type, WGPUStringView message, void*, void*) {
+            Logger::error("WGPU", "error ({}): {}", static_cast<int>(type), std::string_view(message.data, message.length));
+        };
+
+    struct UserData {
+        WGPUDevice device = nullptr;
+        std::string error;
+        std::atomic_bool done = false;
+    } data;
+
+    WGPURequestDeviceCallbackInfo callback = {};
+    callback.mode = WGPUCallbackMode_AllowSpontaneous;
+    callback.callback =
+        [](WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView message, void* userdata1, void*) {
+            auto* data = static_cast<UserData*>(userdata1);
+
+            if (status == WGPURequestDeviceStatus_Success)
+                data->device = device;
+            else
+                data->error = std::string(message.data, message.length);
+
+            data->done.store(true, std::memory_order_release);
+        };
+    callback.userdata1 = &data;
+
+    wgpuAdapterRequestDevice(adapter, &desc, callback);
+
+    while (!data.done.load(std::memory_order_acquire))
+        wgpuInstanceProcessEvents(instance_);
+
+    if (!data.device)
+        throw Lattice::Exception(tag, "failed to create device: {}", data.error);
+
+    return data.device;
+
+}
+
 
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Lattice/Kernel/Component.hpp>
+
 #include <cstddef>
 #include <cstdint>
 #include "Lattice/Tools/Logger.hpp"
@@ -25,7 +27,7 @@ struct BufferDesc {
     BufferUsage usage;
 };
 
-struct Buffer {
+struct Buffer : public Lattice::Component {
     virtual ~Buffer() = default;
 };
 

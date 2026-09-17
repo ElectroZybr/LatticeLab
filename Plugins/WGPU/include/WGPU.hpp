@@ -1,40 +1,39 @@
 #pragma once
 
+#include <span>
+#include <string>
 #include <string_view>
+#include <vector>
 #include <webgpu/webgpu.h>
 #include <webgpu/wgpu.h>
 
 #include <Lattice/Kernel/Node.hpp>
 #include "GPUAPI.hpp"
-#include "WGPUDevice.hpp"
 
 namespace WGPU {
+
+class WDevice;
 
 class WGPU final : public GPU::GPUAPI {
     static constexpr std::string_view tag = "WGPU";
 public:
-    explicit WGPU(Lattice::Node& node) {
-        createInstance();
+    explicit WGPU(Lattice::Node&) { createInstance(); }
 
-        auto adapters = enumerateAdapters();
-
-        WGPUAdapter adapter = selectAdapter(adapters);
-
-        WGPUAdapterInfo info = {};
-        wgpuAdapterGetInfo(adapter, &info);
-
-        DeviceDesc deviceDesc{};
-        deviceDesc.adapter = adapter;
-        deviceDesc.instance = instance_;
-        
-        node.add<WDevice>(std::string(info.device.data, info.device.length), deviceDesc);
+    void configure(Lattice::Node& node) {
+        node.add<WDevice>(deviceName());
     }
 
+    ~WGPU() override {
+        if (instance_)
+            wgpuInstanceRelease(instance_);
+    }
+
+    WGPUDevice createDevice();
 private:
+    std::string deviceName();
     void createInstance();
     std::vector<WGPUAdapter> enumerateAdapters();
     WGPUAdapter selectAdapter(std::span<WGPUAdapter> adapters);
-    // WGPUDevice createDevice(WGPUAdapter adapter);
 
     WGPUInstance instance_ = nullptr;
 };

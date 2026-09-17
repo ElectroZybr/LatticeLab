@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Lattice/Kernel/Component.hpp>
+
 #include <thread>
 #include <atomic>
 
@@ -8,7 +10,7 @@ enum class ServiceLaunch {
     Host
 };
 
-struct ServiceAPI {
+struct ServiceAPI : public Lattice::Component {
     ServiceAPI() = default;
     ServiceAPI(const ServiceAPI&) = delete;
     ServiceAPI& operator=(const ServiceAPI&) = delete;

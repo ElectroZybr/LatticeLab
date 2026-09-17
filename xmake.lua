@@ -19,6 +19,7 @@ add_requires(
     "toml++"
 )
 
+includes("tools/plugin_codegen.lua")
 includes("Lattice")
 
 for _, dir in ipairs(os.dirs("Plugins/*")) do

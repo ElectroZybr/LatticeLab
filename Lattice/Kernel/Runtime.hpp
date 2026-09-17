@@ -39,7 +39,7 @@ public:
     void buildBranch(const StartupEntry& entry) {
         LogScope scope(tag, "Build branch '{}' with name '{}'", entry.type, entry.name);
 
-        Node& node = root.addNode(entry.type, entry.name, nullptr);
+        Node& node = root.addNode(entry.type, entry.name);
 
         if (entry.host) {
             if (host)

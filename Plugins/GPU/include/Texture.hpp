@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Lattice/Kernel/Component.hpp>
+
 #include <cstdint>
 
 namespace GPU {
@@ -44,7 +46,7 @@ struct TextureDesc {
     TextureUsage usage = TextureUsage::None;
 };
 
-struct Texture {
+struct Texture : public Lattice::Component {
     virtual ~Texture() = default;
 };
 

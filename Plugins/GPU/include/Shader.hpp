@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Lattice/Kernel/Component.hpp>
+
 #include <string>
 
 namespace GPU {
@@ -16,7 +18,7 @@ struct ShaderDesc {
     std::string source;
 };
 
-struct Shader {
+struct Shader : public Lattice::Component {
     virtual ~Shader() = default;
 };
 
