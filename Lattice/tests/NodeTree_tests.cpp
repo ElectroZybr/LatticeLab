@@ -379,7 +379,7 @@ TEST(Node_RemoveShadowDoesNotRevealWrongComponent, RuntimeFixture,
 }
 
 TEST(Node_ConfigureDeepTree, RuntimeFixture, 
-"configureAll должен вызвать configure для каждого компонента во всей ветке.\
+"configureBranch должен вызвать configure для каждого компонента во всей ветке.\
 Вызов должен корректно проходить через произвольную глубину дерева.") 
 {
     fixture.blueprints.blueprint<TestComponent>();
@@ -392,7 +392,7 @@ TEST(Node_ConfigureDeepTree, RuntimeFixture,
     Node& child = fixture.root.addFolder("Child");
     child.add<TestComponent>("child");
 
-    fixture.root.configureAll();
+    fixture.root.configureBranch();
 
     REQUIRE(fixture.root.require<TestComponent>("root")->configured);
     REQUIRE(branch.require<TestComponent>("branch")->configured);
@@ -400,7 +400,7 @@ TEST(Node_ConfigureDeepTree, RuntimeFixture,
 }
 
 TEST(Node_ConfigureDoesNotConfigureTwice, RuntimeFixture, 
-"Повторный вызов configureAll не должен приводить к неконтролируемому состоянию компонента. \
+"Повторный вызов configureBranch не должен приводить к неконтролируемому состоянию компонента. \
 Компонент должен сохранять корректное сконфигурированное состояние.")
 {
     fixture.blueprints.blueprint<TestComponent>();
@@ -409,11 +409,11 @@ TEST(Node_ConfigureDoesNotConfigureTwice, RuntimeFixture,
 
     auto component = fixture.root.require<TestComponent>();
 
-    fixture.root.configureAll();
+    fixture.root.configureBranch();
 
     REQUIRE(component->configured);
 
-    fixture.root.configureAll();
+    fixture.root.configureBranch();
 
     REQUIRE(component->configured);
 }

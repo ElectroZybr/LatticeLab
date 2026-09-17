@@ -5,7 +5,6 @@
 
 #include <Lattice/Kernel/RefSlot.hpp>
 
-#include "GPU/include/NativeWindow.hpp"
 #include "NativeWindow.hpp"
 
 

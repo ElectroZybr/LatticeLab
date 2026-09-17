@@ -180,7 +180,7 @@ TEST(Slot_TreeOwnership, RuntimeFixture,
     registerSlotTypes(fixture);
 
     fixture.root.add<SlotHost>();
-    fixture.root.configureAll();
+    fixture.root.configureBranch();
 
     auto host = fixture.root.find<SlotHost>();
     auto window = host.node->find<SlotAPI>();
@@ -203,7 +203,7 @@ TEST(Slot_LateUseReconfiguresFloor, RuntimeFixture,
 
     fixture.root.slot<SlotAPI>();
     fixture.root.add<SlotNeighbor>();
-    fixture.root.configureAll();
+    fixture.root.configureBranch();
 
     auto neighbor = fixture.root.require<SlotNeighbor>();
     REQUIRE(neighbor->configures == 1);
@@ -225,7 +225,7 @@ TEST(Slot_CollectFromFloor, RuntimeFixture,
 
     fixture.root.add<SlotHost>();
     Node& map = fixture.root.addFolder("ActionMap");
-    fixture.root.configureAll();
+    fixture.root.configureBranch();
 
     auto inputs = map.collect<SlotInput>();
     REQUIRE(inputs.size() == 1);

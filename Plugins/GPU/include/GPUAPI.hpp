@@ -1,23 +1,21 @@
-// #pragma once
+#pragma once
 
-// #include <string_view>
+// #include <span>
+#include <string_view>
 
-// #include <GLFW/glfw3.h>
+#include "Lattice/Kernel/SubsystemAPI.hpp"
 
-// namespace GPU {
-// class  GPUAPI {
-// public:
-//     static constexpr std::string_view apiName = "GPUAPI";
-//     virtual ~GPUAPI() = default;
+// #include "Device.hpp"
 
-//     virtual void init(GLFWwindow* window, uint32_t width, uint32_t height) = 0;
-//     virtual void initHeadless(uint32_t width, uint32_t height) = 0;
+namespace GPU {
+class  GPUAPI : public SubsystemAPI {
+public:
+    static constexpr std::string_view tag = "GPUAPI";
 
-//     virtual void resize(uint32_t width, uint32_t height) = 0;
+    // virtual std::span<Device*> devices() const = 0;
+    // virtual Device& device(std::size_t index) = 0;
 
-//     virtual void processEvents() = 0;
-//     virtual void waitIdle() = 0;
+    virtual ~GPUAPI() = default;
+};
 
-//     virtual void shutdown() = 0;
-// };
-// }
+}

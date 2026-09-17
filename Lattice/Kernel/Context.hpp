@@ -20,7 +20,7 @@ inline constexpr std::string_view DefaultBlueprintsPath = "Blueprints";
 inline constexpr std::string_view DefaultInstanceName = "";
 
 struct Meta {
-    void* (*create)(Node&) = nullptr;
+    void* (*create)(Node&, const void* desc) = nullptr;
     void (*destroy)(Node&) = nullptr;
     void (*configure)(Node&) = nullptr;
 };

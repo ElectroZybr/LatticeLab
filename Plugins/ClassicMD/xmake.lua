@@ -10,5 +10,6 @@ target("ClassicMD")
     
     add_includedirs("../ParticleDynamics/include", {public = true})
     add_includedirs("../StdData/include", {public = true})
+    add_includedirs("../GPU/include", {public = true})
 
     add_deps("Lattice")

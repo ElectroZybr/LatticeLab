@@ -39,7 +39,7 @@ public:
     void buildBranch(const StartupEntry& entry) {
         LogScope scope(tag, "Build branch '{}' with name '{}'", entry.type, entry.name);
 
-        root.add(entry.type, entry.name);
+        Node& node = root.addNode(entry.type, entry.name, nullptr);
 
         if (entry.host) {
             if (host)
@@ -48,6 +48,8 @@ public:
             host = &root.require(entry.type, entry.name);
             Logger::info(tag, "Host service '{}'", entry.type);
         }
+
+        node.configureBranch();
 
         scope.finish("Build '{}' done", entry.type);
     }
@@ -115,15 +117,14 @@ public:
                     if (entry.enabled)
                         buildBranch(entry);
                 }
-                root.dumpTree();
                 scope.finish("<b>Build finished</>");
             }
 
-            { // связывание компонентов
-                LogScope scope(tag, "<b>System configuring</>");
-                root.configureAll();
-                scope.finish("<b>Configuration finished</>");
-            }
+            // { // связывание компонентов
+            //     LogScope scope(tag, "<b>System configuring</>");
+            //     root.configureAll();
+            //     scope.finish("<b>Configuration finished</>");
+            // }
 
             { // стартовые данные после configure всех веток
                 LogScope scope(tag, "<b>System boot</>");

@@ -42,7 +42,7 @@ struct KeybindsFixture : RuntimeFixture {
         root.add<TestInput>();
         root.add<ActionMap>();
         root.add<KeybindsLoader>();
-        root.configureAll();
+        root.configureBranch();
 
         input = root.require<TestInput>().getPtr();
         map = root.require<ActionMap>().getPtr();

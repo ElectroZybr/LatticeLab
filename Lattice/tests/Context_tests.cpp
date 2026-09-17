@@ -223,7 +223,7 @@ TEST(Context_NamespaceSwitchExportsChildren, RuntimeFixture,
     fixture.root.add<NsIO>("io");
     fixture.root.add<NsModel>("u1");
     fixture.root.add<NsModel>("u2");
-    fixture.root.configureAll();
+    fixture.root.configureBranch();
 
     const auto io = fixture.root.find<NsIO>("io");
     const auto u1 = fixture.root.find<NsModel>("u1");
@@ -260,7 +260,7 @@ TEST(Context_NamespaceSwitchSkipsSiblingAndNestedService, RuntimeFixture,
     fixture.root.add<NsIO>("io");
     fixture.root.add<NsModel>("u1");
     fixture.root.add<NsModel>("u2");
-    fixture.root.configureAll();
+    fixture.root.configureBranch();
 
     const auto io = fixture.root.find<NsIO>("io");
     const auto u1 = fixture.root.find<NsModel>("u1");

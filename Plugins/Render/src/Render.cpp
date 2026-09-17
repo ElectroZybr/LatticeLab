@@ -21,11 +21,11 @@ struct Render::FrameState {
 
 Render::Render(Lattice::Node& renderer)
     : frameState(std::make_unique<FrameState>()) {
-    renderer.add<GPU::WGPU>();
+    renderer.add<WGPU::WGPU>();
 }
 
 void Render::configure(Lattice::Node& renderer) {
-    gpu_ = renderer.require<GPU::WGPU>();
+    gpu_ = renderer.require<WGPU::WGPU>();
     window_ = renderer.find<WindowAPI>();
 }
 
@@ -132,7 +132,6 @@ void Render::frame() {
         if (st.texture)
             wgpuTextureRelease(st.texture);
 
-        // Outdated / Lost / Error → часто нужен reconfigure
         if (st.status == WGPUSurfaceGetCurrentTextureStatus_Outdated ||
             st.status == WGPUSurfaceGetCurrentTextureStatus_Lost) {
             frameState->surfaceConfigured = false;
@@ -144,12 +143,11 @@ void Render::frame() {
     WGPUTextureView view = wgpuTextureCreateView(st.texture, nullptr);
 
     WGPUCommandEncoderDescriptor encDesc{};
-    WGPUCommandEncoder encoder =
-        wgpuDeviceCreateCommandEncoder(gpu_->device(), &encDesc);
+    WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(gpu_->device(), &encDesc);
 
     WGPURenderPassColorAttachment color{};
     color.view = view;
-    color.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED; // если есть в твоём header
+    color.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
     color.loadOp = WGPULoadOp_Clear;
     color.storeOp = WGPUStoreOp_Store;
     color.clearValue = {0.1, 0.2, 0.3, 1.0};
@@ -169,7 +167,60 @@ void Render::frame() {
     passDesc.colorAttachments = &color;
     passDesc.depthStencilAttachment = frameState->depthView ? &depthAtt : nullptr;
 
+
+    std::ifstream file("Plugins/Render/src/shaders/circle.wgsl");
+    std::string shaderSource(
+        (std::istreambuf_iterator<char>(file)),
+        std::istreambuf_iterator<char>()
+    );
+    WGPUShaderSourceWGSL wgsl{};
+    wgsl.chain.sType = WGPUSType_ShaderSourceWGSL;
+    wgsl.code = {shaderSource.data(), shaderSource.size()};
+
+    WGPUShaderModuleDescriptor wgslDesc{};
+    wgslDesc.label = {"CircleShader", 12};
+    wgslDesc.nextInChain = &wgsl.chain;
+
+    WGPUShaderModule shader = wgpuDeviceCreateShaderModule(gpu_->device(), &wgslDesc);
+
+    WGPUVertexState vertex{};
+    vertex.module = shader;
+    vertex.entryPoint = {"vs", 2};
+
+    WGPUColorTargetState colorTarget{};
+    colorTarget.format = frameState->format;
+    colorTarget.writeMask = WGPUColorWriteMask_All;
+
+    WGPUFragmentState fragment{};
+    fragment.module = shader;
+    fragment.entryPoint = {"fs", 2};
+    fragment.targetCount = 1;
+    fragment.targets = &colorTarget;
+
+    WGPUDepthStencilState depthStencil{};
+    depthStencil.format = WGPUTextureFormat_Depth24Plus;
+    depthStencil.depthWriteEnabled = WGPUOptionalBool_True;
+    depthStencil.depthCompare = WGPUCompareFunction_Less;
+
+    
+    WGPURenderPipelineDescriptor pipelineDesc{};
+    pipelineDesc.label = {"CirclePipeline", 14};
+    pipelineDesc.vertex = vertex;
+    pipelineDesc.fragment = &fragment;
+    pipelineDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+    pipelineDesc.multisample.count = 1;
+    pipelineDesc.multisample.mask = 0xFFFFFFFF;
+    pipelineDesc.depthStencil = &depthStencil;
+    pipelineDesc.layout = nullptr;
+
+
+    WGPURenderPipeline pipeline = wgpuDeviceCreateRenderPipeline(gpu_->device(), &pipelineDesc);
+
     WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(encoder, &passDesc);
+
+    wgpuRenderPassEncoderSetPipeline(pass, pipeline);
+    wgpuRenderPassEncoderDraw(pass, 6, 1, 0, 0);
+
     wgpuRenderPassEncoderEnd(pass);
     wgpuRenderPassEncoderRelease(pass);
 
