@@ -11,6 +11,7 @@
 // Plugin dependences
 #include <ParticleDynamics/include/ParticleAPI.hpp>
 #include <ParticleDynamics/include/ParticleStorage.hpp>
+#include "GPU/include/Buffer.hpp"
 #include "Integrators/src/Verlet.hpp"
 
 // Source
@@ -26,6 +27,9 @@ public:
         universe.add<AtomStorage>();
         universe.slot<ParticleDynamics::SpatialIndexAPI>();
         universe.slot<ParticleDynamics::IntegratorAPI>();
+        GPU::BufferDesc desc{};
+        desc.size = 13;
+        // universe.add<GPU::BufferImpl>("namelol", desc);
     }
 
     void configure(Lattice::Node& universe) {

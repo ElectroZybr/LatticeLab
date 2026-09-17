@@ -8,7 +8,7 @@
 // Plugin dependences
 
 class WindowAPI;
-namespace GPU {
+namespace WGPU {
     class WGPU;
 }
 
@@ -31,5 +31,5 @@ private:
     void releaseFrameResources();
 
     Slot<WindowAPI> window_;
-    Ref<GPU::WGPU> gpu_;
+    Ref<WGPU::WGPU> gpu_;
 };

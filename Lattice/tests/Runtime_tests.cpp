@@ -34,7 +34,7 @@ struct BootHost {
 };
 
 TEST(Runtime_LoadAfterConfigure, RuntimeFixture,
-    "Стартовый load должен вызываться после configureAll, когда дети уже сконфигурированы.")
+    "Стартовый load должен вызываться после configureBranch, когда дети уже сконфигурированы.")
 {
     fixture.blueprints.blueprint<BootChild>();
     fixture.blueprints.blueprint<BootHost>();
@@ -44,7 +44,7 @@ TEST(Runtime_LoadAfterConfigure, RuntimeFixture,
     REQUIRE(host->child == nullptr);
     REQUIRE(!host->loaded);
 
-    fixture.root.configureAll();
+    fixture.root.configureBranch();
 
     REQUIRE(host->child);
     REQUIRE(host->child->configured);

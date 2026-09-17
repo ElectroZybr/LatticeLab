@@ -90,7 +90,7 @@ TEST(Node_Configure, RuntimeFixture) {
 
     REQUIRE(!component->configured);
 
-    fixture.root.configureAll();
+    fixture.root.configureBranch();
 
     REQUIRE(component->configured);
 }
