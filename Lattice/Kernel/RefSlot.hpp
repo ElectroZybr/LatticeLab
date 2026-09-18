@@ -60,7 +60,34 @@ struct Ref {
     bool operator!=(std::nullptr_t) const noexcept { return ptr != nullptr; }
 };
 
+template<typename T>
+struct Mount final : public Ref<T> {
+    Node* node = nullptr;
+
+    Mount() = default;
+
+    Mount(Node& node, T* ptr)
+        : Ref<T>(ptr), node(&node) {}
+
+    Node& branch() {
+        return *node;
+    }
+
+    const Node& branch() const {
+        return *node;
+    }
+
+    bool exists() const noexcept {
+        return this->ptr != nullptr && node != nullptr;
+    }
+
+    explicit operator bool() const noexcept {
+        return exists();
+    }
+};
+
 }
 
 using Lattice::Ref;
 using Lattice::Slot;
+using Lattice::Mount;

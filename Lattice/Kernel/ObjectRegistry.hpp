@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string_view>
+#include <optional>
 #include <vector>
 
 #include <Lattice/Kernel/Exception.hpp>
@@ -22,9 +23,16 @@ template<typename Object, typename Id, typename Key, typename Hash = std::hash<K
 class ObjectRegistry {
 public:
     Id create(Object object) {
-        const Id id = allocate();
+        const Key key{object.name};
+        return create(std::move(object), key);
+    }
 
-        names_.add(object.name, id);
+    Id create(Object object, std::optional<Key> key, bool overwrite = false) {
+        const Id id = freeIds_.empty() ? static_cast<Id>(objects_.size()) : freeIds_.back();
+        if (key)
+            names_.add(*key, id, overwrite);
+        if (!freeIds_.empty())
+            freeIds_.pop_back();
 
         if (id == static_cast<Id>(objects_.size()))
             objects_.push_back(std::move(object));
@@ -35,11 +43,12 @@ public:
     }
 
     // добавляет псевдоним к слоту
-    void alias(Id id, std::string_view name) {
+    template<typename Name>
+    void alias(Id id, const Name& name, bool overwrite = false) {
         if (!get(id))
             return;
 
-        names_.alias(id, name);
+        names_.alias(id, name, overwrite);
     }
 
     // уничтожает слот
@@ -49,9 +58,8 @@ public:
 
         names_.remove(id);
 
+        objects_[id] = Object{};
         objects_[id].exists = false;
-        objects_[id].node = nullptr;
-        objects_[id].name.clear();
 
         freeIds_.push_back(id);
     }
@@ -92,12 +100,14 @@ public:
     }
 
     // ищет id в реестре по строковому имени
-    Id find(std::string_view name) const {
+    template<typename Name>
+    Id find(const Name& name) const {
         return names_.find(name);
     }
 
     // проверяет наличие имени в реестре
-    bool has(std::string_view name) const {
+    template<typename Name>
+    bool has(const Name& name) const {
         return names_.has(name);
     }
 
@@ -115,17 +125,6 @@ public:
 
     static constexpr bool valid(Id id) noexcept {
         return NamedRegistry<Id, Key, Hash>::valid(id);
-    }
-
-private:
-    Id allocate() {
-        if (!freeIds_.empty()) {
-            const Id id = freeIds_.back();
-            freeIds_.pop_back();
-            return id;
-        }
-
-        return static_cast<Id>(objects_.size());
     }
 
 private:

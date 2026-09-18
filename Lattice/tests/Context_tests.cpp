@@ -14,7 +14,7 @@ TEST(Context_Find, RuntimeFixture,
         .name = "print"
     });
 
-    REQUIRE(!Objects::valid(fixture.run_ctx.find("print")));
+    REQUIRE(fixture.run_ctx.find("print") == InvalidObjectId);
 
     fixture.blueprints.add<ContextDummy>();
     fixture.root.add<ContextDummy>("first");
@@ -30,7 +30,7 @@ TEST(Context_Find, RuntimeFixture,
 TEST(Context_FindUnknown, RuntimeFixture,
     "find неизвестного имени должен возвращать InvalidObjectId.")
 {
-    REQUIRE(!Objects::valid(fixture.run_ctx.find("print")));
+    REQUIRE(fixture.run_ctx.find("print") == InvalidObjectId);
 }
 
 TEST(Context_Get, RuntimeFixture,
@@ -40,13 +40,13 @@ TEST(Context_Get, RuntimeFixture,
         .name = "focus"
     });
 
-    REQUIRE(!Objects::valid(fixture.run_ctx.get(slot)));
+    REQUIRE(fixture.run_ctx.get(slot) == InvalidObjectId);
 }
 
 TEST(Context_GetInvalid, RuntimeFixture,
     "get неизвестного слота должен возвращать InvalidObjectId.")
 {
-    REQUIRE(!Objects::valid(fixture.run_ctx.get(99)));
+    REQUIRE(fixture.run_ctx.get(99) == InvalidObjectId);
 }
 
 TEST(Context_Activate, RuntimeFixture,
@@ -120,7 +120,7 @@ TEST(Context_ActivateUnknownSlot, RuntimeFixture,
 
     fixture.run_ctx.activate(99, dummy.node->getId());
 
-    REQUIRE(!Objects::valid(fixture.run_ctx.get(99)));
+    REQUIRE(fixture.run_ctx.get(99) == InvalidObjectId);
 }
 
 TEST(Context_Clear, RuntimeFixture,

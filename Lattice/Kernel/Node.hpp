@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 #include <memory>
+#include <optional>
 #include <vector>
 #include <utility>
 
@@ -13,7 +14,6 @@
 #include <Lattice/Kernel/Requirements.hpp>
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/RefSlot.hpp>
-#include <Lattice/Kernel/Objects.hpp>
 #include <Lattice/Kernel/Bindings.hpp>
 #include <Lattice/Tools/LogStyle.hpp>
 #include <Lattice/Tools/Logger.hpp>
@@ -27,15 +27,16 @@ enum class NodeKind : uint8_t {
     Folder,
     Component,
     Slot,
-    Binding
+    Binding,
+    Mount
 };
 
 class Path {
 public:
     Path() = default;
 
-    explicit Path(ObjectId id, Objects& objects) {
-        while (Objects::valid(id)) {
+    explicit Path(ObjectId id, const ComponentsRegistry& objects) {
+        while (id != InvalidObjectId) {
             ids_.push_back(id);
             id = objects.require(id).parent;
         }
@@ -110,7 +111,8 @@ class Node {
     Node& createNode(std::string_view name, BlueprintId blueprint = Blueprints::InvalidId) {
         auto node = std::make_unique<Node>(run_ctx, this);
         Node& child = *node;
-        child.id = run_ctx.objects.create(name, id, &child);
+        const auto key = name.empty() ? std::nullopt : std::optional{ObjectKey{std::string(name), id}};
+        child.id = run_ctx.objects.create({std::string(name), id, &child}, key, true);
         child.bp = blueprint;
         children_.push_back(std::move(node));
         return child;
@@ -148,7 +150,7 @@ class Node {
     }
 
     void configure() {
-        if (!object)
+        if (kind == NodeKind::Mount || !object)
             return;
         if (const auto* blueprint = run_ctx.blueprints.get(implementation()); blueprint && blueprint->meta.configure)
             blueprint->meta.configure(object, *this);
@@ -197,11 +199,15 @@ class Node {
                         line = run_ctx.blueprints.require(child->bp).shortName();
                     else
                         line = std::format("{}<gr>::{}</>", run_ctx.blueprints.require(child->bp).shortName(), name);
-                    line += std::format("<gr>::<c>{}<//> <bl>S</>", child->object ? run_ctx.blueprints.require(child->implBp).name : "empty");
+                    line += std::format("<gr>::<c>{}<//> <c>S</>", child->object ? run_ctx.blueprints.require(child->implBp).name : "empty");
                     break;
 
                 case NodeKind::Binding:
                     line = std::format("{} <y>λ</>", name);
+                    break;
+
+                case NodeKind::Mount:
+                    line = std::format("<m>[&{}]</> <bl>&</>", name);
                     break;
             }
 
@@ -238,7 +244,7 @@ class Node {
 
     void activate(const Node& child, std::string_view name, bool overwrite = false) {
         const ContextId slot = run_ctx.getOrCreate(name);
-        if (overwrite || !Objects::valid(run_ctx.get(slot)))
+        if (overwrite || run_ctx.get(slot) == InvalidObjectId)
             run_ctx.assign(slot, child.id);
     }
 
@@ -270,7 +276,7 @@ public:
     Node(Context& run_ctx, Node* parent = nullptr)
         : run_ctx(run_ctx), parent(parent) {
             if (!parent) {
-                id = run_ctx.objects.create("Root", InvalidObjectId, this);
+                id = run_ctx.objects.create({"Root", InvalidObjectId, this}, ObjectKey{"Root", InvalidObjectId});
             }
     }
 
@@ -287,7 +293,7 @@ public:
     NodeKind getKind() const noexcept { return kind; }
     ObjectId getId() const noexcept { return id; }
     std::string_view name() const {
-        return run_ctx.objects[id].name;
+        return run_ctx.objects.require(id).name;
     }
 
     // Корень неймспейса: компонент без компонента-предка (ветки lattice.toml),
@@ -434,14 +440,14 @@ public:
     template<typename T>
     Ref<T> add(std::string_view instanceName = DefaultInstanceName) {
         noteAdd<T>();
-        return Ref<T>(static_cast<T*>(createComponent(typeKey<T>(), instanceName, nullptr).object));
+        return Ref<T>(static_cast<T*>(createComponent(typeKey<T>(), instanceName, nullptr).castObject(findBlueprint<T>())));
     }
 
     template<typename T, typename D>
     requires CreationDescriptor<T, D>
     Ref<T> add(std::string_view instanceName, const D& desc) {
         noteAdd<T>();
-        return Ref<T>(static_cast<T*>(createComponent(typeKey<T>(), instanceName, &desc).object));
+        return Ref<T>(static_cast<T*>(createComponent(typeKey<T>(), instanceName, &desc, typeKey<D>()).castObject(findBlueprint<T>())));
     }
 
     void add(std::string_view type, std::string_view instanceName) {
@@ -453,15 +459,17 @@ public:
     }
 
 private:
-    Node& createComponent(std::string_view parent, std::string_view instanceName, const void* desc) {
+    Node& createComponent(std::string_view parent, std::string_view instanceName, const void* desc,
+                          std::string_view descriptor = {}) {
         instanceName = canonicalInstance(instanceName);
 
-        const auto blueprint = findBlueprint(parent);
-        if (blueprint == Blueprints::InvalidId)
+        const auto api = findBlueprint(parent);
+        if (api == Blueprints::InvalidId)
             throw Exception(tag, "Blueprint '{}' not found", parent);
+        const auto* owner = run_ctx.blueprints.get(implementation());
+        const auto blueprint = run_ctx.blueprints.resolveImplementation(
+            api, owner ? owner->namespaceName() : std::string_view{}, descriptor);
         const auto create = run_ctx.blueprints.require(blueprint).meta.create;
-        if (!create)
-            throw Exception(tag, "Blueprint '{}' is not constructible", parent);
 
         for (const auto& child : children_) {
             if (sameInstance(child->name(), instanceName) && child->bp == blueprint) {
@@ -653,6 +661,47 @@ public:
         return false;
     }
 
+    template<typename T>
+    Mount<T> mount() {
+        noteRequire<T>();
+        const BlueprintId api = findBlueprint<T>();
+        if (api == Blueprints::InvalidId)
+            throw Exception(tag, "API '{}' is not registered", typeKey<T>());
+
+        ObjectId target = InvalidObjectId;
+        T* mounted = nullptr;
+        const auto consider = [&](ObjectId candidate) {
+            const auto* entry = run_ctx.objects.get(candidate);
+            if (!entry || !entry->node)
+                return;
+            auto* ptr = static_cast<T*>(entry->node->castObject(api));
+            if (!ptr)
+                return;
+            if (target != InvalidObjectId && target != candidate)
+                throw Exception(tag, "Multiple active components provide '{}' for mount", typeKey<T>());
+            target = candidate;
+            mounted = ptr;
+        };
+
+        // An explicitly active API takes precedence over implementation exports.
+        consider(run_ctx.find(run_ctx.blueprints.require(api).shortName()));
+        if (!mounted) {
+            for (ContextId slot = 0; slot < run_ctx.contexts.size(); ++slot)
+                consider(run_ctx.get(slot));
+        }
+        if (!mounted)
+            throw Exception(tag, "No active '{}' available for mount", typeKey<T>());
+
+        Node& targetNode = *run_ctx.objects.require(target).node;
+
+        Node& mountNode = createNode(typeName<T>(), api);
+        mountNode.kind = NodeKind::Mount;
+        mountNode.object = mounted;
+        mountNode.configured = true;
+
+        return Mount<T>(targetNode, mounted);
+    }
+
     ObjectId resolvePath(std::string_view path, ObjectId from) const {
         ObjectId current = from;
 
@@ -665,8 +714,8 @@ public:
             std::string_view name = path.substr(begin, end - begin);
 
             if (!name.empty()) {
-                current = run_ctx.objects.find(name, current);
-                if (!Objects::valid(current))
+                current = run_ctx.objects.find(ObjectKey{std::string(name), current});
+                if (current == InvalidObjectId)
                     return InvalidObjectId;
             }
 
@@ -709,6 +758,8 @@ public:
 
     // останавливает все сервисы
     void stopServices() {
+        if (kind == NodeKind::Mount)
+            return;
         if (auto* service = get<ServiceAPI>())
             service->stop();
         for (auto& child : children_)
@@ -719,8 +770,10 @@ public:
         if (kind == NodeKind::Binding)
             run_ctx.bindings.unbind(id);
 
-        if (auto* service = get<ServiceAPI>())
-            service->stop();
+        if (kind != NodeKind::Mount) {
+            if (auto* service = get<ServiceAPI>())
+                service->stop();
+        }
         children_.clear();
         if (kind == NodeKind::Component || kind == NodeKind::Slot)
             destroyObject();
@@ -730,9 +783,9 @@ public:
 
     void dumpTree(std::string_view path = "") const {
         ObjectId startId = resolvePath(path, id);
-        if (Objects::valid(startId)) {
+        if (startId != InvalidObjectId) {
             Node* startNode = run_ctx.objects.require(startId).node;
-            Logger::Tree tree(run_ctx.objects[startId].name);
+            Logger::Tree tree(run_ctx.objects.require(startId).name);
             startNode->appendTree(tree, 0, 7);
             tree.print();
         } else {
@@ -796,7 +849,7 @@ public:
         Path path{id, run_ctx.objects};
 
         for (ObjectId current : path.ids()) {
-            const auto& entry = run_ctx.objects[current];
+            const auto& entry = run_ctx.objects.require(current);
             const Node& node = *entry.node;
 
             if (!result.empty())

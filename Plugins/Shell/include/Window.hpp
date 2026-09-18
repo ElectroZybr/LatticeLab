@@ -26,18 +26,12 @@ public:
         actionMap = branch.require<ActionMap>();
         render = branch.require<Render>();
         window = branch.find<WindowAPI>();
-        window.use<glfwWindow>();
+        if (!window) window.use<glfwWindow>();
 
         branch.on("print", [this]() { print(); });
-        branch.on("CreateGlfwWindow", [this]() { window.use("glfwWindow"); });
     }
 
     void run() override {
-        actionMap->bind("print", "MouseLeft");
-        actionMap->bind("load", "Ctrl+O");
-        actionMap->bind("CreateVerlet", "W");
-
-        render->setup();
         while (!stopRequested()) {
             if (window) {
                 window->pollEvents();
@@ -49,7 +43,7 @@ public:
 
             actionMap->tick();
             render->frame();
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
     }
 

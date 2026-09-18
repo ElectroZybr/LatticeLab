@@ -29,21 +29,24 @@ public:
         return id != InvalidId;
     }
 
-    Id add(std::string_view name, Id id) {
-        const Key key{name};
-
-        if (lookup_.contains(key))
-            throw Lattice::Exception("NamedRegistry", "Name '{}' already exists", name);
-
-        lookup_.emplace(std::move(key), id);
+    template<typename Name>
+    Id add(const Name& name, Id id, bool overwrite = false) {
+        Key key{name};
+        if (overwrite) {
+            lookup_.insert_or_assign(std::move(key), id);
+        } else if (!lookup_.emplace(std::move(key), id).second) {
+            throw Lattice::Exception("NamedRegistry", "Name already exists");
+        }
         return id;
     }
 
-    void alias(Id id, std::string_view name) {
-        add(name, id);
+    template<typename Name>
+    void alias(Id id, const Name& name, bool overwrite = false) {
+        add(name, id, overwrite);
     }
 
-    void remove(std::string_view name) {
+    template<typename Name>
+    void remove(const Name& name) {
         lookup_.erase(Key{name});
     }
 
@@ -56,7 +59,8 @@ public:
         }
     }
 
-    Id find(std::string_view name) const {
+    template<typename Name>
+    Id find(const Name& name) const {
         const auto it = lookup_.find(Key{name});
 
         if (it == lookup_.end())
@@ -65,7 +69,8 @@ public:
         return it->second;
     }
 
-    bool has(std::string_view name) const {
+    template<typename Name>
+    bool has(const Name& name) const {
         return lookup_.contains(Key{name});
     }
 

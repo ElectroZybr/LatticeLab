@@ -32,8 +32,13 @@ def generate(plugin, output, flags):
         return '::'.join(reversed(parts))
 
     def bases(cursor):
-        return [(b.type.get_canonical().get_declaration(), b.access_specifier)
-                for b in cursor.get_children() if b.kind == ci.CursorKind.CXX_BASE_SPECIFIER]
+        result = []
+        for base in cursor.get_children():
+            if base.kind != ci.CursorKind.CXX_BASE_SPECIFIER:
+                continue
+            declaration = base.type.get_canonical().get_declaration()
+            result.append((declaration.get_definition() or declaration, base.access_specifier))
+        return result
 
     def participates(cursor, seen=None):
         seen = set() if seen is None else seen

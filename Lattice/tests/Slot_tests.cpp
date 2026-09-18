@@ -155,7 +155,7 @@ TEST(Slot_RequireWalksFloorNotContext, RuntimeFixture,
 
     Node& branch = fixture.root.addFolder("branch");
 
-    REQUIRE(!Objects::valid(fixture.run_ctx.find("SlotAPI")));
+    REQUIRE(fixture.run_ctx.find("SlotAPI") == InvalidObjectId);
     REQUIRE(branch.require<SlotAPI>()->id() == 1);
 }
 

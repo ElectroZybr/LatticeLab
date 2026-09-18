@@ -174,6 +174,7 @@ glfwWindow::glfwWindow(Lattice::Node& branch) {
 }
 
 void glfwWindow::configure(Lattice::Node& branch) {
+    if (window_) return;
     keyboard_ = branch.require<Input::Keyboard>();
     mouse_ = branch.require<Input::Mouse>();
 
@@ -226,6 +227,8 @@ void glfwWindow::configure(Lattice::Node& branch) {
         glfwTerminate();
         throw Lattice::Exception(tag, "Failed to create GLFW window");
     }
+
+    windowOwner_ = std::shared_ptr<GLFWwindow>(window_, glfwDestroyWindow);
 
     if (!state_.fullscreen) {
         glfwSetWindowPos(window_, state_.x, state_.y);
@@ -286,7 +289,6 @@ void glfwWindow::configure(Lattice::Node& branch) {
 glfwWindow::~glfwWindow() {
     if (window_) {
         glfwSetWindowUserPointer(window_, nullptr);
-        glfwDestroyWindow(window_);
         window_ = nullptr;
     }
 }
@@ -304,8 +306,8 @@ glfwWindow& glfwWindow::operator=(glfwWindow&& other) noexcept {
     if (this != &other) {
         if (window_) {
             glfwSetWindowUserPointer(window_, nullptr);
-            glfwDestroyWindow(window_);
         }
+        windowOwner_ = std::move(other.windowOwner_);
         window_ = std::exchange(other.window_, nullptr);
         state_  = other.state_;
         if (window_) {
@@ -396,6 +398,7 @@ void glfwWindow::setTitle(std::string_view title) {
 
 NativeWindow glfwWindow::native() const {
     NativeWindow n{};
+    n.owner = windowOwner_;
     if (!window_) return n;
 
 #if defined(_WIN32)

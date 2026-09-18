@@ -17,9 +17,6 @@ class Node;
 
 inline constexpr std::string_view DefaultInstanceName = "";
 
-using ContextId = uint32_t;
-inline constexpr ContextId InvalidContextId = std::numeric_limits<ContextId>::max();
-
 struct ContextSlot {
     std::string name;
     ObjectId object = InvalidObjectId;
@@ -27,7 +24,11 @@ struct ContextSlot {
     bool exists = true;
 };
 
+using ContextId = uint32_t;
+inline constexpr ContextId InvalidContextId = std::numeric_limits<ContextId>::max();
 using ContextRegistry = ObjectRegistry<ContextSlot, ContextId, std::string>;
+using ComponentsRegistry = ObjectRegistry<Object, ObjectId, ObjectKey, ObjectKeyHash>;
+
 
 class Context {
 public:
@@ -50,9 +51,9 @@ public:
     void printTree() const;
 
     Bindings bindings;
-    Objects objects;
     Blueprints blueprints;
     ContextRegistry contexts;
+    ComponentsRegistry objects;
     
 private:
     void appendTree(Logger::Tree& tree) const;
