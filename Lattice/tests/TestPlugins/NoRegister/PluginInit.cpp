@@ -1,1 +1,0 @@
-extern "C" void some_random_function() {}

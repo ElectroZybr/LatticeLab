@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Lattice/Kernel/Component.hpp>
+
 // Kernel dependences
 #include <Lattice/Kernel/Plugin.hpp>
 #include <Lattice/Kernel/ServiceAPI.hpp>
@@ -12,7 +14,7 @@ namespace WGPU {
     class WGPU;
 }
 
-class Render {
+class Render : public Lattice::Component {
     static constexpr std::string_view tag = "Render";
 public:
     explicit Render(Lattice::Node& renderer);

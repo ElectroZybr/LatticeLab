@@ -33,11 +33,11 @@ struct KeybindsFixture : RuntimeFixture {
     KeybindsLoader* loader = nullptr;
 
     KeybindsFixture() {
-        blueprints.blueprint<InputAPI>();
-        blueprints.blueprint<TestInput, InputAPI>();
-        blueprints.blueprint<ActionMap>();
-        blueprints.blueprint<LoaderAPI>();
-        blueprints.blueprint<KeybindsLoader, LoaderAPI>();
+        blueprints.add<InputAPI>();
+        blueprints.add<TestInput, InputAPI>();
+        blueprints.add<ActionMap>();
+        blueprints.add<LoaderAPI>();
+        blueprints.add<KeybindsLoader, LoaderAPI>();
 
         root.add<TestInput>();
         root.add<ActionMap>();

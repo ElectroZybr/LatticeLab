@@ -36,8 +36,8 @@ struct BootHost {
 TEST(Runtime_LoadAfterConfigure, RuntimeFixture,
     "Стартовый load должен вызываться после configureBranch, когда дети уже сконфигурированы.")
 {
-    fixture.blueprints.blueprint<BootChild>();
-    fixture.blueprints.blueprint<BootHost>();
+    fixture.blueprints.add<BootChild>();
+    fixture.blueprints.add<BootHost>();
     fixture.root.add<BootHost>();
 
     auto host = fixture.root.require<BootHost>();

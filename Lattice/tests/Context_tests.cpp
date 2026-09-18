@@ -16,7 +16,7 @@ TEST(Context_Find, RuntimeFixture,
 
     REQUIRE(!Objects::valid(fixture.run_ctx.find("print")));
 
-    fixture.blueprints.blueprint<ContextDummy>();
+    fixture.blueprints.add<ContextDummy>();
     fixture.root.add<ContextDummy>("first");
 
     const auto dummy = fixture.root.find<ContextDummy>("first");
@@ -52,7 +52,7 @@ TEST(Context_GetInvalid, RuntimeFixture,
 TEST(Context_Activate, RuntimeFixture,
     "activate должен привязать объект к слоту.")
 {
-    fixture.blueprints.blueprint<ContextDummy>();
+    fixture.blueprints.add<ContextDummy>();
     fixture.root.add<ContextDummy>("first");
 
     const auto dummy = fixture.root.find<ContextDummy>("first");
@@ -71,7 +71,7 @@ TEST(Context_Activate, RuntimeFixture,
 TEST(Context_ActivateOverwrite, RuntimeFixture,
     "activate должен заменять текущий объект слота.")
 {
-    fixture.blueprints.blueprint<ContextDummy>();
+    fixture.blueprints.add<ContextDummy>();
     fixture.root.add<ContextDummy>("first");
     fixture.root.add<ContextDummy>("second");
 
@@ -112,7 +112,7 @@ TEST(Context_ActivateUnknownObject, RuntimeFixture,
 TEST(Context_ActivateUnknownSlot, RuntimeFixture,
     "activate неизвестного слота не должен менять контекст.")
 {
-    fixture.blueprints.blueprint<ContextDummy>();
+    fixture.blueprints.add<ContextDummy>();
     fixture.root.add<ContextDummy>();
 
     const auto dummy = fixture.root.find<ContextDummy>();
@@ -183,10 +183,10 @@ struct NsIO : ServiceAPI {
 };
 
 static void registerNamespaces(RuntimeFixture& fixture) {
-    fixture.blueprints.blueprint<NsChild>();
-    fixture.blueprints.blueprint<NsHost, ServiceAPI>();
-    fixture.blueprints.blueprint<NsModel, Model>();
-    fixture.blueprints.blueprint<NsIO, ServiceAPI>();
+    fixture.blueprints.add<NsChild>();
+    fixture.blueprints.add<NsHost, ServiceAPI>();
+    fixture.blueprints.add<NsModel, Model>();
+    fixture.blueprints.add<NsIO, ServiceAPI>();
 }
 
 TEST(Context_NamespaceRoots, RuntimeFixture,

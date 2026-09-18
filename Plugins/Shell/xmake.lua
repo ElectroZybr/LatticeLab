@@ -3,9 +3,9 @@
 
 -- target("Shell")
 --     set_kind("shared")
+--     add_rules("lattice.plugin_codegen")
 --     set_targetdir(".")
 
---     add_files("PluginInit.cpp")
 --     add_files("src/**.cpp")
 --     if is_plat("macosx") then
 --         add_files("src/**.mm")

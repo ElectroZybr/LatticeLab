@@ -55,8 +55,8 @@ Document makeSoADocument(std::string target) {
 TEST(SoALoader_LoadIntoWrapper, RuntimeFixture,
     "Лоадер должен найти SoA под активной обёрткой в контексте и записать строки.")
 {
-    fixture.blueprints.blueprint<StdData::SoA>();
-    fixture.blueprints.blueprint<Wrapper>();
+    fixture.blueprints.add<StdData::SoA>();
+    fixture.blueprints.add<Wrapper>();
     fixture.root.add<Wrapper>();
 
     SoALoader loader;
@@ -80,8 +80,8 @@ TEST(SoALoader_LoadIntoWrapper, RuntimeFixture,
 TEST(SoALoader_LoadNames, RuntimeFixture,
     "Строковые значения должны записываться в char-колонку SoA.")
 {
-    fixture.blueprints.blueprint<StdData::SoA>();
-    fixture.blueprints.blueprint<Wrapper>();
+    fixture.blueprints.add<StdData::SoA>();
+    fixture.blueprints.add<Wrapper>();
     fixture.root.add<Wrapper>();
 
     SoALoader loader;
@@ -102,8 +102,8 @@ TEST(SoALoader_LoadNames, RuntimeFixture,
 TEST(SoALoader_MissingTarget, RuntimeFixture,
     "Лоадер должен падать, если цель не активна в контексте.")
 {
-    fixture.blueprints.blueprint<StdData::SoA>();
-    fixture.blueprints.blueprint<Wrapper>();
+    fixture.blueprints.add<StdData::SoA>();
+    fixture.blueprints.add<Wrapper>();
     fixture.root.add<Wrapper>();
 
     SoALoader loader;
@@ -125,8 +125,8 @@ TEST(SoALoader_MissingTarget, RuntimeFixture,
 TEST(SoALoader_MissingColumn, RuntimeFixture,
     "Лоадер должен падать, если колонки нет в буфере.")
 {
-    fixture.blueprints.blueprint<StdData::SoA>();
-    fixture.blueprints.blueprint<Wrapper>();
+    fixture.blueprints.add<StdData::SoA>();
+    fixture.blueprints.add<Wrapper>();
     fixture.root.add<Wrapper>();
 
     SoALoader loader;
@@ -150,7 +150,7 @@ TEST(SoALoader_MissingColumn, RuntimeFixture,
 TEST(SoALoader_InspectEmpty, RuntimeFixture,
     "inspect пустого SoA не должен падать.")
 {
-    fixture.blueprints.blueprint<StdData::SoA>();
+    fixture.blueprints.add<StdData::SoA>();
     fixture.root.add<StdData::SoA>();
 
     auto soa = fixture.root.require<StdData::SoA>();
@@ -161,8 +161,8 @@ TEST(SoALoader_InspectEmpty, RuntimeFixture,
 TEST(SoALoader_LoadAtomDataFile, RuntimeFixture,
     "Config/atomData.toml должен заполнить SoA у AtomData.")
 {
-    fixture.blueprints.blueprint<StdData::SoA>();
-    fixture.blueprints.blueprint<AtomData>();
+    fixture.blueprints.add<StdData::SoA>();
+    fixture.blueprints.add<AtomData>();
     fixture.root.add<AtomData>();
 
     TomlParser parser;

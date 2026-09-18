@@ -200,7 +200,7 @@ namespace Lattice {
 
         
         for (const auto& entry : std::filesystem::directory_iterator(candidate->path)) {
-            if (entry.is_regular_file() && entry.path().extension() == DynamicLibrary::extension()) {
+            if (entry.is_regular_file() && entry.path().extension() == DynamicLibrary::extension() && !entry.path().stem().has_extension()) {
                 path = entry.path();
                 break;
             }
@@ -233,45 +233,39 @@ namespace Lattice {
             return false;
         }
 
-        auto before = blueprints.collectTree();
+        const auto before = blueprints.size();
+        auto snapshot = blueprints;
 
-        if (!regFn(blueprints)) {
-            Logger::error(tag, "plugin_register failed for '{}'", candidate->manifest.id);
+        try {
+            if (!regFn(blueprints))
+                throw Exception(tag, "plugin_register failed for '{}'", candidate->manifest.id);
+        } catch (const std::exception& error) {
+            blueprints = std::move(snapshot);
+            Logger::error(tag, "Registration failed for '{}': {}", candidate->manifest.id, error.what());
+            candidate->status = LoadStatus::Failed;
+            return false;
+        } catch (...) {
+            blueprints = std::move(snapshot);
             candidate->status = LoadStatus::Failed;
             return false;
         }
-
-        auto after = blueprints.collectTree();
+        const auto after = blueprints.size();
 
         PluginCatalog catalog{.pluginId = candidate->manifest.id};
 
         const auto& sink = compileDepSink();
         catalog.deps.assign(sink.begin() + depsBefore, sink.end());
 
-        std::unordered_set<ObjectId> beforeSet(before.begin(), before.end());
+        for (BlueprintId id = before; id < after; ++id)
+            catalog.provided.push_back(id);
 
-        for (ObjectId id : after) {
-            if (!beforeSet.contains(id))
-                catalog.provided.push_back(id);
-        }
-
-        if (after.size() == before.size())
+        if (after == before)
             Logger::warning(tag, "Plugin '{}' does not provide anything", candidate->manifest.id);
 
         recordPluginCatalog(std::move(catalog));
 
         candidate->status = LoadStatus::Loaded;
         return true;
-    }
-
-    PluginManager::~PluginManager() {
-        for (Plugin* plugin : loadQueue) {
-            if (plugin->status != LoadStatus::Loaded)
-                continue;
-
-            if (plugin->shutdown)
-                plugin->shutdown();
-        }
     }
 
     const Plugin* PluginManager::findCandidate(std::string_view id) const {

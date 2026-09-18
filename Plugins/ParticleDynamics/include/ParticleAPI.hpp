@@ -1,15 +1,17 @@
 #pragma once
 
+#include <Lattice/Kernel/Component.hpp>
+
 namespace ParticleDynamics {
-struct IntegratorAPI {
+struct IntegratorAPI : public Lattice::Component {
     virtual void step() = 0;
 };
 
-struct ForceFieldAPI {
+struct ForceFieldAPI : public Lattice::Component {
     virtual bool compute() = 0;
 };
 
-struct SpatialIndexAPI{
+struct SpatialIndexAPI : public Lattice::Component {
     virtual void rebuild() = 0;
 };
 }

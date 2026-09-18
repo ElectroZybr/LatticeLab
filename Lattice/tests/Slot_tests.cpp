@@ -66,14 +66,14 @@ struct SlotNeighbor {
 };
 
 static void registerSlotTypes(RuntimeFixture& fixture) {
-    fixture.blueprints.blueprint<SlotAPI>();
-    fixture.blueprints.blueprint<SlotImplA, SlotAPI>();
-    fixture.blueprints.blueprint<SlotImplB, SlotAPI>();
-    fixture.blueprints.blueprint<SlotInput>();
-    fixture.blueprints.blueprint<SlotWindowImpl, SlotAPI>();
-    fixture.blueprints.blueprint<SlotRender>();
-    fixture.blueprints.blueprint<SlotHost>();
-    fixture.blueprints.blueprint<SlotNeighbor>();
+    fixture.blueprints.add<SlotAPI>();
+    fixture.blueprints.add<SlotImplA, SlotAPI>();
+    fixture.blueprints.add<SlotImplB, SlotAPI>();
+    fixture.blueprints.add<SlotInput>();
+    fixture.blueprints.add<SlotWindowImpl, SlotAPI>();
+    fixture.blueprints.add<SlotRender>();
+    fixture.blueprints.add<SlotHost>();
+    fixture.blueprints.add<SlotNeighbor>();
 }
 
 TEST(Slot_EmptyNode, RuntimeFixture,

@@ -1,6 +1,9 @@
 #pragma once
 
 #include <algorithm>
+#include <type_traits>
+#include <Lattice/Kernel/TypeName.hpp>
+#include <Lattice/Tools/LogTree.hpp>
 #include <cstdint>
 #include <initializer_list>
 #include <string>
@@ -11,12 +14,21 @@
 
 namespace Lattice {
 
+class Node;
 using BlueprintId = uint32_t;
 
+struct BlueprintMeta {
+    void* (*create)(Node&, const void*) = nullptr;
+    void (*destroy)(void*) = nullptr;
+    void (*configure)(void*, Node&) = nullptr;
+};
+
 struct Blueprint {
-    std::string name; // Полное имя, например WGPU::Device.
+    std::string name;
     std::vector<BlueprintId> bases;
     bool exists = true;
+    BlueprintMeta meta;
+    std::vector<void* (*)(void*)> upcasts;
 
     std::string_view shortName() const noexcept {
         const auto pos = name.rfind("::");
@@ -29,8 +41,6 @@ struct Blueprint {
     }
 };
 
-// Отдельный реестр типов. ID не относятся к Objects и не переиспользуются.
-// Наружу выдаётся только const-доступ: рёбра изменяются через проверку циклов.
 class Blueprints {
     using Registry = ObjectRegistry<Blueprint, BlueprintId, std::string>;
 public:
@@ -47,8 +57,77 @@ public:
         return registry_.create({std::string(name), std::move(uniqueBases)});
     }
 
-    // Имя внутри namespace: find("Device", "WGPU") == find("WGPU::Device").
-    // Поиск точный, без неявного перехода в соседние namespace.
+    template<typename T, typename... Bases>
+    BlueprintId add(std::string_view name = typeKey<T>()) {
+        static_assert((std::is_convertible_v<T*, Bases*> && ...),
+                      "Blueprint bases must be public and unambiguous");
+        Blueprint blueprint{std::string(name), {find(typeKey<Bases>())...}};
+        validateName(name);
+        for (auto base : blueprint.bases)
+            require(base);
+        blueprint.upcasts = {+[](void* ptr) -> void* {
+            return static_cast<Bases*>(static_cast<T*>(ptr));
+        }...};
+        if constexpr (!std::is_abstract_v<T>) {
+            blueprint.meta.create = [](Node& node, const void* desc) -> void* {
+                if constexpr (requires { typename T::Desc; }) {
+                    static_assert(std::is_constructible_v<T, Node&, const typename T::Desc&>);
+                    if (desc)
+                        return new T(node, *static_cast<const typename T::Desc*>(desc));
+                    if constexpr (std::is_default_constructible_v<typename T::Desc>)
+                        return new T(node, typename T::Desc{});
+                    else
+                        throw Exception("Blueprints", "'{}' requires a descriptor", typeKey<T>());
+                } else if constexpr (std::is_constructible_v<T, Node&>) {
+                    return new T(node);
+                } else {
+                    static_assert(std::is_default_constructible_v<T>, "Component needs Node& or default constructor");
+                    return new T();
+                }
+            };
+            blueprint.meta.destroy = [](void* object) { delete static_cast<T*>(object); };
+            if constexpr (requires(T& object, Node& node) { object.configure(node); })
+                blueprint.meta.configure = [](void* object, Node& node) { static_cast<T*>(object)->configure(node); };
+        }
+        return registry_.create(std::move(blueprint));
+    }
+
+    void* cast(BlueprintId from, BlueprintId to, void* object) const {
+        if (!object || !get(from) || !get(to))
+            return nullptr;
+        void* result = nullptr;
+        auto walk = [&](auto&& self, BlueprintId id, void* ptr) -> void {
+            if (id == to) {
+                if (result && result != ptr)
+                    throw Exception("Blueprints", "Ambiguous conversion '{}' -> '{}'", require(from).name, require(to).name);
+                result = ptr;
+                return;
+            }
+            const auto& type = require(id);
+            for (size_t i = 0; i < type.upcasts.size(); ++i)
+                if (type.upcasts[i])
+                    self(self, type.bases[i], type.upcasts[i](ptr));
+        };
+        walk(walk, from, object);
+        return result;
+    }
+
+    void dumpTree() const {
+        Logger::Tree tree("Blueprints");
+        auto append = [&](auto&& self, BlueprintId id, size_t depth) -> void {
+            tree.node(std::format("{} <c>B</> <gr>#{}</>", require(id).name, id), depth);
+            for (BlueprintId child = 0; child < size(); ++child) {
+                const auto& bases = require(child).bases;
+                if (std::find(bases.begin(), bases.end(), id) != bases.end())
+                    self(self, child, depth + 1);
+            }
+        };
+        for (BlueprintId id = 0; id < size(); ++id)
+            if (require(id).bases.empty())
+                append(append, id, 0);
+        tree.print();
+    }
+
     BlueprintId find(std::string_view name, std::string_view nameSpace = {}) const {
         if (nameSpace.empty())
             return registry_.find(name);

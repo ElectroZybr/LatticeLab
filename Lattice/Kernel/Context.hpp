@@ -2,11 +2,10 @@
 
 #include <cstdint>
 #include <limits>
-#include <memory>
 #include <string>
 #include <string_view>
-#include <vector>
 
+#include <Lattice/Kernel/Blueprints.hpp>
 #include <Lattice/Kernel/Bindings.hpp>
 #include <Lattice/Kernel/Objects.hpp>
 #include <Lattice/Kernel/ObjectRegistry.hpp>
@@ -16,14 +15,7 @@ namespace Lattice {
 
 class Node;
 
-inline constexpr std::string_view DefaultBlueprintsPath = "Blueprints";
 inline constexpr std::string_view DefaultInstanceName = "";
-
-struct Meta {
-    void* (*create)(Node&, const void* desc) = nullptr;
-    void (*destroy)(Node&) = nullptr;
-    void (*configure)(Node&) = nullptr;
-};
 
 using ContextId = uint32_t;
 inline constexpr ContextId InvalidContextId = std::numeric_limits<ContextId>::max();
@@ -59,7 +51,7 @@ public:
 
     Bindings bindings;
     Objects objects;
-    std::vector<std::unique_ptr<Meta>> metas;
+    Blueprints blueprints;
     ContextRegistry contexts;
     
 private:

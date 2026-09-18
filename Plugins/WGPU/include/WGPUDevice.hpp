@@ -7,15 +7,15 @@
 
 namespace WGPU {
 
-class WDevice final : public GPU::Device {
+class Device final : public GPU::Device {
 public:
-    explicit WDevice(Lattice::Node& node) {
+    explicit Device(Lattice::Node& node) {
         auto backend = node.requireParent<WGPU>();
         device_ = backend->createDevice();
         queue_ = wgpuDeviceGetQueue(device_);
     }
     
-    ~WDevice() override {
+    ~Device() override {
         if (queue_)
             wgpuQueueRelease(queue_);
         if (device_)

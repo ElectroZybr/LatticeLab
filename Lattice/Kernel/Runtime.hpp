@@ -28,12 +28,11 @@ class Runtime {
     static constexpr std::string_view tag = "Runtime";
 public:
     Runtime() : root(run_ctx, nullptr)
-              , blueprints(root.addFolder(DefaultBlueprintsPath))
-              , pluginManager(blueprints, dlLoader) {
+              , pluginManager(run_ctx.blueprints, dlLoader) {
         // регистрация интерфейсов ядра
-        blueprints.blueprint<ServiceAPI>();
-        blueprints.blueprint<SubsystemAPI>();
-        blueprints.blueprint<Model, ServiceAPI>();
+        run_ctx.blueprints.add<ServiceAPI>();
+        run_ctx.blueprints.add<SubsystemAPI>();
+        run_ctx.blueprints.add<Model, ServiceAPI>();
     }
 
     void buildBranch(const StartupEntry& entry) {
@@ -61,10 +60,10 @@ public:
         Node& service = root.require(entry.type, entry.name);
 
         const ObjectId serviceApiId = root.findBlueprint<ServiceAPI>();
-        if (!service.getBlueprint()->isUnder(serviceApiId))
+        if (!run_ctx.blueprints.isA(service.getBlueprintId(), serviceApiId))
             return;
 
-        auto* api = static_cast<ServiceAPI*>(service.getObject());
+        auto* api = service.get<ServiceAPI>();
         if (!api)
             throw Lattice::Exception(tag, "Service '{}' has no object", entry.type);
 
@@ -142,12 +141,12 @@ public:
             
             run_ctx.printTree();
             root.dumpTree();
+            run_ctx.blueprints.dumpTree();
             // root.requireContext().(0, 65);
-            // root.dumpTree(DefaultBlueprintsPath);
             // Logger::message("{}", kernel.objects.stringPath(17));
 
             if (host) {
-                static_cast<ServiceAPI*>(host->getObject())->enter();
+                host->get<ServiceAPI>()->enter();
             } else {
                 while (running) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -223,7 +222,6 @@ private:
     DLLoader dlLoader;
     Context run_ctx;
     Node root;
-    Node& blueprints;
     PluginManager pluginManager;
 
     bool running = true;

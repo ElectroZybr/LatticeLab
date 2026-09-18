@@ -45,12 +45,12 @@ struct Owner {
 }
 
 TEST(Descriptor_AddAndUse, RuntimeFixture) {
-    fixture.blueprints.blueprint<DescribedAPI>();
-    fixture.blueprints.blueprint<DescribedComponent, DescribedAPI>();
+    fixture.blueprints.add<DescribedAPI>();
+    fixture.blueprints.add<DescribedComponent, DescribedAPI>();
     const Description desc{42};
-    auto& custom = fixture.root.add<DescribedComponent>("custom", desc);
+    auto& custom = *fixture.root.add<DescribedComponent>("custom", desc);
     REQUIRE(custom.size == 42);
-    REQUIRE(fixture.root.add<DescribedComponent>("defaulted").size == 7);
+    REQUIRE(fixture.root.add<DescribedComponent>("defaulted")->size == 7);
     fixture.root.slot<DescribedAPI>("slot");
     fixture.root.use<DescribedAPI, DescribedComponent>("slot", Description{83});
     auto slot = fixture.root.find<DescribedAPI>("slot");
@@ -62,10 +62,10 @@ TEST(Descriptor_AddAndUse, RuntimeFixture) {
 }
 
 TEST(Node_RequireParentDuringConfigure, RuntimeFixture) {
-    fixture.blueprints.blueprint<Owner>();
-    fixture.blueprints.blueprint<Owned>();
-    auto& first = fixture.root.add<Owner>("first");
-    auto& second = fixture.root.add<Owner>("second");
+    fixture.blueprints.add<Owner>();
+    fixture.blueprints.add<Owned>();
+    auto& first = *fixture.root.add<Owner>("first");
+    auto& second = *fixture.root.add<Owner>("second");
     fixture.root.configureBranch();
     auto& firstNode = fixture.root.require("Owner", "first");
     auto& secondNode = fixture.root.require("Owner", "second");
