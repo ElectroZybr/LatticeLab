@@ -74,14 +74,14 @@ void Context::assign(ContextId id, ObjectId object, ObjectId ns) {
 
     slot->object = object;
 
-    if (Objects::valid(ns))
+    if (ns != InvalidObjectId)
         slot->ns = ns;
     else if (entry.node)
         slot->ns = entry.node->nearestNamespaceRoot();
 
     std::string nsLabel;
 
-    if (Objects::valid(slot->ns)) {
+    if (slot->ns != InvalidObjectId) {
         const auto& nsEntry = objects.require(slot->ns);
         nsLabel = std::format(" <m>[{}]</>", nsEntry.node->stringPath());
     }
@@ -120,14 +120,14 @@ void Context::appendTree(Logger::Tree& tree) const {
 
         std::string line = std::format("id:{} <c>{}</>", id, slot->name);
 
-        if (!Objects::valid(slot->object)) {
+        if (slot->object == InvalidObjectId) {
             line += " <gr>➜ inactive</>";
         } else {
             const auto& entry = objects.require(slot->object);
             line += std::format(" <gr>➜ {}</>", entry.node->stringPath());
         }
 
-        if (Objects::valid(slot->ns)) {
+        if (slot->ns != InvalidObjectId) {
             const auto& nsEntry = objects.require(slot->ns);
             line += std::format(" <m>[{}]</>", nsEntry.node->stringPath());
         }

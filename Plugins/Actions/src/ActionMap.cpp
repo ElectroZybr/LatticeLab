@@ -141,7 +141,7 @@ void ActionMap::tick() {
         if (fire) {
             const Lattice::ObjectId object = run_ctx->get(binding->slot);
 
-            if (Lattice::Objects::valid(object)) {
+            if (object != Lattice::InvalidObjectId) {
                 Logger::info("ActionMap", "fire from: {}", binding->trigger);
 
                 if (binding->target == Target::Action) {

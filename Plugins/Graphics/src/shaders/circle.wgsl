@@ -25,7 +25,10 @@ fn vs(@builtin(vertex_index) vertex: u32) -> VSOut {
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-    if (length(in.uv) > 1.0) {
+    // Keep the radius equal in framebuffer pixels when the window is resized.
+    let pixel = vec2<f32>(length(dpdx(in.uv)), length(dpdy(in.uv)));
+    let circularUV = in.uv * (max(pixel.x, pixel.y) / pixel);
+    if (length(circularUV) > 1.0) {
         discard;
     }
 

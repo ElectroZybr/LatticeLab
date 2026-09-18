@@ -62,6 +62,7 @@ private:
 
     Ref<Input::Keyboard> keyboard_;
     Ref<Input::Mouse> mouse_;
+    std::shared_ptr<GLFWwindow> windowOwner_;
     GLFWwindow* window_ = nullptr;
     State state_{};
 };

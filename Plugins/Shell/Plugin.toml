@@ -6,7 +6,7 @@ version = "1.0.0"
 api = "1.0"
 
 [[dependencies]]
-id = "Render"
+id = "Graphics"
 version = ">=1.0.0"
 
 [[dependencies]]

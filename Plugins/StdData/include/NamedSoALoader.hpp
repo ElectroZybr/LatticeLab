@@ -113,7 +113,7 @@ private:
         Lattice::Context& ctx = branch_->requireContext();
         const Lattice::ObjectId id = ctx.find(target);
 
-        if (!Lattice::Objects::valid(id))
+        if (id == Lattice::InvalidObjectId)
             throw Lattice::Exception(tag, "NamedSoA target '{}' is not active in context", target);
 
         Lattice::Node* node = ctx.objects.require(id).node;

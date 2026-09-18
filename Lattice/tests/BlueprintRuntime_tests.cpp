@@ -89,3 +89,51 @@ TEST(BlueprintRuntime_NamesAndFailedConstruction, RuntimeFixture) {
     REQUIRE(fixture.root.collectTree().size() == before);
 }
 }
+
+namespace Lattice::CreationTests {
+struct API {
+    struct Desc { int value = 7; };
+    virtual ~API() = default;
+    virtual int value() const = 0;
+};
+struct Prefix { virtual ~Prefix() = default; int padding = 99; };
+namespace Backend {
+struct Device {};
+struct Buffer : Prefix, API {
+    int stored;
+    Buffer(Node&, const Desc& desc) : stored(desc.value) {}
+    int value() const override { return stored; }
+};
+}
+namespace Other {
+struct Buffer : API {
+    Buffer(Node&, const Desc&) {}
+    int value() const override { return -1; }
+};
+struct WrongDescriptor : API {
+    struct Desc { double value = 0; };
+    WrongDescriptor(Node&, const Desc&) {}
+    int value() const override { return -2; }
+};
+}
+TEST(BlueprintRuntime_CreateThroughAPI, RuntimeFixture) {
+    fixture.blueprints.add<API>();
+    fixture.blueprints.add<Other::WrongDescriptor, API>();
+    bool rejected = false;
+    try { fixture.root.add<API>("wrong", API::Desc{42}); }
+    catch (const Exception&) { rejected = true; }
+    REQUIRE(rejected);
+    fixture.blueprints.add<Backend::Device>();
+    fixture.blueprints.add<Backend::Buffer, API>();
+    auto created = fixture.root.add<API>("unique", API::Desc{42});
+    REQUIRE(created->value() == 42);
+    REQUIRE(created.getPtr() == static_cast<API*>(fixture.root.require<Backend::Buffer>("unique").getPtr()));
+    fixture.blueprints.add<Other::Buffer, API>();
+    rejected = false;
+    try { fixture.root.add<API>("ambiguous", API::Desc{}); }
+    catch (const Exception&) { rejected = true; }
+    REQUIRE(rejected);
+    auto& device = fixture.root.addNode(typeKey<Backend::Device>(), "device");
+    REQUIRE(device.add<API>("local", API::Desc{83})->value() == 83);
+}
+}

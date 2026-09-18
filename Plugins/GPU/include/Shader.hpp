@@ -1,24 +1,21 @@
 #pragma once
 
-#include <Lattice/Kernel/Component.hpp>
-
 #include <string>
+#include <Lattice/Kernel/Component.hpp>
 
 namespace GPU {
 
-enum class ShaderStage {
-    None,
-    Vertex,
-    Fragment,
-    Compute
+enum class ShaderLanguage {
+    WGSL
 };
 
 struct ShaderDesc {
-    ShaderStage stage = ShaderStage::None;
+    ShaderLanguage language = ShaderLanguage::WGSL;
     std::string source;
 };
 
 struct Shader : public Lattice::Component {
+    using Desc = ShaderDesc;
     virtual ~Shader() = default;
 };
 

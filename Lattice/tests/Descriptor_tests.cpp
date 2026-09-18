@@ -84,4 +84,36 @@ TEST(Node_RequireParentDuringConfigure, RuntimeFixture) {
     catch (const Exception&) { rejected = true; }
     REQUIRE(rejected);
 }
+
+namespace {
+struct DescriptorAPI {
+    using Desc = Description;
+    virtual ~DescriptorAPI() = default;
+};
+struct DescriptorImpl : DescriptorAPI {
+    int size;
+    DescriptorImpl(Node&, const Desc& desc) : size(desc.size) {}
+};
+struct AbstractDescriptorAPI {
+    using Desc = Description;
+    virtual ~AbstractDescriptorAPI() = default;
+    virtual void operation() = 0;
+};
+}
+
+TEST(Descriptor_APIWithoutFactory, RuntimeFixture) {
+    const auto api = fixture.blueprints.add<DescriptorAPI>();
+    const auto abstractApi = fixture.blueprints.add<AbstractDescriptorAPI>();
+    const auto impl = fixture.blueprints.add<DescriptorImpl, DescriptorAPI>();
+    REQUIRE(!fixture.blueprints.require(api).meta.create);
+    REQUIRE(!fixture.blueprints.require(abstractApi).meta.create);
+    REQUIRE(fixture.blueprints.require(impl).meta.create);
+    auto slot = fixture.root.slot<DescriptorAPI>();
+    fixture.root.use<DescriptorAPI, DescriptorImpl>("", Description{42});
+    REQUIRE(static_cast<DescriptorImpl*>(slot.get())->size == 42);
+    REQUIRE(fixture.root.add<DescriptorImpl>("defaulted")->size == 7);
+    auto created = fixture.root.add<DescriptorAPI>("viaAPI", Description{53});
+    REQUIRE(static_cast<DescriptorImpl*>(created.getPtr())->size == 53);
+}
+
 }

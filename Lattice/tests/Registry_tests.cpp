@@ -179,4 +179,55 @@ TEST(Registry_AliasDuplicate, RuntimeFixture,
     REQUIRE(registry.find("alias") == a);
 }
 
+TEST(Objects_ScopedNamesAndAliases, RuntimeFixture) {
+    ObjectRegistry<Object, ObjectId, ObjectKey, ObjectKeyHash> objects;
+    const auto first = objects.create({"child", 10, nullptr}, ObjectKey{"child", 10}, true);
+    const auto otherParent = objects.create({"child", 20, nullptr}, ObjectKey{"child", 20}, true);
+    const auto replacement = objects.create({"child", 10, nullptr}, ObjectKey{"child", 10}, true);
+    REQUIRE(objects.find(ObjectKey{"child", 10}) == replacement);
+    REQUIRE(objects.find(ObjectKey{"child", 20}) == otherParent);
+    REQUIRE(objects.get(first));
+
+    objects.alias(first, ObjectKey{"alias", 10}, true);
+    objects.alias(replacement, ObjectKey{"alias", 10}, true);
+    objects.alias(replacement, ObjectKey{"secondAlias", 20}, true);
+    objects.destroy(first);
+    REQUIRE(objects.find(ObjectKey{"child", 10}) == replacement);
+    REQUIRE(objects.find(ObjectKey{"alias", 10}) == replacement);
+
+    objects.destroy(replacement);
+    REQUIRE(!objects.has(ObjectKey{"child", 10}));
+    REQUIRE(!objects.has(ObjectKey{"alias", 10}));
+    REQUIRE(!objects.has(ObjectKey{"secondAlias", 20}));
+    REQUIRE(objects.find(ObjectKey{"child", 20}) == otherParent);
+}
+
+TEST(Objects_UnnamedAndRepeatedDestroy, RuntimeFixture) {
+    ObjectRegistry<Object, ObjectId, ObjectKey, ObjectKeyHash> objects;
+    const auto first = objects.create({"", InvalidObjectId, nullptr}, std::nullopt, true);
+    const auto second = objects.create({"", InvalidObjectId, nullptr}, std::nullopt, true);
+    REQUIRE(first != second);
+    REQUIRE(!objects.has(ObjectKey{"", InvalidObjectId}));
+    objects.destroy(first);
+    objects.destroy(first);
+    const auto reused = objects.create({"new", InvalidObjectId, nullptr}, ObjectKey{"new", InvalidObjectId}, true);
+    const auto next = objects.create({"next", InvalidObjectId, nullptr}, ObjectKey{"next", InvalidObjectId}, true);
+    REQUIRE(reused == first);
+    REQUIRE(next != reused);
+    REQUIRE(objects.require(reused).name == "new");
+    REQUIRE(objects.get(second));
+}
+
+TEST(Registry_DuplicatePreservesFreeId, RuntimeFixture) {
+    TestRegistry registry;
+    registry.create({"first"});
+    const auto free = registry.create({"second"});
+    registry.destroy(free);
+    bool thrown = false;
+    try { registry.create({"first"}); }
+    catch (const Exception&) { thrown = true; }
+    REQUIRE(thrown);
+    REQUIRE(registry.create({"third"}) == free);
+}
+
 } // namespace Lattice

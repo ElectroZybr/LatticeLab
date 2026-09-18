@@ -18,6 +18,7 @@ class Node;
 using BlueprintId = uint32_t;
 
 struct BlueprintMeta {
+    std::string_view descriptor;
     void* (*create)(Node&, const void*) = nullptr;
     void (*destroy)(void*) = nullptr;
     void (*configure)(void*, Node&) = nullptr;
@@ -68,10 +69,17 @@ public:
         blueprint.upcasts = {+[](void* ptr) -> void* {
             return static_cast<Bases*>(static_cast<T*>(ptr));
         }...};
-        if constexpr (!std::is_abstract_v<T>) {
+        if constexpr (requires { typename T::Desc; })
+            blueprint.meta.descriptor = typeKey<typename T::Desc>();
+        constexpr bool constructible = [] {
+            if constexpr (requires { typename T::Desc; })
+                return std::is_constructible_v<T, Node&, const typename T::Desc&>;
+            else
+                return std::is_constructible_v<T, Node&> || std::is_default_constructible_v<T>;
+        }();
+        if constexpr (constructible) {
             blueprint.meta.create = [](Node& node, const void* desc) -> void* {
                 if constexpr (requires { typename T::Desc; }) {
-                    static_assert(std::is_constructible_v<T, Node&, const typename T::Desc&>);
                     if (desc)
                         return new T(node, *static_cast<const typename T::Desc*>(desc));
                     if constexpr (std::is_default_constructible_v<typename T::Desc>)
@@ -81,7 +89,6 @@ public:
                 } else if constexpr (std::is_constructible_v<T, Node&>) {
                     return new T(node);
                 } else {
-                    static_assert(std::is_default_constructible_v<T>, "Component needs Node& or default constructor");
                     return new T();
                 }
             };
@@ -90,6 +97,38 @@ public:
                 blueprint.meta.configure = [](void* object, Node& node) { static_cast<T*>(object)->configure(node); };
         }
         return registry_.create(std::move(blueprint));
+    }
+
+    BlueprintId resolveImplementation(BlueprintId api, std::string_view nameSpace = {},
+                                      std::string_view descriptor = {}) const {
+        const auto compatible = [&](BlueprintId id) {
+            const auto& type = require(id);
+            return type.meta.create && isA(id, api) &&
+                (descriptor.empty() || type.meta.descriptor == descriptor);
+        };
+        if (compatible(api))
+            return api;
+        const auto select = [&](bool local) {
+            BlueprintId result = InvalidId;
+            for (BlueprintId id = 0; id < size(); ++id) {
+                if (!compatible(id) || (local && require(id).namespaceName() != nameSpace))
+                    continue;
+                if (result != InvalidId)
+                    throw Exception("Blueprints", "Multiple implementations of '{}': '{}' and '{}'",
+                                    require(api).name, require(result).name, require(id).name);
+                result = id;
+            }
+            return result;
+        };
+        if (!nameSpace.empty()) {
+            const auto local = select(true);
+            if (local != InvalidId)
+                return local;
+        }
+        const auto result = select(false);
+        if (result == InvalidId)
+            throw Exception("Blueprints", "No constructible implementation of '{}'", require(api).name);
+        return result;
     }
 
     void* cast(BlueprintId from, BlueprintId to, void* object) const {

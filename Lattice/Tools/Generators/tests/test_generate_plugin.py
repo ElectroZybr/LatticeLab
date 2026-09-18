@@ -3,8 +3,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-ROOT = Path(__file__).resolve().parents[2]
-spec = importlib.util.spec_from_file_location('generator', ROOT / 'tools/generate_plugin.py')
+ROOT = Path(__file__).resolve().parents[4]
+spec = importlib.util.spec_from_file_location('generator', ROOT / 'Lattice/Tools/Generators/generate_plugin.py')
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
 
@@ -49,11 +49,15 @@ struct Derived : ZBase, Alias {};
     def test_only_graph_registration(self):
         self.generate('namespace Test { struct Base : Lattice::Component {}; struct Child : Base {}; struct Helper {}; }')
         code = self.output.read_text()
-        self.assertIn('plugin_register_blueprints(Lattice::Blueprints& types)', code)
-        self.assertNotIn('plugin_register(', code)
+        self.assertIn('plugin_register(Lattice::Blueprints& types)', code)
         self.assertNotIn('plugin_shutdown', code)
         self.assertNotIn('Node.hpp', code)
         self.assertNotIn('Helper', code)
+
+    def test_forward_declared_base(self):
+        types = self.generate('struct API; struct API : Lattice::Component {}; struct Window : API {};')
+        self.assertEqual(types, ['API', 'Window'])
+        self.assertIn('types.add<::Window, ::API>', self.output.read_text())
 
     def test_multiple_bases(self):
         self.generate('struct A : Lattice::Component {}; struct B : Lattice::Component {}; struct C : A, B {};')

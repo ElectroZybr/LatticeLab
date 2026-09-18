@@ -116,14 +116,9 @@ public:
                     if (entry.enabled)
                         buildBranch(entry);
                 }
+                root.on("tree", [this]() { root.dumpTree(); });
                 scope.finish("<b>Build finished</>");
             }
-
-            // { // связывание компонентов
-            //     LogScope scope(tag, "<b>System configuring</>");
-            //     root.configureAll();
-            //     scope.finish("<b>Configuration finished</>");
-            // }
 
             { // стартовые данные после configure всех веток
                 LogScope scope(tag, "<b>System boot</>");
@@ -142,8 +137,6 @@ public:
             run_ctx.printTree();
             root.dumpTree();
             run_ctx.blueprints.dumpTree();
-            // root.requireContext().(0, 65);
-            // Logger::message("{}", kernel.objects.stringPath(17));
 
             if (host) {
                 host->get<ServiceAPI>()->enter();
@@ -205,7 +198,7 @@ public:
 private:
     void loadStartup() {
         const ObjectId id = run_ctx.find("load");
-        if (!Objects::valid(id)) {
+        if (id == InvalidObjectId) {
             Logger::info(tag, "no load action, skip startup config");
             return;
         }

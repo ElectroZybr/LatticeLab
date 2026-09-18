@@ -18,7 +18,7 @@ public:
     void configure(Lattice::Node& branch) {
         Lattice::Context& ctx = branch.requireContext();
         const Lattice::ObjectId id = ctx.find(Lattice::typeName<ActionMap>());
-        if (!Lattice::Objects::valid(id))
+        if (id == Lattice::InvalidObjectId)
             throw Lattice::Exception(tag, "ActionMap is not active in context");
 
         actionMap = static_cast<ActionMap*>(ctx.objects.require(id).node->getObject());

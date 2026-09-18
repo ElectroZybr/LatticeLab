@@ -6,7 +6,6 @@
 #include "Lattice/Tools/LogScope.hpp"
 
 #include <cstddef>
-#include <unordered_set>
 
 namespace Lattice {
 

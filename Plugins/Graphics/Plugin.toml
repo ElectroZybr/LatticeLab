@@ -1,10 +1,10 @@
-id = "Render"
-name = "Render"
+id = "Graphics"
+name = "Graphics"
 version = "1.0.0"
 
 [core]
 api = "1.0"
 
 [[dependencies]]
-id = "WGPU"
+id = "GPU"
 version = ">=1.0.0"
