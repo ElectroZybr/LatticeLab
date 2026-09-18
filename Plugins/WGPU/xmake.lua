@@ -5,7 +5,6 @@ target("WGPU")
     add_rules("lattice.plugin_codegen")
     set_targetdir(".")
 
-    add_files("PluginInit.cpp")
     add_files("src/**.cpp")
 
     add_packages("wgpu-native")

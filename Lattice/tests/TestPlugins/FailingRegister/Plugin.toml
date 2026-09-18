@@ -1,6 +1,0 @@
-id = "FailingRegister"
-name = "Test Failing Register"
-version = "1.0.0"
-
-[core]
-api = "1.0"

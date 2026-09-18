@@ -23,21 +23,16 @@ namespace ClassicMD {
 class ClassicMD final : public Model {
 public:
     explicit ClassicMD(Lattice::Node& universe) {
-        universe.add<AtomData>();
-        universe.add<AtomStorage>();
-        universe.slot<ParticleDynamics::SpatialIndexAPI>();
-        universe.slot<ParticleDynamics::IntegratorAPI>();
+        atomData    = universe.add<AtomData>();
+        atoms       = universe.add<AtomStorage>();
+        spatialGrid = universe.slot<ParticleDynamics::SpatialIndexAPI>();
+        integrator  = universe.slot<ParticleDynamics::IntegratorAPI>();
         GPU::BufferDesc desc{};
         desc.size = 13;
         // universe.add<GPU::BufferImpl>("namelol", desc);
     }
 
     void configure(Lattice::Node& universe) {
-        atomData = universe.require<AtomData>();
-        atoms = universe.require<AtomStorage>();
-        spatialGrid = universe.find<ParticleDynamics::SpatialIndexAPI>();
-        integrator = universe.find<ParticleDynamics::IntegratorAPI>();
-
         universe.activateNamespace();
         // integrator.use<Integrators::Verlet>();
         universe.on("CreateVerlet", [this]() { integrator.use("Verlet"); });

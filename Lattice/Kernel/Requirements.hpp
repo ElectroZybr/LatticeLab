@@ -6,7 +6,7 @@
 #include <vector>
 
 #include <Lattice/Kernel/TypeName.hpp>
-#include "Lattice/Kernel/Objects.hpp"
+#include "Lattice/Kernel/Blueprints.hpp"
 
 namespace Lattice {
 
@@ -27,15 +27,15 @@ struct CompileDep {
 struct PluginCatalog {
     std::string pluginId;
     std::vector<CompileDep> deps;
-    std::vector<ObjectId> provided;
+    std::vector<BlueprintId> provided;
 };
 
 std::vector<CompileDep>& compileDepSink();
 std::vector<PluginCatalog>& pluginCatalogs();
-bool check(std::string_view name, ObjectId blueprintsId);
-std::vector<std::string> uniqueList(std::string_view name, ObjectId blueprintsId);
-std::vector<std::string> printUniqueList(std::string_view name, ObjectId blueprintsId);
-void printCompositionTree(std::string_view name, ObjectId blueprintsId);
+bool check(std::string_view name, const Blueprints& blueprints);
+std::vector<std::string> uniqueList(std::string_view name, const Blueprints& blueprints);
+std::vector<std::string> printUniqueList(std::string_view name, const Blueprints& blueprints);
+void printCompositionTree(std::string_view name, const Blueprints& blueprints);
 void recordPluginCatalog(PluginCatalog catalog);
 
 inline constexpr std::string_view tag = "Requirements";
@@ -52,7 +52,7 @@ template<typename T, DepKind Kind>
 struct DepNote {
     DepNote() {
         compileDepSink().push_back({
-            std::string(typeName<T>()),
+            std::string(typeKey<T>()),
             {},
             Kind
         });
@@ -70,8 +70,8 @@ template<typename API, typename Impl>
 struct DepNoteUse {
     DepNoteUse() {
         compileDepSink().push_back({
-            std::string(typeName<API>()),
-            std::string(typeName<Impl>()),
+            std::string(typeKey<API>()),
+            std::string(typeKey<Impl>()),
             DepKind::Use
         });
     }

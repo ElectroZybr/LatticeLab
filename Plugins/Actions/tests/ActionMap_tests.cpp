@@ -30,9 +30,9 @@ struct ActionMapFixture : RuntimeFixture {
     ActionMap* map = nullptr;
 
     ActionMapFixture() {
-        blueprints.blueprint<InputAPI>();
-        blueprints.blueprint<TestInput, InputAPI>();
-        blueprints.blueprint<ActionMap>();
+        blueprints.add<InputAPI>();
+        blueprints.add<TestInput, InputAPI>();
+        blueprints.add<ActionMap>();
 
         root.add<TestInput>();
         root.add<ActionMap>();

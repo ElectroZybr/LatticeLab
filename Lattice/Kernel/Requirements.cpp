@@ -9,26 +9,28 @@
 namespace Lattice {
 namespace {
 
-const PluginCatalog* catalogFor(std::string_view name, Objects& objects, ObjectId blueprintsId) {
-    ObjectId id = objects.find(name, blueprintsId);
+const PluginCatalog* catalogFor(std::string_view name, const Blueprints& blueprints) {
+    BlueprintId id = blueprints.resolve(name);
 
-    if (!Objects::valid(id))
+    if (id == Blueprints::InvalidId)
         return nullptr;
 
     for (const auto& catalog : pluginCatalogs())
-        for (ObjectId provided : catalog.provided)
+        for (BlueprintId provided : catalog.provided)
             if (provided == id)
                 return &catalog;
 
     return nullptr;
 }
 
-std::vector<std::string> collectUniqueList(std::string_view name, Objects& objects, ObjectId blueprintsId) {
+std::vector<std::string> collectUniqueList(std::string_view name, const Blueprints& blueprints) {
     std::vector<std::string> result;
     std::unordered_set<std::string> seen;
+    std::unordered_set<std::string> visited;
 
     auto walk = [&](auto&& self, std::string_view currentName) -> void {
-        const PluginCatalog* catalog = catalogFor(currentName, objects, blueprintsId);
+        if (!visited.insert(std::string(currentName)).second) return;
+        const PluginCatalog* catalog = catalogFor(currentName, blueprints);
         if (!catalog)
             return;
 
@@ -46,11 +48,11 @@ std::vector<std::string> collectUniqueList(std::string_view name, Objects& objec
     return result;
 }
 
-void appendComposition(Logger::Tree& tree, std::string_view name, size_t depth, Objects& objects, ObjectId blueprintsId, std::unordered_set<std::string>& seen) {
+void appendComposition(Logger::Tree& tree, std::string_view name, size_t depth, const Blueprints& blueprints, std::unordered_set<std::string>& seen) {
     if (!seen.insert(std::string(name)).second)
         return;
 
-    const PluginCatalog* catalog = catalogFor(name, objects, blueprintsId);
+    const PluginCatalog* catalog = catalogFor(name, blueprints);
     if (!catalog)
         return;
 
@@ -58,33 +60,33 @@ void appendComposition(Logger::Tree& tree, std::string_view name, size_t depth, 
         tree.node(dep.type, depth);
 
         if (dep.kind == DepKind::Add)
-            appendComposition(tree, dep.type, depth + 1, objects, blueprintsId, seen);
+            appendComposition(tree, dep.type, depth + 1, blueprints, seen);
     }
 }
 
 } // namespace
 
-std::vector<std::string> uniqueList(std::string_view name, Objects& objects, ObjectId blueprintsId) {
-    if (!Objects::valid(objects.find(name, blueprintsId))) {
+std::vector<std::string> uniqueList(std::string_view name, const Blueprints& blueprints) {
+    if (blueprints.resolve(name) == Blueprints::InvalidId) {
         Logger::error(tag, "unknown component '{}'", name);
         return {};
     }
 
-    if (!catalogFor(name, objects, blueprintsId)) {
+    if (!catalogFor(name, blueprints)) {
         Logger::error(tag, "no compile catalog for '{}'", name);
         return {};
     }
 
-    return collectUniqueList(name, objects, blueprintsId);
+    return collectUniqueList(name, blueprints);
 }
 
-std::vector<std::string> printUniqueList(std::string_view name, Objects& objects, ObjectId blueprintsId) {
-    const auto requirements = collectUniqueList(name, objects, blueprintsId);
+std::vector<std::string> printUniqueList(std::string_view name, const Blueprints& blueprints) {
+    const auto requirements = collectUniqueList(name, blueprints);
 
     Logger::Tree tree{"Dependencies"};
 
     for (const auto& requirement : requirements) {
-        const bool exists = Objects::valid(objects.find(requirement, blueprintsId));
+        const bool exists = (blueprints.resolve(requirement) != Blueprints::InvalidId);
 
         tree.node(std::format("{}{}", exists ? Color::paint("✓ ", Color::ok) : Color::paint("✗ ", Color::error), requirement));
     }
@@ -93,8 +95,8 @@ std::vector<std::string> printUniqueList(std::string_view name, Objects& objects
     return requirements;
 }
 
-void printCompositionTree(std::string_view name, Objects& objects, ObjectId blueprintsId) {
-    if (!catalogFor(name, objects, blueprintsId)) {
+void printCompositionTree(std::string_view name, const Blueprints& blueprints) {
+    if (!catalogFor(name, blueprints)) {
         Logger::error(tag, "no compile catalog for '{}'", name);
         return;
     }
@@ -102,32 +104,32 @@ void printCompositionTree(std::string_view name, Objects& objects, ObjectId blue
     Logger::Tree tree{std::string(name)};
     std::unordered_set<std::string> seen;
 
-    appendComposition(tree, name, 0, objects, blueprintsId, seen);
+    appendComposition(tree, name, 0, blueprints, seen);
     tree.print();
 }
 
-bool check(std::string_view name, Objects& objects, ObjectId blueprintsId) {
-    if (!Objects::valid(objects.find(name, blueprintsId))) {
+bool check(std::string_view name, const Blueprints& blueprints) {
+    if (blueprints.resolve(name) == Blueprints::InvalidId) {
         Logger::error(tag, "unknown component '{}'", name);
         return false;
     }
 
-    if (!catalogFor(name, objects, blueprintsId)) {
+    if (!catalogFor(name, blueprints)) {
         Logger::error(tag, "no compile catalog for '{}'", name);
         return false;
     }
 
-    const auto requirements = collectUniqueList(name, objects, blueprintsId);
+    const auto requirements = collectUniqueList(name, blueprints);
 
     for (const auto& requirement : requirements) {
-        if (!Objects::valid(objects.find(requirement, blueprintsId))) {
+        if (!(blueprints.resolve(requirement) != Blueprints::InvalidId)) {
             Logger::error(tag, "{} check failed", name);
             return false;
         }
     }
 
     Logger::ok(tag, "{} check passed", name);
-    printCompositionTree(name, objects, blueprintsId);
+    printCompositionTree(name, blueprints);
     return true;
 }
 

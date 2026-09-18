@@ -13,30 +13,30 @@ struct Slot {
     Node* node = nullptr;
 
     Slot() = default;
-    Slot(Node* node) : node(node) {}
+    Slot(Node& node) : node(&node) {}
 
-    T* get() const noexcept;
-    T* operator->() const noexcept { return get(); }
-    T& operator*() const noexcept { return *get(); }
+    T* get() const;
+    T* operator->() const { return get(); }
+    T& operator*() const { return *get(); }
 
     void use(std::string_view implName);
 
     template<typename Impl>
     void use() {
-        use(typeName<Impl>());
+        use(typeKey<Impl>());
     }
 
-    bool exists() const noexcept;
+    bool exists() const;
 
-    explicit operator bool() const noexcept {
+    explicit operator bool() const {
         return exists();
     }
 
-    bool operator==(std::nullptr_t) const noexcept {
+    bool operator==(std::nullptr_t) const {
         return !exists();
     }
 
-    bool operator!=(std::nullptr_t) const noexcept {
+    bool operator!=(std::nullptr_t) const {
         return exists();
     }
 };

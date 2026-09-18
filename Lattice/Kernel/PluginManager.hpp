@@ -15,7 +15,7 @@ struct PluginManifest;
 class PluginManager {
     static constexpr std::string_view tag = "PluginManager";
 public:
-    PluginManager(Node& blueprints, DLLoader& dlLoader)
+    PluginManager(Blueprints& blueprints, DLLoader& dlLoader)
         : blueprints(blueprints), dlLoader(dlLoader) {}
 
     uint16_t load(std::filesystem::path path);
@@ -23,8 +23,6 @@ public:
     void scanDirectory(std::filesystem::path path);
     void checkCandidates();
     uint16_t loadCandidates();
-
-    ~PluginManager();
 
     const Plugin* findCandidate(std::string_view id) const;
     const std::vector<Plugin*>& queue() const { return loadQueue; }
@@ -38,7 +36,7 @@ private:
     std::unordered_map<std::string, Plugin> candidates;
     std::vector<Plugin*> loadQueue;
 
-    Node& blueprints;
+    Blueprints& blueprints;
     DLLoader& dlLoader;
 };
 }

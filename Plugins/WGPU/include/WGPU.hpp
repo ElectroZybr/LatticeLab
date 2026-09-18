@@ -12,7 +12,7 @@
 
 namespace WGPU {
 
-class WDevice;
+class Device;
 
 class WGPU final : public GPU::GPUAPI {
     static constexpr std::string_view tag = "WGPU";
@@ -20,7 +20,7 @@ public:
     explicit WGPU(Lattice::Node&) { createInstance(); }
 
     void configure(Lattice::Node& node) {
-        node.add<WDevice>(deviceName());
+        node.add<Device>(deviceName());
     }
 
     ~WGPU() override {

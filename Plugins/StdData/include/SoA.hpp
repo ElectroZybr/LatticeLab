@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Lattice/Kernel/Component.hpp>
+
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -36,7 +38,7 @@ constexpr bool isCharArray<std::array<char, N>> = true;
  типизированный доступ к значениям, управление колонками и размером таблицы.
 */
 
-class SoA {
+class SoA : public Lattice::Component {
     static constexpr std::string_view tag = "SoA";
 public:
     SoA() = default;

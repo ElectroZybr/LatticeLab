@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Lattice/Kernel/Component.hpp>
+
 #include <string_view>
 #include <glm/vec2.hpp>
 
@@ -13,7 +15,7 @@ namespace Input {
     struct Mouse;
 }
 
-class WindowAPI {
+class WindowAPI : public Lattice::Component {
 public:
     struct State {
         std::string_view name = "default";

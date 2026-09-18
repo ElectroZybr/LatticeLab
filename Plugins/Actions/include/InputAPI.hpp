@@ -1,9 +1,11 @@
 #pragma once
 
+#include <Lattice/Kernel/Component.hpp>
+
 #include <string_view>
 
 
-class InputAPI {
+class InputAPI : public Lattice::Component {
 public:
     virtual bool down(std::string_view trigger) const = 0;
     virtual bool pressed(std::string_view trigger) const = 0;
