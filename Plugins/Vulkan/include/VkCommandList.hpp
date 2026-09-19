@@ -57,7 +57,9 @@ public:
         return buffer_;
     }
 
-    void draw(Surface& surface, Pipeline& pipeline, ClearColor clear, uint32_t vertices) override;
+    GPU::RenderPass& beginRenderPass(GPU::Surface&, GPU::Color = {}) override {
+        throw Lattice::Exception("Vulkan::CommandList", "surface rendering is not implemented");
+    }
 
 private:
     VkDevice device_ = VK_NULL_HANDLE;

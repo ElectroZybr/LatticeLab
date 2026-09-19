@@ -13,10 +13,12 @@ class WindowAPI;
 class Render : public Lattice::Component {
 public:
     explicit Render(Lattice::Node& renderer);
+    ~Render();
     void configure(Lattice::Node& renderer);
-    void frame();
+    void frame(float dt = 0.0f);
     void releaseFrameResources();
 private:
+    Lattice::Context& context_;
     Mount<GPU::Device> device_;
     Slot<WindowAPI> window_;
     Ref<GPU::Surface> surface_;
