@@ -7,7 +7,7 @@
 
 #include <Lattice/Kernel/RefSlot.hpp>
 
-#include "NativeWindow.hpp"
+#include <GPU/include/NativeWindow.hpp>
 
 
 namespace Input { 

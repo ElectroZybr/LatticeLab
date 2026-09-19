@@ -433,6 +433,11 @@ public:
         return floor.folderCollect<API>();
     }
 
+    template<typename T>
+    Children<T> children() const {
+        folderCollect<T>();
+    }
+
     Node& addFolder(std::string_view name) {
         return createNode(name);
     }

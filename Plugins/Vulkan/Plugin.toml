@@ -1,5 +1,5 @@
-id = "WGPU"
-name = "WGPU"
+id = "Vulkan"
+name = "Vulkan"
 version = "1.0.0"
 
 [core]

@@ -11,7 +11,7 @@ struct Counters {
     bool available = true, failDraw = false, failPipeline = false, prematureWindowDestroy = false;
 } stats;
 
-struct Surface final : Graphics::Surface {
+struct Surface final : GPU::Surface {
     uint32_t width = 0, height = 0;
     Surface(Lattice::Node&, const Desc&) { ++stats.surfaces; ++stats.liveSurfaces; }
     ~Surface() override { --stats.liveSurfaces; }
@@ -29,7 +29,7 @@ struct Shader final : GPU::Shader {
     }
 };
 
-struct Pipeline final : Graphics::RenderPipeline {
+struct Pipeline final : GPU::Pipeline {
     Pipeline(Lattice::Node&, const Desc& desc) {
         REQUIRE(desc.shader);
         if (stats.failPipeline) throw Lattice::Exception("test", "pipeline failure");
@@ -37,8 +37,8 @@ struct Pipeline final : Graphics::RenderPipeline {
     }
 };
 
-struct Commands final : Graphics::CommandList {
-    void draw(Graphics::Surface&, Graphics::RenderPipeline&, Graphics::ClearColor, uint32_t vertices) override {
+struct Commands final : GPU::CommandList {
+    void draw(GPU::Surface&, GPU::Pipeline&, GPU::ClearColor, uint32_t vertices) override {
         REQUIRE(vertices == 6);
         if (stats.failDraw) throw Lattice::Exception("test", "draw failure");
         ++stats.draws;
@@ -46,9 +46,9 @@ struct Commands final : Graphics::CommandList {
     void submit() override { ++stats.submits; }
 };
 
-struct Device final : Graphics::Device {
+struct Device final : GPU::Device {
+    Device(Lattice::Node&, const Desc&) {}
     std::unique_ptr<GPU::CommandList> createCommandList() override { return std::make_unique<Commands>(); }
-    std::unique_ptr<Graphics::CommandList> createRenderCommandList() override { return std::make_unique<Commands>(); }
 };
 
 struct Window final : WindowAPI {
@@ -84,11 +84,10 @@ struct Fixture : Lattice::RuntimeFixture {
     Fixture() {
         stats = {};
         blueprints.add<GPU::Device>();
-        blueprints.add<Graphics::Device, GPU::Device>();
-        blueprints.add<Device, Graphics::Device>();
-        blueprints.add<Graphics::Surface>(); blueprints.add<Surface, Graphics::Surface>();
+        blueprints.add<Device, GPU::Device>();
+        blueprints.add<GPU::Surface>(); blueprints.add<Surface, GPU::Surface>();
         blueprints.add<GPU::Shader>(); blueprints.add<Shader, GPU::Shader>();
-        blueprints.add<Graphics::RenderPipeline>(); blueprints.add<Pipeline, Graphics::RenderPipeline>();
+        blueprints.add<GPU::Pipeline>(); blueprints.add<Pipeline, GPU::Pipeline>();
         blueprints.add<WindowAPI>(); blueprints.add<Window, WindowAPI>(); blueprints.add<Render>();
         root.add<Device>("GPU");
         auto slot = root.slot<WindowAPI>();
@@ -116,8 +115,8 @@ TEST(Render_CachesResourcesAndResizes, Fixture) {
     fixture.renderer->frame();
     REQUIRE(stats.draws == 3);
     fixture.root.remove<Render>();
-    REQUIRE(fixture.root.globalCollect<Graphics::Surface>().empty());
-    REQUIRE(fixture.root.globalCollect<Graphics::RenderPipeline>().empty());
+    REQUIRE(fixture.root.globalCollect<GPU::Surface>().empty());
+    REQUIRE(fixture.root.globalCollect<GPU::Pipeline>().empty());
 }
 
 TEST(Render_UnavailableAndFailedFrames, Fixture) {
@@ -159,7 +158,7 @@ TEST(Render_FailedConfigureReleasesResources, Fixture) {
     REQUIRE(rejected);
     REQUIRE(stats.liveSurfaces == 0);
     REQUIRE(fixture.root.globalCollect<GPU::Shader>().empty());
-    REQUIRE(fixture.root.globalCollect<Graphics::RenderPipeline>().empty());
+    REQUIRE(fixture.root.globalCollect<GPU::Pipeline>().empty());
 }
 
 TEST(Render_DeviceDestroyedBeforeRenderer, Fixture) {

@@ -1,12 +1,12 @@
 #pragma once
 #include <memory>
 #include <Lattice/Kernel/Node.hpp>
-#include <Graphics/include/Surface.hpp>
-#include <Graphics/include/RenderPipeline.hpp>
+#include <GPU/include/Surface.hpp>
+#include <GPU/include/Pipeline.hpp>
 #include <webgpu/webgpu.h>
 
 namespace WGPU {
-class Surface final : public Graphics::Surface {
+class Surface final : public GPU::Surface {
 public:
     Surface(Lattice::Node&, const Desc&);
     ~Surface() override;
@@ -22,10 +22,10 @@ private:
     std::unique_ptr<State> state_;
 };
 
-class RenderPipeline final : public Graphics::RenderPipeline {
+class Pipeline final : public GPU::Pipeline {
 public:
-    RenderPipeline(Lattice::Node&, const Desc&);
-    ~RenderPipeline() override;
+    Pipeline(Lattice::Node&, const Desc&);
+    ~Pipeline() override;
     WGPURenderPipeline native() const { return pipeline_; }
     WGPUDevice device() const { return device_; }
 private:

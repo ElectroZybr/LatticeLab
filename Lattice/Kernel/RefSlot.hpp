@@ -2,6 +2,7 @@
 
 #include <string_view>
 #include <cstddef>
+#include <vector>
 #include <Lattice/Kernel/TypeName.hpp>
 
 namespace Lattice {
@@ -86,8 +87,53 @@ struct Mount final : public Ref<T> {
     }
 };
 
+template<typename T>
+struct Children {
+    std::vector<T*> items;
+
+    Children() = default;
+    explicit Children(std::vector<T*> items) : items(&items) {}
+
+    std::size_t size() const noexcept {
+        return items->size();
+    }
+
+    bool empty() const noexcept {
+        return size() == 0;
+    }
+
+    bool exists() const noexcept {
+        return items != nullptr;
+    }
+
+    T* operator[](std::size_t i) const {
+        return items[i];
+    }
+
+    auto begin() const {
+        return items.begin();
+    }
+
+    auto end() const {
+        return items.end();
+    }
+
+    explicit operator bool() const noexcept {
+        return exists();
+    }
+};
+
 }
 
+/// ссылка на объект дерева
 using Lattice::Ref;
+
+/// ссылка на слот апи в котором может находится его реализация
 using Lattice::Slot;
+
+/// ссылка на внешний примонтированный компонент
 using Lattice::Mount;
+
+/// ссылка на список всех детей типа
+/// (автоматически обновляется при изменении ветки)
+using Lattice::Children;

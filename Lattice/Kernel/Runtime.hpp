@@ -116,7 +116,9 @@ public:
                     if (entry.enabled)
                         buildBranch(entry);
                 }
-                root.on("tree", [this]() { root.dumpTree(); });
+                root.on("dumpTree", [this]() { root.dumpTree(); });
+                root.on("dumpContext", [this]() { run_ctx.printTree(); });
+                root.on("dumpBlueprints", [this]() { run_ctx.blueprints.dumpTree(); });
                 scope.finish("<b>Build finished</>");
             }
 
@@ -133,10 +135,6 @@ public:
                         startService(entry);
                 scope.finish("<b>Start finished</>");
             }
-            
-            run_ctx.printTree();
-            root.dumpTree();
-            run_ctx.blueprints.dumpTree();
 
             if (host) {
                 host->get<ServiceAPI>()->enter();
@@ -178,7 +176,6 @@ public:
             Logger::exception(fatal->tag(), "{}", error.what());
             Logger::message("Dump components tree (failed node is red):");
             root.dumpTree();
-            // run_ctx.blueprints.dumpTree();
         } else {
             Logger::exception(tag, "Unhandled exception: {}", error.what());
             Logger::message("Dump components tree:");

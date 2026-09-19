@@ -9,8 +9,8 @@
 
 #include <Lattice/Kernel/Node.hpp>
 #include "Buffer.hpp"
-#include <Graphics/include/CommandList.hpp>
-#include <Graphics/include/Device.hpp>
+#include <GPU/include/CommandList.hpp>
+#include <GPU/include/Device.hpp>
 #include "GPUAPI.hpp"
 #include "Shader.hpp"
 #include "Texture.hpp"
@@ -27,7 +27,7 @@ static WGPUStringView toWGPU(std::string_view s) {
 class WGPU final : public GPU::GPUAPI {
     static constexpr std::string_view tag = "WGPU";
 public:
-    explicit WGPU(Lattice::Node&) { createInstance(); }
+    explicit WGPU(Lattice::Node&, const Desc& = {}) { createInstance(); }
 
     void configure(Lattice::Node& node) {
         node.add<Device>(deviceName());
@@ -49,7 +49,7 @@ private:
     WGPUInstance instance_ = nullptr;
 };
 
-class CommandList final : public Graphics::CommandList {
+class CommandList final : public GPU::CommandList {
 public:
     CommandList(WGPUDevice device, WGPUQueue queue) : device_(device), queue_(queue) {
         wgpuQueueAddRef(queue_);
@@ -67,7 +67,7 @@ public:
         if (queue_) wgpuQueueRelease(queue_);
     }
 
-    void draw(Graphics::Surface&, Graphics::RenderPipeline&, Graphics::ClearColor, uint32_t) override;
+    void draw(GPU::Surface&, GPU::Pipeline&, GPU::ClearColor, uint32_t) override;
 
     void submit() override {
         if (submitted_)
@@ -89,9 +89,9 @@ private:
     WGPUCommandBuffer commandBuffer_ = nullptr;
 };
 
-class Device final : public Graphics::Device {
+class Device final : public GPU::Device {
 public:
-    explicit Device(Lattice::Node& node) {
+    explicit Device(Lattice::Node& node, const Desc& = {}) {
         auto backend = node.requireParent<WGPU>();
         device_ = backend->createDevice(adapter_);
         instance_ = backend->native();
@@ -109,10 +109,6 @@ public:
     }
 
     std::unique_ptr<GPU::CommandList> createCommandList() override {
-        return std::make_unique<CommandList>(device_, queue_);
-    }
-
-    std::unique_ptr<Graphics::CommandList> createRenderCommandList() override {
         return std::make_unique<CommandList>(device_, queue_);
     }
 

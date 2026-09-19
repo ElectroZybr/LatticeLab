@@ -13,17 +13,22 @@ enum class DeviceType {
     Discrete,
     Integrated,
     Virtual,
-    CPU
+    CPU,
+    Unknown
 };
 
-struct DeviceInfo {
+using DeviceId = uint32_t;
+
+struct DeviceDesc {
+    uint32_t id = 0;
     std::string name;
-    DeviceType type;
+    DeviceType type = DeviceType::Unknown;
     uint64_t memory = 0;
 };
 
 class Device : public Lattice::Component {
 public:
+    using Desc = DeviceDesc;
     virtual ~Device() = default;
     virtual std::unique_ptr<GPU::CommandList> createCommandList() = 0;
 };
