@@ -12,6 +12,7 @@
 #include "Render.hpp"
 #include "WindowAPI.hpp"
 #include "glfwWindow/glfwWindow.hpp"
+#include <chrono>
 
 
 class Window final : public ServiceAPI {
@@ -32,6 +33,7 @@ public:
     }
 
     void run() override {
+        auto previous = std::chrono::steady_clock::now();
         while (!stopRequested()) {
             if (window) {
                 window->pollEvents();
@@ -42,7 +44,10 @@ public:
             }
 
             actionMap->tick();
-            render->frame();
+            const auto now = std::chrono::steady_clock::now();
+            const float dt = std::min(std::chrono::duration<float>(now - previous).count(), 0.1f);
+            previous = now;
+            render->frame(dt);
             std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
     }

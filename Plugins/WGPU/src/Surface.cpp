@@ -198,25 +198,4 @@ Pipeline::Pipeline(Lattice::Node& node, const Desc& desc) {
 
 Pipeline::~Pipeline() { if (pipeline_) wgpuRenderPipelineRelease(pipeline_); }
 
-void CommandList::draw(GPU::Surface& target, GPU::Pipeline& state, GPU::ClearColor clear, uint32_t vertices) {
-    auto* surface = dynamic_cast<Surface*>(&target);
-    auto* pipeline = dynamic_cast<Pipeline*>(&state);
-    if (commandBuffer_ || !surface || !pipeline || !surface->view() || surface->device() != pipeline->device() || surface->device() != device_)
-        throw Lattice::Exception("WGPU::CommandList", "invalid render pass resources or command state");
-    WGPURenderPassColorAttachment color{};
-    color.view = surface->view();
-    color.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-    color.loadOp = WGPULoadOp_Clear;
-    color.storeOp = WGPUStoreOp_Store;
-    color.clearValue = {clear.r, clear.g, clear.b, clear.a};
-    WGPURenderPassDescriptor desc{};
-    desc.colorAttachmentCount = 1;
-    desc.colorAttachments = &color;
-    const auto pass = wgpuCommandEncoderBeginRenderPass(encoder_, &desc);
-    if (!pass) throw Lattice::Exception("WGPU::CommandList", "failed to begin render pass");
-    wgpuRenderPassEncoderSetPipeline(pass, pipeline->native());
-    wgpuRenderPassEncoderDraw(pass, vertices, 1, 0, 0);
-    wgpuRenderPassEncoderEnd(pass);
-    wgpuRenderPassEncoderRelease(pass);
-}
 }

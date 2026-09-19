@@ -4,11 +4,10 @@
 #include <fstream>
 #include <iterator>
 
-Render::Render(Lattice::Node& renderer) {
+Render::Render(Lattice::Node& renderer) : context_(renderer.requireContext()) {
     device_ = renderer.mount<GPU::Device>();
     resourceName_ = std::format("render-{}", renderer.getId());
     renderer.add<Viewport>("Main");
-
 }
 
 void Render::configure(Lattice::Node& renderer) {
@@ -39,17 +38,19 @@ void Render::configure(Lattice::Node& renderer) {
     surface_->resize(size.x > 0 ? uint32_t(size.x) : 0, size.y > 0 ? uint32_t(size.y) : 0);
 }
 
-void Render::frame() {
+void Render::frame(float) {
     if (!window_ || window_->shouldClose()) return;
     if (!surface_) return;
     const auto size = window_->framebufferSize();
-    surface_->resize(size.x > 0 ? uint32_t(size.x) : 0, size.y > 0 ? uint32_t(size.y) : 0);
+    const glm::uvec2 framebuffer{size.x > 0 ? uint32_t(size.x) : 0, size.y > 0 ? uint32_t(size.y) : 0};
+    surface_->resize(framebuffer.x, framebuffer.y);
     if (!surface_->acquire()) return;
     try {
-        for (Viewport* viewport : viewports_)
-            viewport->render();
         auto commands = device_->createCommandList();
-        commands->draw(*surface_, *pipeline_, {}, 6);
+        auto& pass = commands->beginRenderPass(*surface_, {0.1f, 0.2f, 0.3f, 1.0f});
+        for (Viewport* viewport : viewports_)
+            viewport->render(pass, *pipeline_, framebuffer);
+        pass.end();
         commands->submit();
         surface_->present();
     } catch (...) {
@@ -58,9 +59,12 @@ void Render::frame() {
     }
 }
 
+Render::~Render() {
+    releaseFrameResources();
+}
+
 void Render::releaseFrameResources() {
     auto& branch = device_.branch();
-    branch.dumpTree();
     branch.remove<GPU::Pipeline>(resourceName_);
     branch.remove<GPU::Shader>(resourceName_);
     branch.remove<GPU::Surface>(resourceName_);

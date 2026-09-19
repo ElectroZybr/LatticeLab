@@ -12,6 +12,7 @@
 #include <GPU/include/CommandList.hpp>
 #include <GPU/include/Device.hpp>
 #include "GPUAPI.hpp"
+#include "RenderPass.hpp"
 #include "Shader.hpp"
 #include "Texture.hpp"
 
@@ -62,14 +63,25 @@ public:
     }
 
     ~CommandList() override {
+        renderPass_.end();
         if (commandBuffer_) wgpuCommandBufferRelease(commandBuffer_);
         if (encoder_) wgpuCommandEncoderRelease(encoder_);
         if (queue_) wgpuQueueRelease(queue_);
     }
 
-    void draw(GPU::Surface&, GPU::Pipeline&, GPU::ClearColor, uint32_t) override;
+    GPU::RenderPass& beginRenderPass(GPU::Surface& surface, GPU::Color clear = {}) override {
+        if (submitted_ || commandBuffer_)
+            throw Lattice::Exception("WGPU::CommandList", "command list already finished");
+        auto* native = dynamic_cast<::WGPU::Surface*>(&surface);
+        if (!native || native->device() != device_ || !native->view())
+            throw Lattice::Exception("WGPU::CommandList", "expected acquired surface from the same WGPU device");
+        renderPass_.begin(encoder_, *native, clear);
+        return renderPass_;
+    }
 
     void submit() override {
+        if (renderPass_.active())
+            throw Lattice::Exception("WGPU::CommandList", "end the render pass before submitting");
         if (submitted_)
             throw Lattice::Exception("WGPU::CommandList", "command list already submitted");
         if (!commandBuffer_)
@@ -87,6 +99,7 @@ private:
     WGPUQueue queue_ = nullptr;
     WGPUCommandEncoder encoder_ = nullptr;
     WGPUCommandBuffer commandBuffer_ = nullptr;
+    RenderPass renderPass_;
 };
 
 class Device final : public GPU::Device {

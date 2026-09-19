@@ -2,15 +2,10 @@
 
 #include "SceneObject.hpp"
 #include <glm/glm.hpp>
-
-#include "Lattice/Kernel/Node.hpp"
+#include <glm/ext/matrix_clip_space.hpp>
 
 class Camera final : public SceneObject {
 public:
-    explicit Camera(Lattice::Node& node) {
-        
-    }
-
     glm::mat4 viewMatrix() const {
         const auto& t = transform();
         const glm::mat4 world =
@@ -21,7 +16,7 @@ public:
     }
 
     glm::mat4 projectionMatrix(float aspect) const {
-        return glm::perspective(glm::radians(fov_), aspect, nearPlane_, farPlane_);
+        return glm::perspectiveRH_ZO(glm::radians(fov_), aspect, nearPlane_, farPlane_);
     }
 
     glm::mat4 viewProjection(float aspect) const {

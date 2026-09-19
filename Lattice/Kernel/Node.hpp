@@ -435,7 +435,7 @@ public:
 
     template<typename T>
     Children<T> children() const {
-        folderCollect<T>();
+        return Children<T>(directCollect<T>());
     }
 
     Node& addFolder(std::string_view name) {

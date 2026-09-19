@@ -3,6 +3,7 @@
 #include <string_view>
 #include <cstddef>
 #include <vector>
+#include <utility>
 #include <Lattice/Kernel/TypeName.hpp>
 
 namespace Lattice {
@@ -92,10 +93,10 @@ struct Children {
     std::vector<T*> items;
 
     Children() = default;
-    explicit Children(std::vector<T*> items) : items(&items) {}
+    explicit Children(std::vector<T*> items) : items(std::move(items)) {}
 
     std::size_t size() const noexcept {
-        return items->size();
+        return items.size();
     }
 
     bool empty() const noexcept {
@@ -103,7 +104,7 @@ struct Children {
     }
 
     bool exists() const noexcept {
-        return items != nullptr;
+        return !empty();
     }
 
     T* operator[](std::size_t i) const {
@@ -134,6 +135,5 @@ using Lattice::Slot;
 /// ссылка на внешний примонтированный компонент
 using Lattice::Mount;
 
-/// ссылка на список всех детей типа
-/// (автоматически обновляется при изменении ветки)
+/// Список непосредственных детей типа; обновляется присваиванием в configure.
 using Lattice::Children;
