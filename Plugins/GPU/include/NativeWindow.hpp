@@ -7,7 +7,6 @@ struct NativeWindow {
     void* display = nullptr;
     void* window = nullptr;
     void* extra = nullptr;
-    // Keeps the platform window alive while a presentation surface uses it.
     std::shared_ptr<void> owner;
     bool operator==(const NativeWindow&) const = default;
 };

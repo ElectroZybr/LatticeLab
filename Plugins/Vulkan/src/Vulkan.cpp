@@ -1,0 +1,127 @@
+#include "Vulkan.hpp"
+
+namespace Vk {
+
+void Vulkan::createInstance() {
+    VkApplicationInfo appInfo{};
+    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    appInfo.pApplicationName = "Lattice";
+    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.pEngineName = "Lattice";
+    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.apiVersion = VK_API_VERSION_1_0;
+
+    VkInstanceCreateInfo desc{};
+    desc.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    desc.pApplicationInfo = &appInfo;
+
+    if (vkCreateInstance(&desc, nullptr, &instance_) != VK_SUCCESS)
+        throw Lattice::Exception(tag, "failed to create Vulkan instance");
+}
+
+
+std::vector<VkPhysicalDevice> Vulkan::enumeratePhysicalDevices() {
+    uint32_t count = 0;
+
+    if (vkEnumeratePhysicalDevices(instance_, &count, nullptr) != VK_SUCCESS)
+        throw Lattice::Exception(tag, "failed to enumerate physical devices");
+
+    if (count == 0)
+        throw Lattice::Exception(tag, "no Vulkan physical devices found");
+
+    std::vector<VkPhysicalDevice> devices(count);
+
+    if (vkEnumeratePhysicalDevices(instance_, &count, devices.data()) != VK_SUCCESS)
+        throw Lattice::Exception(tag, "failed to enumerate physical devices");
+
+    return devices;
+}
+
+
+VkPhysicalDevice Vulkan::selectPhysicalDevice(std::span<VkPhysicalDevice> devices) {
+    if (devices.empty())
+        throw Lattice::Exception(tag, "no physical devices available");
+
+    for (VkPhysicalDevice device : devices) {
+        VkPhysicalDeviceProperties props{};
+        vkGetPhysicalDeviceProperties(device, &props);
+
+        if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+            return device;
+    }
+
+    return devices.front();
+}
+
+
+GPU::DeviceDesc Vulkan::describeDevice(VkPhysicalDevice physical) const {
+    VkPhysicalDeviceProperties props{};
+    vkGetPhysicalDeviceProperties(physical, &props);
+
+    uint32_t id = 0;
+
+    for (; id < physicalDevices_.size(); ++id) {
+        if (physicalDevices_[id] == physical)
+            break;
+    }
+
+    if (id == physicalDevices_.size())
+        throw Lattice::Exception(tag, "physical device is not registered");
+
+    GPU::DeviceDesc desc{};
+    desc.id = id;
+    desc.name = props.deviceName;
+    desc.type = deviceType(props.deviceType);
+
+    VkPhysicalDeviceMemoryProperties memory{};
+    vkGetPhysicalDeviceMemoryProperties(physical, &memory);
+
+    for (uint32_t i = 0; i < memory.memoryHeapCount; ++i) {
+        if (memory.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
+            desc.memory += memory.memoryHeaps[i].size;
+    }
+
+    return desc;
+}
+
+VkDevice Vulkan::createDevice(VkPhysicalDevice physical) {
+    uint32_t count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(physical, &count, nullptr);
+
+    std::vector<VkQueueFamilyProperties> families(count);
+    vkGetPhysicalDeviceQueueFamilyProperties(physical, &count, families.data());
+
+    uint32_t queueFamily = UINT32_MAX;
+
+    for (uint32_t i = 0; i < count; ++i) {
+        if (families[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
+            queueFamily = i;
+            break;
+        }
+    }
+
+    if (queueFamily == UINT32_MAX)
+        throw Lattice::Exception(tag, "physical device has no compute queue");
+
+    constexpr float priority = 1.0f;
+
+    VkDeviceQueueCreateInfo queueInfo{};
+    queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queueInfo.queueFamilyIndex = queueFamily;
+    queueInfo.queueCount = 1;
+    queueInfo.pQueuePriorities = &priority;
+
+    VkDeviceCreateInfo desc{};
+    desc.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    desc.queueCreateInfoCount = 1;
+    desc.pQueueCreateInfos = &queueInfo;
+
+    VkDevice device = VK_NULL_HANDLE;
+
+    if (vkCreateDevice(physical, &desc, nullptr, &device) != VK_SUCCESS)
+        throw Lattice::Exception(tag, "failed to create logical device");
+
+    return device;
+}
+
+}

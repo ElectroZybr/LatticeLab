@@ -172,10 +172,10 @@ void Surface::present() {
     if (status != WGPUStatus_Success) throw Lattice::Exception("WGPU::Surface", "present failed");
 }
 
-RenderPipeline::RenderPipeline(Lattice::Node& node, const Desc& desc) {
+Pipeline::Pipeline(Lattice::Node& node, const Desc& desc) {
     auto device = node.requireParent<Device>();
     auto* shader = dynamic_cast<Shader*>(desc.shader);
-    if (!shader || shader->device() != device->native()) throw Lattice::Exception("WGPU::RenderPipeline", "expected WGPU shader");
+    if (!shader || shader->device() != device->native()) throw Lattice::Exception("WGPU::Pipeline", "expected WGPU shader");
     device_ = device->native();
     WGPUColorTargetState color{};
     color.format = nativeFormat(desc.colorFormat);
@@ -193,13 +193,14 @@ RenderPipeline::RenderPipeline(Lattice::Node& node, const Desc& desc) {
     pipeline.multisample.count = 1;
     pipeline.multisample.mask = 0xFFFFFFFF;
     pipeline_ = wgpuDeviceCreateRenderPipeline(device_, &pipeline);
-    if (!pipeline_) throw Lattice::Exception("WGPU::RenderPipeline", "failed to create pipeline");
+    if (!pipeline_) throw Lattice::Exception("WGPU::Pipeline", "failed to create pipeline");
 }
-RenderPipeline::~RenderPipeline() { if (pipeline_) wgpuRenderPipelineRelease(pipeline_); }
 
-void CommandList::draw(Graphics::Surface& target, Graphics::RenderPipeline& state, Graphics::ClearColor clear, uint32_t vertices) {
+Pipeline::~Pipeline() { if (pipeline_) wgpuRenderPipelineRelease(pipeline_); }
+
+void CommandList::draw(GPU::Surface& target, GPU::Pipeline& state, GPU::ClearColor clear, uint32_t vertices) {
     auto* surface = dynamic_cast<Surface*>(&target);
-    auto* pipeline = dynamic_cast<RenderPipeline*>(&state);
+    auto* pipeline = dynamic_cast<Pipeline*>(&state);
     if (commandBuffer_ || !surface || !pipeline || !surface->view() || surface->device() != pipeline->device() || surface->device() != device_)
         throw Lattice::Exception("WGPU::CommandList", "invalid render pass resources or command state");
     WGPURenderPassColorAttachment color{};

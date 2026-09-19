@@ -24,7 +24,7 @@ void WGPU::createInstance() {
 
     instance_ = wgpuCreateInstance(&desc);
     if (!instance_)
-        throw Lattice::Exception(tag,"failed to create instance");
+        throw Lattice::Exception(tag, "failed to create instance");
 }
 
 std::vector<WGPUAdapter> WGPU::enumerateAdapters() {

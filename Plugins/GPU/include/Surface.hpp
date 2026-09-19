@@ -2,7 +2,7 @@
 #include "NativeWindow.hpp"
 #include <GPU/include/Texture.hpp>
 
-namespace Graphics {
+namespace GPU {
 struct SurfaceDesc { NativeWindow window; };
 class Surface : public Lattice::Component {
 public:

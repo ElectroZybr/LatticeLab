@@ -2,7 +2,9 @@
 quit = ["Ctrl+Q", 12]
 dt.add = ["]", 0.001, "hold"]
 dt.sub = ["[", -0.001, "hold"]
-tree = "Ctrl+T"
+dumpTree = "T"
+dumpContext = "C"
+dumpBlueprints = "B"
 load = "Ctrl+O"
 print = "MouseLeft"
 CreateVerlet = "W"
