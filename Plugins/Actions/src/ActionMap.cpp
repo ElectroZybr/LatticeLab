@@ -9,8 +9,8 @@
 #include <Lattice/Tools/Logger.hpp>
 
 
-std::string ActionMap::bindName(Lattice::ContextId slot, std::string_view trigger) {
-    return std::format("{}:{}", slot, trigger);
+std::string ActionMap::bindName(Lattice::RoleId role, std::string_view trigger) {
+    return std::format("{}:{}", role, trigger);
 }
 
 void ActionMap::configure(Lattice::Node& branch) {
@@ -18,18 +18,18 @@ void ActionMap::configure(Lattice::Node& branch) {
     inputs_ = branch.collect<InputAPI>();
 }
 
-ActionMap::Binding* ActionMap::findBind(Lattice::ContextId slot, std::string_view trigger) {
-    return const_cast<Binding*>(std::as_const(*this).findBind(slot, trigger));
+ActionMap::Binding* ActionMap::findBind(Lattice::RoleId role, std::string_view trigger) {
+    return const_cast<Binding*>(std::as_const(*this).findBind(role, trigger));
 }
 
-const ActionMap::Binding* ActionMap::findBind(Lattice::ContextId slot, std::string_view trigger) const {
-    return bindings_.get(bindings_.find(bindName(slot, trigger)));
+const ActionMap::Binding* ActionMap::findBind(Lattice::RoleId role, std::string_view trigger) const {
+    return bindings_.get(bindings_.find(bindName(role, trigger)));
 }
 
-bool ActionMap::any(Lattice::ContextId slot, bool Binding::* field) const {
+bool ActionMap::any(Lattice::RoleId role, bool Binding::* field) const {
     for (BindId id = 0; id < bindings_.size(); ++id) {
         const Binding* binding = bindings_.get(id);
-        if (binding && binding->slot == slot && binding->*field)
+        if (binding && binding->role == role && binding->*field)
             return true;
     }
     return false;
@@ -48,11 +48,11 @@ bool ActionMap::hasBind(std::string_view verb, std::string_view trigger) const {
     if (!run_ctx)
         return false;
 
-    const Lattice::ContextId slot = run_ctx->contexts.find(verb);
-    if (!Lattice::ContextRegistry::valid(slot))
+    const Lattice::RoleId role = run_ctx->roles.find(verb);
+    if (!Lattice::RoleRegistry::valid(role))
         return false;
 
-    return findBind(slot, trigger) != nullptr;
+    return findBind(role, trigger) != nullptr;
 }
 
 void ActionMap::upsert(
@@ -62,9 +62,9 @@ void ActionMap::upsert(
     Target target,
     double delta
 ) {
-    const Lattice::ContextId slot = run_ctx->getOrCreate(verb);
+    const Lattice::RoleId role = run_ctx->getOrCreateRole(verb);
 
-    if (Binding* existing = findBind(slot, trigger)) {
+    if (Binding* existing = findBind(role, trigger)) {
         existing->mode = mode;
         existing->target = target;
         existing->delta = delta;
@@ -74,8 +74,8 @@ void ActionMap::upsert(
     }
 
     bindings_.create({
-        .name = bindName(slot, trigger),
-        .slot = slot,
+        .name = bindName(role, trigger),
+        .role = role,
         .trigger = std::string(trigger),
         .mode = mode,
         .target = target,
@@ -139,7 +139,7 @@ void ActionMap::tick() {
             (binding->mode == ActionMode::OnRelease && released);
 
         if (fire) {
-            const Lattice::ObjectId object = run_ctx->get(binding->slot);
+            const Lattice::ObjectId object = run_ctx->resolveFocus(Lattice::InvalidFocusScopeId, binding->role);
 
             if (object != Lattice::InvalidObjectId) {
                 Logger::info("ActionMap", "fire from: {}", binding->trigger);
@@ -161,16 +161,16 @@ void ActionMap::tick() {
     }
 }
 
-bool ActionMap::down(Lattice::ContextId slot) const {
-    return any(slot, &Binding::down);
+bool ActionMap::down(Lattice::RoleId role) const {
+    return any(role, &Binding::down);
 }
 
-bool ActionMap::pressed(Lattice::ContextId slot) const {
-    return any(slot, &Binding::pressed);
+bool ActionMap::pressed(Lattice::RoleId role) const {
+    return any(role, &Binding::pressed);
 }
 
-bool ActionMap::released(Lattice::ContextId slot) const {
-    return any(slot, &Binding::released);
+bool ActionMap::released(Lattice::RoleId role) const {
+    return any(role, &Binding::released);
 }
 
 void ActionMap::clearBinds() {

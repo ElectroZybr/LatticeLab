@@ -50,7 +50,7 @@ TEST(Runtime_LoadAfterConfigure, RuntimeFixture,
     REQUIRE(host->child->configured);
     REQUIRE(!host->loaded);
 
-    const ObjectId load = fixture.run_ctx.find("load");
+    const ObjectId load = fixture.run_ctx.resolveFocus(InvalidFocusScopeId, fixture.run_ctx.roles.find("load"));
     REQUIRE(load != InvalidObjectId);
 
     fixture.run_ctx.bindings.invoke(load);
@@ -61,8 +61,8 @@ TEST(Runtime_LoadAfterConfigure, RuntimeFixture,
 TEST(Runtime_LoadMissingIsSafe, RuntimeFixture,
     "Если действия load нет, стартовая загрузка должна просто пропускаться.")
 {
-    REQUIRE(fixture.run_ctx.find("load") == InvalidObjectId);
-    fixture.run_ctx.bindings.invoke(fixture.run_ctx.find("load"));
+    REQUIRE(fixture.run_ctx.resolveFocus(InvalidFocusScopeId, fixture.run_ctx.roles.find("load")) == InvalidObjectId);
+    fixture.run_ctx.bindings.invoke(fixture.run_ctx.resolveFocus(InvalidFocusScopeId, fixture.run_ctx.roles.find("load")));
 }
 
 } // namespace Lattice

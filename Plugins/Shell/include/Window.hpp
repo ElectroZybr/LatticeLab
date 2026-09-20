@@ -21,6 +21,7 @@ public:
         branch.slot<WindowAPI>();
         branch.add<Render>();
         branch.add<ActionMap>();
+        branch.setFocus(Lattice::typeKey<ActionMap>(), branch.find<ActionMap>().node->getId());
     }
 
     void configure(Lattice::Node& branch) {

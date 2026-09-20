@@ -41,6 +41,7 @@ struct KeybindsFixture : RuntimeFixture {
 
         root.add<TestInput>();
         root.add<ActionMap>();
+        root.setFocus(Lattice::typeKey<ActionMap>(), root.find<ActionMap>().node->getId());
         root.add<KeybindsLoader>();
         root.configureBranch();
 
@@ -63,7 +64,6 @@ TEST(Keybinds_SimpleAction, KeybindsFixture,
 {
     int fires = 0;
     fixture.root.on("print", [&] { ++fires; });
-
     fixture.load(Lattice::Table{
         {"print", std::string("P")},
     });
@@ -81,7 +81,6 @@ TEST(Keybinds_ArrayTriggerIgnoresExtraNumber, KeybindsFixture,
 {
     int fires = 0;
     fixture.root.on("quit", [&] { ++fires; });
-
     fixture.load(Lattice::Table{
         {"quit", Lattice::Array{std::string("Ctrl+Q"), int64_t{12}}},
     });
@@ -99,7 +98,6 @@ TEST(Keybinds_OpInKey, KeybindsFixture,
 {
     double dt = 1.0;
     fixture.root.bind("dt", &dt);
-
     fixture.load(Lattice::Table{
         {"dt.add", Lattice::Array{std::string("]"), 0.5, std::string("hold")}},
         {"dt.sub", Lattice::Array{std::string("["), -0.5, std::string("hold")}},
@@ -126,7 +124,6 @@ TEST(Keybinds_NestedTable, KeybindsFixture,
 {
     double dt = 0.0;
     fixture.root.bind("dt", &dt);
-
     fixture.load(Lattice::Table{
         {"dt", Lattice::Table{
             {"add", Lattice::Array{std::string("]"), 0.5}},
@@ -145,7 +142,6 @@ TEST(Keybinds_ToggleInKey, KeybindsFixture,
 {
     bool flag = false;
     fixture.root.bind("flag", &flag);
-
     fixture.load(Lattice::Table{
         {"flag.toggle", std::string("Space")},
     });
@@ -179,7 +175,6 @@ TEST(Keybinds_FileSignature, KeybindsFixture,
     int prints = 0;
     fixture.root.bind("dt", &dt);
     fixture.root.on("print", [&] { ++prints; });
-
     TomlParser parser;
     const Document doc = parser.parseFile("Config/keybinds.toml");
     const Lattice::Value* section = doc.section(fixture.loader->section());

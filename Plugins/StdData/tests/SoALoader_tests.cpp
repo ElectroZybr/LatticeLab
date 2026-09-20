@@ -58,6 +58,7 @@ TEST(SoALoader_LoadIntoWrapper, RuntimeFixture,
     fixture.blueprints.add<StdData::SoA>();
     fixture.blueprints.add<Wrapper>();
     fixture.root.add<Wrapper>();
+    fixture.root.setFocus("Wrapper", fixture.root.find<Wrapper>().node->getId());
 
     SoALoader loader;
     loader.configure(fixture.root);
@@ -83,6 +84,7 @@ TEST(SoALoader_LoadNames, RuntimeFixture,
     fixture.blueprints.add<StdData::SoA>();
     fixture.blueprints.add<Wrapper>();
     fixture.root.add<Wrapper>();
+    fixture.root.setFocus("Wrapper", fixture.root.find<Wrapper>().node->getId());
 
     SoALoader loader;
     loader.configure(fixture.root);
@@ -105,6 +107,7 @@ TEST(SoALoader_MissingTarget, RuntimeFixture,
     fixture.blueprints.add<StdData::SoA>();
     fixture.blueprints.add<Wrapper>();
     fixture.root.add<Wrapper>();
+    fixture.root.setFocus("Wrapper", fixture.root.find<Wrapper>().node->getId());
 
     SoALoader loader;
     loader.configure(fixture.root);
@@ -128,6 +131,7 @@ TEST(SoALoader_MissingColumn, RuntimeFixture,
     fixture.blueprints.add<StdData::SoA>();
     fixture.blueprints.add<Wrapper>();
     fixture.root.add<Wrapper>();
+    fixture.root.setFocus("Wrapper", fixture.root.find<Wrapper>().node->getId());
 
     SoALoader loader;
     loader.configure(fixture.root);
@@ -164,6 +168,7 @@ TEST(SoALoader_LoadAtomDataFile, RuntimeFixture,
     fixture.blueprints.add<StdData::SoA>();
     fixture.blueprints.add<AtomData>();
     fixture.root.add<AtomData>();
+    fixture.root.setFocus("AtomData", fixture.root.find<AtomData>().node->getId());
 
     TomlParser parser;
     const Document doc = parser.parseFile("Config/atomData.toml");
@@ -193,4 +198,30 @@ TEST(SoALoader_LoadAtomDataFile, RuntimeFixture,
     REQUIRE(std::strcmp(soa->at<Name>(2).data(), "Li") == 0);
 
     soa->inspect("AtomData");
+}
+TEST(SoALoader_ExplicitFocusTarget, RuntimeFixture) {
+    fixture.blueprints.add<StdData::SoA>();
+    fixture.blueprints.add<Wrapper>();
+    fixture.root.add<Wrapper>();
+    const auto id = fixture.root.find<Wrapper>().node->getId();
+    SoALoader loader;
+    loader.configure(fixture.root);
+    // Empty rows isolate target resolution from the unfinished row writer.
+    const Lattice::Value data = Lattice::Table{
+        {"target", std::string("data")},
+        {"columns", Lattice::Array{std::string("Mass")}},
+        {"rows", Lattice::Array{}}
+    };
+    bool rejected = false;
+    try { loader.load(data); } catch (const Lattice::Exception&) { rejected = true; }
+    REQUIRE(rejected);
+    fixture.root.setFocus("data", id);
+    loader.load(data);
+    auto& local = fixture.root.addFolder("local");
+    fixture.run_ctx.activateFocus(local.makeFocusScope());
+    loader.load(data); // Inherits Root.
+    local.setFocus("data", Lattice::InvalidObjectId);
+    rejected = false;
+    try { loader.load(data); } catch (const Lattice::Exception&) { rejected = true; }
+    REQUIRE(rejected);
 }

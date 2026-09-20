@@ -6,6 +6,7 @@
 #include <GPU/include/CommandList.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "Camera.hpp"
+#include "TransformController.hpp"
 
 enum class ViewportSizeMode {
     Fixed,
@@ -15,8 +16,12 @@ enum class ViewportSizeMode {
 class Viewport : public Lattice::Component {
 public:
     Viewport(Lattice::Node& node) {
+        node.makeFocusScope();
         camera_ = node.add<Camera>("MainCamera");
         camera_->setPosition({0.0f, 0.0f, 2.0f});
+        node.setFocus("camera", node.find<Camera>("MainCamera").node->getId());
+        node.requireContext().activateFocus(node.getFocusScopeId());
+        node.add<TransformController>();
     }
 
     glm::uvec2 position() const noexcept { return position_; }

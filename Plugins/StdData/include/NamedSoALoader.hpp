@@ -111,13 +111,15 @@ public:
 private:
     StdData::NamedSoA* resolveTarget(std::string_view target) const {
         Lattice::Context& ctx = branch_->requireContext();
-        const Lattice::ObjectId id = ctx.find(target);
+        const Lattice::ObjectId id = ctx.resolveFocus(Lattice::InvalidFocusScopeId, ctx.roles.find(target));
 
         if (id == Lattice::InvalidObjectId)
             throw Lattice::Exception(tag, "NamedSoA target '{}' is not active in context", target);
 
         Lattice::Node* node = ctx.objects.require(id).node;
 
+        if (auto* soa = node->get<StdData::NamedSoA>())
+            return soa;
         if (auto soa = node->find<StdData::NamedSoA>())
             return soa.get();
 

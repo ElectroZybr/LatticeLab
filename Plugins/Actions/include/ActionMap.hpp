@@ -25,7 +25,7 @@ public:
         std::string name;
         bool exists = true;
 
-        Lattice::ContextId slot = Lattice::InvalidContextId;
+        Lattice::RoleId role = Lattice::InvalidRoleId;
         std::string trigger;
         ActionMode mode = ActionMode::OnPress;
         Target target = Target::Action;
@@ -48,9 +48,9 @@ public:
 
     void tick();
 
-    bool down(Lattice::ContextId slot) const;
-    bool pressed(Lattice::ContextId slot) const;
-    bool released(Lattice::ContextId slot) const;
+    bool down(Lattice::RoleId role) const;
+    bool pressed(Lattice::RoleId role) const;
+    bool released(Lattice::RoleId role) const;
 
     size_t bindCount() const;
     bool hasBind(std::string_view verb, std::string_view trigger) const;
@@ -62,11 +62,11 @@ private:
     std::vector<InputAPI*> inputs_;
     BindRegistry bindings_;
 
-    static std::string bindName(Lattice::ContextId slot, std::string_view trigger);
+    static std::string bindName(Lattice::RoleId role, std::string_view trigger);
 
-    Binding* findBind(Lattice::ContextId slot, std::string_view trigger);
-    const Binding* findBind(Lattice::ContextId slot, std::string_view trigger) const;
-    bool any(Lattice::ContextId slot, bool Binding::* field) const;
+    Binding* findBind(Lattice::RoleId role, std::string_view trigger);
+    const Binding* findBind(Lattice::RoleId role, std::string_view trigger) const;
+    bool any(Lattice::RoleId role, bool Binding::* field) const;
     void upsert(
         std::string_view verb,
         std::string_view trigger,

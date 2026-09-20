@@ -1,289 +1,72 @@
 #include <Lattice/Tools/Fixture.hpp>
 #include <Lattice/Tools/Tests.hpp>
-#include <Lattice/Lattice.hpp>
-
 
 namespace Lattice {
-
 struct ContextDummy {};
 
-TEST(Context_Find, RuntimeFixture,
-    "find должен возвращать объект активного слота.")
-{
-    const ContextId slot = fixture.run_ctx.contexts.create({
-        .name = "print"
-    });
-
-    REQUIRE(fixture.run_ctx.find("print") == InvalidObjectId);
-
+TEST(Context_ExplicitAssignments, RuntimeFixture) {
+    auto& ctx = fixture.run_ctx;
+    auto& root = fixture.root;
     fixture.blueprints.add<ContextDummy>();
-    fixture.root.add<ContextDummy>("first");
-
-    const auto dummy = fixture.root.find<ContextDummy>("first");
-    REQUIRE(dummy.node);
-
-    fixture.run_ctx.activate(slot, dummy.node->getId());
-
-    REQUIRE(fixture.run_ctx.find("print") == dummy.node->getId());
+    root.add<ContextDummy>();
+    REQUIRE(ctx.roles.size() == 0);
+    int value = 1;
+    const auto binding = root.bind("value", &value);
+    const auto action = root.on("action", [] {});
+    REQUIRE(ctx.resolveFocus(InvalidFocusScopeId, ctx.roles.find("value")) == binding);
+    REQUIRE(ctx.resolveFocus(InvalidFocusScopeId, ctx.roles.find("action")) == action);
+    auto& local = root.addFolder("local");
+    auto scope = local.makeFocusScope();
+    auto& child = local.addFolder("child");
+    child.setFocus("value", binding);
+    const auto role = ctx.roles.find("value");
+    REQUIRE(ctx.resolveFocus(scope, role) == binding);
+    REQUIRE(ctx.resolveFocus(InvalidFocusScopeId, role) == binding);
+    ctx.activateFocus(scope);
+    REQUIRE(ctx.resolveFocus(InvalidFocusScopeId, role) == binding);
+    child.setFocus("value", InvalidObjectId);
+    REQUIRE(ctx.resolveFocus(scope, role) == InvalidObjectId);
+    child.setFocus("value", action);
+    REQUIRE(ctx.roles.find("value") == role);
+    REQUIRE(ctx.resolveFocus(scope, role) == action);
+    bool rejected = false;
+    try { child.setFocus("invalid", 999999); } catch (const Exception&) { rejected = true; }
+    REQUIRE(rejected);
+    REQUIRE(ctx.roles.find("invalid") == InvalidRoleId);
+    ctx.printTree();
+}
 }
 
-TEST(Context_FindUnknown, RuntimeFixture,
-    "find неизвестного имени должен возвращать InvalidObjectId.")
-{
-    REQUIRE(fixture.run_ctx.find("print") == InvalidObjectId);
+namespace Lattice {
+TEST(Context_AutoBindingsUseNearestScope, RuntimeFixture) {
+    auto& ctx = fixture.run_ctx;
+    int rootCalls = 0, calls = 0, value = 0, changed = 0;
+    const auto rootAction = fixture.root.on("move", [&] { ++rootCalls; });
+    auto& local = fixture.root.addFolder("local");
+    const auto scope = local.makeFocusScope();
+    auto& child = local.addFolder("consumer");
+    const auto action = child.on("move", [&] { ++calls; });
+    const auto role = ctx.roles.find("move");
+    REQUIRE(ctx.resolveFocus(scope, role) == action);
+    REQUIRE(ctx.resolveFocus(InvalidFocusScopeId, role) == rootAction);
+    ctx.activateFocus(scope);
+    ctx.bindings.invoke(ctx.resolveFocus(InvalidFocusScopeId, role));
+    REQUIRE(calls == 1);
+    REQUIRE(rootCalls == 0);
+    child.setFocus("move", InvalidObjectId);
+    REQUIRE(child.on("move", [&] { calls += 2; }) == action);
+    ctx.bindings.invoke(ctx.resolveFocus(InvalidFocusScopeId, role));
+    REQUIRE(calls == 3);
+    REQUIRE(ctx.focusScopes.require(scope).roles.size() == 1);
+    const auto binding = child.bind("value", &value);
+    const auto valueRole = ctx.roles.find("value");
+    REQUIRE(ctx.resolveFocus(scope, valueRole) == binding);
+    child.setFocus("value", InvalidObjectId);
+    REQUIRE(child.bind("value", &value, [&](int v) { changed = v; }) == binding);
+    REQUIRE(ctx.resolveFocus(InvalidFocusScopeId, valueRole) == binding);
+    ctx.bindings.set(binding, 7);
+    REQUIRE(value == 7);
+    REQUIRE(changed == 7);
+    REQUIRE(ctx.focusScopes.require(scope).roles.size() == 2);
 }
-
-TEST(Context_Get, RuntimeFixture,
-    "get должен возвращать объект слота по ContextId.")
-{
-    const ContextId slot = fixture.run_ctx.contexts.create({
-        .name = "focus"
-    });
-
-    REQUIRE(fixture.run_ctx.get(slot) == InvalidObjectId);
 }
-
-TEST(Context_GetInvalid, RuntimeFixture,
-    "get неизвестного слота должен возвращать InvalidObjectId.")
-{
-    REQUIRE(fixture.run_ctx.get(99) == InvalidObjectId);
-}
-
-TEST(Context_Activate, RuntimeFixture,
-    "activate должен привязать объект к слоту.")
-{
-    fixture.blueprints.add<ContextDummy>();
-    fixture.root.add<ContextDummy>("first");
-
-    const auto dummy = fixture.root.find<ContextDummy>("first");
-    REQUIRE(dummy.node);
-
-    const ContextId slot = fixture.run_ctx.contexts.create({
-        .name = "focus"
-    });
-
-    fixture.run_ctx.activate(slot, dummy.node->getId());
-
-    REQUIRE(fixture.run_ctx.get(slot) == dummy.node->getId());
-    REQUIRE(fixture.run_ctx.find("focus") == dummy.node->getId());
-}
-
-TEST(Context_ActivateOverwrite, RuntimeFixture,
-    "activate должен заменять текущий объект слота.")
-{
-    fixture.blueprints.add<ContextDummy>();
-    fixture.root.add<ContextDummy>("first");
-    fixture.root.add<ContextDummy>("second");
-
-    const auto first = fixture.root.find<ContextDummy>("first");
-    const auto second = fixture.root.find<ContextDummy>("second");
-
-    REQUIRE(first.node);
-    REQUIRE(second.node);
-
-    const ContextId slot = fixture.run_ctx.contexts.find("ContextDummy");
-    REQUIRE(slot != InvalidContextId);
-    REQUIRE(fixture.run_ctx.get(slot) == first.node->getId());
-
-    fixture.run_ctx.activate(slot, second.node->getId());
-
-    REQUIRE(fixture.run_ctx.get(slot) == second.node->getId());
-    REQUIRE(fixture.run_ctx.find("ContextDummy") == second.node->getId());
-}
-
-TEST(Context_ActivateUnknownObject, RuntimeFixture,
-    "activate неизвестного объекта должен бросать исключение.")
-{
-    const ContextId slot = fixture.run_ctx.contexts.create({
-        .name = "print"
-    });
-
-    bool thrown = false;
-
-    try {
-        fixture.run_ctx.activate(slot, 999);
-    } catch (const Exception&) {
-        thrown = true;
-    }
-
-    REQUIRE(thrown);
-}
-
-TEST(Context_ActivateUnknownSlot, RuntimeFixture,
-    "activate неизвестного слота не должен менять контекст.")
-{
-    fixture.blueprints.add<ContextDummy>();
-    fixture.root.add<ContextDummy>();
-
-    const auto dummy = fixture.root.find<ContextDummy>();
-    REQUIRE(dummy.node);
-
-    fixture.run_ctx.activate(99, dummy.node->getId());
-
-    REQUIRE(fixture.run_ctx.get(99) == InvalidObjectId);
-}
-
-TEST(Context_Clear, RuntimeFixture,
-    "clear должен удалить все слоты.")
-{
-    fixture.run_ctx.contexts.create({
-        .name = "print"
-    });
-
-    REQUIRE(fixture.run_ctx.contexts.find("print") != InvalidContextId);
-
-    fixture.run_ctx.clear();
-
-    REQUIRE(fixture.run_ctx.contexts.find("print") == InvalidContextId);
-}
-
-
-struct NsChild {
-    float size = 1.f;
-
-    void configure(Node& n) {
-        n.bind("size", &size);
-    }
-};
-
-struct NsHost : ServiceAPI {
-    explicit NsHost(Node&) {}
-
-    void configure(Node& n) {
-        n.on("nested", [] {});
-    }
-
-    void run() override {}
-};
-
-struct NsModel : Model {
-    float dt = 0.01f;
-
-    explicit NsModel(Node& n) {
-        Node& data = n.addFolder("data");
-        data.add<NsChild>("child");
-        n.add<NsHost>("nested");
-    }
-
-    void configure(Node& n) {
-        n.bind("dt", &dt);
-    }
-
-    void run() override {}
-};
-
-struct NsIO : ServiceAPI {
-    explicit NsIO(Node&) {}
-
-    void configure(Node& n) {
-        n.on("load", [] {});
-    }
-
-    void run() override {}
-};
-
-static void registerNamespaces(RuntimeFixture& fixture) {
-    fixture.blueprints.add<NsChild>();
-    fixture.blueprints.add<NsHost, ServiceAPI>();
-    fixture.blueprints.add<NsModel, Model>();
-    fixture.blueprints.add<NsIO, ServiceAPI>();
-}
-
-TEST(Context_NamespaceRoots, RuntimeFixture,
-    "Верхние компоненты и вложенные сервисы — корни неймспейсов, обычные дети нет.")
-{
-    registerNamespaces(fixture);
-
-    fixture.root.add<NsIO>("io");
-    fixture.root.add<NsModel>("u1");
-
-    const auto io = fixture.root.find<NsIO>("io");
-    const auto u1 = fixture.root.find<NsModel>("u1");
-    const auto nested = u1.node->find<NsHost>("nested");
-    Node* child = fixture.run_ctx.objects.require(u1.node->exported("NsChild")).node;
-
-    REQUIRE(io.node);
-    REQUIRE(u1.node);
-    REQUIRE(child);
-    REQUIRE(nested.node);
-
-    REQUIRE(io.node->isNamespaceRoot());
-    REQUIRE(u1.node->isNamespaceRoot());
-    REQUIRE(!child->isNamespaceRoot());
-    REQUIRE(nested.node->isNamespaceRoot());
-    REQUIRE(child->nearestNamespaceRoot() == u1.node->getId());
-    REQUIRE(nested.node->nearestNamespaceRoot() == nested.node->getId());
-}
-
-TEST(Context_NamespaceSwitchExportsChildren, RuntimeFixture,
-    "Переключение модели должно сменить её bind и обычных детей, включая тех что в папке.")
-{
-    registerNamespaces(fixture);
-
-    fixture.root.add<NsIO>("io");
-    fixture.root.add<NsModel>("u1");
-    fixture.root.add<NsModel>("u2");
-    fixture.root.configureBranch();
-
-    const auto io = fixture.root.find<NsIO>("io");
-    const auto u1 = fixture.root.find<NsModel>("u1");
-    const auto u2 = fixture.root.find<NsModel>("u2");
-    Node* child1 = fixture.run_ctx.objects.require(u1.node->exported("NsChild")).node;
-    Node* child2 = fixture.run_ctx.objects.require(u2.node->exported("NsChild")).node;
-    const auto nested1 = u1.node->find<NsHost>("nested");
-
-    REQUIRE(fixture.run_ctx.find("NsModel") == u1.node->getId());
-    REQUIRE(fixture.run_ctx.find("dt") == u1.node->exported("dt"));
-    REQUIRE(fixture.run_ctx.find("size") == child1->exported("size"));
-    REQUIRE(fixture.run_ctx.find("NsChild") == child1->getId());
-    REQUIRE(fixture.run_ctx.find("load") == io.node->exported("load"));
-    REQUIRE(fixture.run_ctx.find("NsHost") == nested1.node->getId());
-
-    REQUIRE(u2.node->exported("dt") != fixture.run_ctx.find("dt"));
-    REQUIRE(u2.node->exported("size") == child2->exported("size"));
-
-    u2.node->activateNamespace();
-
-    REQUIRE(fixture.run_ctx.find("NsModel") == u2.node->getId());
-    REQUIRE(fixture.run_ctx.find("dt") == u2.node->exported("dt"));
-    REQUIRE(fixture.run_ctx.find("size") == child2->exported("size"));
-    REQUIRE(fixture.run_ctx.find("NsChild") == child2->getId());
-    REQUIRE(fixture.run_ctx.namespaceOf("dt") == u2.node->getId());
-    REQUIRE(fixture.run_ctx.namespaceOf("size") == u2.node->getId());
-}
-
-TEST(Context_NamespaceSwitchSkipsSiblingAndNestedService, RuntimeFixture,
-    "Соседний неймспейс и вложенный Service не должны уезжать вместе с моделью.")
-{
-    registerNamespaces(fixture);
-
-    fixture.root.add<NsIO>("io");
-    fixture.root.add<NsModel>("u1");
-    fixture.root.add<NsModel>("u2");
-    fixture.root.configureBranch();
-
-    const auto io = fixture.root.find<NsIO>("io");
-    const auto u1 = fixture.root.find<NsModel>("u1");
-    const auto u2 = fixture.root.find<NsModel>("u2");
-    const auto nested1 = u1.node->find<NsHost>("nested");
-    const auto nested2 = u2.node->find<NsHost>("nested");
-
-    const ObjectId load = fixture.run_ctx.find("load");
-    const ObjectId host = fixture.run_ctx.find("NsHost");
-    const ObjectId nestedAction = fixture.run_ctx.find("nested");
-
-    REQUIRE(load == io.node->exported("load"));
-    REQUIRE(host == nested1.node->getId());
-    REQUIRE(nestedAction == nested1.node->exported("nested"));
-    REQUIRE(nested2.node->exported("nested") != nestedAction);
-
-    u2.node->activateNamespace();
-
-    REQUIRE(fixture.run_ctx.find("load") == load);
-    REQUIRE(fixture.run_ctx.namespaceOf("load") == io.node->getId());
-    REQUIRE(fixture.run_ctx.find("NsHost") == nested1.node->getId());
-    REQUIRE(fixture.run_ctx.find("nested") == nestedAction);
-    REQUIRE(fixture.run_ctx.find("NsModel") == u2.node->getId());
-}
-
-} // namespace Lattice

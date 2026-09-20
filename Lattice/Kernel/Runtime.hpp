@@ -194,7 +194,7 @@ public:
 
 private:
     void loadStartup() {
-        const ObjectId id = run_ctx.find("load");
+        const ObjectId id = run_ctx.resolveFocus(InvalidFocusScopeId, run_ctx.roles.find("load"));
         if (id == InvalidObjectId) {
             Logger::info(tag, "no load action, skip startup config");
             return;
