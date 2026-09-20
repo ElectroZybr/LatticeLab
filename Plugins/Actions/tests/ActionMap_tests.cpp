@@ -70,7 +70,6 @@ TEST(ActionMap_ReloadDoesNotDoubleFire, ActionMapFixture,
 {
     int fires = 0;
     fixture.root.on("print", [&] { ++fires; });
-
     fixture.map->bind("print", "P");
     fixture.map->bind("print", "P");
 
@@ -87,7 +86,6 @@ TEST(ActionMap_ReboundMode, ActionMapFixture,
 {
     int fires = 0;
     fixture.root.on("print", [&] { ++fires; });
-
     fixture.map->bind("print", "P");
     fixture.map->bind("print", "P", ActionMode::OnHold);
 
@@ -105,7 +103,6 @@ TEST(ActionMap_Toggle, ActionMapFixture,
 {
     bool flag = false;
     fixture.root.bind("flag", &flag);
-
     fixture.map->bindToggle("flag", "T");
     fixture.map->bindToggle("flag", "T");
 
@@ -127,7 +124,6 @@ TEST(ActionMap_Add, ActionMapFixture,
 {
     double dt = 1.0;
     fixture.root.bind("dt", &dt);
-
     fixture.map->bindAdd("dt", "]", 0.5);
     fixture.map->bindAdd("dt", "]", 0.5);
 
@@ -145,8 +141,8 @@ TEST(ActionMap_PressHoldRelease, ActionMapFixture,
     fixture.root.on("print", [] {});
     fixture.map->bind("print", "P");
 
-    const auto slot = fixture.run_ctx.contexts.find("print");
-    REQUIRE(slot != Lattice::InvalidContextId);
+    const auto slot = fixture.run_ctx.roles.find("print");
+    REQUIRE(slot != Lattice::InvalidRoleId);
 
     fixture.input->held = "P";
     fixture.map->tick();
@@ -183,5 +179,34 @@ TEST(ActionMap_HasBindMissing, ActionMapFixture,
     "hasBind не должен создавать слот для неизвестного глагола.")
 {
     REQUIRE(!fixture.map->hasBind("missing", "P"));
-    REQUIRE(fixture.run_ctx.find("missing") == Lattice::InvalidObjectId);
+    REQUIRE(fixture.run_ctx.resolveFocus(Lattice::InvalidFocusScopeId, fixture.run_ctx.roles.find("missing")) == Lattice::InvalidObjectId);
+}
+
+TEST(ActionMap_FocusChainSwitch, ActionMapFixture) {
+    auto& ctx = fixture.run_ctx;
+    int rootCalls = 0, localCalls = 0;
+    fixture.root.on("move", [&] { ++rootCalls; });
+    auto& left = fixture.root.addFolder("left");
+    auto& right = fixture.root.addFolder("right");
+    const auto leftScope = left.makeFocusScope();
+    const auto rightScope = right.makeFocusScope();
+    left.on("move", [&] { ++localCalls; });
+    fixture.map->bind("move", "M", ActionMode::OnHold);
+    const auto role = ctx.roles.find("move");
+    fixture.input->held = "M";
+    ctx.activateFocus(leftScope);
+    fixture.map->tick();
+    REQUIRE(localCalls == 1);
+    REQUIRE(rootCalls == 0);
+    ctx.activateFocus(rightScope);
+    fixture.map->tick();
+    REQUIRE(rootCalls == 1);
+    right.setFocus("move", Lattice::InvalidObjectId);
+    fixture.map->tick();
+    REQUIRE(rootCalls == 1);
+    ctx.resetFocus(rightScope, role);
+    fixture.map->tick();
+    REQUIRE(rootCalls == 2);
+    REQUIRE(ctx.roles.find("move") == role);
+    REQUIRE(fixture.map->hasBind("move", "M"));
 }

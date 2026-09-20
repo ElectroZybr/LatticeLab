@@ -155,7 +155,7 @@ TEST(Slot_RequireWalksFloorNotContext, RuntimeFixture,
 
     Node& branch = fixture.root.addFolder("branch");
 
-    REQUIRE(fixture.run_ctx.find("SlotAPI") == InvalidObjectId);
+    REQUIRE(fixture.run_ctx.resolveFocus(InvalidFocusScopeId, fixture.run_ctx.roles.find(typeKey<SlotAPI>())) == InvalidObjectId);
     REQUIRE(branch.require<SlotAPI>()->id() == 1);
 }
 

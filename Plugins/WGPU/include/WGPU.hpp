@@ -31,7 +31,9 @@ public:
     explicit WGPU(Lattice::Node&, const Desc& = {}) { createInstance(); }
 
     void configure(Lattice::Node& node) {
-        node.add<Device>(deviceName());
+        const auto name = deviceName();
+        node.add<Device>(name);
+        node.setFocus(Lattice::typeKey<GPU::Device>(), node.find<Device>(name).node->getId());
     }
 
     ~WGPU() override {

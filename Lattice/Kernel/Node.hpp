@@ -105,6 +105,7 @@ class Node {
     void* object = nullptr;
     NodeKind kind = NodeKind::Folder;
     bool configured = false;
+    FocusScopeId focusScope = InvalidFocusScopeId;
 
     std::vector<std::unique_ptr<Node>> children_;
 
@@ -242,41 +243,13 @@ class Node {
         return *n;
     }
 
-    void activate(const Node& child, std::string_view name, bool overwrite = false) {
-        const ContextId slot = run_ctx.getOrCreate(name);
-        if (overwrite || run_ctx.get(slot) == InvalidObjectId)
-            run_ctx.assign(slot, child.id);
-    }
-
-    bool implementsService() const {
-        const BlueprintId serviceId = findBlueprint<ServiceAPI>();
-        return (serviceId != Blueprints::InvalidId) && isImplement(serviceId);
-    }
-
-    void collectExportsInto(
-        std::vector<std::pair<std::string, ObjectId>>& out,
-        bool nested
-    ) const {
-        if (nested && isNamespaceRoot())
-            return;
-
-        if (kind == NodeKind::Binding) {
-            out.emplace_back(std::string(name()), id);
-            return;
-        }
-
-        if (kind == NodeKind::Component && bp != Blueprints::InvalidId)
-            out.emplace_back(std::string(run_ctx.blueprints.require(bp).shortName()), id);
-
-        for (const auto& child : children_)
-            child->collectExportsInto(out, true);
-    }
 
 public:
     Node(Context& run_ctx, Node* parent = nullptr)
         : run_ctx(run_ctx), parent(parent) {
             if (!parent) {
                 id = run_ctx.objects.create({"Root", InvalidObjectId, this}, ObjectKey{"Root", InvalidObjectId});
+                makeFocusScope();
             }
     }
 
@@ -284,6 +257,41 @@ public:
     Node& operator=(const Node&) = delete;
     Node(Node&&) = delete;
     Node& operator=(Node&&) = delete;
+
+    FocusScopeId getFocusScopeId() const noexcept { return focusScope; }
+
+    FocusScopeId makeFocusScope() {
+        if (focusScope == InvalidFocusScopeId) {
+            focusScope = run_ctx.createFocusScope(id);
+            if (!parent)
+                run_ctx.activeScope = focusScope;
+            run_ctx.rebuildFocus();
+        }
+        return focusScope;
+    }
+
+    template<class T>
+    Focus<T> focus(std::string_view role = typeKey<T>()) {
+        static_assert(!std::is_same_v<T, Node>, "Use id() for low-level node access");
+        const Node* origin = this;
+        while (origin && origin->focusScope == InvalidFocusScopeId)
+            origin = origin->parent;
+        if (!origin)
+            throw Exception(tag, "No focus scope for node");
+        return Focus<T>(run_ctx, run_ctx.getOrCreateRole(role), origin->focusScope);
+    }
+
+    // Explicitly assign a role in the nearest scope, including this node.
+    void setFocus(std::string_view role, ObjectId target) {
+        if (target != InvalidObjectId)
+            run_ctx.objects.require(target);
+        const Node* origin = this;
+        while (origin && origin->focusScope == InvalidFocusScopeId)
+            origin = origin->parent;
+        if (!origin)
+            throw Exception(tag, "No focus scope for node");
+        run_ctx.setFocus(origin->focusScope, run_ctx.getOrCreateRole(role), target);
+    }
 
     Context& requireContext() noexcept { return run_ctx; }
     const Blueprint* getBlueprint() const noexcept { return run_ctx.blueprints.get(bp); }
@@ -294,64 +302,6 @@ public:
     ObjectId getId() const noexcept { return id; }
     std::string_view name() const {
         return run_ctx.objects.require(id).name;
-    }
-
-    // Корень неймспейса: компонент без компонента-предка (ветки lattice.toml),
-    // либо вложенный ServiceAPI/Model — свой фокус, с родителем не едет.
-    bool isNamespaceRoot() const {
-        if (kind != NodeKind::Component || !parent)
-            return false;
-
-        for (const Node* ancestor = parent; ancestor; ancestor = ancestor->parent) {
-            if (ancestor->kind == NodeKind::Component)
-                return implementsService();
-        }
-
-        return true;
-    }
-
-    ObjectId nearestNamespaceRoot() const {
-        const Node* node = this;
-        while (node) {
-            if (node->isNamespaceRoot())
-                return node->id;
-            node = node->parent;
-        }
-        return InvalidObjectId;
-    }
-
-    ObjectId exported(std::string_view exportName) const {
-        std::vector<std::pair<std::string, ObjectId>> exports;
-        collectExportsInto(exports, false);
-
-        ObjectId found = InvalidObjectId;
-        for (const auto& [exportSlot, object] : exports) {
-            if (exportSlot == exportName)
-                found = object;
-        }
-        return found;
-    }
-
-    void applyNamespace() {
-        if (!isNamespaceRoot())
-            return;
-
-        std::vector<std::pair<std::string, ObjectId>> exports;
-        collectExportsInto(exports, false);
-
-        Logger::info(tag, "activate namespace '{}'", stringPath());
-
-        for (const auto& [exportName, object] : exports) {
-            const ContextId slot = run_ctx.getOrCreate(exportName);
-            run_ctx.assign(slot, object, id);
-        }
-    }
-
-    void activateNamespace() {
-        if (!isNamespaceRoot() || bp == Blueprints::InvalidId)
-            return;
-
-        run_ctx.activate(run_ctx.getOrCreate(run_ctx.blueprints.require(bp).shortName()), id);
     }
 
     BlueprintId findBlueprint(std::string_view name) const {
@@ -497,7 +447,6 @@ private:
         else
             Logger::info(tag, "added '{}:{}'", run_ctx.blueprints.require(blueprint).shortName(), instanceName);
 
-        activate(child, run_ctx.blueprints.require(blueprint).shortName());
         return child;
     }
 
@@ -667,35 +616,14 @@ public:
     }
 
     template<typename T>
-    Mount<T> mount() {
+    Mount<T> mount(std::string_view role = typeKey<T>()) {
         noteRequire<T>();
         const BlueprintId api = findBlueprint<T>();
-        if (api == Blueprints::InvalidId)
-            throw Exception(tag, "API '{}' is not registered", typeKey<T>());
-
-        ObjectId target = InvalidObjectId;
-        T* mounted = nullptr;
-        const auto consider = [&](ObjectId candidate) {
-            const auto* entry = run_ctx.objects.get(candidate);
-            if (!entry || !entry->node)
-                return;
-            auto* ptr = static_cast<T*>(entry->node->castObject(api));
-            if (!ptr)
-                return;
-            if (target != InvalidObjectId && target != candidate)
-                throw Exception(tag, "Multiple active components provide '{}' for mount", typeKey<T>());
-            target = candidate;
-            mounted = ptr;
-        };
-
-        // An explicitly active API takes precedence over implementation exports.
-        consider(run_ctx.find(run_ctx.blueprints.require(api).shortName()));
-        if (!mounted) {
-            for (ContextId slot = 0; slot < run_ctx.contexts.size(); ++slot)
-                consider(run_ctx.get(slot));
-        }
+        auto selected = focus<T>(role);
+        T* mounted = selected.get();
         if (!mounted)
-            throw Exception(tag, "No active '{}' available for mount", typeKey<T>());
+            throw Exception(tag, "Focus role '{}' does not provide '{}' for mount", role, typeKey<T>());
+        const ObjectId target = selected.id();
 
         Node& targetNode = *run_ctx.objects.require(target).node;
 
@@ -783,6 +711,7 @@ public:
         if (kind == NodeKind::Component || kind == NodeKind::Slot)
             destroyObject();
 
+        run_ctx.removeFocusObject(id);
         run_ctx.objects.destroy(id);
     }
 
@@ -829,7 +758,7 @@ public:
     ObjectId bind(std::string_view name, T* ptr, double min = 0, double max = 0, bool hasRange = false) {
         Node& child = bindingChild(name);
         child.object = &run_ctx.bindings.bind(child.id, ptr, min, max, hasRange);
-        activate(child, name);
+        setFocus(name, child.id);
         return child.id;
     }
 
@@ -838,14 +767,14 @@ public:
     ObjectId bind(std::string_view name, T* ptr, F&& onChange, double min = 0, double max = 0, bool hasRange = false) {
         Node& child = bindingChild(name);
         child.object = &run_ctx.bindings.bind(child.id, ptr, std::forward<F>(onChange), min, max, hasRange);
-        activate(child, name);
+        setFocus(name, child.id);
         return child.id;
     }
 
     ObjectId on(std::string_view name, std::function<void()> handler) {
         Node& child = bindingChild(name);
         child.object = &run_ctx.bindings.on(child.id, std::move(handler));
-        activate(child, name);
+        setFocus(name, child.id);
         return child.id;
     }
 
