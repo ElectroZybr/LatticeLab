@@ -40,8 +40,7 @@ struct KeybindsFixture : RuntimeFixture {
         blueprints.add<KeybindsLoader, LoaderAPI>();
 
         root.add<TestInput>();
-        root.add<ActionMap>();
-        root.setFocus(Lattice::typeKey<ActionMap>(), root.find<ActionMap>().node->getId());
+        root.add<ActionMap>().focus();
         root.add<KeybindsLoader>();
         root.configureBranch();
 

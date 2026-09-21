@@ -5,21 +5,27 @@
 #include <vector>
 #include <utility>
 #include <Lattice/Kernel/TypeName.hpp>
+#include <Lattice/Kernel/Objects.hpp>
 
 namespace Lattice {
 
 class Node;
+class Context;
 
 template<typename T>
 struct Slot {
-    Node* node = nullptr;
+    Context* ctx = nullptr;
+    ObjectId id = InvalidObjectId;
 
     Slot() = default;
-    Slot(Node& node) : node(&node) {}
+    Slot(Node& node);
+    Slot(Context& context, ObjectId object) : ctx(&context), id(object) {}
 
     T* get() const;
     T* operator->() const { return get(); }
     T& operator*() const { return *get(); }
+    Node* node() const;
+    ObjectId getId() const noexcept { return id; }
 
     void use(std::string_view implName);
 
@@ -27,6 +33,10 @@ struct Slot {
     void use() {
         use(typeKey<Impl>());
     }
+
+    Slot& focus(std::string_view role = typeKey<T>());
+    template<class Role>
+    Slot& focus() { return focus(typeKey<Role>()); }
 
     bool exists() const;
 
@@ -45,47 +55,39 @@ struct Slot {
 
 template<typename T>
 struct Ref {
-    T* ptr = nullptr;
+    Context* ctx = nullptr;
+    ObjectId id = InvalidObjectId;
 
     Ref() = default;
-    Ref(T* ptr) : ptr(ptr) {}
+    Ref(Node& node);
+    Ref(Context& context, ObjectId object) : ctx(&context), id(object) {}
 
-    T* operator->() const noexcept { return ptr; }
-    T& operator*() const noexcept { return *ptr; }
-    T& get() const noexcept { return *ptr; }
-    T* getPtr() const noexcept { return ptr; }
-    bool exists() const noexcept { return ptr != nullptr; }
+    T* getPtr() const;
+    T* operator->() const { return getPtr(); }
+    T& operator*() const { return *getPtr(); }
+    T& get() const { return *getPtr(); }
+    Node* node() const;
+    ObjectId getId() const noexcept { return id; }
 
-    explicit operator bool() const noexcept { return ptr != nullptr; }
+    Ref& focus(std::string_view role = typeKey<T>());
+    template<class Role>
+    Ref& focus() { return focus(typeKey<Role>()); }
 
-    bool operator==(std::nullptr_t) const noexcept { return ptr == nullptr; }
-    bool operator!=(std::nullptr_t) const noexcept { return ptr != nullptr; }
+    bool exists() const { return getPtr() != nullptr; }
+
+    explicit operator bool() const { return exists(); }
+
+    bool operator==(std::nullptr_t) const { return !exists(); }
+    bool operator!=(std::nullptr_t) const { return exists(); }
 };
 
 template<typename T>
 struct Mount final : public Ref<T> {
-    Node* node = nullptr;
-
     Mount() = default;
+    using Ref<T>::Ref;
 
-    Mount(Node& node, T* ptr)
-        : Ref<T>(ptr), node(&node) {}
-
-    Node& branch() {
-        return *node;
-    }
-
-    const Node& branch() const {
-        return *node;
-    }
-
-    bool exists() const noexcept {
-        return this->ptr != nullptr && node != nullptr;
-    }
-
-    explicit operator bool() const noexcept {
-        return exists();
-    }
+    Node& branch();
+    const Node& branch() const;
 };
 
 template<typename T>

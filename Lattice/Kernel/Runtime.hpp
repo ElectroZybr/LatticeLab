@@ -159,7 +159,7 @@ public:
 
         service->stop();
 
-        if (service.node == host)
+        if (service.node() == host)
             host = nullptr;
 
         root.remove<ServiceAPI>(instanceName);
@@ -176,10 +176,12 @@ public:
             Logger::exception(fatal->tag(), "{}", error.what());
             Logger::message("Dump components tree (failed node is red):");
             root.dumpTree();
+            run_ctx.printTree();
         } else {
             Logger::exception(tag, "Unhandled exception: {}", error.what());
             Logger::message("Dump components tree:");
             root.dumpTree();
+            run_ctx.printTree();
         }
         Logger::message("<r><b>Critical error. Application terminated.<//>");
         Logger::message("Crash log: {}", std::string(LogSystem::getPath()));
@@ -190,6 +192,7 @@ public:
         Logger::exception(tag, "Unhandled non-standard exception");
         Logger::message("Dump components tree");
         root.dumpTree();
+        run_ctx.printTree();
     }
 
 private:

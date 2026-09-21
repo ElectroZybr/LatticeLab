@@ -9,8 +9,8 @@ TEST(Viewport_ActiveControllerMovesLocalCamera, Lattice::RuntimeFixture) {
     fixture.blueprints.add<TransformController>();
     fixture.blueprints.add<Viewport>();
     fixture.root.add<Viewport>("left");
-    auto* left = fixture.root.find<Viewport>("left").node;
-    REQUIRE(ctx.activeScope == left->getFocusScopeId());
+    auto* left = fixture.root.find<Viewport>("left").node();
+    REQUIRE(ctx.activeFocus(fixture.blueprints.find(Lattice::typeKey<Viewport>())) == left->getFocusScopeId());
     fixture.root.configureBranch();
     auto leftCamera = left->focus<SceneObject>("camera");
     const auto role = ctx.roles.find("right");
@@ -18,9 +18,9 @@ TEST(Viewport_ActiveControllerMovesLocalCamera, Lattice::RuntimeFixture) {
     REQUIRE(leftCamera->transform().position.x > 0.09f);
 
     fixture.root.add<Viewport>("right");
-    auto* right = fixture.root.find<Viewport>("right").node;
+    auto* right = fixture.root.find<Viewport>("right").node();
     fixture.root.configureBranch();
-    REQUIRE(ctx.activeScope == right->getFocusScopeId());
+    REQUIRE(ctx.activeFocus(fixture.blueprints.find(Lattice::typeKey<Viewport>())) == right->getFocusScopeId());
     auto rightCamera = right->focus<SceneObject>("camera");
     const auto oldLeft = leftCamera->transform().position.x;
     ctx.bindings.invoke(ctx.resolveFocus(Lattice::InvalidFocusScopeId, role));

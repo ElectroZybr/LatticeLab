@@ -8,18 +8,16 @@
 #include <webgpu/wgpu.h>
 
 #include <Lattice/Kernel/Node.hpp>
-#include "Buffer.hpp"
 #include <GPU/include/CommandList.hpp>
 #include <GPU/include/Device.hpp>
 #include "GPUAPI.hpp"
+#include "WGPUDevice.hpp"
 #include "RenderPass.hpp"
 #include "Shader.hpp"
 #include "Texture.hpp"
 
 
 namespace WGPU {
-
-class Device;
 
 static WGPUStringView toWGPU(std::string_view s) {
     return WGPUStringView{s.data(), static_cast<size_t>(s.size())};
@@ -32,8 +30,7 @@ public:
 
     void configure(Lattice::Node& node) {
         const auto name = deviceName();
-        node.add<Device>(name);
-        node.setFocus(Lattice::typeKey<GPU::Device>(), node.find<Device>(name).node->getId());
+        node.add<Device>(name).focus<GPU::Device>();
     }
 
     ~WGPU() override {
@@ -102,73 +99,6 @@ private:
     WGPUCommandEncoder encoder_ = nullptr;
     WGPUCommandBuffer commandBuffer_ = nullptr;
     RenderPass renderPass_;
-};
-
-class Device final : public GPU::Device {
-public:
-    explicit Device(Lattice::Node& node, const Desc& = {}) {
-        auto backend = node.requireParent<WGPU>();
-        device_ = backend->createDevice(adapter_);
-        instance_ = backend->native();
-        wgpuInstanceAddRef(instance_);
-        queue_ = wgpuDeviceGetQueue(device_);
-    }
-    
-    ~Device() override {
-        if (queue_)
-            wgpuQueueRelease(queue_);
-        if (device_)
-            wgpuDeviceRelease(device_);
-        if (adapter_) wgpuAdapterRelease(adapter_);
-        if (instance_) wgpuInstanceRelease(instance_);
-    }
-
-    std::unique_ptr<GPU::CommandList> createCommandList() override {
-        return std::make_unique<CommandList>(device_, queue_);
-    }
-
-    WGPUDevice native() const noexcept { return device_; }
-    WGPUAdapter adapter() const noexcept { return adapter_; }
-    WGPUInstance instance() const noexcept { return instance_; }
-
-private:
-    WGPUAdapter adapter_ = nullptr;
-    WGPUInstance instance_ = nullptr;
-    WGPUDevice device_ = nullptr;
-    WGPUQueue queue_ = nullptr;
-};
-
-
-// ---------- resources ----------
-class Buffer final : public GPU::Buffer {
-public:
-    explicit Buffer(Lattice::Node& node, const Desc& desc) {
-        const auto device = node.requireParent<Device>();
-
-        WGPUBufferDescriptor nativeDesc = {};
-        auto name = node.name();
-        nativeDesc.label = WGPUStringView{name.data(), name.size()};
-        nativeDesc.size = desc.size;
-        nativeDesc.usage = static_cast<WGPUBufferUsage>(desc.usage);
-        nativeDesc.mappedAtCreation = false;
-
-        buffer_ = wgpuDeviceCreateBuffer(device->native(), &nativeDesc);
-
-        if (!buffer_)
-            throw Lattice::Exception("WGPU::Buffer", "failed to create buffer");
-    }
-
-    ~Buffer() override {
-        if (buffer_)
-            wgpuBufferRelease(buffer_);
-    }
-
-    WGPUBuffer native() const noexcept {
-        return buffer_;
-    }
-
-private:
-    WGPUBuffer buffer_ = nullptr;
 };
 
 class Texture final : public GPU::Texture {

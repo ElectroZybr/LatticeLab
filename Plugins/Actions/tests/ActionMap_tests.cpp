@@ -188,8 +188,8 @@ TEST(ActionMap_FocusChainSwitch, ActionMapFixture) {
     fixture.root.on("move", [&] { ++rootCalls; });
     auto& left = fixture.root.addFolder("left");
     auto& right = fixture.root.addFolder("right");
-    const auto leftScope = left.makeFocusScope();
-    const auto rightScope = right.makeFocusScope();
+    const auto leftScope = left.makeFocusScope<ActionMap>();
+    const auto rightScope = right.makeFocusScope<ActionMap>();
     left.on("move", [&] { ++localCalls; });
     fixture.map->bind("move", "M", ActionMode::OnHold);
     const auto role = ctx.roles.find("move");

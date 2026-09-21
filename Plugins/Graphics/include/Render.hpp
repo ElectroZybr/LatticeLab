@@ -6,6 +6,7 @@
 #include <GPU/include/Surface.hpp>
 #include <GPU/include/Shader.hpp>
 #include <GPU/include/Pipeline.hpp>
+#include <GPU/include/Buffer.hpp>
 #include "Lattice/Kernel/RefSlot.hpp"
 
 class WindowAPI;
@@ -26,6 +27,8 @@ private:
     Ref<GPU::Pipeline> pipeline_;
     NativeWindow native_;
     std::string resourceName_;
+
+    Ref<GPU::Buffer> uniform_;
 
     Children<Viewport> viewports_;
 };

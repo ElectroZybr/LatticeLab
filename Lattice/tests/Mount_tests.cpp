@@ -18,7 +18,7 @@ TEST(Mount_AbstractAPI, RuntimeFixture) {
     fixture.run_ctx.getOrCreateRole("unused");
     fixture.run_ctx.getOrCreateRole("alsoUnused");
     auto component = fixture.root.add<Impl>();
-    const auto id = fixture.root.find<Impl>().node->getId();
+    const auto id = fixture.root.find<Impl>().node()->getId();
     fixture.root.setFocus(typeKey<API>(), id);
     fixture.root.setFocus(typeKey<Impl>(), id);
     auto& consumer = fixture.root.addFolder("consumer");
@@ -59,7 +59,7 @@ TEST(Mount_SlotImplementation, RuntimeFixture) {
     fixture.blueprints.add<Impl, API>();
     auto slot = fixture.root.slot<API>();
     fixture.root.use<API, Impl>();
-    fixture.root.setFocus(typeKey<API>(), slot.node->getId());
+    fixture.root.setFocus(typeKey<API>(), slot.node()->getId());
     auto& consumer = fixture.root.addFolder("consumer");
     REQUIRE(consumer.mount<API>().getPtr() == slot.get());
 }
@@ -72,8 +72,8 @@ TEST(Mount_LocalRoleAndSnapshot, RuntimeFixture) {
     fixture.blueprints.add<Other, API>();
     fixture.root.add<Impl>();
     fixture.root.add<Other>();
-    auto* first = fixture.root.find<Impl>().node;
-    auto* second = fixture.root.find<Other>().node;
+    auto* first = fixture.root.find<Impl>().node();
+    auto* second = fixture.root.find<Other>().node();
     fixture.root.setFocus(typeKey<API>(), first->getId());
     auto& consumer = fixture.root.addFolder("local");
     consumer.makeFocusScope();

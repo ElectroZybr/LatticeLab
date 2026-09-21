@@ -16,7 +16,7 @@ TEST(Context_ExplicitAssignments, RuntimeFixture) {
     REQUIRE(ctx.resolveFocus(InvalidFocusScopeId, ctx.roles.find("value")) == binding);
     REQUIRE(ctx.resolveFocus(InvalidFocusScopeId, ctx.roles.find("action")) == action);
     auto& local = root.addFolder("local");
-    auto scope = local.makeFocusScope();
+    auto scope = local.makeFocusScope<Model>();
     auto& child = local.addFolder("child");
     child.setFocus("value", binding);
     const auto role = ctx.roles.find("value");
@@ -41,14 +41,14 @@ namespace Lattice {
 TEST(Context_AutoBindingsUseNearestScope, RuntimeFixture) {
     auto& ctx = fixture.run_ctx;
     int rootCalls = 0, calls = 0, value = 0, changed = 0;
-    const auto rootAction = fixture.root.on("move", [&] { ++rootCalls; });
+    fixture.root.on("move", [&] { ++rootCalls; });
     auto& local = fixture.root.addFolder("local");
-    const auto scope = local.makeFocusScope();
+    const auto scope = local.makeFocusScope<Model>();
     auto& child = local.addFolder("consumer");
     const auto action = child.on("move", [&] { ++calls; });
     const auto role = ctx.roles.find("move");
     REQUIRE(ctx.resolveFocus(scope, role) == action);
-    REQUIRE(ctx.resolveFocus(InvalidFocusScopeId, role) == rootAction);
+    REQUIRE(ctx.resolveFocus(InvalidFocusScopeId, role) == action);
     ctx.activateFocus(scope);
     ctx.bindings.invoke(ctx.resolveFocus(InvalidFocusScopeId, role));
     REQUIRE(calls == 1);

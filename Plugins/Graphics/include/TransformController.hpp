@@ -8,7 +8,7 @@
 class TransformController : public Lattice::Component {
 public:
     void configure(Lattice::Node& node) {
-        camera = node.focus<SceneObject>("camera");
+        camera = node.focus<SceneObject>("Camera");
         node.on("left", [this]() {
             if (camera)
                 camera->move({-0.1, 0, 0});

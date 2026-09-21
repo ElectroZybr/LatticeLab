@@ -22,18 +22,16 @@ class ClassicMD final : public Model {
 public:
     explicit ClassicMD(Lattice::Node& universe) {
         universe.makeFocusScope();
-        atomData    = universe.add<AtomData>();
-        atoms       = universe.add<AtomStorage>();
+        atomData    = universe.add<AtomData>().focus();
+        atoms       = universe.add<AtomStorage>().focus();
         spatialGrid = universe.slot<ParticleDynamics::SpatialIndexAPI>();
         integrator  = universe.slot<ParticleDynamics::IntegratorAPI>();
     }
 
     void configure(Lattice::Node& universe) {
-        universe.setFocus("AtomData", universe.find<AtomData>().node->getId());
-        universe.setFocus("AtomStorage", universe.find<AtomStorage>().node->getId());
-        universe.requireContext().activateFocus(universe.getFocusScopeId());
         // integrator.use<Integrators::Verlet>();
         universe.on("CreateVerlet", [this]() { integrator.use("Verlet"); });
+        universe.on("selectUniverse", [&universe] { universe.requireContext().activateFocus(universe.getFocusScopeId()); });
     }
 
     void run() override {

@@ -26,8 +26,11 @@ void Render::configure(Lattice::Node& renderer) {
             GPU::ShaderDesc shader;
             shader.source.assign(std::istreambuf_iterator<char>(file), {});
             shader_ = branch.add<GPU::Shader>(resourceName_, shader);
-            pipeline_ = branch.add<GPU::Pipeline>(resourceName_,
-                GPU::PipelineDesc{shader_.getPtr(), surface_->format()});
+            pipeline_ = branch.add<GPU::Pipeline>(resourceName_, GPU::PipelineDesc{shader_.getPtr(), surface_->format()});
+            GPU::BufferDesc desc{};
+            desc.size = sizeof(glm::mat4);
+            desc.usage = GPU::BufferUsage::Uniform | GPU::BufferUsage::CopyDestination;
+            uniform_ = branch.add<GPU::Buffer>("Uniform", desc);
             native_ = native;
         } catch (...) {
             releaseFrameResources();
@@ -68,6 +71,8 @@ void Render::releaseFrameResources() {
     branch.remove<GPU::Pipeline>(resourceName_);
     branch.remove<GPU::Shader>(resourceName_);
     branch.remove<GPU::Surface>(resourceName_);
+    branch.remove<GPU::Buffer>("Uniform");
+    uniform_ = {};
     pipeline_ = {};
     shader_ = {};
     surface_ = {};

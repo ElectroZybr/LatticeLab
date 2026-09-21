@@ -83,12 +83,12 @@ TEST(Slot_EmptyNode, RuntimeFixture,
 
     auto slot = fixture.root.slot<SlotAPI>();
 
-    REQUIRE(slot.node);
-    REQUIRE(slot.node->name().empty());
-    REQUIRE(slot.node->getKind() == NodeKind::Slot);
-    REQUIRE(slot.node->getObject() == nullptr);
+    REQUIRE(slot.node());
+    REQUIRE(slot.node()->name().empty());
+    REQUIRE(slot.node()->getKind() == NodeKind::Slot);
+    REQUIRE(slot.node()->getObject() == nullptr);
     REQUIRE(!slot.exists());
-    REQUIRE(fixture.root.find<SlotAPI>().node == slot.node);
+    REQUIRE(fixture.root.find<SlotAPI>().node() == slot.node());
 }
 
 TEST(Slot_RequireEmptyThrows, RuntimeFixture,
@@ -97,7 +97,7 @@ TEST(Slot_RequireEmptyThrows, RuntimeFixture,
     registerSlotTypes(fixture);
     fixture.root.slot<SlotAPI>();
 
-    REQUIRE(fixture.root.find<SlotAPI>().node);
+    REQUIRE(fixture.root.find<SlotAPI>().node());
     REQUIRE(!fixture.root.find<SlotAPI>().exists());
 
     bool thrown = false;
@@ -115,15 +115,15 @@ TEST(Slot_UseFillsSameNode, RuntimeFixture,
     registerSlotTypes(fixture);
 
     auto slot = fixture.root.slot<SlotAPI>();
-    const ObjectId id = slot.node->getId();
+    const ObjectId id = slot.node()->getId();
 
     slot.use("SlotImplA");
 
-    REQUIRE(slot.node->getId() == id);
+    REQUIRE(slot.node()->getId() == id);
     REQUIRE(slot.exists());
     REQUIRE(slot->id() == 1);
-    REQUIRE(slot.node->getKind() == NodeKind::Slot);
-    REQUIRE(slot.node->directCollect<SlotImplA>().empty());
+    REQUIRE(slot.node()->getKind() == NodeKind::Slot);
+    REQUIRE(slot.node()->directCollect<SlotImplA>().empty());
     REQUIRE(fixture.root.require<SlotAPI>().getPtr() == slot.get());
 }
 
@@ -133,16 +133,16 @@ TEST(Slot_UseReplacesImpl, RuntimeFixture,
     registerSlotTypes(fixture);
 
     auto slot = fixture.root.slot<SlotAPI>();
-    const ObjectId id = slot.node->getId();
+    const ObjectId id = slot.node()->getId();
 
     slot.use("SlotWindowImpl");
-    REQUIRE(slot.node->directCollect<SlotInput>().size() == 1);
+    REQUIRE(slot.node()->directCollect<SlotInput>().size() == 1);
 
     slot.use("SlotImplB");
 
-    REQUIRE(slot.node->getId() == id);
+    REQUIRE(slot.node()->getId() == id);
     REQUIRE(slot->id() == 2);
-    REQUIRE(slot.node->directCollect<SlotInput>().empty());
+    REQUIRE(slot.node()->directCollect<SlotInput>().empty());
 }
 
 TEST(Slot_RequireWalksFloorNotContext, RuntimeFixture,
@@ -171,7 +171,7 @@ TEST(Slot_FloorDoesNotCrossSiblings, RuntimeFixture,
     Node& b = fixture.root.addFolder("B");
 
     REQUIRE(a.find<SlotAPI>().exists());
-    REQUIRE(!b.find<SlotAPI>().node);
+    REQUIRE(!b.find<SlotAPI>().node());
 }
 
 TEST(Slot_TreeOwnership, RuntimeFixture,
@@ -183,17 +183,17 @@ TEST(Slot_TreeOwnership, RuntimeFixture,
     fixture.root.configureBranch();
 
     auto host = fixture.root.find<SlotHost>();
-    auto window = host.node->find<SlotAPI>();
-    auto render = host.node->find<SlotRender>();
+    auto window = host.node()->find<SlotAPI>();
+    auto render = host.node()->find<SlotRender>();
 
     REQUIRE(window.exists());
     REQUIRE(window->id() == 7);
-    REQUIRE(window.node->getParent() == host.node);
-    REQUIRE(render.node->getParent() == host.node);
-    REQUIRE(window.node->directCollect<SlotInput>().size() == 1);
-    REQUIRE(window.node->directCollect<SlotRender>().empty());
+    REQUIRE(window.node()->getParent() == host.node());
+    REQUIRE(render.node()->getParent() == host.node());
+    REQUIRE(window.node()->directCollect<SlotInput>().size() == 1);
+    REQUIRE(window.node()->directCollect<SlotRender>().empty());
     REQUIRE(render->window.get() == window.get());
-    REQUIRE(window.node->directCollect<SlotInput>()[0]->configured);
+    REQUIRE(window.node()->directCollect<SlotInput>()[0]->configured);
 }
 
 TEST(Slot_LateUseReconfiguresFloor, RuntimeFixture,
@@ -209,10 +209,10 @@ TEST(Slot_LateUseReconfiguresFloor, RuntimeFixture,
     REQUIRE(neighbor->configures == 1);
     REQUIRE(neighbor->api == nullptr);
 
-    const ObjectId id = fixture.root.find<SlotAPI>().node->getId();
+    const ObjectId id = fixture.root.find<SlotAPI>().node()->getId();
     fixture.root.find<SlotAPI>().use("SlotImplA");
 
-    REQUIRE(fixture.root.find<SlotAPI>().node->getId() == id);
+    REQUIRE(fixture.root.find<SlotAPI>().node()->getId() == id);
     REQUIRE(neighbor->configures == 2);
     REQUIRE(neighbor->api);
     REQUIRE(neighbor->api->id() == 1);

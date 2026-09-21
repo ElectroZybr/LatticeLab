@@ -6,6 +6,7 @@
 #include <GPU/include/CommandList.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "Camera.hpp"
+#include "Render.hpp"
 #include "TransformController.hpp"
 
 enum class ViewportSizeMode {
@@ -17,11 +18,18 @@ class Viewport : public Lattice::Component {
 public:
     Viewport(Lattice::Node& node) {
         node.makeFocusScope();
-        camera_ = node.add<Camera>("MainCamera");
+        camera_ = node.add<Camera>("MainCamera").focus();
         camera_->setPosition({0.0f, 0.0f, 2.0f});
-        node.setFocus("camera", node.find<Camera>("MainCamera").node->getId());
-        node.requireContext().activateFocus(node.getFocusScopeId());
         node.add<TransformController>();
+
+        auto render = node.requireParent<Render>();
+        // GPU::Binding binding{};
+        // binding.binding = 0;
+        // binding.buffer = uniform.getPtr();
+        // binding.offset = 0;
+        // binding.size = 16;
+
+        // bindingSet = device_->createBindingSet(*pipeline_, 0, std::span(&binding, 1));
     }
 
     glm::uvec2 position() const noexcept { return position_; }
@@ -55,11 +63,11 @@ public:
         const GPU::Rect rect{position_.x, position_.y, extent.x, extent.y};
         const auto matrix = camera_->viewProjection(float(extent.x) / float(extent.y));
 
-        pass.setViewport(rect);
-        pass.setScissor(rect);
-        pass.setPipeline(pipeline);
-        pass.setUniform(0, 0, std::as_bytes(std::span(glm::value_ptr(matrix), 16)));
-        pass.draw(6);
+        // pass.setViewport(rect);
+        // pass.setScissor(rect);
+        // pass.setPipeline(pipeline);
+        // pass.setBindings(0, *cameraBindings);
+        // pass.draw(6);
     }
 
 private:
@@ -67,4 +75,5 @@ private:
     glm::uvec2 position_{};
     glm::uvec2 size_{1280, 720};
     ViewportSizeMode sizeMode_ = ViewportSizeMode::Fill;
+    GPU::BindingSet bindingSet{};
 };
