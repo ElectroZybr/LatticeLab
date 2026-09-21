@@ -4,10 +4,9 @@
 #include <string_view>
 
 #include <Lattice/Kernel/Node.hpp>
-
 #include "WindowAPI.hpp"
-#include "Keyboard.hpp"
-#include "Mouse.hpp"
+#include "glfwWindow/glfwKeyboard.hpp"
+#include "glfwWindow/glfwMouse.hpp"
 
 class glfwWindow final : public WindowAPI {
 public:
@@ -36,22 +35,10 @@ public:
     void show() override;
     void setTitle(std::string_view title) override;
 
-    const Ref<Input::Keyboard> keyboard() const override { return keyboard_; }
-    const Ref<Input::Mouse> mouse() const override { return mouse_; }
-
 private:
     static constexpr std::string_view tag = "glfwWindow";
-    static void posCallback(GLFWwindow* w, int x, int y);
-    static void sizeCallback(GLFWwindow* w, int width, int height);
-    static void maximizeCallback(GLFWwindow* w, int maximized);
-    static void keyCallback(GLFWwindow* w, int key, int scancode, int action, int mods);
-    static void mouseButtonCallback(GLFWwindow* w, int button, int action, int mods);
-    static void cursorPosCallback(GLFWwindow* w, double x, double y);
-    static void scrollCallback(GLFWwindow* w, double dx, double dy);
-
-    void onPos(int x, int y);
-    void onSize(int width, int height);
-    void onMaximize(int maximized);
+    
+    void setupCallbacks();
 
     void syncFromWindow();
     GLFWmonitor* currentMonitor() const;
@@ -60,8 +47,8 @@ private:
     void applyWindowed();
     void applyFullscreen(GLFWmonitor* monitor);
 
-    Ref<Input::Keyboard> keyboard_;
-    Ref<Input::Mouse> mouse_;
+    Ref<glfwKeyboard> keyboard_;
+    Ref<glfwMouse> mouse_;
     std::shared_ptr<GLFWwindow> windowOwner_;
     GLFWwindow* window_ = nullptr;
     State state_{};

@@ -8,7 +8,7 @@
 #include <Lattice/Kernel/Node.hpp>
 #include <Lattice/Kernel/Value.hpp>
 
-#include "ActionMap.hpp"
+#include "ActionRouter.hpp"
 #include "LoaderAPI.hpp"
 
 class KeybindsLoader final : public LoaderAPI {
@@ -17,7 +17,7 @@ class KeybindsLoader final : public LoaderAPI {
 public:
     void configure(Lattice::Node& branch) {
         Lattice::Context& ctx = branch.requireContext();
-        actionMap = ctx.focus<ActionMap>();
+        actionMap = ctx.focus<ActionRouter>();
     }
 
     std::string_view section() const override { return "keybinds"; }
@@ -33,7 +33,7 @@ public:
     }
 
 private:
-    Lattice::Focus<ActionMap> actionMap;
+    Lattice::Focus<ActionRouter> actionMap;
 
     static bool isOp(std::string_view name) {
         return name == "add" || name == "sub" || name == "toggle";

@@ -169,15 +169,12 @@ bool monitorWorkArea(GLFWmonitor* monitor, int& x, int& y, int& w, int& h) {
 // ============================================================
 
 glfwWindow::glfwWindow(Lattice::Node& branch) {
-    branch.add<Input::Keyboard>();
-    branch.add<Input::Mouse>();
+    keyboard_ = branch.add<glfwKeyboard>();
+    mouse_ = branch.add<glfwMouse>();
 }
 
 void glfwWindow::configure(Lattice::Node& branch) {
     if (window_) return;
-    keyboard_ = branch.require<Input::Keyboard>();
-    mouse_ = branch.require<Input::Mouse>();
-
 
     if (!glfwInit()) {
         throw Lattice::Exception(tag, "Failed to initialize GLFW");
@@ -263,21 +260,11 @@ void glfwWindow::configure(Lattice::Node& branch) {
     #endif
     #endif
 
-    glfwSetWindowUserPointer(window_, this);
-    glfwSetWindowPosCallback(window_, posCallback);
-    glfwSetWindowSizeCallback(window_, sizeCallback);
-    glfwSetWindowMaximizeCallback(window_, maximizeCallback);
-
-    glfwSetKeyCallback(window_, keyCallback);
-
-    glfwSetMouseButtonCallback(window_, mouseButtonCallback);
-    glfwSetCursorPosCallback(window_, cursorPosCallback);
-    glfwSetScrollCallback(window_, scrollCallback);
+    setupCallbacks();
 
     double x = 0.0, y = 0.0;
     glfwGetCursorPos(window_, &x, &y);
-    mouse_->setPosition(static_cast<float>(x), static_cast<float>(y));
-    mouse_->resetDelta();
+    mouse_->onMove(x, y);
 
     if (!state_.fullscreen) {
         syncFromWindow();
@@ -286,21 +273,70 @@ void glfwWindow::configure(Lattice::Node& branch) {
     show();
 }
 
+void glfwWindow::setupCallbacks() {
+    glfwSetWindowUserPointer(window_, this);
+
+    glfwSetWindowPosCallback(window_, [](GLFWwindow* w, int x, int y) {
+        if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w))) {
+            if (self->state_.fullscreen || self->state_.maximized) return;
+            self->state_.x = x;
+            self->state_.y = y;
+            self->state_.monitorIndex = self->monitorIndex(self->currentMonitor());
+            Logger::info("Window", "moved {},{}", x, y);
+        }
+    });
+
+    glfwSetWindowSizeCallback(window_, [](GLFWwindow* w, int width, int height) {
+        if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w))) {
+            if (self->state_.fullscreen || self->state_.maximized || width <= 0 || height <= 0) return;
+            self->state_.width = width;
+            self->state_.height = height;
+            self->state_.monitorIndex = self->monitorIndex(self->currentMonitor());
+            Logger::info("Window", "resized {}x{}", width, height);
+        }
+    });
+
+    glfwSetWindowMaximizeCallback(window_, [](GLFWwindow* w, int maximized) {
+        if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w))) {
+            if (self->state_.fullscreen) return;
+
+            self->state_.maximized = maximized == GLFW_TRUE;
+            Logger::info("Window", "{}", self->state_.maximized ? "maximized" : "restored");
+
+            if (!self->state_.maximized)
+                self->syncFromWindow();
+            else
+                self->state_.monitorIndex = self->monitorIndex(self->currentMonitor());
+        }
+    });
+
+    glfwSetKeyCallback(window_, [](GLFWwindow* w, int key, int, int action, int) {
+        if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w)))
+            self->keyboard_->onKey(key, action);
+    });
+
+    glfwSetMouseButtonCallback(window_, [](GLFWwindow* w, int button, int action, int) {
+        if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w)))
+            self->mouse_->onButton(button, action);
+    });
+
+    glfwSetCursorPosCallback(window_, [](GLFWwindow* w, double x, double y) {
+        if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w)))
+            self->mouse_->onMove(x, y);
+    });
+
+    glfwSetScrollCallback(window_, [](GLFWwindow* w, double x, double y) {
+        if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w)))
+            self->mouse_->onScroll(x, y);
+    });
+}
+
 glfwWindow::~glfwWindow() {
     if (window_) {
         glfwSetWindowUserPointer(window_, nullptr);
         window_ = nullptr;
     }
 }
-
-// glfwWindow::glfwWindow(glfwWindow&& other) noexcept
-//     : window_(std::exchange(other.window_, nullptr))
-//     , state_(other.state_)
-// {
-//     if (window_) {
-//         glfwSetWindowUserPointer(window_, this);
-//     }
-// }
 
 glfwWindow& glfwWindow::operator=(glfwWindow&& other) noexcept {
     if (this != &other) {
@@ -428,81 +464,6 @@ NativeWindow glfwWindow::native() const {
 #endif
     return n;
 }
-
-// ============================================================
-// Callbacks
-// ============================================================
-
-void glfwWindow::posCallback(GLFWwindow* w, int x, int y) {
-    if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w)))
-        self->onPos(x, y);
-}
-
-void glfwWindow::sizeCallback(GLFWwindow* w, int width, int height) {
-    if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w)))
-        self->onSize(width, height);
-}
-
-void glfwWindow::maximizeCallback(GLFWwindow* w, int maximized) {
-    if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w)))
-        self->onMaximize(maximized);
-}
-
-void glfwWindow::keyCallback(GLFWwindow* w, int key, int, int action, int) {
-    if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w))) {
-        self->keyboard_->onKey(Input::keyFromGlfw(key), Input::keyActionFromGlfw(action));
-    }
-}
-
-void glfwWindow::mouseButtonCallback(GLFWwindow* w, int button, int action, int mods) {
-    auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w));
-    if (!self) return;
-    const auto btn = Input::mouseButtonFromGlfw(button);
-    if (btn == Input::MouseButton::Count) return;
-    self->mouse_->onButton(btn, Input::buttonActionFromGlfw(action));
-    // Logger::debug("Window", "click");
-}
-
-void glfwWindow::cursorPosCallback(GLFWwindow* w, double x, double y) {
-    if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w)))
-        self->mouse_->onMove(static_cast<float>(x), static_cast<float>(y));
-}
-
-void glfwWindow::scrollCallback(GLFWwindow* w, double dx, double dy) {
-    if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w)))
-        self->mouse_->onScroll(static_cast<float>(dx), static_cast<float>(dy));
-}
-
-void glfwWindow::onPos(int x, int y) {
-    if (state_.fullscreen || state_.maximized) return;
-    state_.x = x;
-    state_.y = y;
-    state_.monitorIndex = monitorIndex(currentMonitor());
-    Logger::info("Window", "moved {},{}", x, y);
-}
-
-void glfwWindow::onSize(int width, int height) {
-    if (state_.fullscreen || state_.maximized || width <= 0 || height <= 0) return;
-    state_.width = width;
-    state_.height = height;
-    state_.monitorIndex = monitorIndex(currentMonitor());
-    Logger::info("Window", "resized {}x{}", width, height);
-}
-
-void glfwWindow::onMaximize(int maximized) {
-    if (state_.fullscreen) return;
-    state_.maximized = (maximized == GLFW_TRUE);
-    Logger::info("Window", "{}", state_.maximized ? "maximized" : "restored");
-    if (!state_.maximized) {
-        syncFromWindow();
-    } else {
-        state_.monitorIndex = monitorIndex(currentMonitor());
-    }
-}
-
-// ============================================================
-// Helpers
-// ============================================================
 
 GLFWmonitor* glfwWindow::monitorByIndex(int index) const {
     int count = 0;
