@@ -7,6 +7,7 @@
 #include "Vulkan.hpp"
 #include "VkCommandList.hpp"
 
+#include <Lattice/Kernel/Exception.hpp>
 #include "Lattice/Kernel/Node.hpp"
 
 namespace Vk {
@@ -37,6 +38,14 @@ public:
 
     std::unique_ptr<GPU::CommandList> createCommandList() override {
         return std::make_unique<CommandList>(device_, commandPool_, queue_);
+    }
+
+    std::unique_ptr<GPU::BindingSet> createBindingSet(GPU::Pipeline&, uint32_t, std::span<const GPU::Binding>) override {
+        throw Lattice::Exception("Vulkan::Device", "createBindingSet is not implemented");
+    }
+
+    void writeBuffer(GPU::Buffer&, uint64_t, std::span<const std::byte>) override {
+        throw Lattice::Exception("Vulkan::Device", "writeBuffer is not implemented");
     }
 
 private:

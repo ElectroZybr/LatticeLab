@@ -55,13 +55,7 @@ bool ActionMap::hasBind(std::string_view verb, std::string_view trigger) const {
     return findBind(role, trigger) != nullptr;
 }
 
-void ActionMap::upsert(
-    std::string_view verb,
-    std::string_view trigger,
-    ActionMode mode,
-    Target target,
-    double delta
-) {
+void ActionMap::upsert(std::string_view verb, std::string_view trigger, ActionMode mode, Target target, double delta) {
     const Lattice::RoleId role = run_ctx->getOrCreateRole(verb);
 
     if (Binding* existing = findBind(role, trigger)) {
@@ -102,21 +96,41 @@ void ActionMap::bindAdd(std::string_view param, std::string_view trigger, double
     upsert(param, trigger, mode, Target::Add, delta);
 }
 
+void ActionMap::bindAxis2(std::string_view param, std::string_view trigger) {
+    const Lattice::RoleId role = run_ctx->getOrCreateRole(param);
+    bindings_.create({
+        .name = bindName(role, trigger),
+        .role = role,
+        .trigger = std::string(trigger),
+        .input = InputKind::Axis2,
+    });
+}
+
 void ActionMap::tick() {
     for (BindId id = 0; id < bindings_.size(); ++id) {
         Binding* binding = bindings_.get(id);
-        if (!binding)
-            continue;
+        if (!binding) continue;
 
         binding->down = false;
         binding->pressed = false;
         binding->released = false;
-    }
 
-    for (BindId id = 0; id < bindings_.size(); ++id) {
-        Binding* binding = bindings_.get(id);
-        if (!binding)
+        const Lattice::ObjectId object = run_ctx->resolveFocus(Lattice::InvalidFocusScopeId, binding->role);
+        if (object == Lattice::InvalidObjectId) continue;
+
+        if (binding->input == InputKind::Axis) {
+            double value = 0.0;
+            for (auto* input : inputs_) if (input) value += input->axis(binding->trigger);
+            run_ctx->bindings.set(object, value);
             continue;
+        }
+
+        if (binding->input == InputKind::Axis2) {
+            glm::vec2 value{};
+            for (auto* input : inputs_) if (input) value += input->axis2(binding->trigger);
+            run_ctx->bindings.set(object, value);
+            continue;
+        }
 
         bool now = false;
         for (auto* input : inputs_) {
@@ -139,21 +153,17 @@ void ActionMap::tick() {
             (binding->mode == ActionMode::OnRelease && released);
 
         if (fire) {
-            const Lattice::ObjectId object = run_ctx->resolveFocus(Lattice::InvalidFocusScopeId, binding->role);
-
-            if (object != Lattice::InvalidObjectId) {
-                Logger::info("ActionMap", "fire from: {}", binding->trigger);
-
-                if (binding->target == Target::Action) {
+            Logger::info("ActionMap", "fire from: {}", binding->trigger);
+            switch (binding->target) {
+                case Target::Action:
                     run_ctx->bindings.invoke(object);
-                } else if (binding->target == Target::Toggle) {
+                    break;
+                case Target::Toggle:
                     run_ctx->bindings.set(object, !run_ctx->bindings.get<bool>(object));
-                } else {
-                    run_ctx->bindings.set(
-                        object,
-                        run_ctx->bindings.get<double>(object) + binding->delta
-                    );
-                }
+                    break;
+                case Target::Add:
+                    run_ctx->bindings.set(object, run_ctx->bindings.get<double>(object) + binding->delta);
+                    break;
             }
         }
 

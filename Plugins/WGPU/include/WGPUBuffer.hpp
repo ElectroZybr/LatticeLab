@@ -25,6 +25,7 @@ public:
 
         if (!buffer_)
             throw Lattice::Exception("WGPU::Buffer", "failed to create buffer");
+        size_ = desc.size;
     }
 
     ~Buffer() override {

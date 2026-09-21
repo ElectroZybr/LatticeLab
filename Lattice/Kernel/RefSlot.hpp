@@ -2,6 +2,7 @@
 
 #include <string_view>
 #include <cstddef>
+#include <functional>
 #include <vector>
 #include <utility>
 #include <Lattice/Kernel/TypeName.hpp>
@@ -54,6 +55,9 @@ struct Slot {
 };
 
 template<typename T>
+struct Children;
+
+template<typename T>
 struct Ref {
     Context* ctx = nullptr;
     ObjectId id = InvalidObjectId;
@@ -79,15 +83,50 @@ struct Ref {
 
     bool operator==(std::nullptr_t) const { return !exists(); }
     bool operator!=(std::nullptr_t) const { return exists(); }
+
+    Node& branch();
+    const Node& branch() const;
+
+    template<typename U>
+    Ref<U> add(std::string_view instanceName = {});
+
+    template<typename U, typename D>
+    Ref<U> add(std::string_view instanceName, const D& desc);
+
+    template<typename U>
+    Slot<U> slot(std::string_view instanceName = {});
+
+    template<typename API, typename Impl>
+    void use(std::string_view instanceName = {});
+
+    template<typename API>
+    void use(std::string_view implName);
+
+    template<typename U>
+    Slot<U> find(std::string_view instanceName = {});
+
+    template<typename U>
+    Ref<U> require(std::string_view instanceName = {});
+
+    template<typename U>
+    ObjectId bind(std::string_view name, U* ptr, double min = 0, double max = 0, bool hasRange = false);
+
+    template<typename U, typename F>
+    ObjectId bind(std::string_view name, U* ptr, F&& onChange, double min = 0, double max = 0, bool hasRange = false);
+
+    ObjectId on(std::string_view name, std::function<void()> handler);
+
+    template<typename U>
+    void remove(std::string_view instanceName = {});
+
+    template<typename U>
+    Children<U> children() const;
 };
 
 template<typename T>
 struct Mount final : public Ref<T> {
     Mount() = default;
     using Ref<T>::Ref;
-
-    Node& branch();
-    const Node& branch() const;
 };
 
 template<typename T>

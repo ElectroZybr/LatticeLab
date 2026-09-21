@@ -1,6 +1,7 @@
 #include "WGPUDevice.hpp"
 #include "WGPU.hpp"
 #include "RenderPass.hpp"
+#include "WGPUBuffer.hpp"
 #include "Surface.hpp"
 
 #include <Lattice/Kernel/Exception.hpp>
@@ -30,14 +31,17 @@ std::unique_ptr<GPU::CommandList> Device::createCommandList() {
     return std::make_unique<CommandList>(device_, queue_);
 }
 
-std::unique_ptr<GPU::BindingSet> Device::createBindingSet(
-    GPU::Pipeline& pipeline, uint32_t group, std::span<const GPU::Binding> bindings)
-{
-    auto* nativePipeline = dynamic_cast<Pipeline*>(&pipeline);
-    if (!nativePipeline)
-        throw Lattice::Exception("WGPU::Device", "expected WGPU pipeline");
+std::unique_ptr<GPU::BindingSet> Device::createBindingSet(GPU::Pipeline& pipeline, uint32_t group, std::span<const GPU::Binding> bindings) {
+    auto* native = dynamic_cast<Pipeline*>(&pipeline);
+    if (!native) throw Lattice::Exception("WGPU::Device", "expected WGPU pipeline");
+    return std::make_unique<BindingSet>(device_, *native, group, bindings);
+}
 
-    return std::make_unique<BindingSet>(device_, *nativePipeline, group, bindings);
+void Device::writeBuffer(GPU::Buffer& buffer, uint64_t offset, std::span<const std::byte> data) {
+    auto* native = dynamic_cast<Buffer*>(&buffer);
+    if (!native)
+        throw Lattice::Exception("WGPU::Device", "expected WGPU buffer");
+    wgpuQueueWriteBuffer(queue_, native->native(), offset, data.data(), data.size());
 }
 
 }

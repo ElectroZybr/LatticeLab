@@ -28,7 +28,7 @@ private:
     NativeWindow native_;
     std::string resourceName_;
 
-    Ref<GPU::Buffer> uniform_;
+    // Ref<GPU::Buffer> uniform_;
 
     Children<Viewport> viewports_;
 };
