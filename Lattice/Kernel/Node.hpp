@@ -217,7 +217,10 @@ class Node {
                     break;
 
                 case NodeKind::Mount:
-                    line = std::format("<m>[&{}]</> <bl>&</>", name);
+                    if (unnamedInstance(name))
+                        line = std::format("<m>[&{}]</> <bl>&</>", run_ctx.blueprints.require(child->bp).shortName());
+                    else
+                        line = std::format("<m>[&{}]</> <bl>&</>", name);
                     break;
             }
 
@@ -650,20 +653,31 @@ public:
     Mount<T> mount(std::string_view role = typeKey<T>()) {
         noteRequire<T>();
         const BlueprintId api = findBlueprint<T>();
+        if (api == Blueprints::InvalidId)
+            throw Exception(tag, "unknown API '{}' for mount", typeKey<T>());
+
+        for (const auto& child : children_) {
+            if (child->kind == NodeKind::Mount &&
+                sameInstance(child->name(), DefaultInstanceName) &&
+                child->isImplement(api))
+                return Mount<T>(*child);
+        }
+
         auto selected = focus<T>(role);
-        T* mounted = selected.get();
-        if (!mounted)
+        if (!selected.get())
             throw Exception(tag, "Focus role '{}' does not provide '{}' for mount", role, typeKey<T>());
-        const ObjectId target = selected.id();
 
-        Node& targetNode = *run_ctx.objects.require(target).node;
+        Node& targetNode = *run_ctx.objects.require(selected.id()).node;
+        const BlueprintId impl = targetNode.implementation();
+        void* object = targetNode.getObject();
+        if (impl == Blueprints::InvalidId || !object)
+            throw Exception(tag, "Focus role '{}' does not provide '{}' for mount", role, typeKey<T>());
 
-        Node& mountNode = createNode(typeName<T>(), api);
+        Node& mountNode = createNode(DefaultInstanceName, impl);
         mountNode.kind = NodeKind::Mount;
-        mountNode.object = mounted;
+        mountNode.object = object;
         mountNode.configured = true;
-
-        return Mount<T>(targetNode);
+        return Mount<T>(mountNode);
     }
 
     ObjectId resolvePath(std::string_view path, ObjectId from) const {
@@ -722,10 +736,10 @@ public:
 
     // останавливает все сервисы
     void stopServices() {
-        if (kind == NodeKind::Mount)
-            return;
-        if (auto* service = get<ServiceAPI>())
-            service->stop();
+        if (kind != NodeKind::Mount) {
+            if (auto* service = get<ServiceAPI>())
+                service->stop();
+        }
         for (auto& child : children_)
             child->stopServices();
     }
@@ -911,19 +925,90 @@ Ref<T>& Ref<T>::focus(std::string_view role) {
 }
 
 template<typename T>
-Node& Mount<T>::branch() {
-    Node* n = this->node();
+Node& Ref<T>::branch() {
+    Node* n = node();
     if (!n)
-        throw Exception("Mount", "branch() on empty handle");
+        throw Exception("Ref", "branch() on empty handle");
     return *n;
 }
 
 template<typename T>
-const Node& Mount<T>::branch() const {
-    Node* n = this->node();
+const Node& Ref<T>::branch() const {
+    Node* n = node();
     if (!n)
-        throw Exception("Mount", "branch() on empty handle");
+        throw Exception("Ref", "branch() on empty handle");
     return *n;
+}
+
+template<typename T>
+template<typename U>
+Ref<U> Ref<T>::add(std::string_view instanceName) {
+    return branch().template add<U>(instanceName);
+}
+
+template<typename T>
+template<typename U, typename D>
+Ref<U> Ref<T>::add(std::string_view instanceName, const D& desc) {
+    return branch().template add<U>(instanceName, desc);
+}
+
+template<typename T>
+template<typename U>
+Slot<U> Ref<T>::slot(std::string_view instanceName) {
+    return branch().template slot<U>(instanceName);
+}
+
+template<typename T>
+template<typename API, typename Impl>
+void Ref<T>::use(std::string_view instanceName) {
+    branch().template use<API, Impl>(instanceName);
+}
+
+template<typename T>
+template<typename API>
+void Ref<T>::use(std::string_view implName) {
+    branch().template use<API>(implName);
+}
+
+template<typename T>
+template<typename U>
+Slot<U> Ref<T>::find(std::string_view instanceName) {
+    return branch().template find<U>(instanceName);
+}
+
+template<typename T>
+template<typename U>
+Ref<U> Ref<T>::require(std::string_view instanceName) {
+    return branch().template require<U>(instanceName);
+}
+
+template<typename T>
+template<typename U>
+ObjectId Ref<T>::bind(std::string_view name, U* ptr, double min, double max, bool hasRange) {
+    return branch().bind(name, ptr, min, max, hasRange);
+}
+
+template<typename T>
+template<typename U, typename F>
+ObjectId Ref<T>::bind(std::string_view name, U* ptr, F&& onChange, double min, double max, bool hasRange) {
+    return branch().bind(name, ptr, std::forward<F>(onChange), min, max, hasRange);
+}
+
+template<typename T>
+ObjectId Ref<T>::on(std::string_view name, std::function<void()> handler) {
+    return branch().on(name, std::move(handler));
+}
+
+template<typename T>
+template<typename U>
+void Ref<T>::remove(std::string_view instanceName) {
+    branch().template remove<U>(instanceName);
+}
+
+template<typename T>
+template<typename U>
+Children<U> Ref<T>::children() const {
+    return branch().template children<U>();
 }
 
 } // namespace Lattice

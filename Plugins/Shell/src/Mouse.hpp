@@ -22,8 +22,7 @@ enum class MouseButton : uint8_t {
     Count
 };
 
-static constexpr std::size_t kMouseButtonCount =
-    static_cast<std::size_t>(MouseButton::Count);
+static constexpr std::size_t kMouseButtonCount = static_cast<std::size_t>(MouseButton::Count);
 
 enum class ButtonAction : uint8_t {
     Press,
@@ -60,17 +59,6 @@ struct MouseState {
             down[i] = false;
         }
     }
-
-    void onMove(float x, float y) {
-        const glm::vec2 p{x, y};
-        delta += p - pos;
-        pos = p;
-    }
-
-    void onScroll(float dx, float dy) {
-        scrollDelta += glm::vec2{dx, dy};
-        scroll += glm::vec2{dx, dy};
-    }
 };
 
 class Mouse final : public InputAPI {
@@ -79,6 +67,12 @@ public:
     bool pressed(std::string_view trigger) const override;
     bool released(std::string_view trigger) const override;
 
+    glm::vec2 axis2(std::string_view trigger) const override {
+        if (trigger == "MouseDelta") return state_.delta;
+        if (trigger == "MouseScroll") return state_.scrollDelta;
+        return {};
+    }
+
     void beginFrame() { state_.beginFrame(); }
 
     void onButton(MouseButton button, ButtonAction action) {
@@ -86,11 +80,14 @@ public:
     }
 
     void onMove(float x, float y) {
-        state_.onMove(x, y);
+        const glm::vec2 p{x, y};
+        state_.delta += p - state_.pos;
+        state_.pos = p;
     }
 
     void onScroll(float dx, float dy) {
-        state_.onScroll(dx, dy);
+        state_.scrollDelta += glm::vec2{dx, dy};
+        state_.scroll += glm::vec2{dx, dy};
     }
 
     void setPosition(float x, float y) {
@@ -100,8 +97,6 @@ public:
     void resetDelta() {
         state_.delta = {0, 0};
     }
-
-    const MouseState& state() const { return state_; }
 
     static std::string_view buttonToString(MouseButton button);
     static MouseButton buttonFromString(std::string_view name);

@@ -15,6 +15,7 @@ namespace Lattice { class Node; }
 
 enum class ActionMode { OnPress, OnHold, OnRelease };
 enum class Target { Action, Toggle, Add };
+enum class InputKind { Button, Axis, Axis2 };
 
 class ActionMap final : public SubsystemAPI {
 public:
@@ -26,8 +27,10 @@ public:
 
         Lattice::RoleId role = Lattice::InvalidRoleId;
         std::string trigger;
+        InputKind input = InputKind::Button;
         ActionMode mode = ActionMode::OnPress;
         Target target = Target::Action;
+
         double delta = 0;
         bool wasDown = false;
         bool down = false;
@@ -38,22 +41,23 @@ public:
     using BindRegistry = Lattice::ObjectRegistry<Binding, BindId, std::string>;
 
     explicit ActionMap(Lattice::Node& branch) {}
-
     void configure(Lattice::Node& branch);
+    void tick();
 
+    /// output слой
     void bind(std::string_view verb, std::string_view trigger, ActionMode mode = ActionMode::OnPress);
     void bindToggle(std::string_view param, std::string_view trigger, ActionMode mode = ActionMode::OnPress);
     void bindAdd(std::string_view param, std::string_view trigger, double delta, ActionMode mode = ActionMode::OnPress);
+    void bindAxis(std::string_view param, std::string_view trigger);
+    void bindAxis2(std::string_view param, std::string_view trigger);
 
-    void tick();
-
+    /// input слой
     bool down(Lattice::RoleId role) const;
     bool pressed(Lattice::RoleId role) const;
     bool released(Lattice::RoleId role) const;
 
     size_t bindCount() const;
     bool hasBind(std::string_view verb, std::string_view trigger) const;
-
     void clearBinds();
     
 private:
@@ -66,11 +70,5 @@ private:
     Binding* findBind(Lattice::RoleId role, std::string_view trigger);
     const Binding* findBind(Lattice::RoleId role, std::string_view trigger) const;
     bool any(Lattice::RoleId role, bool Binding::* field) const;
-    void upsert(
-        std::string_view verb,
-        std::string_view trigger,
-        ActionMode mode,
-        Target target,
-        double delta
-    );
+    void upsert(std::string_view verb, std::string_view trigger, ActionMode mode, Target target, double delta);
 };

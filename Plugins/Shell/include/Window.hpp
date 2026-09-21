@@ -30,9 +30,11 @@ public:
         if (!window) window.use<glfwWindow>();
 
         branch.on("print", [this]() { print(); });
-    }
 
+    }
+    
     void run() override {
+        actionMap->bindAxis2("look", "MouseDelta");
         auto previous = std::chrono::steady_clock::now();
         while (!stopRequested()) {
             if (window) {

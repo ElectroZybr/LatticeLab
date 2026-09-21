@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <string>
 
 namespace GPU {
@@ -31,6 +32,8 @@ public:
     using Desc = DeviceDesc;
     virtual ~Device() = default;
     virtual std::unique_ptr<GPU::CommandList> createCommandList() = 0;
+    virtual std::unique_ptr<BindingSet> createBindingSet(Pipeline& pipeline, uint32_t group, std::span<const Binding> bindings) = 0;
+    virtual void writeBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data) = 0;
 };
 
 }

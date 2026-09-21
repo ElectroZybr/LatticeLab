@@ -19,18 +19,17 @@ void Render::configure(Lattice::Node& renderer) {
     if (surface_ && native_ != native) releaseFrameResources();
     if (!surface_) {
         try {
-            auto& branch = device_.branch();
-            surface_ = branch.add<GPU::Surface>(resourceName_, GPU::SurfaceDesc{native});
+            surface_ = device_.add<GPU::Surface>(resourceName_, GPU::SurfaceDesc{native});
             std::ifstream file("Plugins/Graphics/src/shaders/circle.wgsl");
             if (!file) throw Lattice::Exception("Render", "cannot read circle.wgsl");
             GPU::ShaderDesc shader;
             shader.source.assign(std::istreambuf_iterator<char>(file), {});
-            shader_ = branch.add<GPU::Shader>(resourceName_, shader);
-            pipeline_ = branch.add<GPU::Pipeline>(resourceName_, GPU::PipelineDesc{shader_.getPtr(), surface_->format()});
-            GPU::BufferDesc desc{};
-            desc.size = sizeof(glm::mat4);
-            desc.usage = GPU::BufferUsage::Uniform | GPU::BufferUsage::CopyDestination;
-            uniform_ = branch.add<GPU::Buffer>("Uniform", desc);
+            shader_ = device_.add<GPU::Shader>(resourceName_, shader);
+            pipeline_ = device_.add<GPU::Pipeline>(resourceName_, GPU::PipelineDesc{shader_.getPtr(), surface_->format()});
+            // GPU::BufferDesc desc{};
+            // desc.size = sizeof(glm::mat4);
+            // desc.usage = GPU::BufferUsage::Uniform | GPU::BufferUsage::CopyDestination;
+            // uniform_ = device_.add<GPU::Buffer>("Uniform", desc);
             native_ = native;
         } catch (...) {
             releaseFrameResources();
@@ -67,12 +66,11 @@ Render::~Render() {
 }
 
 void Render::releaseFrameResources() {
-    auto& branch = device_.branch();
-    branch.remove<GPU::Pipeline>(resourceName_);
-    branch.remove<GPU::Shader>(resourceName_);
-    branch.remove<GPU::Surface>(resourceName_);
-    branch.remove<GPU::Buffer>("Uniform");
-    uniform_ = {};
+    device_.remove<GPU::Pipeline>(resourceName_);
+    device_.remove<GPU::Shader>(resourceName_);
+    device_.remove<GPU::Surface>(resourceName_);
+    // device_.remove<GPU::Buffer>("Uniform");
+    // uniform_ = {};
     pipeline_ = {};
     shader_ = {};
     surface_ = {};
