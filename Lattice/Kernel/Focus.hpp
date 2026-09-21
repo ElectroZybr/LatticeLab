@@ -38,9 +38,13 @@ template<class T>
 class Focus {
 public:
     Focus() = default;
+
     ObjectId id() const;
     T* get() const;
+
     T* operator->() const { return get(); }
+    T& operator*() const { return *get(); }
+
     explicit operator bool() const { return get() != nullptr; }
 
 private:

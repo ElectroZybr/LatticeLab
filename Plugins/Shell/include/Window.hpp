@@ -33,7 +33,11 @@ public:
     }
     
     void run() override {
-        actionMap->bindAxis2("look", "MouseDelta");
+        actionMap->bindAxis2("look", "MouseDelta+MouseLeft");
+        actionMap->bindAxis2("orbit", "MouseDelta+MouseLeft");
+        actionMap->bindAxis2("pan", "MouseDelta+Ctrl+MouseLeft");
+        actionMap->bindAxis2("zoom", "MouseWheel");
+        actionMap->bindAxis2("cursor", "MousePos");
         auto previous = std::chrono::steady_clock::now();
         while (!stopRequested()) {
             if (window) {

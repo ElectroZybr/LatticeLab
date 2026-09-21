@@ -11,6 +11,7 @@
 #include <Lattice/Kernel/Node.hpp>
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/Bindings.hpp>
+#include "Lattice/Kernel/Component.hpp"
 #include "Lattice/Kernel/DLLoader.hpp"
 #include <Lattice/Kernel/Context.hpp>
 #include <Lattice/Kernel/Model.hpp>
@@ -30,6 +31,7 @@ public:
     Runtime() : root(run_ctx, nullptr)
               , pluginManager(run_ctx.blueprints, dlLoader) {
         // регистрация интерфейсов ядра
+        run_ctx.blueprints.add<Component>();
         run_ctx.blueprints.add<ServiceAPI>();
         run_ctx.blueprints.add<SubsystemAPI>();
         run_ctx.blueprints.add<Model, ServiceAPI>();
