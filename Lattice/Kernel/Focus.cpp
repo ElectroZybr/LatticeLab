@@ -10,9 +10,19 @@ RoleId Context::getOrCreateRole(std::string_view name) {
     return role;
 }
 
-FocusScopeId Context::createFocusScope(ObjectId owner) {
+RoleId Context::findRole(std::string_view name) const {
+    const auto role = roles.find(name);
+    if (role != InvalidRoleId)
+        return role;
+    const auto blueprint = blueprints.resolve(name);
+    if (blueprint == Blueprints::InvalidId)
+        return InvalidRoleId;
+    return roles.find(blueprints.require(blueprint).name);
+}
+
+FocusScopeId Context::createFocusScope(ObjectId owner, BlueprintId type) {
     objects.require(owner);
-    return focusScopes.create(FocusScope{owner}, owner);
+    return focusScopes.create(FocusScope{owner, type}, owner);
 }
 
 FocusScopeId Context::parentFocusScope(FocusScopeId scope) const {
@@ -40,14 +50,29 @@ ObjectId Context::resolveFocus(FocusScopeId origin, RoleId role) const {
     return InvalidObjectId;
 }
 
+void Context::overlayActive(RoleId role) {
+    const bool all = role == InvalidRoleId;
+    std::vector<FocusScopeId> overlay;
+    if (focusScopes.get(rootScope))
+        overlay.push_back(rootScope);
+    for (auto selected : activeScopes) {
+        std::vector<FocusScopeId> chain;
+        for (auto scope = selected; scope != InvalidFocusScopeId; scope = parentFocusScope(scope))
+            chain.push_back(scope);
+        for (auto it = chain.rbegin(); it != chain.rend(); ++it)
+            if (std::ranges::find(overlay, *it) == overlay.end())
+                overlay.push_back(*it);
+    }
+    for (auto id : overlay)
+        for (const auto& entry : focusScopes.require(id).roles)
+            if (all || entry.role == role)
+                resolvedRoles[entry.role] = entry.target;
+}
+
 void Context::resolveActiveRole(RoleId role) {
     resolvedRoles.resize(roles.size(), InvalidObjectId);
-    ObjectId target = InvalidObjectId;
-    for (auto id : activeChain)
-        for (const auto& entry : focusScopes.require(id).roles)
-            if (entry.role == role)
-                target = entry.target;
-    resolvedRoles[role] = target;
+    resolvedRoles[role] = InvalidObjectId;
+    overlayActive(role);
 }
 
 void Context::setFocus(FocusScopeId scopeId, RoleId role, ObjectId target) {
@@ -61,8 +86,7 @@ void Context::setFocus(FocusScopeId scopeId, RoleId role, ObjectId target) {
         entries.push_back({role, target});
     else
         entry->target = target;
-    if (std::ranges::find(activeChain, scopeId) != activeChain.end())
-        resolveActiveRole(role);
+    resolveActiveRole(role);
 }
 
 void Context::resetFocus(FocusScopeId scopeId, RoleId role) {
@@ -70,24 +94,80 @@ void Context::resetFocus(FocusScopeId scopeId, RoleId role) {
     roles.require(role);
     std::erase_if(focusScopes.get(scopeId)->roles,
                   [role](const auto& entry) { return entry.role == role; });
-    if (std::ranges::find(activeChain, scopeId) != activeChain.end())
-        resolveActiveRole(role);
+    resolveActiveRole(role);
+}
+
+FocusScopeId Context::activeFocus(BlueprintId type) const {
+    for (auto scope : activeScopes)
+        if (focusScopes.require(scope).type == type)
+            return scope;
+    return InvalidFocusScopeId;
+}
+
+void Context::activateFocusIfTyped(FocusScopeId scope) {
+    const auto* requested = focusScopes.get(scope);
+    if (!requested || scope == rootScope || requested->type == Blueprints::InvalidId)
+        return;
+    std::vector<BlueprintId> seen;
+    for (auto id = scope; id != rootScope && id != InvalidFocusScopeId; id = parentFocusScope(id)) {
+        const auto type = focusScopes.require(id).type;
+        if (type == Blueprints::InvalidId)
+            continue;
+        if (std::ranges::find(seen, type) != seen.end())
+            return;
+        seen.push_back(type);
+    }
+    activateFocus(scope);
 }
 
 void Context::rebuildFocus() {
-    activeChain.clear();
-    for (auto scope = activeScope; scope != InvalidFocusScopeId; scope = parentFocusScope(scope))
-        activeChain.push_back(scope);
-    std::ranges::reverse(activeChain);
     resolvedRoles.assign(roles.size(), InvalidObjectId);
-    for (auto scope : activeChain)
-        for (const auto& entry : focusScopes.require(scope).roles)
-            resolvedRoles[entry.role] = entry.target;
+    overlayActive();
 }
 
 void Context::activateFocus(FocusScopeId scope) {
-    focusScopes.require(scope);
-    activeScope = scope;
+    const auto& requested = focusScopes.require(scope);
+    if (scope == rootScope)
+        return; // Root is the floor, not a selection.
+    if (requested.type == Blueprints::InvalidId)
+        throw Exception("Focus", "Scope requires an explicit type for activation");
+
+    std::vector<FocusScopeId> chain;
+    for (auto id = scope; id != rootScope && id != InvalidFocusScopeId; id = parentFocusScope(id)) {
+        const auto type = focusScopes.require(id).type;
+        if (type != Blueprints::InvalidId) {
+            for (auto child : chain)
+                if (focusScopes.require(child).type == type)
+                    throw Exception("Focus", "A focus chain cannot activate two scopes of the same type");
+            chain.push_back(id);
+        }
+    }
+    // Validate the whole chain before changing any selection.
+    for (auto it = chain.rbegin(); it != chain.rend(); ++it) {
+        const auto candidate = *it;
+        const auto type = focusScopes.require(candidate).type;
+        const auto previous = activeFocus(type);
+        if (previous != InvalidFocusScopeId && previous != candidate) {
+            const auto owner = focusScopes.require(previous).owner;
+            std::erase_if(activeScopes, [&](auto active) {
+                return objects.require(focusScopes.require(active).owner).node->isUnder(owner);
+            });
+        }
+        std::vector<FocusScopeId> descendants;
+        if (candidate == scope) {
+            const auto owner = focusScopes.require(candidate).owner;
+            std::erase_if(activeScopes, [&](auto active) {
+                if (!objects.require(focusScopes.require(active).owner).node->isUnder(owner))
+                    return false;
+                if (active != candidate)
+                    descendants.push_back(active);
+                return true;
+            });
+        }
+        if (std::ranges::find(activeScopes, candidate) == activeScopes.end())
+            activeScopes.push_back(candidate);
+        activeScopes.insert(activeScopes.end(), descendants.begin(), descendants.end());
+    }
     rebuildFocus();
 }
 
@@ -100,15 +180,15 @@ void Context::removeFocusObject(ObjectId object) {
         for (auto& entry : scope->roles) {
             if (entry.target == object) {
                 entry.target = InvalidObjectId;
-                if (std::ranges::find(activeChain, id) != activeChain.end())
-                    resolveActiveRole(entry.role);
+                resolveActiveRole(entry.role);
             }
         }
     }
     const auto scope = focusScopes.find(object);
     if (scope != InvalidFocusScopeId) {
-        if (activeScope == scope)
-            activeScope = parentFocusScope(scope);
+        std::erase(activeScopes, scope);
+        if (rootScope == scope)
+            rootScope = InvalidFocusScopeId;
         focusScopes.destroy(scope);
         rebuildFocus();
     }

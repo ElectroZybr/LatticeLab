@@ -20,8 +20,7 @@ public:
     explicit Window(Lattice::Node& branch) {
         branch.slot<WindowAPI>();
         branch.add<Render>();
-        branch.add<ActionMap>();
-        branch.setFocus(Lattice::typeKey<ActionMap>(), branch.find<ActionMap>().node->getId());
+        branch.add<ActionMap>().focus();
     }
 
     void configure(Lattice::Node& branch) {

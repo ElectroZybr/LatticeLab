@@ -6,7 +6,6 @@
 #include <vector>
 
 #include <Lattice/Kernel/Context.hpp>
-#include <Lattice/Kernel/RefSlot.hpp>
 #include <Lattice/Kernel/ObjectRegistry.hpp>
 #include <Lattice/Kernel/SubsystemAPI.hpp>
 
@@ -58,7 +57,7 @@ public:
     void clearBinds();
     
 private:
-    Ref<Lattice::Context> run_ctx;
+    Lattice::Context* run_ctx = nullptr;
     std::vector<InputAPI*> inputs_;
     BindRegistry bindings_;
 

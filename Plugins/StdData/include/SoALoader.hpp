@@ -14,7 +14,7 @@ class SoALoader final : public LoaderAPI {
 
 public:
     void configure(Lattice::Node& branch) {
-        branch_ = &branch;
+        branch_ = branch;
     }
 
     std::string_view section() const override { return "SoA"; }
@@ -91,7 +91,7 @@ public:
 private:
     StdData::SoA* resolveTarget(std::string_view target) const {
         Lattice::Context& ctx = branch_->requireContext();
-        const Lattice::ObjectId id = ctx.resolveFocus(Lattice::InvalidFocusScopeId, ctx.roles.find(target));
+        const Lattice::ObjectId id = ctx.resolveFocus(Lattice::InvalidFocusScopeId, ctx.findRole(target));
 
         if (id == Lattice::InvalidObjectId)
             throw Lattice::Exception(tag, "SoA target '{}' is not active in context", target);

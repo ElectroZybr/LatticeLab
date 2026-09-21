@@ -13,7 +13,7 @@ class NamedSoALoader final : public LoaderAPI {
     static constexpr std::string_view keyColumn = "key";
 
 public:
-    void configure(Lattice::Node& branch) { branch_ = &branch; }
+    void configure(Lattice::Node& branch) { branch_ = branch; }
 
     std::string_view section() const override { return "NamedSoA"; }
 
@@ -111,7 +111,7 @@ public:
 private:
     StdData::NamedSoA* resolveTarget(std::string_view target) const {
         Lattice::Context& ctx = branch_->requireContext();
-        const Lattice::ObjectId id = ctx.resolveFocus(Lattice::InvalidFocusScopeId, ctx.roles.find(target));
+        const Lattice::ObjectId id = ctx.resolveFocus(Lattice::InvalidFocusScopeId, ctx.findRole(target));
 
         if (id == Lattice::InvalidObjectId)
             throw Lattice::Exception(tag, "NamedSoA target '{}' is not active in context", target);

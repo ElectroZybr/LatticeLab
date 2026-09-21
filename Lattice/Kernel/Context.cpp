@@ -16,9 +16,10 @@ void Context::appendTree(Logger::Tree& tree) const {
         const auto* scope = focusScopes.get(id);
         if (!scope) continue;
         std::string state;
-        if (id == 0) state += " <m>[root]</>";
-        if (id == activeScope) state += " <m>[active]</>";
-        tree.node(std::format("{}{} <gr>#{}</>", label(scope->owner), state, id), 1);
+        if (id == rootScope) state += " <m>[root]</>";
+        if (std::ranges::find(activeScopes, id) != activeScopes.end()) state += " <m>[active]</>";
+        const auto type = scope->type == Blueprints::InvalidId ? "untyped" : blueprints.require(scope->type).name;
+        tree.node(std::format("{}{} <gr>#{} [{}]</>", label(scope->owner), state, id, type), 1);
         for (const auto& entry : scope->roles)
             tree.node(std::format("{} ➜ <gr>{}</>", roles.require(entry.role).name, label(entry.target)), 2);
     }

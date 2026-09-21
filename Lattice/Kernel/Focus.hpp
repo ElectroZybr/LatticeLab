@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <Lattice/Kernel/Objects.hpp>
+#include <Lattice/Kernel/Blueprints.hpp>
 #include <Lattice/Kernel/ObjectRegistry.hpp>
 
 namespace Lattice {
@@ -26,6 +27,7 @@ struct FocusEntry {
 };
 struct FocusScope {
     ObjectId owner = InvalidObjectId;
+    BlueprintId type = Blueprints::InvalidId;
     std::vector<FocusEntry> roles;
     bool exists = true;
 };

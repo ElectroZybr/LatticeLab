@@ -119,6 +119,15 @@ class Node {
         return child;
     }
 
+    FocusScopeId nearestFocusScope() const {
+        const Node* origin = this;
+        while (origin && origin->focusScope == InvalidFocusScopeId)
+            origin = origin->parent;
+        if (!origin)
+            throw Exception(tag, "No focus scope for node");
+        return origin->focusScope;
+    }
+
     Node* findChild(std::string_view childName) const noexcept {
         for (const auto& child : children_) {
             if (child->name() == childName)
@@ -261,11 +270,41 @@ public:
     FocusScopeId getFocusScopeId() const noexcept { return focusScope; }
 
     FocusScopeId makeFocusScope() {
-        if (focusScope == InvalidFocusScopeId) {
-            focusScope = run_ctx.createFocusScope(id);
-            if (!parent)
-                run_ctx.activeScope = focusScope;
+        return focusScope != InvalidFocusScopeId ? focusScope : makeFocusScope(bp);
+    }
+
+    template<class T>
+    FocusScopeId makeFocusScope() {
+        const auto type = findBlueprint<T>();
+        if (type == Blueprints::InvalidId)
+            throw Exception(tag, "Scope type '{}' is not registered", typeKey<T>());
+        return makeFocusScope(type);
+    }
+
+    FocusScopeId makeFocusScope(BlueprintId type) {
+        if (type != Blueprints::InvalidId)
+            run_ctx.blueprints.require(type);
+        if (focusScope != InvalidFocusScopeId) {
+            if (run_ctx.focusScopes.require(focusScope).type != type)
+                throw Exception(tag, "Cannot change the type of an existing focus scope");
+            return focusScope;
+        }
+        const auto previousSelections = run_ctx.activeScopes;
+        focusScope = run_ctx.createFocusScope(id, type);
+        if (!parent)
+            run_ctx.rootScope = focusScope;
+        try {
+            // Inserting a typed ancestor must also update existing selections.
+            for (auto selected : previousSelections)
+                run_ctx.activateFocus(selected);
+            run_ctx.activateFocusIfTyped(focusScope);
             run_ctx.rebuildFocus();
+        } catch (...) {
+            run_ctx.focusScopes.destroy(focusScope);
+            focusScope = InvalidFocusScopeId;
+            run_ctx.activeScopes = previousSelections;
+            run_ctx.rebuildFocus();
+            throw;
         }
         return focusScope;
     }
@@ -273,24 +312,16 @@ public:
     template<class T>
     Focus<T> focus(std::string_view role = typeKey<T>()) {
         static_assert(!std::is_same_v<T, Node>, "Use id() for low-level node access");
-        const Node* origin = this;
-        while (origin && origin->focusScope == InvalidFocusScopeId)
-            origin = origin->parent;
-        if (!origin)
-            throw Exception(tag, "No focus scope for node");
-        return Focus<T>(run_ctx, run_ctx.getOrCreateRole(role), origin->focusScope);
+        return Focus<T>(run_ctx, run_ctx.getOrCreateRole(role), nearestFocusScope());
     }
 
-    // Explicitly assign a role in the nearest scope, including this node.
+    // Assign a role in the nearest scope and select that scope if it is typed.
     void setFocus(std::string_view role, ObjectId target) {
         if (target != InvalidObjectId)
             run_ctx.objects.require(target);
-        const Node* origin = this;
-        while (origin && origin->focusScope == InvalidFocusScopeId)
-            origin = origin->parent;
-        if (!origin)
-            throw Exception(tag, "No focus scope for node");
-        run_ctx.setFocus(origin->focusScope, run_ctx.getOrCreateRole(role), target);
+        const auto scope = nearestFocusScope();
+        run_ctx.setFocus(scope, run_ctx.getOrCreateRole(role), target);
+        run_ctx.activateFocusIfTyped(scope);
     }
 
     Context& requireContext() noexcept { return run_ctx; }
@@ -395,14 +426,14 @@ public:
     template<typename T>
     Ref<T> add(std::string_view instanceName = DefaultInstanceName) {
         noteAdd<T>();
-        return Ref<T>(static_cast<T*>(createComponent(typeKey<T>(), instanceName, nullptr).castObject(findBlueprint<T>())));
+        return Ref<T>(createComponent(typeKey<T>(), instanceName, nullptr));
     }
 
     template<typename T, typename D>
     requires CreationDescriptor<T, D>
     Ref<T> add(std::string_view instanceName, const D& desc) {
         noteAdd<T>();
-        return Ref<T>(static_cast<T*>(createComponent(typeKey<T>(), instanceName, &desc, typeKey<D>()).castObject(findBlueprint<T>())));
+        return Ref<T>(createComponent(typeKey<T>(), instanceName, &desc, typeKey<D>()));
     }
 
     void add(std::string_view type, std::string_view instanceName) {
@@ -472,9 +503,9 @@ private:
     void useImplementation(std::string_view instanceName, const void* desc) {
         noteUseImpl<API, Impl>();
         auto found = find<API>(instanceName);
-        if (!found.node)
+        if (!found.node())
             throw Exception(tag, "slot '{}' with instance '{}' not found", typeName<API>(), instanceName);
-        found.node->template useSlot<API>(typeKey<Impl>(), desc);
+        found.node()->template useSlot<API>(typeKey<Impl>(), desc);
     }
 
     template<typename API>
@@ -569,13 +600,13 @@ public:
         noteRequire<T>();
 
         auto found = find<T>(instanceName);
-        if (!found.node)
+        if (!found.node())
             throw Lattice::Exception(tag, "Object '{}' with instance '{}' not found", typeName<T>(), instanceName);
 
         if (!found.get())
             throw Lattice::Exception(tag, "Slot '{}' with instance '{}' is empty", typeName<T>(), instanceName);
 
-        return Ref<T>(found.get());
+        return Ref<T>(*found.node());
     }
 
     // Resolve the direct owner, independent of its instance name or siblings.
@@ -585,7 +616,7 @@ public:
         T* ptr = parent ? parent->get<T>() : nullptr;
         if (!ptr)
             throw Exception(tag, "Parent does not provide '{}'", typeKey<T>());
-        return Ref<T>(ptr);
+        return Ref<T>(*parent);
     }
 
     Node& require(std::string_view type, std::string_view instanceName = DefaultInstanceName) {
@@ -632,7 +663,7 @@ public:
         mountNode.object = mounted;
         mountNode.configured = true;
 
-        return Mount<T>(targetNode, mounted);
+        return Mount<T>(targetNode);
     }
 
     ObjectId resolvePath(std::string_view path, ObjectId from) const {
@@ -758,7 +789,7 @@ public:
     ObjectId bind(std::string_view name, T* ptr, double min = 0, double max = 0, bool hasRange = false) {
         Node& child = bindingChild(name);
         child.object = &run_ctx.bindings.bind(child.id, ptr, min, max, hasRange);
-        setFocus(name, child.id);
+        run_ctx.setFocus(nearestFocusScope(), run_ctx.getOrCreateRole(name), child.id);
         return child.id;
     }
 
@@ -767,14 +798,14 @@ public:
     ObjectId bind(std::string_view name, T* ptr, F&& onChange, double min = 0, double max = 0, bool hasRange = false) {
         Node& child = bindingChild(name);
         child.object = &run_ctx.bindings.bind(child.id, ptr, std::forward<F>(onChange), min, max, hasRange);
-        setFocus(name, child.id);
+        run_ctx.setFocus(nearestFocusScope(), run_ctx.getOrCreateRole(name), child.id);
         return child.id;
     }
 
     ObjectId on(std::string_view name, std::function<void()> handler) {
         Node& child = bindingChild(name);
         child.object = &run_ctx.bindings.on(child.id, std::move(handler));
-        setFocus(name, child.id);
+        run_ctx.setFocus(nearestFocusScope(), run_ctx.getOrCreateRole(name), child.id);
         return child.id;
     }
 
@@ -804,21 +835,95 @@ public:
     }
 };
 
-template<typename T>
-T* Lattice::Slot<T>::get() const {
-    return node ? node->template get<T>() : nullptr;
+inline Node* handleNode(Context* ctx, ObjectId id) {
+    if (!ctx || id == InvalidObjectId)
+        return nullptr;
+    const auto* object = ctx->objects.get(id);
+    return object ? object->node : nullptr;
 }
 
 template<typename T>
-bool Lattice::Slot<T>::exists() const {
+Slot<T>::Slot(Node& node) : ctx(&node.requireContext()), id(node.getId()) {}
+
+template<typename T>
+Node* Slot<T>::node() const {
+    return handleNode(ctx, id);
+}
+
+template<typename T>
+T* Slot<T>::get() const {
+    Node* n = node();
+    return n ? n->template get<T>() : nullptr;
+}
+
+template<typename T>
+bool Slot<T>::exists() const {
     return get() != nullptr;
 }
 
 template<typename T>
-void Lattice::Slot<T>::use(std::string_view implName) {
-    if (!node)
+void Slot<T>::use(std::string_view implName) {
+    Node* n = node();
+    if (!n)
         throw Exception("Node", "use() on empty slot handle");
-    node->template use<T>(implName);
+    n->template use<T>(implName);
+}
+
+template<typename T>
+Slot<T>& Slot<T>::focus(std::string_view role) {
+    Node* n = node();
+    if (!n)
+        throw Exception("Slot", "focus() on empty handle");
+    n->setFocus(role, id);
+    if (role == typeKey<T>() && typeName<T>() != typeKey<T>())
+        n->setFocus(typeName<T>(), id);
+    return *this;
+}
+
+template<typename T>
+Ref<T>::Ref(Node& node) : ctx(&node.requireContext()), id(node.getId()) {}
+
+template<typename T>
+Node* Ref<T>::node() const {
+    return handleNode(ctx, id);
+}
+
+template<typename T>
+T* Ref<T>::getPtr() const {
+    Node* n = node();
+    if (!n)
+        return nullptr;
+    if constexpr (std::is_same_v<T, Node>)
+        return n;
+    else
+        return n->template get<T>();
+}
+
+template<typename T>
+Ref<T>& Ref<T>::focus(std::string_view role) {
+    Node* n = node();
+    if (!n)
+        throw Exception("Ref", "focus() on empty handle");
+    n->setFocus(role, id);
+    if (role == typeKey<T>() && typeName<T>() != typeKey<T>())
+        n->setFocus(typeName<T>(), id);
+    return *this;
+}
+
+template<typename T>
+Node& Mount<T>::branch() {
+    Node* n = this->node();
+    if (!n)
+        throw Exception("Mount", "branch() on empty handle");
+    return *n;
+}
+
+template<typename T>
+const Node& Mount<T>::branch() const {
+    Node* n = this->node();
+    if (!n)
+        throw Exception("Mount", "branch() on empty handle");
+    return *n;
 }
 
 } // namespace Lattice

@@ -28,8 +28,7 @@ public:
 
         const GPU::DeviceDesc desc = describeDevice(physical);
 
-        node.add<Device>(desc.name, desc);
-        node.setFocus(Lattice::typeKey<GPU::Device>(), node.find<Device>(desc.name).node->getId());
+        node.add<Device>(desc.name, desc).focus<GPU::Device>();
     }
 
     ~Vulkan() override {

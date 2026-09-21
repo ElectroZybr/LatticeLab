@@ -1,11 +1,66 @@
 #pragma once
 
 #include "Surface.hpp"
+#include "WGPUBuffer.hpp"
 #include <GPU/include/CommandList.hpp>
 #include <Lattice/Kernel/Exception.hpp>
-#include <cstring>
 
 namespace WGPU {
+
+class BindingSet final : public GPU::BindingSet {
+public:
+    BindingSet(WGPUDevice device, Pipeline& pipeline, uint32_t group, std::span<const GPU::Binding> bindings)
+        : device_(device)
+    {
+        auto layout = wgpuRenderPipelineGetBindGroupLayout(pipeline.native(), group);
+        if (!layout)
+            throw Lattice::Exception("WGPU::BindingSet", "failed to get bind group layout");
+
+        std::vector<WGPUBindGroupEntry> entries;
+        entries.reserve(bindings.size());
+
+        for (const auto& binding : bindings) {
+            auto* buffer = dynamic_cast<Buffer*>(binding.buffer);
+            if (!buffer) {
+                wgpuBindGroupLayoutRelease(layout);
+                throw Lattice::Exception("WGPU::BindingSet", "expected WGPU buffer at binding {}", binding.binding);
+            }
+
+            WGPUBindGroupEntry entry{};
+            entry.binding = binding.binding;
+            entry.buffer = buffer->native();
+            entry.offset = binding.offset;
+            entry.size = binding.size ? binding.size : buffer->size();
+
+            entries.push_back(entry);
+        }
+
+        WGPUBindGroupDescriptor desc{};
+        desc.layout = layout;
+        desc.entryCount = entries.size();
+        desc.entries = entries.data();
+
+        bindGroup_ = wgpuDeviceCreateBindGroup(device_, &desc);
+
+        wgpuBindGroupLayoutRelease(layout);
+
+        if (!bindGroup_)
+            throw Lattice::Exception("WGPU::BindingSet", "failed to create bind group");
+    }
+
+    ~BindingSet() override {
+        if (bindGroup_)
+            wgpuBindGroupRelease(bindGroup_);
+    }
+
+    WGPUBindGroup native() const noexcept {
+        return bindGroup_;
+    }
+
+private:
+    WGPUDevice device_ = nullptr;
+    WGPUBindGroup bindGroup_ = nullptr;
+};
 
 class RenderPass final : public GPU::RenderPass {
 public:
@@ -42,47 +97,19 @@ public:
 
     void setPipeline(GPU::Pipeline& pipeline) override {
         requireActive();
-        auto* native = dynamic_cast<WGPU::Pipeline*>(&pipeline);
+        auto* native = dynamic_cast<Pipeline*>(&pipeline);
         if (!native || native->device() != device_)
             throw Lattice::Exception("WGPU::RenderPass", "expected pipeline from the same WGPU device");
         pipeline_ = native->native();
         wgpuRenderPassEncoderSetPipeline(pass_, pipeline_);
     }
 
-    void setUniform(uint32_t group, uint32_t binding, std::span<const std::byte> data) override {
+    void setBindings(uint32_t group, GPU::BindingSet& bindings) override {
         requireActive();
-        if (!pipeline_ || data.empty())
-            throw Lattice::Exception("WGPU::RenderPass", "uniform requires a pipeline and nonempty data");
-        WGPUBufferDescriptor desc{};
-        desc.size = (data.size() + 15) & ~uint64_t(15);
-        desc.usage = WGPUBufferUsage_Uniform;
-        desc.mappedAtCreation = true;
-        auto buffer = wgpuDeviceCreateBuffer(device_, &desc);
-        if (!buffer) throw Lattice::Exception("WGPU::RenderPass", "failed to create uniform buffer");
-        auto* mapped = wgpuBufferGetMappedRange(buffer, 0, desc.size);
-        if (!mapped) {
-            wgpuBufferRelease(buffer);
-            throw Lattice::Exception("WGPU::RenderPass", "failed to map uniform buffer");
-        }
-        std::memset(mapped, 0, desc.size);
-        std::memcpy(mapped, data.data(), data.size());
-        wgpuBufferUnmap(buffer);
-        auto layout = wgpuRenderPipelineGetBindGroupLayout(pipeline_, group);
-        WGPUBindGroupEntry entry{};
-        entry.binding = binding;
-        entry.buffer = buffer;
-        entry.size = desc.size;
-        WGPUBindGroupDescriptor bindDesc{};
-        bindDesc.layout = layout;
-        bindDesc.entryCount = 1;
-        bindDesc.entries = &entry;
-        auto bindGroup = wgpuDeviceCreateBindGroup(device_, &bindDesc);
-        if (layout) wgpuBindGroupLayoutRelease(layout);
-        wgpuBufferRelease(buffer);
-        if (!bindGroup) throw Lattice::Exception("WGPU::RenderPass", "failed to create uniform bind group");
-        // Encoded commands retain their own references; each draw gets immutable data.
-        wgpuRenderPassEncoderSetBindGroup(pass_, group, bindGroup, 0, nullptr);
-        wgpuBindGroupRelease(bindGroup);
+        auto* native = dynamic_cast<BindingSet*>(&bindings);
+        if (!native)
+            throw Lattice::Exception("WGPU::RenderPass", "expected WGPU binding set");
+        wgpuRenderPassEncoderSetBindGroup(pass_, group, native->native(), 0, nullptr);
     }
 
     void draw(uint32_t vertexCount, uint32_t firstVertex = 0) override {

@@ -1,8 +1,5 @@
 #pragma once
 
-#include <cstdint>
-#include <limits>
-#include <string>
 #include <string_view>
 
 #include <Lattice/Kernel/Focus.hpp>
@@ -24,9 +21,11 @@ using ComponentsRegistry = ObjectRegistry<Object, ObjectId, ObjectKey, ObjectKey
 class Context {
 public:
     RoleId getOrCreateRole(std::string_view name);
+    RoleId findRole(std::string_view name) const;
     void setFocus(FocusScopeId scope, RoleId role, ObjectId target);
     void resetFocus(FocusScopeId scope, RoleId role);
     void activateFocus(FocusScopeId scope);
+    FocusScopeId activeFocus(BlueprintId type) const;
     ObjectId resolveFocus(FocusScopeId origin, RoleId role) const;
 
     template<class T>
@@ -37,8 +36,8 @@ public:
 
     RoleRegistry roles;
     FocusScopeRegistry focusScopes;
-    FocusScopeId activeScope = InvalidFocusScopeId;
-    std::vector<FocusScopeId> activeChain;
+    FocusScopeId rootScope = InvalidFocusScopeId;
+    std::vector<FocusScopeId> activeScopes;
     std::vector<ObjectId> resolvedRoles;
 
     void printTree() const;
@@ -50,11 +49,13 @@ public:
 private:
     friend class Node;
     template<class T> friend class Focus;
-    FocusScopeId createFocusScope(ObjectId owner);
+    FocusScopeId createFocusScope(ObjectId owner, BlueprintId type);
     FocusScopeId parentFocusScope(FocusScopeId scope) const;
+    void activateFocusIfTyped(FocusScopeId scope);
     void removeFocusObject(ObjectId object);
     void rebuildFocus();
     void resolveActiveRole(RoleId role);
+    void overlayActive(RoleId role = InvalidRoleId);
     void* castFocus(ObjectId object, BlueprintId api) const;
     void appendTree(Logger::Tree& tree) const;
 };
