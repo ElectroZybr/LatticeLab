@@ -6,7 +6,7 @@
 #include <Lattice/Kernel/Node.hpp>
 
 // Plugin dependences
-#include "ActionMap.hpp"
+#include "ActionRouter.hpp"
 
 // Source
 #include "Render.hpp"
@@ -20,17 +20,16 @@ public:
     explicit Window(Lattice::Node& branch) {
         branch.slot<WindowAPI>();
         branch.add<Render>();
-        branch.add<ActionMap>().focus();
+        branch.add<ActionRouter>().focus();
     }
 
     void configure(Lattice::Node& branch) {
-        actionMap = branch.require<ActionMap>();
+        actionMap = branch.require<ActionRouter>();
         render = branch.require<Render>();
         window = branch.find<WindowAPI>();
         if (!window) window.use<glfwWindow>();
 
         branch.on("print", [this]() { print(); });
-
     }
     
     void run() override {
@@ -60,7 +59,7 @@ public:
     }
 
 private:
-    Ref<ActionMap> actionMap;
+    Ref<ActionRouter> actionMap;
     Ref<Render> render;
     Slot<WindowAPI> window;
 

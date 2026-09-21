@@ -36,8 +36,6 @@ public:
 
     // pump
     virtual void pollEvents() = 0;
-    virtual const Ref<Input::Keyboard> keyboard() const = 0;
-    virtual const Ref<Input::Mouse> mouse() const = 0;
 
     // geometry
     virtual glm::vec2 windowSize() const = 0;

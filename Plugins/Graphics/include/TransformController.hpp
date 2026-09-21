@@ -19,7 +19,7 @@ public:
         // });
 
         node.bind("look", &v, [this](glm::vec2 delta) {
-            Logger::info("lambda", "{} {}", v.x, v.y);
+            // Logger::info("lambda", "{} {}", v.x, v.y);
             target_->move({v.x * -0.001, v.y * 0.001, 0});
         });
 
