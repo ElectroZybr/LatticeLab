@@ -24,13 +24,20 @@ public:
         node.makeFocusScope();
         camera_ = node.add<Camera>("MainCamera").focus();
         camera_->setPosition({0.0f, 0.0f, 2.0f});
-        node.add<TransformController>();
+        node.slot<TransformController>("Camera");
+        node.bind("cursor", &cursor_);
     }
 
     void configure(Lattice::Node& node) {
+        auto controller = node.find<TransformController>("Camera");
+        if (controller.node() && !controller.exists())
+            controller.use("FreeCameraController");
+
         if (!node.find<GPU::Device>().exists())
             return;
+
         device_ = node.require<GPU::Device>();
+
         GPU::BufferDesc desc{};
         desc.size = sizeof(glm::mat4);
         desc.usage = GPU::BufferUsage::Uniform | GPU::BufferUsage::CopyDestination;
@@ -84,6 +91,8 @@ public:
         pass.draw(6);
     }
 
+    glm::vec2 cursor() { return cursor_; }
+
 private:
     Ref<Camera> camera_;
     Ref<GPU::Device> device_;
@@ -91,6 +100,8 @@ private:
     glm::uvec2 size_{1280, 720};
     ViewportSizeMode sizeMode_ = ViewportSizeMode::Fill;
 
+    // cursor
+    glm::vec2 cursor_{};
 
     std::unique_ptr<GPU::BindingSet> bindings_;
     Ref<GPU::Buffer> uniform_;

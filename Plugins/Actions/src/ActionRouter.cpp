@@ -45,6 +45,10 @@ std::optional<ActionRouter::TriggerChain> ActionRouter::parseTriggerChain(std::s
         begin = end + 1;
     }
 
+    // сортируем цепочку
+    std::sort(chain.modifiers.begin(), chain.modifiers.end());
+    chain.modifiers.erase(std::unique(chain.modifiers.begin(), chain.modifiers.end()), chain.modifiers.end());
+
     return chain;
 }
 
@@ -79,12 +83,7 @@ void ActionRouter::upsert(std::string_view verb, std::string_view expression, Ac
         .delta = delta
     }, key);
 
-    if (target == Target::Toggle)
-        Logger::ok("ActionRouter", "bound toggle '{}' ➜ '{}'", expression, verb);
-    else if (target == Target::Add)
-        Logger::ok("ActionRouter", "bound add '{}' ➜ '{}' ({})", expression, verb, delta);
-    else
-        Logger::ok("ActionRouter", "bound '{}' ➜ '{}'", expression, verb);
+    Logger::info("ActionRouter", "bound '{}' ➜ '{}'", expression, verb);
 }
 
 void ActionRouter::bind(std::string_view verb, std::string_view trigger, ActionMode mode) {
@@ -114,6 +113,8 @@ void ActionRouter::bindAxis(std::string_view verb, std::string_view expression) 
         .role = role,
         .trigger = *chain
     }, key);
+
+    Logger::info("ActionRouter", "bound '{}' ➜ '{}'", expression, verb);
 }
 
 void ActionRouter::bindAxis2(std::string_view verb, std::string_view expression) {
@@ -131,6 +132,8 @@ void ActionRouter::bindAxis2(std::string_view verb, std::string_view expression)
         .role = role,
         .trigger = *chain
     }, key);
+
+    Logger::info("ActionRouter", "bound '{}' ➜ '{}'", expression, verb);
 }
 
 void ActionRouter::tick() {
@@ -149,24 +152,42 @@ void ActionRouter::tick() {
         const TriggerId source = binding->trigger.source;
         const Trigger& trigger = triggers_.require(source);
 
-        bool enabled = true;
-        for (TriggerId modifier : binding->trigger.modifiers) {
-            bool down = false;
-            for (auto* input : inputs_) {
-                if (input && input->down(modifier)) {
-                    down = true;
+        auto isDown = [&](TriggerId trigger) {
+            for (auto* input : inputs_)
+                if (input && input->down(trigger)) return true;
+            return false;
+        };
+
+        auto matches = [&](const TriggerChain& chain) {
+            for (TriggerId required : chain.modifiers)
+                if (!isDown(required)) return false;
+            return true;
+        };
+
+        bool enabled = matches(binding->trigger);
+
+        if (enabled) {
+            for (BindId otherId = 0; otherId < bindings_.size(); ++otherId) {
+                if (otherId == id) continue;
+
+                const Binding* other = bindings_.get(otherId);
+                if (!other || other->trigger.source != binding->trigger.source) continue;
+                if (other->trigger.modifiers.size() <= binding->trigger.modifiers.size()) continue;
+                if (!matches(other->trigger)) continue;
+
+                if (std::includes(
+                    other->trigger.modifiers.begin(), other->trigger.modifiers.end(),
+                    binding->trigger.modifiers.begin(), binding->trigger.modifiers.end()
+                )) {
+                    enabled = false;
                     break;
                 }
             }
-            if (!down) {
-                enabled = false;
-                break;
-            }
         }
-
+        
         if (trigger.kind == InputKind::Axis) {
             double value = 0.0;
-            for (auto* input : inputs_) if (input)
+            if (enabled) for (auto* input : inputs_) if (input)
                 value += input->axis(source);
             run_ctx->bindings.set(object, value);
             continue;
@@ -174,7 +195,7 @@ void ActionRouter::tick() {
 
         if (trigger.kind == InputKind::Axis2) {
             glm::vec2 value{};
-            for (auto* input : inputs_) if (input)
+            if (enabled) for (auto* input : inputs_) if (input)
                 value += input->axis2(source);
             run_ctx->bindings.set(object, value);
             continue;
@@ -204,7 +225,6 @@ void ActionRouter::tick() {
             (binding->mode == ActionMode::OnRelease && released);
 
         if (fire) {
-            Logger::info("ActionRouter", "fire from: {}", source);
             switch (binding->target) {
                 case Target::Action:
                     run_ctx->bindings.invoke(object);
