@@ -20,16 +20,16 @@
 
 class IOSubsystem final : public SubsystemAPI {
 public:
-    explicit IOSubsystem(Lattice::Node& ioBranch) {
-        ioBranch.addImpls<LoaderAPI>();
-        ioBranch.addImpls<ParserAPI>();
+    explicit IOSubsystem(Lattice::NodeBuildView& ioBranch) {
+        loaders = ioBranch.addImpls<LoaderAPI>();
+        parsers = ioBranch.addImpls<ParserAPI>();
     }
 
-    void configure(Lattice::Node& ioBranch) {
-        ioBranch.on("load", [this]() { loadDir("Config"); } );
-        loaders = ioBranch.directCollect<LoaderAPI>();
-        parsers = ioBranch.directCollect<ParserAPI>();
-    }
+    // void configure(Lattice::Node& ioBranch) {
+    //     // ioBranch.on("load", [this]() { loadDir("Config"); } );
+    //     loaders = ioBranch.directCollect<LoaderAPI>();
+    //     parsers = ioBranch.directCollect<ParserAPI>();
+    // }
 
     void loadDir(const std::filesystem::path& dir) {
         LogScope loadScope("IOSubsystem", LogMode::Verbose, "load dir: {}", std::string(dir));

@@ -1,6 +1,5 @@
 #include <Lattice/Kernel/Requirements.hpp>
 #include <Lattice/Tools/Logger.hpp>
-#include "Lattice/Kernel/Objects.hpp"
 #include "Lattice/Tools/LogTree.hpp"
 
 #include <format>

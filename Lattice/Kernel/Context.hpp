@@ -8,67 +8,67 @@
 #include <Lattice/Kernel/Objects.hpp>
 #include <Lattice/Kernel/ObjectRegistry.hpp>
 #include <Lattice/Tools/LogTree.hpp>
+#include "Lattice/Kernel/NodeSystem.hpp"
 
 namespace Lattice {
 
-class Node;
-
-inline constexpr std::string_view DefaultInstanceName = "";
-
-using ComponentsRegistry = ObjectRegistry<Object, ObjectId, ObjectKey, ObjectKeyHash>;
+// using ComponentsRegistry = ObjectRegistry<Object, ObjectId, ObjectKey, ObjectKeyHash>;
 
 
 class Context {
 public:
-    RoleId getOrCreateRole(std::string_view name);
-    RoleId findRole(std::string_view name) const;
-    void setFocus(FocusScopeId scope, RoleId role, ObjectId target);
-    void resetFocus(FocusScopeId scope, RoleId role);
-    void activateFocus(FocusScopeId scope);
-    FocusScopeId activeFocus(BlueprintId type) const;
-    ObjectId resolveFocus(FocusScopeId origin, RoleId role) const;
+    // RoleId getOrCreateRole(std::string_view name);
+    // RoleId findRole(std::string_view name) const;
+    // void setFocus(FocusScopeId scope, RoleId role, ObjectId target);
+    // void resetFocus(FocusScopeId scope, RoleId role);
+    // void activateFocus(FocusScopeId scope);
+    // FocusScopeId activeFocus(BlueprintId type) const;
+    // ObjectId resolveFocus(FocusScopeId origin, RoleId role) const;
 
-    template<class T>
-    Focus<T> focus(std::string_view role = typeKey<T>()) {
-        static_assert(!std::is_same_v<T, Node>, "Use id() for low-level node access");
-        return Focus<T>(*this, getOrCreateRole(role), InvalidFocusScopeId);
-    }
+    // template<class T>
+    // Focus<T> focus(std::string_view role = typeKey<T>()) {
+    //     static_assert(!std::is_same_v<T, Node>, "Use id() for low-level node access");
+    //     return Focus<T>(*this, getOrCreateRole(role), InvalidFocusScopeId);
+    // }
 
-    RoleRegistry roles;
-    FocusScopeRegistry focusScopes;
-    FocusScopeId rootScope = InvalidFocusScopeId;
-    std::vector<FocusScopeId> activeScopes;
-    std::vector<ObjectId> resolvedRoles;
+    // RoleRegistry roles;
+    // FocusScopeRegistry focusScopes;
+    // FocusScopeId rootScope = InvalidFocusScopeId;
+    // std::vector<FocusScopeId> activeScopes;
+    // std::vector<ObjectId> resolvedRoles;
 
-    void printTree() const;
+    // void printTree() const;
 
-    Bindings bindings;
+    // Bindings bindings;
     Blueprints blueprints;
-    ComponentsRegistry objects;
+
+    NodeSystem nodes;
+
+    Context() : nodes(blueprints, *this) {}
     
 private:
-    friend class Node;
-    template<class T> friend class Focus;
-    FocusScopeId createFocusScope(ObjectId owner, BlueprintId type);
-    FocusScopeId parentFocusScope(FocusScopeId scope) const;
-    void activateFocusIfTyped(FocusScopeId scope);
-    void removeFocusObject(ObjectId object);
-    void rebuildFocus();
-    void resolveActiveRole(RoleId role);
-    void overlayActive(RoleId role = InvalidRoleId);
-    void* castFocus(ObjectId object, BlueprintId api) const;
-    void appendTree(Logger::Tree& tree) const;
+    // friend class Node;
+    // template<class T> friend class Focus;
+    // FocusScopeId createFocusScope(ObjectId owner, BlueprintId type);
+    // FocusScopeId parentFocusScope(FocusScopeId scope) const;
+    // void activateFocusIfTyped(FocusScopeId scope);
+    // void removeFocusObject(ObjectId object);
+    // void rebuildFocus();
+    // void resolveActiveRole(RoleId role);
+    // void overlayActive(RoleId role = InvalidRoleId);
+    // void* castFocus(ObjectId object, BlueprintId api) const;
+    // void appendTree(Logger::Tree& tree) const;
 };
 
-template<class T>
-ObjectId Focus<T>::id() const {
-    return context_ ? context_->resolveFocus(originScope_, role_) : InvalidObjectId;
-}
+// template<class T>
+// ObjectId Focus<T>::id() const {
+//     return context_ ? context_->resolveFocus(originScope_, role_) : InvalidObjectId;
+// }
 
-template<class T>
-T* Focus<T>::get() const {
-    return context_ ? static_cast<T*>(context_->castFocus(
-        id(), context_->blueprints.find(typeKey<T>()))) : nullptr;
-}
+// template<class T>
+// T* Focus<T>::get() const {
+//     return context_ ? static_cast<T*>(context_->castFocus(
+//         id(), context_->blueprints.find(typeKey<T>()))) : nullptr;
+// }
 
 }
