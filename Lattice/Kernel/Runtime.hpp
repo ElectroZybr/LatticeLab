@@ -15,8 +15,9 @@
 #include "Lattice/Kernel/DLLoader.hpp"
 #include <Lattice/Kernel/Context.hpp>
 #include <Lattice/Kernel/Model.hpp>
-#include <Lattice/Tools/SystemInfo.hpp>
+#include "Lattice/Kernel/Ids.hpp"
 #include "Lattice/Kernel/Objects.hpp"
+#include <Lattice/Tools/SystemInfo.hpp>
 #include "Lattice/Tools/LogScope.hpp"
 #include "Lattice/Tools/LogMode.hpp"
 #include "Lattice/Tools/Logger.hpp"
@@ -28,30 +29,28 @@ namespace Lattice {
 class Runtime {
     static constexpr std::string_view tag = "Runtime";
 public:
-    Runtime() : root(run_ctx, nullptr)
-              , pluginManager(run_ctx.blueprints, dlLoader) {
+    Runtime() : pluginManager(run_ctx.blueprints, dlLoader) {
         // регистрация интерфейсов ядра
         run_ctx.blueprints.add<Component>();
         run_ctx.blueprints.add<ServiceAPI>();
         run_ctx.blueprints.add<SubsystemAPI>();
         run_ctx.blueprints.add<Model, ServiceAPI>();
+        root = run_ctx.nodes.factory.folder(InvalidNodeId, "Root");
     }
 
     void buildBranch(const StartupEntry& entry) {
         LogScope scope(tag, "Build branch '{}' with name '{}'", entry.type, entry.name);
-
-        Node& node = root.addNode(entry.type, entry.name);
+        const NodeId node = run_ctx.nodes.factory.component(root, entry.type, entry.name);
 
         if (entry.host) {
             if (host)
                 throw Lattice::Exception(tag, "Runtime already has a host service");
 
-            host = &root.require(entry.type, entry.name);
+            host = node;
             Logger::info(tag, "Host service '{}'", entry.type);
         }
 
-        node.configureBranch();
-
+        run_ctx.nodes.ops.configureBranch(node);
         scope.finish("Build '{}' done", entry.type);
     }
 
@@ -59,17 +58,11 @@ public:
         if (!entry.enabled || entry.host)
             return;
 
-        Node& service = root.require(entry.type, entry.name);
-
-        const ObjectId serviceApiId = root.findBlueprint<ServiceAPI>();
-        if (!run_ctx.blueprints.isA(service.getBlueprintId(), serviceApiId))
+        auto service = run_ctx.nodes.configure(root).find<ServiceAPI>(entry.name);
+        if (!service)
             return;
 
-        auto* api = service.get<ServiceAPI>();
-        if (!api)
-            throw Lattice::Exception(tag, "Service '{}' has no object", entry.type);
-
-        api->start();
+        service->start();
 
         Logger::info(tag, "Started service '{}.{}'", entry.type, entry.name);
     }
@@ -99,7 +92,9 @@ public:
             { // инициализация ядра
                 LogScope scope(tag, "<b>System loading</>");
                 // загрузка плагинов
-                pluginManager.load("Plugins");
+                // pluginManager.load("Plugins/StdIo");
+                // pluginManager.load("Plugins/StdData");
+                // pluginManager.load("Plugins/ClassicMD");
                 scope.finish("<b>Loaded</>");
             }
             
@@ -118,9 +113,9 @@ public:
                     if (entry.enabled)
                         buildBranch(entry);
                 }
-                root.on("dumpTree", [this]() { root.dumpTree(); });
-                root.on("dumpContext", [this]() { run_ctx.printTree(); });
-                root.on("dumpBlueprints", [this]() { run_ctx.blueprints.dumpTree(); });
+                // root.on("dumpTree", [this]() { root.dumpTree(); });
+                // root.on("dumpContext", [this]() { run_ctx.printTree(); });
+                // root.on("dumpBlueprints", [this]() { run_ctx.blueprints.dumpTree(); });
                 scope.finish("<b>Build finished</>");
             }
 
@@ -138,12 +133,14 @@ public:
                 scope.finish("<b>Start finished</>");
             }
 
-            if (host) {
-                host->get<ServiceAPI>()->enter();
+            run_ctx.blueprints.dumpTree();
+
+            if (host != InvalidNodeId) {
+                auto service = run_ctx.nodes.configure(host).require<ServiceAPI>();
+                service->enter();
             } else {
-                while (running) {
+                while (running)
                     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                }
             }
             stopAll();
         } catch (const std::exception& error) {
@@ -154,17 +151,17 @@ public:
     }
 
     void stop(std::string_view instanceName) {
-        Slot<ServiceAPI> service = root.find<ServiceAPI>(instanceName);
+        auto service = run_ctx.nodes.configure(root).find<ServiceAPI>(instanceName);
 
         if (!service)
             return;
 
         service->stop();
 
-        if (service.node() == host)
-            host = nullptr;
+        if (service.id == host)
+            host = InvalidNodeId;
 
-        root.remove<ServiceAPI>(instanceName);
+        run_ctx.nodes.ops.destroyBranch(service.id);
     }
 
     ~Runtime() {
@@ -177,13 +174,13 @@ public:
         if (fatal) {
             Logger::exception(fatal->tag(), "{}", error.what());
             Logger::message("Dump components tree (failed node is red):");
-            root.dumpTree();
-            run_ctx.printTree();
+            run_ctx.nodes.ops.dumpTree(root);
+            // run_ctx.printTree();
         } else {
             Logger::exception(tag, "Unhandled exception: {}", error.what());
             Logger::message("Dump components tree:");
-            root.dumpTree();
-            run_ctx.printTree();
+            run_ctx.nodes.ops.dumpTree(root);
+            // run_ctx.printTree();
         }
         Logger::message("<r><b>Critical error. Application terminated.<//>");
         Logger::message("Crash log: {}", std::string(LogSystem::getPath()));
@@ -193,33 +190,40 @@ public:
     void reportUnknownException() const {
         Logger::exception(tag, "Unhandled non-standard exception");
         Logger::message("Dump components tree");
-        root.dumpTree();
-        run_ctx.printTree();
+        run_ctx.nodes.ops.dumpTree(root);
+        // run_ctx.printTree();
     }
 
 private:
     void loadStartup() {
-        const ObjectId id = run_ctx.resolveFocus(InvalidFocusScopeId, run_ctx.roles.find("load"));
-        if (id == InvalidObjectId) {
-            Logger::info(tag, "no load action, skip startup config");
-            return;
-        }
+        // const ObjectId id = run_ctx.resolveFocus(InvalidFocusScopeId, run_ctx.roles.find("load"));
+        // if (id == InvalidObjectId) {
+        //     Logger::info(tag, "no load action, skip startup config");
+        //     return;
+        // }
 
-        Logger::info(tag, "loading startup config");
-        run_ctx.bindings.invoke(id);
+        // Logger::info(tag, "loading startup config");
+        // run_ctx.bindings.invoke(id);
     }
 
     void stopAll() {
         running = false;
-        root.stopServices();
+
+        auto services = run_ctx.nodes.query.collect(
+            root,
+            run_ctx.blueprints.id<ServiceAPI>()
+        );
+
+        for (auto it = services.rbegin(); it != services.rend(); ++it)
+            if (auto* service = run_ctx.nodes.configure(root).resolve<ServiceAPI>(*it))
+                service->stop();
     }
 
-    DLLoader dlLoader;
     Context run_ctx;
-    Node root;
+    NodeId root = InvalidNodeId;
+    NodeId host = InvalidNodeId;
+    DLLoader dlLoader;
     PluginManager pluginManager;
-
     bool running = true;
-    Node* host = nullptr;
 };
 }

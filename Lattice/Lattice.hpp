@@ -7,7 +7,7 @@
 #include <Lattice/Kernel/SubsystemAPI.hpp>
 #include <Lattice/Kernel/Bindings.hpp>
 #include <Lattice/Kernel/Exception.hpp>
-#include <Lattice/Kernel/RefSlot.hpp>
+#include <Lattice/Kernel/NodeHandlers.hpp>
 
 // Tools
 #include <Lattice/Tools/Logger.hpp>

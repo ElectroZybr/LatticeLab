@@ -73,6 +73,15 @@ public:
         return *object;
     }
 
+    Object& require(Id id) {
+        Object* object = get(id);
+
+        if (!object)
+            throw Lattice::Exception("Registry", "Object with id {} not found", id);
+
+        return *object;
+    }
+
     // доступ по индексу, nullptr если не найден
     const Object* get(Id id) const {
         if (!valid(id) || id >= objects_.size())

@@ -6,7 +6,6 @@
 
 #include <Lattice/Kernel/DLLoader.hpp>
 #include <Lattice/Kernel/Plugin.hpp>
-#include "Lattice/Kernel/Node.hpp"
 
 namespace Lattice {
 
