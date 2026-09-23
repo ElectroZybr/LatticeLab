@@ -1,7 +1,7 @@
 #pragma once
 
 #include <array>
-#include <Lattice/Kernel/Node.hpp>
+#include <Lattice/Kernel/NodeViews.hpp>
 #include "StdData/include/NamedSoA.hpp"
 
 #include "AtomStorage.hpp"
@@ -13,7 +13,7 @@ struct Mass    {using type = float;};
 
 class AtomData final : public StdData::NamedSoA {
 public:
-    explicit AtomData(Lattice::Node& branch) {
+    explicit AtomData(Lattice::NodeBuildView branch) {
         addCol<Element>();
         addCol<Mass>();
         addCol<Valence>();

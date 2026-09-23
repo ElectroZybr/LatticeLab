@@ -4,19 +4,17 @@
 #include <string>
 
 #include <Lattice/Kernel/ServiceAPI.hpp>
-#include <Lattice/Kernel/SubsystemAPI.hpp>
+#include <Lattice/Kernel/Consts.hpp>
 #include <Lattice/Kernel/PluginManager.hpp>
 #include <Lattice/Kernel/StartupConfig.hpp>
 #include <Lattice/Kernel/Requirements.hpp>
 #include <Lattice/Kernel/Node.hpp>
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/Bindings.hpp>
-#include "Lattice/Kernel/Component.hpp"
 #include "Lattice/Kernel/DLLoader.hpp"
 #include <Lattice/Kernel/Context.hpp>
+#include <Lattice/Kernel/BlueprintRegister.hpp>
 #include <Lattice/Kernel/Model.hpp>
-#include "Lattice/Kernel/Ids.hpp"
-#include "Lattice/Kernel/Objects.hpp"
 #include <Lattice/Tools/SystemInfo.hpp>
 #include "Lattice/Tools/LogScope.hpp"
 #include "Lattice/Tools/LogMode.hpp"
@@ -28,13 +26,20 @@ namespace Lattice {
 
 class Runtime {
     static constexpr std::string_view tag = "Runtime";
+    Context run_ctx;
+    NodeId root = InvalidNodeId;
+    NodeId host = InvalidNodeId;
+    DLLoader dlLoader;
+    PluginManager pluginManager;
+    bool running = true;
+    
 public:
     Runtime() : pluginManager(run_ctx.blueprints, dlLoader) {
         // регистрация интерфейсов ядра
-        run_ctx.blueprints.add<Component>();
-        run_ctx.blueprints.add<ServiceAPI>();
-        run_ctx.blueprints.add<SubsystemAPI>();
-        run_ctx.blueprints.add<Model, ServiceAPI>();
+        BlueprintRegister::add<Component>(run_ctx.blueprints);
+        BlueprintRegister::add<ServiceAPI>(run_ctx.blueprints);
+        BlueprintRegister::add<SubsystemAPI>(run_ctx.blueprints);
+        BlueprintRegister::add<Model, ServiceAPI>(run_ctx.blueprints);
         root = run_ctx.nodes.factory.folder(InvalidNodeId, "Root");
     }
 
@@ -84,7 +89,7 @@ public:
                     configPath = argv[i];
                 } else if (arg == "--tests" || arg == "-t") {
                     testMode = true;
-                }
+            }
             }
 
             StartupConfig config(configPath);
@@ -94,6 +99,7 @@ public:
                 // загрузка плагинов
                 // pluginManager.load("Plugins/StdIo");
                 // pluginManager.load("Plugins/StdData");
+                // pluginManager.load("Plugins/ParticleDynamics");
                 // pluginManager.load("Plugins/ClassicMD");
                 scope.finish("<b>Loaded</>");
             }
@@ -109,10 +115,9 @@ public:
             
             { // Сборка дерева компонентов
                 LogScope scope(tag, "<b>System build</>");
-                for (const auto& entry : config.entries()) {
+                for (const auto& entry : config.entries())
                     if (entry.enabled)
                         buildBranch(entry);
-                }
                 // root.on("dumpTree", [this]() { root.dumpTree(); });
                 // root.on("dumpContext", [this]() { run_ctx.printTree(); });
                 // root.on("dumpBlueprints", [this]() { run_ctx.blueprints.dumpTree(); });
@@ -133,7 +138,20 @@ public:
                 scope.finish("<b>Start finished</>");
             }
 
+            NodeId branch = run_ctx.nodes.factory.folder(root, "branch");
+            run_ctx.nodes.factory.component(branch, "Component", "1");
+            run_ctx.nodes.factory.component(branch, "Component", "2");
+            run_ctx.nodes.factory.component(branch, "Component", "3");
+            auto focus = run_ctx.nodes.configure(branch).focus<Component>();
+            focus.choice(6);
+            auto id = run_ctx.nodes.context.findScope(branch);
+            run_ctx.nodes.context.activate(id);
+            auto id2 = run_ctx.nodes.context.findScope(root);
+            // run_ctx.nodes.context.deactivate(id);
+
+            run_ctx.nodes.ops.dumpTree(root);
             run_ctx.blueprints.dumpTree();
+            run_ctx.nodes.ops.dumpContext();
 
             if (host != InvalidNodeId) {
                 auto service = run_ctx.nodes.configure(host).require<ServiceAPI>();
@@ -151,6 +169,7 @@ public:
     }
 
     void stop(std::string_view instanceName) {
+        const NodeId id = run_ctx.nodes.configure(root).findId(typeKey<ServiceAPI>(), instanceName);
         auto service = run_ctx.nodes.configure(root).find<ServiceAPI>(instanceName);
 
         if (!service)
@@ -158,10 +177,10 @@ public:
 
         service->stop();
 
-        if (service.id == host)
+        if (id == host)
             host = InvalidNodeId;
 
-        run_ctx.nodes.ops.destroyBranch(service.id);
+        run_ctx.nodes.ops.destroyBranch(id);
     }
 
     ~Runtime() {
@@ -204,7 +223,7 @@ private:
 
         // Logger::info(tag, "loading startup config");
         // run_ctx.bindings.invoke(id);
-    }
+        }
 
     void stopAll() {
         running = false;
@@ -218,12 +237,5 @@ private:
             if (auto* service = run_ctx.nodes.configure(root).resolve<ServiceAPI>(*it))
                 service->stop();
     }
-
-    Context run_ctx;
-    NodeId root = InvalidNodeId;
-    NodeId host = InvalidNodeId;
-    DLLoader dlLoader;
-    PluginManager pluginManager;
-    bool running = true;
 };
 }

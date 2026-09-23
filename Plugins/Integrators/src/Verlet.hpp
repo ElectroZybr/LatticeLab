@@ -5,7 +5,7 @@
 #include <ParticleDynamics/include/ParticleAPI.hpp>
 #include <ParticleDynamics/include/ParticleStorage.hpp>
 
-#include <Lattice/Kernel/Node.hpp>
+#include <Lattice/Kernel/NodeViews.hpp>
 
 namespace Integrators {
 
@@ -15,12 +15,13 @@ public:
     struct PrevForceY {using type = float;};
     struct PrevForceZ {using type = float;};
 
-    Verlet(Lattice::Node& branch) {}
+    Verlet(Lattice::NodeBuildView branch) {}
 
-    void configure(Lattice::Node& branch) {
+    void configure(Lattice::NodeConfigureView branch) {
         // интегратор требует для работы буфер. Если нет - исключение
         particles = branch.require<ParticleDynamics::ParticleStorage>();
-        branch.bind("dt", &dt, 0, 0.1, true);
+        // TODO: restore when bindings are available in the new API.
+        // branch.bind("dt", &dt, 0, 0.1, true);
         particles->addCol<PrevForceX>();
         particles->addCol<PrevForceY>();
         particles->addCol<PrevForceZ>();

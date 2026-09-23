@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <Lattice/Kernel/NodeOps.hpp>
 #include <Lattice/Kernel/NodeRegistry.hpp>
 #include <Lattice/Kernel/NodeViews.hpp>
+#include <Lattice/Kernel/NodeContext.hpp>
 #include <Lattice/Kernel/Blueprints.hpp>
 #include <Lattice/Tools/LogTree.hpp>
 
@@ -74,45 +76,46 @@ void NodeOps::configure(NodeId id) {
     const auto& blueprint = blueprints_.require(node.object.bp);
 
     if (blueprint.meta.configure)
-        blueprint.meta.configure(node.object.ptr, NodeConfigureView{id, query_});
+        blueprint.meta.configure(node.object.ptr, NodeConfigureView{id, query_, context_});
 
-    node.object.configured = true;
+    nodes_.require(id).object.configured = true;
 }
 
 void NodeOps::configureBranch(NodeId id) {
     configure(id);
 
-    for (NodeId child : nodes_.children(id))
-        configureBranch(child);
+    const auto span = nodes_.children(id);
+    const std::vector<NodeId> children(span.begin(), span.end());
+    for (NodeId child : children) configureBranch(child);
 }
 
 void NodeOps::destroyBranch(NodeId id) {
-    nodes_.require(id);
+    clearContents(id);
 
-    auto destroyObject = [&](NodeId nodeId) {
-        auto& node = nodes_.require(nodeId);
+    context_.removeTarget(id);
 
-        if (!node.object.ptr || node.kind == NodeKind::Mount)
-            return;
-
-        const auto& blueprint = blueprints_.require(node.object.bp);
-
-        if (blueprint.meta.destroy)
-            blueprint.meta.destroy(node.object.ptr);
-
-        node.object.ptr = nullptr;
-        node.object.bp = InvalidBlueprintId;
-        node.object.configured = false;
-    };
-
-    auto children = collectTree(id);
-
-    for (auto it = children.rbegin(); it != children.rend(); ++it)
-        destroyObject(*it);
-
-    destroyObject(id);
+    if (const ContextScopeId scope = context_.findScope(id); scope != InvalidContextScopeId)
+        context_.destroyScope(scope);
 
     nodes_.destroy(id);
+}
+
+void NodeOps::clearContents(NodeId id) {
+    const auto children = std::vector<NodeId>(nodes_.children(id).begin(), nodes_.children(id).end());
+
+    for (NodeId child : children)
+        destroyBranch(child);
+
+    auto& node = nodes_.require(id);
+
+    if (node.object.ptr) {
+        const auto& bp = blueprints_.require(node.object.bp);
+
+        if (bp.meta.destroy)
+            bp.meta.destroy(node.object.ptr);
+
+        node.object = {};
+    }
 }
 
 std::string NodeOps::stringPath(NodeId id) const {
@@ -203,6 +206,42 @@ void NodeOps::dumpTree(NodeId id, NodeId highlighted) const {
     };
 
     append(append, id, 0);
+    tree.print();
+}
+
+void NodeOps::dumpContext() const {
+    Logger::Tree tree("Context");
+
+    const auto label = [this](NodeId id) -> std::string {
+        if (id == InvalidNodeId) return "Empty";
+        return nodes_.get(id) ? stringPath(id) : std::format("missing #{}", id);
+    };
+
+    tree.node("<b><c>Scopes<//>", 0);
+
+    for (ContextScopeId id = 0; id < context_.scopeCount(); ++id) {
+        const auto* scope = context_.scope(id);
+        if (!scope) continue;
+
+        std::string state;
+        if (id == context_.root()) state += " <m>[root]</>";
+        if (context_.isActive(id)) state += " <m>[active]</>";
+
+        const auto type = scope->type == InvalidBlueprintId ? std::string_view{"untyped"} : blueprints_.require(scope->type).name;
+
+        tree.node(std::format("{}{} <gr>#{} [{}]</>", label(scope->owner), state, id, type), 1);
+
+        for (const auto& entry : scope->roles)
+            tree.node(std::format("{} ➜ <gr>{}</>", context_.roleName(entry.role), label(entry.target)), 2);
+    }
+
+    tree.node("<b><c>Resolved roles<//>", 0);
+
+    for (RoleId role = 0; role < context_.roleCount(); ++role) {
+        if (!context_.hasRole(role)) continue;
+        tree.node(std::format("{} ➜ <gr>{}</>", context_.roleName(role), label(context_.resolve(role))), 1);
+    }
+
     tree.print();
 }
 

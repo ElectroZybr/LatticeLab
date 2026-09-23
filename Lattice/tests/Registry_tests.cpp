@@ -180,38 +180,38 @@ TEST(Registry_AliasDuplicate, RuntimeFixture,
 }
 
 TEST(Objects_ScopedNamesAndAliases, RuntimeFixture) {
-    ObjectRegistry<Object, ObjectId, ObjectKey, ObjectKeyHash> objects;
-    const auto first = objects.create({"child", 10, nullptr}, ObjectKey{"child", 10}, true);
-    const auto otherParent = objects.create({"child", 20, nullptr}, ObjectKey{"child", 20}, true);
-    const auto replacement = objects.create({"child", 10, nullptr}, ObjectKey{"child", 10}, true);
-    REQUIRE(objects.find(ObjectKey{"child", 10}) == replacement);
-    REQUIRE(objects.find(ObjectKey{"child", 20}) == otherParent);
+    ObjectRegistry<Node, NodeId, NodeKey, NodeKeyHash> objects;
+    const auto first = objects.create({"child", 10}, NodeKey{"child", 10}, true);
+    const auto otherParent = objects.create({"child", 20}, NodeKey{"child", 20}, true);
+    const auto replacement = objects.create({"child", 10}, NodeKey{"child", 10}, true);
+    REQUIRE(objects.find(NodeKey{"child", 10}) == replacement);
+    REQUIRE(objects.find(NodeKey{"child", 20}) == otherParent);
     REQUIRE(objects.get(first));
 
-    objects.alias(first, ObjectKey{"alias", 10}, true);
-    objects.alias(replacement, ObjectKey{"alias", 10}, true);
-    objects.alias(replacement, ObjectKey{"secondAlias", 20}, true);
+    objects.alias(first, NodeKey{"alias", 10}, true);
+    objects.alias(replacement, NodeKey{"alias", 10}, true);
+    objects.alias(replacement, NodeKey{"secondAlias", 20}, true);
     objects.destroy(first);
-    REQUIRE(objects.find(ObjectKey{"child", 10}) == replacement);
-    REQUIRE(objects.find(ObjectKey{"alias", 10}) == replacement);
+    REQUIRE(objects.find(NodeKey{"child", 10}) == replacement);
+    REQUIRE(objects.find(NodeKey{"alias", 10}) == replacement);
 
     objects.destroy(replacement);
-    REQUIRE(!objects.has(ObjectKey{"child", 10}));
-    REQUIRE(!objects.has(ObjectKey{"alias", 10}));
-    REQUIRE(!objects.has(ObjectKey{"secondAlias", 20}));
-    REQUIRE(objects.find(ObjectKey{"child", 20}) == otherParent);
+    REQUIRE(!objects.has(NodeKey{"child", 10}));
+    REQUIRE(!objects.has(NodeKey{"alias", 10}));
+    REQUIRE(!objects.has(NodeKey{"secondAlias", 20}));
+    REQUIRE(objects.find(NodeKey{"child", 20}) == otherParent);
 }
 
 TEST(Objects_UnnamedAndRepeatedDestroy, RuntimeFixture) {
-    ObjectRegistry<Object, ObjectId, ObjectKey, ObjectKeyHash> objects;
-    const auto first = objects.create({"", InvalidObjectId, nullptr}, std::nullopt, true);
-    const auto second = objects.create({"", InvalidObjectId, nullptr}, std::nullopt, true);
+    ObjectRegistry<Node, NodeId, NodeKey, NodeKeyHash> objects;
+    const auto first = objects.create({"", InvalidNodeId}, std::nullopt, true);
+    const auto second = objects.create({"", InvalidNodeId}, std::nullopt, true);
     REQUIRE(first != second);
-    REQUIRE(!objects.has(ObjectKey{"", InvalidObjectId}));
+    REQUIRE(!objects.has(NodeKey{"", InvalidNodeId}));
     objects.destroy(first);
     objects.destroy(first);
-    const auto reused = objects.create({"new", InvalidObjectId, nullptr}, ObjectKey{"new", InvalidObjectId}, true);
-    const auto next = objects.create({"next", InvalidObjectId, nullptr}, ObjectKey{"next", InvalidObjectId}, true);
+    const auto reused = objects.create({"new", InvalidNodeId}, NodeKey{"new", InvalidNodeId}, true);
+    const auto next = objects.create({"next", InvalidNodeId}, NodeKey{"next", InvalidNodeId}, true);
     REQUIRE(reused == first);
     REQUIRE(next != reused);
     REQUIRE(objects.require(reused).name == "new");

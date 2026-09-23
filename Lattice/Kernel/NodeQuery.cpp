@@ -1,4 +1,5 @@
 #include <Lattice/Kernel/NodeQuery.hpp>
+#include <Lattice/Kernel/NodeViews.hpp>
 
 #include <Lattice/Kernel/Blueprints.hpp>
 #include <Lattice/Kernel/Exception.hpp>
@@ -14,17 +15,24 @@ bool NodeQuery::provides(NodeId id, BlueprintId api) const {
 
 NodeId NodeQuery::find(NodeId from, BlueprintId api, std::string_view instance) const {
     blueprints_.require(api);
+    nodes_.require(from);
 
     for (NodeId current = from; current != InvalidNodeId; current = nodes_.require(current).parent) {
+        NodeId result = InvalidNodeId;
         for (NodeId child : nodes_.children(current)) {
             const auto& node = nodes_.require(child);
 
             if (node.name != instance)
                 continue;
 
-            if (provides(child, api))
-                return child;
+            if (provides(child, api)) {
+                if (result != InvalidNodeId)
+                    throw Exception("NodeQuery", "Ambiguous '{}' with instance '{}' under #{}",
+                                    blueprints_.require(api).name, instance, current);
+                result = child;
+            }
         }
+        if (result != InvalidNodeId) return result;
     }
 
     return InvalidNodeId;
@@ -47,12 +55,12 @@ NodeId NodeQuery::require(NodeId from, BlueprintId api, std::string_view instanc
 }
 
 NodeId NodeQuery::find(NodeId from, std::string_view api, std::string_view instance) const {
-    const BlueprintId id = blueprints_.find(api);
+    const BlueprintId id = blueprints_.resolve(api);
     return id == InvalidBlueprintId ? InvalidNodeId : find(from, id, instance);
 }
 
 NodeId NodeQuery::require(NodeId from, std::string_view api, std::string_view instance) const {
-    const BlueprintId id = blueprints_.find(api);
+    const BlueprintId id = blueprints_.resolve(api);
 
     if (id == InvalidBlueprintId)
         throw Exception("NodeQuery", "Unknown blueprint '{}'", api);
@@ -108,11 +116,11 @@ void* NodeQuery::resolve(NodeId id, std::string_view api) const {
 
 /*=== NodeConfigureView ===*/
 NodeId NodeConfigureView::findId(std::string_view api, std::string_view instance) const {
-    return query_->find(id_, api, instance);
+    return query_.find(id_, api, instance);
 }
 
 NodeId NodeConfigureView::requireId(std::string_view api, std::string_view instance) const {
-    return query_->require(id_, api, instance);
+    return query_.require(id_, api, instance);
 }
 
 }

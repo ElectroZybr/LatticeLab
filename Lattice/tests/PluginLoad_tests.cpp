@@ -158,7 +158,7 @@ TEST(Plugin_FailingRegister, RuntimeFixture,
 
     REQUIRE(plugin);
     REQUIRE(plugin->status == LoadStatus::Failed);
-    REQUIRE(fixture.blueprints.find("Failed::PartialRegistration") == Blueprints::InvalidId);
+    REQUIRE(fixture.run_ctx.blueprints.find("Failed::PartialRegistration") == Blueprints::InvalidId);
 }
 
 TEST(Plugin_CheckCandidatesTwice, RuntimeFixture,

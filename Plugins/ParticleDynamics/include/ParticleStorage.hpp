@@ -2,7 +2,7 @@
 
 #include <glm/vec3.hpp>
 
-#include <Lattice/Kernel/Node.hpp>
+#include <Lattice/Kernel/NodeViews.hpp>
 #include "StdData/include/SoA.hpp"
 
 
@@ -31,7 +31,7 @@ namespace ParticleDynamics {
     
 class ParticleStorage : public StdData::SoA {
 public:
-    explicit ParticleStorage(Lattice::Node& branch) {
+    explicit ParticleStorage(Lattice::NodeBuildView branch) {
 
         addCol<Pos::X>();
         addCol<Pos::Y>();

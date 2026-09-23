@@ -1,0 +1,6 @@
+id = "NoRegister"
+name = "Test NoRegister"
+version = "1.0.0"
+
+[core]
+api = "1.0"

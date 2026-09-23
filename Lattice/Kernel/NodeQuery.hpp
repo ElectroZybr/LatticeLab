@@ -3,7 +3,7 @@
 #include <string_view>
 #include <vector>
 
-#include <Lattice/Kernel/Ids.hpp>
+#include <Lattice/Kernel/Consts.hpp>
 
 namespace Lattice {
 

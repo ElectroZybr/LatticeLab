@@ -1,4 +1,8 @@
 [Startup]
+Component.1 = "on"
+Component.2 = "on"
+# ClassicMD.Universe1 = "on"
+# IOSubsystem = "on"
 # WGPU = "on"
 # Vulkan = "on"
 # ClassicMD.Universe1 = "on"

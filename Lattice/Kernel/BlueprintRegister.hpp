@@ -1,26 +1,13 @@
 #pragma once
 
+#include <string_view>
+#include <string>
 #include <type_traits>
 
 #include <Lattice/Kernel/Blueprints.hpp>
-#include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/NodeViews.hpp>
-#include <Lattice/Kernel/TypeName.hpp>
 
-namespace Lattice::BlueprintTypes {
-
-template<typename T>
-BlueprintId find(const Blueprints& blueprints) {
-    return blueprints.find(typeKey<T>());
-}
-
-template<typename T>
-BlueprintId id(const Blueprints& blueprints) {
-    const BlueprintId result = find<T>(blueprints);
-    if (result == Blueprints::InvalidId)
-        throw Exception("BlueprintTypes", "Blueprint '{}' not found", typeKey<T>());
-    return result;
-}
+namespace Lattice::BlueprintRegister {
 
 template<typename T, typename... Bases>
 BlueprintId add(Blueprints& blueprints, std::string_view name = typeKey<T>()) {
@@ -29,7 +16,7 @@ BlueprintId add(Blueprints& blueprints, std::string_view name = typeKey<T>()) {
 
     Blueprint blueprint{
         .name = std::string(name),
-        .bases = {id<Bases>(blueprints)...}
+        .bases = {blueprints.id<Bases>()...}
     };
 
     blueprint.upcasts = {
@@ -50,17 +37,14 @@ BlueprintId add(Blueprints& blueprints, std::string_view name = typeKey<T>()) {
     if constexpr (constructible) {
         blueprint.meta.create = [](NodeBuildView node, const void* desc) -> void* {
             if constexpr (requires { typename T::Desc; }) {
-                if (desc)
-                    return new T(node, *static_cast<const typename T::Desc*>(desc));
+                if (desc) return new T(node, *static_cast<const typename T::Desc*>(desc));
                 if constexpr (std::is_default_constructible_v<typename T::Desc>)
                     return new T(node, typename T::Desc{});
                 throw Exception("BlueprintTypes", "'{}' requires a descriptor", typeKey<T>());
-            }
-
-            if constexpr (std::is_constructible_v<T, NodeBuildView>)
+            } else if constexpr (std::is_constructible_v<T, NodeBuildView>)
                 return new T(node);
-
-            return new T();
+            else
+                return new T();
         };
 
         blueprint.meta.destroy = [](void* object) {
