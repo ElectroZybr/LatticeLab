@@ -178,6 +178,17 @@ namespace Lattice {
     uint16_t PluginManager::loadCandidates() {
         uint16_t loadedPlugins = 0; 
         for (Plugin* candidate : loadQueue) {
+            if (candidate->status == LoadStatus::Loaded) continue;
+            bool dependenciesLoaded = true;
+            for (const auto& dep : candidate->manifest.dependencies) {
+                auto found = candidates.find(dep.id);
+                if (found == candidates.end() || found->second.status != LoadStatus::Loaded)
+                    dependenciesLoaded = false;
+            }
+            if (!dependenciesLoaded) {
+                candidate->status = LoadStatus::Failed;
+                continue;
+            }
             LogScope scope(tag, "Loading '{}'", candidate->path.string());
             if (loadPlugin(candidate)) {
                 scope.finish("Loaded plugin '{}'", candidate->manifest.id);

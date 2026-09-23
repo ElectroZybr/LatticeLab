@@ -11,7 +11,7 @@ struct Valence {using type = uint8_t;};
 
 class AtomStorage final : public ParticleDynamics::ParticleStorage {
 public:
-    explicit AtomStorage(Lattice::Node& branch)
+    explicit AtomStorage(Lattice::NodeBuildView branch)
         : ParticleStorage(branch) {
         addCol<DataId>();
         addCol<Energy>();

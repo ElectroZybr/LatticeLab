@@ -7,19 +7,19 @@ namespace Lattice {
 
 
 struct RuntimeFixture : public TestFixture {
-    DLLoader dlLoader;
     Context run_ctx;
-    Node root;
-    Blueprints& blueprints;
+    NodeId root = InvalidNodeId;
+    DLLoader dlLoader;
     PluginManager pluginManager;
 
-    RuntimeFixture()
-            : root(run_ctx, nullptr)
-            , blueprints(run_ctx.blueprints)
-            , pluginManager(blueprints, dlLoader) {
-        blueprints.add<ServiceAPI>();
-        blueprints.add<SubsystemAPI>();
-        blueprints.add<Model, ServiceAPI>();
+    ~RuntimeFixture() override { run_ctx.nodes.ops.destroyBranch(root); }
+
+    RuntimeFixture() : pluginManager(run_ctx.blueprints, dlLoader) {
+        BlueprintRegister::add<Component>(run_ctx.blueprints);
+        BlueprintRegister::add<ServiceAPI>(run_ctx.blueprints);
+        BlueprintRegister::add<SubsystemAPI>(run_ctx.blueprints);
+        BlueprintRegister::add<Model, ServiceAPI>(run_ctx.blueprints);
+        root = run_ctx.nodes.factory.folder(InvalidNodeId, "Root");
     }
 };
 }

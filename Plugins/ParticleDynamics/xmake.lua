@@ -3,7 +3,7 @@ target("ParticleDynamics")
     add_rules("lattice.plugin_codegen")
     set_targetdir(".")
 
-    add_files("src/**.cpp")
+    -- Spatial algorithms are deferred in the minimal core.
 
     add_includedirs("..", {public = true})
     add_includedirs("include", {public = true})

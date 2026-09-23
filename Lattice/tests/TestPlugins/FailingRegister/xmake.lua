@@ -1,0 +1,5 @@
+target("TestFailingRegister")
+    set_kind("shared")
+    set_targetdir(".")
+    add_files("Fixture.cpp")
+    add_deps("Lattice")

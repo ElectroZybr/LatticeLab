@@ -5,7 +5,8 @@
 #include <string_view>
 #include <vector>
 
-#include <Lattice/Kernel/Ids.hpp>
+#include <Lattice/Kernel/Consts.hpp>
+#include <Lattice/Kernel/TypeName.hpp>
 #include <Lattice/Kernel/ObjectRegistry.hpp>
 
 namespace Lattice {
@@ -46,12 +47,12 @@ public:
         std::string_view descriptor = {}
     ) const;
 
-    void* cast(BlueprintId from, BlueprintId to, void* object) const;
-
     BlueprintId find(
         std::string_view name,
         std::string_view nameSpace = {}
     ) const;
+
+    void* cast(BlueprintId from, BlueprintId to, void* object) const;
 
     BlueprintId resolve(std::string_view name) const;
 
@@ -65,6 +66,19 @@ public:
     ) const;
 
     void dumpTree() const;
+
+    template<typename T>
+    BlueprintId find() const {
+        return find(typeKey<T>());
+    }
+
+    template<typename T>
+    BlueprintId id() const {
+        const BlueprintId result = find<T>();
+        if (result == InvalidId)
+            throw Exception("Blueprints", "Blueprint '{}' not found", typeKey<T>());
+        return result;
+    }
 
 private:
     static void validateName(std::string_view name);

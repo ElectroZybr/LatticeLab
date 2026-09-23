@@ -10,14 +10,14 @@ target("Lattice")
     add_packages("glm", "toml++", {public = true})
 
 -- сборка тестов
--- target("Lattice.tests")
---     set_kind("shared")
---     set_targetdir(".")
+target("Lattice.tests")
+    set_kind("shared")
+    set_targetdir(".")
 
---     add_files("tests/*.cpp")
+    add_files("tests/*.cpp")
     
---     for _, dir in ipairs(os.dirs("tests/TestPlugins/*")) do
---         includes(dir)
---     end
+    for _, dir in ipairs(os.dirs("tests/TestPlugins/*")) do
+        includes(dir)
+    end
 
---     add_deps("Lattice")
+    add_deps("Lattice")

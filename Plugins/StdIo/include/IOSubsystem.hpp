@@ -6,11 +6,11 @@
 
 // Kernel dependences
 #include <Lattice/Kernel/Plugin.hpp>
-#include "Lattice/Kernel/SubsystemAPI.hpp"
+#include "Lattice/Kernel/Consts.hpp"
 #include "Lattice/Tools/LogMode.hpp"
 #include "Lattice/Tools/LogScope.hpp"
 #include "Lattice/Tools/Logger.hpp"
-#include <Lattice/Kernel/Node.hpp>
+#include <Lattice/Kernel/NodeViews.hpp>
 
 // Source
 #include "Document.hpp"
@@ -18,14 +18,14 @@
 #include "ParserAPI.hpp"
 
 
-class IOSubsystem final : public SubsystemAPI {
+class IOSubsystem final : public Lattice::SubsystemAPI {
 public:
-    explicit IOSubsystem(Lattice::NodeBuildView& ioBranch) {
+    explicit IOSubsystem(Lattice::NodeBuildView ioBranch) {
         loaders = ioBranch.addImpls<LoaderAPI>();
         parsers = ioBranch.addImpls<ParserAPI>();
     }
 
-    // void configure(Lattice::Node& ioBranch) {
+    // void configure(Lattice::NodeBuildView ioBranch) {
     //     // ioBranch.on("load", [this]() { loadDir("Config"); } );
     //     loaders = ioBranch.directCollect<LoaderAPI>();
     //     parsers = ioBranch.directCollect<ParserAPI>();
@@ -81,6 +81,6 @@ private:
         Logger::warning("IOSubsystem", "Parser for extension {} not found", std::string(path.extension()));
         return nullptr;
     }
-    std::vector<LoaderAPI*> loaders;
-    std::vector<ParserAPI*> parsers;
+    Children<LoaderAPI> loaders;
+    Children<ParserAPI> parsers;
 };

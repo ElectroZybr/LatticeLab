@@ -13,6 +13,3 @@ version = ">=1.0.0"
 id = "ParticleDynamics"
 version = ">=1.0.0"
 
-[[dependencies]]
-id = "Integrators"
-version = ">=1.0.0"

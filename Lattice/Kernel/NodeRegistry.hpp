@@ -1,5 +1,6 @@
 #pragma once
 
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -12,11 +13,16 @@ class NodeRegistry : public ObjectRegistry<Node, NodeId, NodeKey, NodeKeyHash> {
     using Base = ObjectRegistry<Node, NodeId, NodeKey, NodeKeyHash>;
     std::vector<std::vector<NodeId>> children_;
 public:
+    void clear() {
+        children_.clear();
+        Base::clear();
+    }
+    
     NodeId create(Node node) {
         if (node.parent != InvalidNodeId)
             require(node.parent);
 
-        NodeKey key{node.name, node.parent};
+        NodeKey key{node.name, node.parent, node.bp};
         const NodeId id = Base::create(std::move(node), std::move(key));
 
         if (id >= children_.size())
@@ -31,11 +37,12 @@ public:
         return id;
     }
 
-    NodeId find(std::string_view name, NodeId parent = InvalidNodeId) const {
-        return Base::find(NodeKey{std::string(name), parent});
+    NodeId find(std::string_view name, NodeId parent = InvalidNodeId, BlueprintId type = InvalidBlueprintId) const {
+        return Base::find(NodeKey{std::string(name), parent, type});
     }
 
     std::span<const NodeId> children(NodeId id) const {
+        require(id);
         return children_[id];
     }
 
