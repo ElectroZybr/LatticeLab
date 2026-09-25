@@ -4,24 +4,15 @@
 
 namespace Lattice {
 
-class NodeRegistry;
-class NodeFocus;
-class Blueprints;
-class NodeContext;
-class NodeOps;
-class NodeQuery;
+class NodeSystem;
 
 class NodeFactory {
-    NodeRegistry& nodes_;
-    Blueprints& blueprints_;
-    NodeContext& context_;
-    NodeOps& ops_;
-    NodeQuery& query_;
+    NodeSystem& nodeSystem_;
 
     NodeId createNode(NodeId parent, std::string_view name, BlueprintId bp, NodeKind kind);
 public:
-    NodeFactory(NodeRegistry& nodes, Blueprints& blueprints, NodeContext& context, NodeOps& ops, NodeQuery& query)
-        : nodes_(nodes), blueprints_(blueprints), context_(context), ops_(ops), query_(query) {}
+    NodeFactory(NodeSystem& nodeSystem)
+        : nodeSystem_(nodeSystem) {}
 
     NodeId folder(NodeId parent, std::string_view name);
 

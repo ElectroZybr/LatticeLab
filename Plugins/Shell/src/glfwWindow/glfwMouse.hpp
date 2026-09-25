@@ -2,11 +2,11 @@
 
 #include "InputState.hpp"
 #include <GLFW/glfw3.h>
-#include "Lattice/Kernel/Node.hpp"
+#include <Lattice/Kernel/NodeViews.hpp>
 
 class glfwMouse final : public InputAPI {
 public:
-    explicit glfwMouse(Lattice::Node&) {}
+    explicit glfwMouse(NodeBuild) {}
     void registerTriggers(TriggerRegistry& triggers) override {
         buttons_.fill(InvalidTriggerId);
         auto add = [&](std::string_view name, InputKind kind) {

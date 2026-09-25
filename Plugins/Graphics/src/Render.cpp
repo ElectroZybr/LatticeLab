@@ -1,16 +1,20 @@
+#include <fstream>
+#include <iterator>
+#include <Lattice/Kernel/NodeViews.hpp>
+
 #include "Render.hpp"
 #include "Viewport.hpp"
 #include "WindowAPI.hpp"
-#include <fstream>
-#include <iterator>
+#include "TransformController.hpp"
 
-Render::Render(Lattice::Node& renderer) : context_(renderer.requireContext()) {
+Render::Render(NodeBuild renderer) {
     device_ = renderer.mount<GPU::Device>();
-    resourceName_ = std::format("render-{}", renderer.getId());
+    resourceName_ = std::format("render-{}", renderer.id());
     renderer.add<Viewport>("Main");
+    
 }
 
-void Render::configure(Lattice::Node& renderer) {
+void Render::configure(NodeConfigure renderer) {
     window_ = renderer.find<WindowAPI>();
     viewports_ = renderer.children<Viewport>();
     if (!window_ || window_->shouldClose()) return;
@@ -26,10 +30,6 @@ void Render::configure(Lattice::Node& renderer) {
             shader.source.assign(std::istreambuf_iterator<char>(file), {});
             shader_ = device_.add<GPU::Shader>(resourceName_, shader);
             pipeline_ = device_.add<GPU::Pipeline>(resourceName_, GPU::PipelineDesc{shader_.getPtr(), surface_->format()});
-            // GPU::BufferDesc desc{};
-            // desc.size = sizeof(glm::mat4);
-            // desc.usage = GPU::BufferUsage::Uniform | GPU::BufferUsage::CopyDestination;
-            // uniform_ = device_.add<GPU::Buffer>("Uniform", desc);
             native_ = native;
         } catch (...) {
             releaseFrameResources();
@@ -69,8 +69,6 @@ void Render::releaseFrameResources() {
     device_.remove<GPU::Pipeline>(resourceName_);
     device_.remove<GPU::Shader>(resourceName_);
     device_.remove<GPU::Surface>(resourceName_);
-    // device_.remove<GPU::Buffer>("Uniform");
-    // uniform_ = {};
     pipeline_ = {};
     shader_ = {};
     surface_ = {};

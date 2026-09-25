@@ -4,15 +4,20 @@
 
 #include <Lattice/Kernel/Context.hpp>
 #include <Lattice/Kernel/Node.hpp>
-#include <Lattice/Kernel/Objects.hpp>
 #include <Lattice/Tools/Logger.hpp>
 
 
-void ActionRouter::configure(Lattice::Node& branch) {
-    run_ctx = &branch.requireContext();
-    inputs_ = branch.collect<InputAPI>();
-    for (auto* input : inputs_)
-        if (input) input->registerTriggers(triggers_);
+void ActionRouter::configure(NodeBuild branch) {
+    exports = branch.exports();
+    for (auto* input : branch.collect<InputAPI>())
+        if (input) registerInput(*input);
+}
+
+void ActionRouter::registerInput(InputAPI& input) {
+    if (std::ranges::find(inputs_, &input) != inputs_.end())
+        return;
+    inputs_.push_back(&input);
+    input.registerTriggers(triggers_);
 }
 
 std::optional<ActionRouter::TriggerChain> ActionRouter::parseTriggerChain(std::string_view expression) {
@@ -52,6 +57,30 @@ std::optional<ActionRouter::TriggerChain> ActionRouter::parseTriggerChain(std::s
     return chain;
 }
 
+void ActionRouter::resolve(Binding& binding) {
+    binding.resolved = exports.resolve(binding.role);
+    if (!binding.resolved) return;
+
+    switch (binding.target) {
+        case Target::Action:
+            if (!binding.resolved.invoke)
+                binding.resolved = {};
+            break;
+
+        case Target::Toggle:
+        case Target::Add:
+            if (!binding.resolved.get || !binding.resolved.set)
+                binding.resolved = {};
+            break;
+    }
+}
+
+void ActionRouter::resolveBindings() {
+    for (BindId id = 0; id < bindings_.size(); ++id)
+        if (auto* binding = bindings_.get(id))
+            resolve(*binding);
+}
+
 bool ActionRouter::any(Lattice::RoleId role, BindingFlags flag) const {
     for (BindId id = 0; id < bindings_.size(); ++id) {
         const Binding* binding = bindings_.get(id);
@@ -62,9 +91,10 @@ bool ActionRouter::any(Lattice::RoleId role, BindingFlags flag) const {
 }
 
 void ActionRouter::upsert(std::string_view verb, std::string_view expression, ActionMode mode, Target target, double delta) {
-    const auto role = run_ctx->getOrCreateRole(verb);
+    const auto role = exports.role(verb);
     const auto chain = parseTriggerChain(expression);
     if (!chain) return;
+
     const auto key = bindKey(role, *chain);
 
     if (auto* existing = bindings_.get(bindings_.find(key))) {
@@ -72,16 +102,19 @@ void ActionRouter::upsert(std::string_view verb, std::string_view expression, Ac
         existing->target = target;
         existing->delta = delta;
         existing->flags = 0;
+        resolve(*existing);
         return;
     }
 
-    bindings_.create({
+    const BindId id = bindings_.create({
         .role = role,
         .trigger = *chain,
         .mode = mode,
         .target = target,
         .delta = delta
     }, key);
+
+    resolve(bindings_.require(id));
 
     Logger::info("ActionRouter", "bound '{}' ➜ '{}'", expression, verb);
 }
@@ -99,26 +132,30 @@ void ActionRouter::bindAdd(std::string_view verb, std::string_view trigger, doub
 }
 
 void ActionRouter::bindAxis(std::string_view verb, std::string_view expression) {
-    const auto role = run_ctx->getOrCreateRole(verb);
+    const auto role = exports.role(verb);
     const auto chain = parseTriggerChain(expression);
     if (!chain) return;
+
     const auto key = bindKey(role, *chain);
 
     if (auto* existing = bindings_.get(bindings_.find(key))) {
         existing->flags = 0;
+        resolve(*existing);
         return;
     }
 
-    bindings_.create({
+    const BindId id = bindings_.create({
         .role = role,
         .trigger = *chain
     }, key);
+
+    resolve(bindings_.require(id));
 
     Logger::info("ActionRouter", "bound '{}' ➜ '{}'", expression, verb);
 }
 
 void ActionRouter::bindAxis2(std::string_view verb, std::string_view expression) {
-    const auto role = run_ctx->getOrCreateRole(verb);
+    const auto role = exports.role(verb);
     const auto chain = parseTriggerChain(expression);
     if (!chain) return;
     const auto key = bindKey(role, *chain);
@@ -128,10 +165,12 @@ void ActionRouter::bindAxis2(std::string_view verb, std::string_view expression)
         return;
     }
 
-    bindings_.create({
+    const BindId id = bindings_.create({
         .role = role,
         .trigger = *chain
     }, key);
+
+    resolve(bindings_.require(id));
 
     Logger::info("ActionRouter", "bound '{}' ➜ '{}'", expression, verb);
 }
@@ -146,8 +185,8 @@ void ActionRouter::tick() {
         setFlag(*binding, Pressed, false);
         setFlag(*binding, Released, false);
 
-        const Lattice::ObjectId object = run_ctx->resolveFocus(Lattice::InvalidFocusScopeId, binding->role);
-        if (object == Lattice::InvalidObjectId) continue;
+        auto& target = binding->resolved;
+        if (!target) continue;
 
         const TriggerId source = binding->trigger.source;
         const Trigger& trigger = triggers_.require(source);
@@ -187,17 +226,29 @@ void ActionRouter::tick() {
         
         if (trigger.kind == InputKind::Axis) {
             double value = 0.0;
-            if (enabled) for (auto* input : inputs_) if (input)
-                value += input->axis(source);
-            run_ctx->bindings.set(object, value);
+
+            if (enabled)
+                for (auto* input : inputs_)
+                    if (input)
+                        value += input->axis(source);
+
+            if (target.set)
+                target.set(target.object, Lattice::Value{value});
+
             continue;
         }
 
         if (trigger.kind == InputKind::Axis2) {
             glm::vec2 value{};
-            if (enabled) for (auto* input : inputs_) if (input)
-                value += input->axis2(source);
-            run_ctx->bindings.set(object, value);
+
+            if (enabled)
+                for (auto* input : inputs_)
+                    if (input)
+                        value += input->axis2(source);
+
+            if (target.set)
+                target.set(target.object, Lattice::Value{value});
+
             continue;
         }
 
@@ -225,15 +276,23 @@ void ActionRouter::tick() {
             (binding->mode == ActionMode::OnRelease && released);
 
         if (fire) {
+            auto& target = binding->resolved;
+
             switch (binding->target) {
                 case Target::Action:
-                    run_ctx->bindings.invoke(object);
+                    target.invoke(target.object);
                     break;
+
                 case Target::Toggle:
-                    run_ctx->bindings.set(object, !run_ctx->bindings.get<bool>(object));
+                    target.set(target.object, Lattice::Value{
+                        !target.get(target.object).get<bool>()
+                    });
                     break;
+
                 case Target::Add:
-                    run_ctx->bindings.set(object, run_ctx->bindings.get<double>(object) + binding->delta);
+                    target.set(target.object, Lattice::Value{
+                        target.get(target.object).get<double>() + binding->delta
+                    });
                     break;
             }
         }

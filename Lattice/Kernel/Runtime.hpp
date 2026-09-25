@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <csignal>
 #include <string>
 
 #include <Lattice/Kernel/ServiceAPI.hpp>
@@ -10,8 +11,7 @@
 #include <Lattice/Kernel/Requirements.hpp>
 #include <Lattice/Kernel/Node.hpp>
 #include <Lattice/Kernel/Exception.hpp>
-#include <Lattice/Kernel/Bindings.hpp>
-#include "Lattice/Kernel/DLLoader.hpp"
+#include <Lattice/Kernel/DLLoader.hpp>
 #include <Lattice/Kernel/Context.hpp>
 #include <Lattice/Kernel/BlueprintRegister.hpp>
 #include <Lattice/Kernel/Model.hpp>
@@ -32,6 +32,7 @@ class Runtime {
     DLLoader dlLoader;
     PluginManager pluginManager;
     bool running = true;
+    inline static volatile std::sig_atomic_t interrupted = 0;
     
 public:
     Runtime() : pluginManager(run_ctx.blueprints, dlLoader) {
@@ -48,7 +49,7 @@ public:
         const NodeId node = run_ctx.nodes.factory.component(root, entry.type, entry.name);
 
         if (entry.host) {
-            if (host)
+            if (host != InvalidNodeId)
                 throw Lattice::Exception(tag, "Runtime already has a host service");
 
             host = node;
@@ -63,7 +64,8 @@ public:
         if (!entry.enabled || entry.host)
             return;
 
-        auto service = run_ctx.nodes.configure(root).find<ServiceAPI>(entry.name);
+        const NodeId node = run_ctx.nodes.query.require(root, entry.type, entry.name);
+        auto* service = run_ctx.nodes.configure(root).resolve<ServiceAPI>(node);
         if (!service)
             return;
 
@@ -72,7 +74,19 @@ public:
         Logger::info(tag, "Started service '{}.{}'", entry.type, entry.name);
     }
 
-    void run(int argc, char** argv) {
+    int run(int argc, char** argv) {
+        interrupted = 0;
+        const auto handler = +[](int) { interrupted = 1; };
+        const auto previousInt = std::signal(SIGINT, handler);
+        const auto previousTerm = std::signal(SIGTERM, handler);
+        struct RestoreSignals {
+            decltype(previousInt) interruptHandler;
+            decltype(previousTerm) terminateHandler;
+            ~RestoreSignals() {
+                std::signal(SIGINT, interruptHandler);
+                std::signal(SIGTERM, terminateHandler);
+            }
+        } restoreSignals{previousInt, previousTerm};
         try {
             Logger::setDefaultMode(LogMode::Clean | LogMode::OnlyWarn);
             Lattice::CliSystemInfo::printSystemInfo();
@@ -97,18 +111,14 @@ public:
             { // инициализация ядра
                 LogScope scope(tag, "<b>System loading</>");
                 // загрузка плагинов
-                // pluginManager.load("Plugins/StdIo");
-                // pluginManager.load("Plugins/StdData");
-                // pluginManager.load("Plugins/ParticleDynamics");
-                // pluginManager.load("Plugins/ClassicMD");
+                pluginManager.load("Plugins");
                 scope.finish("<b>Loaded</>");
             }
             
             if (testMode) { // режим прогона тестов
                 dlLoader.load("Lattice", ".tests");
                 dlLoader.load("Plugins", ".tests");
-                TestBlueprints::instance().runAll();
-                return;
+                return TestBlueprints::instance().runAll() == 0 ? 0 : 1;
             }
 
             if (benchMode) {}
@@ -138,34 +148,28 @@ public:
                 scope.finish("<b>Start finished</>");
             }
 
-            NodeId branch = run_ctx.nodes.factory.folder(root, "branch");
-            run_ctx.nodes.factory.component(branch, "Component", "1");
-            run_ctx.nodes.factory.component(branch, "Component", "2");
-            run_ctx.nodes.factory.component(branch, "Component", "3");
-            auto focus = run_ctx.nodes.configure(branch).focus<Component>();
-            focus.choice(6);
-            auto id = run_ctx.nodes.context.findScope(branch);
-            run_ctx.nodes.context.activate(id);
-            auto id2 = run_ctx.nodes.context.findScope(root);
-            // run_ctx.nodes.context.deactivate(id);
-
             run_ctx.nodes.ops.dumpTree(root);
             run_ctx.blueprints.dumpTree();
             run_ctx.nodes.ops.dumpContext();
+            run_ctx.nodes.exports.dump();
 
             if (host != InvalidNodeId) {
-                auto service = run_ctx.nodes.configure(host).require<ServiceAPI>();
+                auto* service = run_ctx.nodes.configure(root).resolve<ServiceAPI>(host);
+                if (!service) throw Exception(tag, "Host does not implement ServiceAPI");
                 service->enter();
             } else {
-                while (running)
+                while (running && !interrupted)
                     std::this_thread::sleep_for(std::chrono::milliseconds(50));
             }
             stopAll();
+            return 0;
         } catch (const std::exception& error) {
             reportException(error);
         } catch (...) {
             reportUnknownException();
         }
+        stopAll();
+        return 1;
     }
 
     void stop(std::string_view instanceName) {
@@ -185,6 +189,7 @@ public:
 
     ~Runtime() {
         stopAll();
+        run_ctx.nodes.ops.destroyBranch(root);
     }
 
     void reportException(const std::exception& error) const {
@@ -194,12 +199,10 @@ public:
             Logger::exception(fatal->tag(), "{}", error.what());
             Logger::message("Dump components tree (failed node is red):");
             run_ctx.nodes.ops.dumpTree(root);
-            // run_ctx.printTree();
         } else {
             Logger::exception(tag, "Unhandled exception: {}", error.what());
             Logger::message("Dump components tree:");
             run_ctx.nodes.ops.dumpTree(root);
-            // run_ctx.printTree();
         }
         Logger::message("<r><b>Critical error. Application terminated.<//>");
         Logger::message("Crash log: {}", std::string(LogSystem::getPath()));
@@ -210,7 +213,6 @@ public:
         Logger::exception(tag, "Unhandled non-standard exception");
         Logger::message("Dump components tree");
         run_ctx.nodes.ops.dumpTree(root);
-        // run_ctx.printTree();
     }
 
 private:
@@ -223,7 +225,7 @@ private:
 
         // Logger::info(tag, "loading startup config");
         // run_ctx.bindings.invoke(id);
-        }
+    }
 
     void stopAll() {
         running = false;

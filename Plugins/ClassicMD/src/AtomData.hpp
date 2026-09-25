@@ -13,7 +13,7 @@ struct Mass    {using type = float;};
 
 class AtomData final : public StdData::NamedSoA {
 public:
-    explicit AtomData(Lattice::NodeBuildView branch) {
+    explicit AtomData(NodeBuild branch) {
         addCol<Element>();
         addCol<Mass>();
         addCol<Valence>();

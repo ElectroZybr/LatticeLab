@@ -20,7 +20,7 @@ struct Valence { using type = uint8_t; };
 
 class Wrapper {
 public:
-    explicit Wrapper(Lattice::Node& branch) {
+    explicit Wrapper(NodeBuild branch) {
         branch.add<StdData::SoA>();
         soa = branch.require<StdData::SoA>();
         soa->addCol<Name>();
@@ -33,7 +33,7 @@ public:
 
 class AtomData {
 public:
-    explicit AtomData(Lattice::Node& branch) {
+    explicit AtomData(NodeBuild branch) {
         branch.add<StdData::SoA>();
         soa = branch.require<StdData::SoA>();
         soa->addCol<Name>();

@@ -1,9 +1,9 @@
 #pragma once
 
+#include <cstdint>
+
 #include "Surface.hpp"
 #include "Pipeline.hpp"
-#include <cstdint>
-#include <span>
 
 namespace GPU {
 
@@ -41,9 +41,7 @@ public:
     virtual void setScissor(Rect rect) = 0;
     virtual void setBindings(uint32_t group, BindingSet& bindings) = 0;
     virtual void setPipeline(Pipeline& pipeline) = 0;
-    // virtual void setUniform(uint32_t, uint32_t, std::span<const std::byte>) {}
     virtual void draw(uint32_t vertexCount, uint32_t firstVertex = 0) = 0;
-    // virtual void drawIndexed(uint32_t indexCount, uint32_t firstIndex = 0) = 0;
     virtual void end() = 0;
 };
 

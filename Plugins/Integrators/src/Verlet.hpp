@@ -15,9 +15,9 @@ public:
     struct PrevForceY {using type = float;};
     struct PrevForceZ {using type = float;};
 
-    Verlet(Lattice::NodeBuildView branch) {}
+    Verlet(NodeBuild branch) {}
 
-    void configure(Lattice::NodeConfigureView branch) {
+    void configure(NodeBuild branch) {
         // интегратор требует для работы буфер. Если нет - исключение
         particles = branch.require<ParticleDynamics::ParticleStorage>();
         // TODO: restore when bindings are available in the new API.

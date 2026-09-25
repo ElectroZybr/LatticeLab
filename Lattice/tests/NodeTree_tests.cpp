@@ -11,7 +11,7 @@ public:
     int value = 0;
     bool configured = false;
 
-    void configure(NodeConfigureView) {
+    void configure(NodeConfigure) {
         configured = true;
     }
 };
@@ -332,8 +332,8 @@ TEST(Node_GlobalCollectByRole, RuntimeFixture,
 
     REQUIRE(result.size() == 3);
 
-    REQUIRE(std::ranges::any_of(result, [&](NodeId id) { return nodes.query.resolve(id, typeKey<TestComponent>()) == a.get(); }));
-    REQUIRE(std::ranges::any_of(result, [&](NodeId id) { return nodes.query.resolve(id, typeKey<TestComponent>()) == b.get(); }));
+    REQUIRE(std::ranges::any_of(result, [&](NodeId id) { return nodes.query.resolve(id, typeKey<TestAPI>()) == a.get(); }));
+    REQUIRE(std::ranges::any_of(result, [&](NodeId id) { return nodes.query.resolve(id, typeKey<TestAPI>()) == b.get(); }));
     REQUIRE(std::ranges::any_of(result, [&](NodeId id) { return nodes.query.resolve(id, typeKey<TestAPI>()) == c.get(); }));
 }
 

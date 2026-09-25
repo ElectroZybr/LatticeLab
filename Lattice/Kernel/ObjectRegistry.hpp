@@ -4,7 +4,7 @@
 #include <vector>
 
 #include <Lattice/Kernel/Exception.hpp>
-#include "Lattice/Kernel/NamedRegistry.hpp"
+#include <Lattice/Kernel/NamedRegistry.hpp>
 
 namespace Lattice {
 

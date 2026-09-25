@@ -5,7 +5,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include "Lattice/Kernel/Node.hpp"
+#include <Lattice/Kernel/NodeViews.hpp>
+
 #include "Camera.hpp"
 #include "TransformController.hpp"
 #include "Viewport.hpp"
@@ -28,30 +29,37 @@ inline glm::vec3 rotateAroundAxis(glm::vec3 v, glm::vec3 axis, float angle) {
 
 class Camera2DController final : public TransformController {
 public:
-    void configure(Lattice::Node& node) {
-        camera_ = node.focus<Camera>("Camera");
-        viewport_ = node.requireParent<Viewport>();
+    explicit Camera2DController(NodeBuild node) {
+        node.param("pan", pan_);
+        node.param("zoom", zoom_);
+    }
 
-        node.bind("pan", &pan_, [this](glm::vec2 delta) {
-            if (!camera_ || !viewport_) return;
-            const glm::vec3 d = panDelta(*camera_, *viewport_, delta, pivot_);
+    void configure(NodeConfigure node) {
+        auto camera = node.focus<Camera>("Camera");
+        camera_ = Ref<Camera>{camera.get()};
+        viewport_ = node.require<Viewport>("Main");
+    }
+
+    void update() override {
+        if (!camera_ || !viewport_) return;
+        if (pan_ != glm::vec2{}) {
+            const glm::vec3 d = panDelta(*camera_, *viewport_, pan_, pivot_);
             camera_->move(d);
             pivot_ += d;
-        });
-
-        node.bind("zoom", &zoom_, [this](float delta) {
-            if (!camera_) return;
+            pan_ = {};
+        }
+        if (zoom_ != 0.0f) {
             auto& t = camera_->transform();
             glm::vec3 offset = t.position - pivot_;
             const float distance = glm::length(offset);
-            if (distance <= 1e-6f) return;
-            const float newDistance = std::max(minDistance_, distance * (1.0f - delta * zoomSpeed_));
-            t.position = pivot_ + glm::normalize(offset) * newDistance;
-        });
+            if (distance > 1e-6f)
+                t.position = pivot_ + glm::normalize(offset) * std::max(minDistance_, distance * (1.0f - zoom_ * zoomSpeed_));
+            zoom_ = 0.0f;
+        }
     }
 
 private:
-    Lattice::Focus<Camera> camera_;
+    Lattice::Ref<Camera> camera_;
     Lattice::Ref<Viewport> viewport_;
     glm::vec2 pan_{};
     float zoom_ = 0.0f;
@@ -62,36 +70,45 @@ private:
 
 class FreeCameraController final : public TransformController {
 public:
-    void configure(Lattice::Node& node) {
-        camera_ = node.focus<Camera>("Camera");
-        viewport_ = node.requireParent<Viewport>();
+    explicit FreeCameraController(NodeBuild node) {
+        node.param("look", look_);
+        node.param("zoom", zoom_);
+        node.param("pan", pan_);
+        node.param("move", move_);
+    }
 
-        node.bind("look", &look_, [this](glm::vec2 delta) {
-            if (!camera_) return;
+    void configure(NodeConfigure node) {
+        auto camera = node.focus<Camera>("Camera");
+        camera_ = Ref<Camera>{camera.get()};
+        viewport_ = node.require<Viewport>("Main");
+    }
+
+    void update() override {
+        if (!camera_) return;
+        if (look_ != glm::vec2{}) {
             auto& r = camera_->transform().rotation;
-            const float yaw = -delta.x * lookSensitivity_, pitch = -delta.y * lookSensitivity_;
+            const float yaw = -look_.x * lookSensitivity_, pitch = -look_.y * lookSensitivity_;
             r = glm::normalize(glm::angleAxis(yaw, glm::vec3{0, 1, 0}) * r);
             r = glm::normalize(glm::angleAxis(pitch, glm::normalize(cameraRight(*camera_))) * r);
-        });
-
-        node.bind("zoom", &zoom_, [this](float delta) {
-            if (camera_) camera_->move(cameraForward(*camera_) * delta * zoomSpeed_);
-        });
-
-        node.bind("pan", &pan_, [this](glm::vec2 delta) {
-            if (!camera_ || !viewport_) return;
+            look_ = {};
+        }
+        if (zoom_ != 0.0f) {
+            camera_->move(cameraForward(*camera_) * zoom_ * zoomSpeed_);
+            zoom_ = 0.0f;
+        }
+        if (viewport_ && pan_ != glm::vec2{}) {
             const glm::vec3 planePoint = camera_->transform().position + cameraForward(*camera_) * panDistance_;
-            camera_->move(panDelta(*camera_, *viewport_, delta, planePoint));
-        });
-
-        node.bind("move", &move_, [this](glm::vec3 v) {
-            if (!camera_) return;
-            camera_->move(cameraRight(*camera_) * v.x * moveSpeed_ + cameraUp(*camera_) * v.y * moveSpeed_ + cameraForward(*camera_) * v.z * moveSpeed_);
-        });
+            camera_->move(panDelta(*camera_, *viewport_, pan_, planePoint));
+            pan_ = {};
+        }
+        if (move_ != glm::vec3{}) {
+            camera_->move(cameraRight(*camera_) * move_.x * moveSpeed_ + cameraUp(*camera_) * move_.y * moveSpeed_ + cameraForward(*camera_) * move_.z * moveSpeed_);
+            move_ = {};
+        }
     }
 
 private:
-    Lattice::Focus<Camera> camera_;
+    Lattice::Ref<Camera> camera_;
     Lattice::Ref<Viewport> viewport_;
     glm::vec3 move_{};
     glm::vec2 look_{}, pan_{};
@@ -101,21 +118,29 @@ private:
 
 class OrbitCameraController final : public TransformController {
 public:
-    void configure(Lattice::Node& node) {
-        camera_ = node.focus<Camera>("Camera");
-        viewport_ = node.requireParent<Viewport>();
+    explicit OrbitCameraController(NodeBuild node) {
+        node.param("orbit", orbit_);
+        node.param("pan", pan_);
+        node.param("zoom", zoom_);
+    }
 
-        node.bind("orbit", &orbit_, [this](glm::vec2 delta) { if (camera_ && viewport_) orbit(delta); });
+    void configure(NodeConfigure node) {
+        auto camera = node.focus<Camera>("Camera");
+        camera_ = Ref<Camera>{camera.get()};
+        viewport_ = node.require<Viewport>("Main");
+        lookAtPivot();
+    }
 
-        node.bind("pan", &pan_, [this](glm::vec2 delta) {
-            if (!camera_ || !viewport_) return;
-            const glm::vec3 d = panDelta(*camera_, *viewport_, delta, pivot_);
+    void update() override {
+        if (!camera_) return;
+        if (viewport_ && orbit_ != glm::vec2{}) { orbit(orbit_); orbit_ = {}; }
+        if (viewport_ && pan_ != glm::vec2{}) {
+            const glm::vec3 d = panDelta(*camera_, *viewport_, pan_, pivot_);
             camera_->move(d);
             pivot_ += d;
-        });
-
-        node.bind("zoom", &zoom_, [this](float delta) { if (camera_) zoom(delta); });
-        lookAtPivot();
+            pan_ = {};
+        }
+        if (zoom_ != 0.0f) { zoom(zoom_); zoom_ = 0.0f; }
     }
 
 private:
@@ -155,7 +180,7 @@ private:
     }
 
 private:
-    Lattice::Focus<Camera> camera_;
+    Lattice::Ref<Camera> camera_;
     Lattice::Ref<Viewport> viewport_;
     glm::vec2 orbit_{}, pan_{};
     float zoom_ = 0.0f;
@@ -165,26 +190,34 @@ private:
 
 class TrackballCameraController final : public TransformController {
 public:
-    void configure(Lattice::Node& node) {
-        camera_ = node.focus<Camera>("Camera");
-        viewport_ = node.requireParent<Viewport>();
+    explicit TrackballCameraController(NodeBuild node) {
+        node.param("orbit", orbit_);
+        node.param("pan", pan_);
+        node.param("zoom", zoom_);
+    }
 
-        node.bind("orbit", &orbit_, [this](glm::vec2 delta) { if (camera_ && viewport_) orbit(delta); });
-
-        node.bind("pan", &pan_, [this](glm::vec2 delta) {
-            if (!camera_ || !viewport_) return;
-            const glm::vec3 d = panDelta(*camera_, *viewport_, delta, pivot_);
-            camera_->move(d);
-            pivot_ += d;
-        });
-
-        node.bind("zoom", &zoom_, [this](float delta) { if (camera_) zoom(delta); });
+    void configure(NodeConfigure node) {
+        auto camera = node.focus<Camera>("Camera");
+        camera_ = Ref<Camera>{camera.get()};
+        viewport_ = node.require<Viewport>("Main");
 
         orbitUp_ = camera_->transform().rotation * glm::vec3{0, 1, 0};
         if (glm::dot(orbitUp_, orbitUp_) <= 1e-8f) orbitUp_ = {0, 1, 0};
         orbitUp_ = glm::normalize(orbitUp_);
 
         lookAtPivot();
+    }
+
+    void update() override {
+        if (!camera_) return;
+        if (viewport_ && orbit_ != glm::vec2{}) { orbit(orbit_); orbit_ = {}; }
+        if (viewport_ && pan_ != glm::vec2{}) {
+            const glm::vec3 d = panDelta(*camera_, *viewport_, pan_, pivot_);
+            camera_->move(d);
+            pivot_ += d;
+            pan_ = {};
+        }
+        if (zoom_ != 0.0f) { zoom(zoom_); zoom_ = 0.0f; }
     }
 
 private:
@@ -233,7 +266,7 @@ private:
     }
 
 private:
-    Lattice::Focus<Camera> camera_;
+    Lattice::Ref<Camera> camera_;
     Lattice::Ref<Viewport> viewport_;
     glm::vec2 orbit_{}, pan_{};
     float zoom_ = 0.0f;

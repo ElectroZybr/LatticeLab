@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Lattice/Kernel/SubsystemAPI.hpp"
+#include <Lattice/Kernel/Consts.hpp>
+
+namespace GPU {
 
 enum class DevicePreference {
     Any,
@@ -12,8 +14,7 @@ struct GPUDesc {
     DevicePreference preference = DevicePreference::Any;
 };
 
-namespace GPU {
-class  GPUAPI : public SubsystemAPI {
+class GPUAPI : public Lattice::SubsystemAPI {
 public:
     using Desc = GPUDesc;
     virtual ~GPUAPI() = default;

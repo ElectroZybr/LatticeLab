@@ -2,11 +2,10 @@
 
 #include <filesystem>
 #include <string>
-#include <vector>
 
 // Kernel dependences
 #include <Lattice/Kernel/Plugin.hpp>
-#include "Lattice/Kernel/Consts.hpp"
+#include <Lattice/Kernel/Consts.hpp>
 #include "Lattice/Tools/LogMode.hpp"
 #include "Lattice/Tools/LogScope.hpp"
 #include "Lattice/Tools/Logger.hpp"
@@ -20,16 +19,10 @@
 
 class IOSubsystem final : public Lattice::SubsystemAPI {
 public:
-    explicit IOSubsystem(Lattice::NodeBuildView ioBranch) {
+    explicit IOSubsystem(NodeBuild ioBranch) {
         loaders = ioBranch.addImpls<LoaderAPI>();
         parsers = ioBranch.addImpls<ParserAPI>();
     }
-
-    // void configure(Lattice::NodeBuildView ioBranch) {
-    //     // ioBranch.on("load", [this]() { loadDir("Config"); } );
-    //     loaders = ioBranch.directCollect<LoaderAPI>();
-    //     parsers = ioBranch.directCollect<ParserAPI>();
-    // }
 
     void loadDir(const std::filesystem::path& dir) {
         LogScope loadScope("IOSubsystem", LogMode::Verbose, "load dir: {}", std::string(dir));

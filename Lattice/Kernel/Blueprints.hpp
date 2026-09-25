@@ -9,15 +9,15 @@
 #include <Lattice/Kernel/TypeName.hpp>
 #include <Lattice/Kernel/ObjectRegistry.hpp>
 
-namespace Lattice {
+class NodeBuild;
+class NodeConfigure;
 
-class NodeBuildView;
-class NodeConfigureView;
+namespace Lattice {
 
 struct BlueprintMeta {
     std::string_view descriptor;
-    void* (*create)(NodeBuildView, const void*) = nullptr;
-    void (*configure)(void*, NodeConfigureView) = nullptr;
+    void* (*create)(::NodeBuild, const void*) = nullptr;
+    void (*configure)(void*, ::NodeConfigure) = nullptr;
     void (*destroy)(void*) = nullptr;
 };
 

@@ -4,9 +4,10 @@
 #include <string_view>
 #include <vector>
 
-#include <Lattice/Kernel/Context.hpp>
 #include <Lattice/Kernel/ObjectRegistry.hpp>
-#include <Lattice/Kernel/SubsystemAPI.hpp>
+#include <Lattice/Kernel/Consts.hpp>
+#include <Lattice/Kernel/Exports.hpp>
+#include <Lattice/Kernel/NodeViews.hpp>
 
 #include "InputAPI.hpp"
 
@@ -15,7 +16,7 @@ namespace Lattice { class Node; }
 enum class ActionMode { OnPress, OnHold, OnRelease };
 enum class Target { Action, Toggle, Add };
 
-class ActionRouter final : public SubsystemAPI {
+class ActionRouter final : public Lattice::SubsystemAPI {
 private:
     struct Binding;
 
@@ -67,12 +68,17 @@ private:
         Target target = Target::Action;
         double delta = 0;
         uint8_t flags = 0;
+
+        Lattice::ResolvedExport resolved;
     };
 
 public:
-    explicit ActionRouter(Lattice::Node& branch) {}
-    void configure(Lattice::Node& branch);
+    void configure(NodeBuild branch);
     void tick();
+    void registerInput(InputAPI& input);
+
+    void resolve(Binding& binding);
+    void resolveBindings();
 
     std::optional<ActionRouter::TriggerChain> parseTriggerChain(std::string_view expression);
 
@@ -91,7 +97,7 @@ public:
     void clearBinds() { bindings_.clear(); }
     
 private:
-    Lattice::Context* run_ctx = nullptr;
+    Lattice::ExportsView exports;
     std::vector<InputAPI*> inputs_;
     BindRegistry bindings_;
     TriggerRegistry triggers_;

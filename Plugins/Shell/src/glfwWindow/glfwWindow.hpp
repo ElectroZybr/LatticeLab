@@ -3,22 +3,24 @@
 #include <GLFW/glfw3.h>
 #include <string_view>
 
-#include <Lattice/Kernel/Node.hpp>
+#include <Lattice/Kernel/NodeViews.hpp>
 #include "WindowAPI.hpp"
-#include "glfwWindow/glfwKeyboard.hpp"
-#include "glfwWindow/glfwMouse.hpp"
+
+class glfwKeyboard;
+class glfwMouse;
 
 class glfwWindow final : public WindowAPI {
 public:
-    explicit glfwWindow(Lattice::Node& branch);
-    void configure(Lattice::Node& branch);
+    explicit glfwWindow(NodeBuild);
+    void configure(NodeConfigure);
 
     ~glfwWindow() override;
 
     glfwWindow(const glfwWindow&) = delete;
     glfwWindow& operator=(const glfwWindow&) = delete;
-    glfwWindow(glfwWindow&&) noexcept;
-    glfwWindow& operator=(glfwWindow&&) noexcept;
+
+    glfwWindow(glfwWindow&&) = delete;
+    glfwWindow& operator=(glfwWindow&&) = delete;
 
     // WindowAPI
     bool shouldClose() const override;
@@ -39,7 +41,6 @@ private:
     static constexpr std::string_view tag = "glfwWindow";
     
     void setupCallbacks();
-
     void syncFromWindow();
     GLFWmonitor* currentMonitor() const;
     GLFWmonitor* monitorByIndex(int index) const;

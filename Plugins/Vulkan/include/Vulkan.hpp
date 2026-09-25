@@ -9,7 +9,7 @@
 #include "GPUAPI.hpp"
 
 #include <Lattice/Kernel/Exception.hpp>
-#include <Lattice/Kernel/Node.hpp>
+#include <Lattice/Kernel/NodeViews.hpp>
 
 namespace Vk {
 
@@ -17,18 +17,11 @@ class Vulkan final : public GPU::GPUAPI {
     static constexpr std::string_view tag = "Vulkan";
 
 public:
-    explicit Vulkan(Lattice::Node&, const Desc& = {}) {
+    explicit Vulkan(NodeBuild node, const Desc& = {}) {
         createInstance();
-    }
-
-    void configure(Lattice::Node& node) {
         physicalDevices_ = enumeratePhysicalDevices();
-
-        VkPhysicalDevice physical = selectPhysicalDevice(physicalDevices_);
-
-        const GPU::DeviceDesc desc = describeDevice(physical);
-
-        node.add<Device>(desc.name, desc).focus<GPU::Device>();
+        auto device = node.addSlot<GPU::Device>();
+        device.choice<Device>();
     }
 
     ~Vulkan() override {

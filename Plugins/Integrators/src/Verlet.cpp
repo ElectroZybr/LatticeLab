@@ -2,7 +2,7 @@
 #include <glm/ext/vector_float3.hpp>
 
 // #include "src/StepOps.hpp"
-#include "Lattice/Kernel/Restrict.hpp"
+#include <Lattice/Kernel/Restrict.hpp>
 #include "Lattice/Tools/Logger.hpp"
 
 namespace Integrators {

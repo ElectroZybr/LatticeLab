@@ -1,5 +1,5 @@
 #include <Lattice/Kernel/NodeContext.hpp>
-#include "Lattice/Kernel/NodeRegistry.hpp"
+#include <Lattice/Kernel/NodeRegistry.hpp>
 
 namespace Lattice {
 
@@ -23,7 +23,7 @@ ContextScopeId NodeContext::createScope(NodeId owner, BlueprintId type) {
         .type = type
     }, owner);
 
-    if (nodes_.require(owner).parent == InvalidNodeId)
+    if (registry_.require(owner).parent == InvalidNodeId)
         rootScope_ = id;
 
     return id;
@@ -71,7 +71,7 @@ NodeId NodeContext::get(ContextScopeId scopeId, RoleId roleId) const {
 ContextScopeId NodeContext::parentScope(ContextScopeId scope) const {
     NodeId owner = scopes_.require(scope).owner;
 
-    for (NodeId parent = nodes_.require(owner).parent; parent != InvalidNodeId; parent = nodes_.require(parent).parent) {
+    for (NodeId parent = registry_.require(owner).parent; parent != InvalidNodeId; parent = registry_.require(parent).parent) {
         const ContextScopeId found = findScope(parent);
         if (found != InvalidContextScopeId) return found;
     }
@@ -144,7 +144,7 @@ void NodeContext::deactivate(ContextScopeId scope) {
 }
 
 ContextScopeId NodeContext::nearestScope(NodeId owner) const {
-    for (NodeId id = owner; id != InvalidNodeId; id = nodes_.require(id).parent) {
+    for (NodeId id = owner; id != InvalidNodeId; id = registry_.require(id).parent) {
         const ContextScopeId scope = findScope(id);
         if (scope != InvalidContextScopeId)
             return scope;

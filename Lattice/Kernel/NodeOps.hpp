@@ -8,23 +8,14 @@
 
 namespace Lattice {
 
-class NodeRegistry;
-class Blueprints;
-class NodeConfigureView;
-class NodeQuery;
-class NodeContext;
-class NodeFocus;
-class NodeSlot;
+class NodeSystem;
 
 class NodeOps {
-    Blueprints& blueprints_;
-    NodeContext& context_;
-    NodeRegistry& nodes_;
-    NodeQuery& query_;
+    NodeSystem& nodeSystem_;
 
 public:
-    NodeOps(NodeRegistry& nodes, Blueprints& blueprints, NodeQuery& query, NodeContext& context)
-        : nodes_(nodes), blueprints_(blueprints), query_(query), context_(context) {}
+    NodeOps(NodeSystem& nodeSystem)
+        : nodeSystem_(nodeSystem) {}
 
     void configureBranch(NodeId id);
     void destroyBranch(NodeId id);

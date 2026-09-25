@@ -4,26 +4,18 @@
 #include <memory>
 
 #include "Device.hpp"
-#include "Vulkan.hpp"
 #include "VkCommandList.hpp"
 
 #include <Lattice/Kernel/Exception.hpp>
-#include "Lattice/Kernel/Node.hpp"
+#include <Lattice/Kernel/NodeViews.hpp>
 
 namespace Vk {
+class Vulkan;
 
 class Device final : public GPU::Device {
 public:
-    explicit Device(Lattice::Node& node, const Desc& desc)
-        : info_(desc)
-    {
-        auto backend = node.requireParent<Vulkan>();
-
-        physicalDevice_ = backend->physicalDevice(desc.id);
-
-        createDevice();
-        createCommandPool();
-    }
+    explicit Device(NodeBuild, const Desc& desc = {}) : info_(desc) {}
+    void configure(NodeBuild node);
 
     ~Device() override {
         if (device_)
@@ -38,6 +30,22 @@ public:
 
     std::unique_ptr<GPU::CommandList> createCommandList() override {
         return std::make_unique<CommandList>(device_, commandPool_, queue_);
+    }
+
+    std::unique_ptr<GPU::Surface> createSurface(const GPU::SurfaceDesc&) override {
+        throw Lattice::Exception("Vulkan::Device", "createSurface is not implemented");
+    }
+
+    std::unique_ptr<GPU::Shader> createShader(const GPU::ShaderDesc&) override {
+        throw Lattice::Exception("Vulkan::Device", "createShader is not implemented");
+    }
+
+    std::unique_ptr<GPU::Pipeline> createPipeline(const GPU::PipelineDesc&) override {
+        throw Lattice::Exception("Vulkan::Device", "createPipeline is not implemented");
+    }
+
+    std::unique_ptr<GPU::Buffer> createBuffer(const GPU::BufferDesc&) override {
+        throw Lattice::Exception("Vulkan::Device", "createBuffer is not implemented");
     }
 
     std::unique_ptr<GPU::BindingSet> createBindingSet(GPU::Pipeline&, uint32_t, std::span<const GPU::Binding>) override {

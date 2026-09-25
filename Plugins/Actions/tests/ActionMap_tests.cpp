@@ -1,7 +1,7 @@
 // #include <Lattice/Tools/Fixture.hpp>
 // #include <Lattice/Tools/Tests.hpp>
 // #include <Lattice/Lattice.hpp>
-// #include "Lattice/Kernel/Objects.hpp"
+// #include <Lattice/Kernel/Objects.hpp>
 
 // #include "ActionMap.hpp"
 // #include "InputAPI.hpp"

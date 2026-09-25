@@ -39,7 +39,8 @@
 #endif
     #include <GLFW/glfw3native.h>
 
-#include "Lattice/Kernel/Exception.hpp"
+#include <Lattice/Kernel/NodeViews.hpp>
+#include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Tools/Logger.hpp>
 #include "glfwKeyboard.hpp"
 #include "glfwMouse.hpp"
@@ -168,12 +169,12 @@ bool monitorWorkArea(GLFWmonitor* monitor, int& x, int& y, int& w, int& h) {
 // ctor / dtor / move
 // ============================================================
 
-glfwWindow::glfwWindow(Lattice::Node& branch) {
-    keyboard_ = branch.add<glfwKeyboard>();
-    mouse_ = branch.add<glfwMouse>();
+glfwWindow::glfwWindow(NodeBuild node) {
+    keyboard_ = node.add<glfwKeyboard>();
+    mouse_ = node.add<glfwMouse>();
 }
 
-void glfwWindow::configure(Lattice::Node& branch) {
+void glfwWindow::configure(NodeConfigure node) {
     if (window_) return;
 
     if (!glfwInit()) {
@@ -185,21 +186,22 @@ void glfwWindow::configure(Lattice::Node& branch) {
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
     glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-#if defined(GLFW_X11_CLASS_NAME)
-    glfwWindowHintString(GLFW_X11_CLASS_NAME, "LatticeLab");
-    glfwWindowHintString(GLFW_X11_INSTANCE_NAME, "LatticeLab");
-#endif
-#if defined(GLFW_WAYLAND_APP_ID)
-    glfwWindowHintString(GLFW_WAYLAND_APP_ID, "LatticeLab");
-#endif
-#ifdef __linux__
-    const auto iconPath = findIconPath();
-    if (iconPath.empty()) {
-        Logger::warning("Window", "icon not found (assets/icon.png from cwd/exe/plugin)");
-    } else if (glfwGetPlatform() == GLFW_PLATFORM_WAYLAND) {
-        installDesktopIcon(iconPath);
-    }
-#endif
+
+    #if defined(GLFW_X11_CLASS_NAME)
+        glfwWindowHintString(GLFW_X11_CLASS_NAME, "LatticeLab");
+        glfwWindowHintString(GLFW_X11_INSTANCE_NAME, "LatticeLab");
+    #endif
+    #if defined(GLFW_WAYLAND_APP_ID)
+        glfwWindowHintString(GLFW_WAYLAND_APP_ID, "LatticeLab");
+    #endif
+    #ifdef __linux__
+        const auto iconPath = findIconPath();
+        if (iconPath.empty()) {
+            Logger::warning("Window", "icon not found (assets/icon.png from cwd/exe/plugin)");
+        } else if (glfwGetPlatform() == GLFW_PLATFORM_WAYLAND) {
+            installDesktopIcon(iconPath);
+        }
+    #endif
 
     int monitorCount = 0;
     GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
@@ -214,11 +216,7 @@ void glfwWindow::configure(Lattice::Node& branch) {
 
     const std::string title = std::format("{} {}", state_.name, BUILD_VERSION);
 
-    window_ = glfwCreateWindow(
-        w, h,
-        title.c_str(),
-        state_.fullscreen ? monitor : nullptr,
-        nullptr);
+    window_ = glfwCreateWindow(w, h, title.c_str(), state_.fullscreen ? monitor : nullptr, nullptr);
 
     if (!window_) {
         glfwTerminate();
@@ -338,21 +336,6 @@ glfwWindow::~glfwWindow() {
     }
 }
 
-glfwWindow& glfwWindow::operator=(glfwWindow&& other) noexcept {
-    if (this != &other) {
-        if (window_) {
-            glfwSetWindowUserPointer(window_, nullptr);
-        }
-        windowOwner_ = std::move(other.windowOwner_);
-        window_ = std::exchange(other.window_, nullptr);
-        state_  = other.state_;
-        if (window_) {
-            glfwSetWindowUserPointer(window_, this);
-        }
-    }
-    return *this;
-}
-
 // ============================================================
 // WindowAPI
 // ============================================================
@@ -437,31 +420,32 @@ NativeWindow glfwWindow::native() const {
     n.owner = windowOwner_;
     if (!window_) return n;
 
-#if defined(_WIN32)
-    n.kind = NativeWindow::Kind::Win32;
-    n.window = glfwGetWin32Window(window_);
+    #if defined(_WIN32)
+        n.kind = NativeWindow::Kind::Win32;
+        n.window = glfwGetWin32Window(window_);
 
-#elif defined(__APPLE__)
-    n.kind = NativeWindow::Kind::Metal;
-    n.window = glfwGetCocoaWindow(window_);
-    n.extra = glfwMetalLayer(window_);
+    #elif defined(__APPLE__)
+        n.kind = NativeWindow::Kind::Metal;
+        n.window = glfwGetCocoaWindow(window_);
+        n.extra = glfwMetalLayer(window_);
 
-#else
-    const int platform = glfwGetPlatform(); // GLFW ≥ 3.4
+    #else
+        const int platform = glfwGetPlatform(); // GLFW ≥ 3.4
 
-    if (platform == GLFW_PLATFORM_WAYLAND) {
-        n.kind = NativeWindow::Kind::Wayland;
-        n.display = glfwGetWaylandDisplay();
-        n.window  = glfwGetWaylandWindow(window_); // wl_surface*
-    } else if (platform == GLFW_PLATFORM_X11) {
-        n.kind = NativeWindow::Kind::X11;
-        n.display = glfwGetX11Display();
-        n.window  = reinterpret_cast<void*>(
-            static_cast<uintptr_t>(glfwGetX11Window(window_)));
-    } else {
-        Logger::error("Window", "unsupported glfw platform {}", platform);
-    }
-#endif
+        if (platform == GLFW_PLATFORM_WAYLAND) {
+            n.kind = NativeWindow::Kind::Wayland;
+            n.display = glfwGetWaylandDisplay();
+            n.window  = glfwGetWaylandWindow(window_); // wl_surface*
+        } else if (platform == GLFW_PLATFORM_X11) {
+            n.kind = NativeWindow::Kind::X11;
+            n.display = glfwGetX11Display();
+            n.window  = reinterpret_cast<void*>(
+                static_cast<uintptr_t>(glfwGetX11Window(window_)));
+        } else {
+            Logger::error("Window", "unsupported glfw platform {}", platform);
+        }
+    #endif
+
     return n;
 }
 

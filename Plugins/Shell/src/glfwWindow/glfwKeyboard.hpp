@@ -2,11 +2,11 @@
 
 #include "InputState.hpp"
 #include <GLFW/glfw3.h>
-#include "Lattice/Kernel/Node.hpp"
+#include <Lattice/Kernel/NodeViews.hpp>
 
 class glfwKeyboard final : public InputAPI {
 public:
-    explicit glfwKeyboard(Lattice::Node&) {
+    explicit glfwKeyboard(NodeBuild) {
         keys_.fill(InvalidTriggerId);
     }
 

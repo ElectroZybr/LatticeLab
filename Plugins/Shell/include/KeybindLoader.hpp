@@ -5,7 +5,7 @@
 #include <utility>
 
 #include <Lattice/Kernel/Exception.hpp>
-#include <Lattice/Kernel/Node.hpp>
+#include <Lattice/Kernel/NodeViews.hpp>
 #include <Lattice/Kernel/Value.hpp>
 
 #include "ActionRouter.hpp"
@@ -13,11 +13,11 @@
 
 class KeybindsLoader final : public LoaderAPI {
     static constexpr std::string_view tag = "KeybindsLoader";
+    Focus<ActionRouter> actionMap_;
 
 public:
-    void configure(Lattice::Node& branch) {
-        Lattice::Context& ctx = branch.requireContext();
-        actionMap = ctx.focus<ActionRouter>();
+    void configure(NodeConfigure node) {
+        node.focus<ActionRouter>();
     }
 
     std::string_view section() const override { return "keybinds"; }
@@ -26,15 +26,13 @@ public:
         if (!section.is<Lattice::Table>())
             return;
 
-        if (!actionMap)
+        if (!actionMap_)
             throw Lattice::Exception(tag, "loader is not configured");
 
-        loadTable(std::get<Lattice::Table>(section), "");
+        loadTable(section.require<Lattice::Table>(), "");
     }
 
 private:
-    Lattice::Focus<ActionRouter> actionMap;
-
     static bool isOp(std::string_view name) {
         return name == "add" || name == "sub" || name == "toggle";
     }
@@ -71,7 +69,7 @@ private:
             const std::string path = prefix.empty() ? key : prefix + "." + key;
 
             if (value.is<Lattice::Table>()) {
-                loadTable(std::get<Lattice::Table>(value), path);
+                loadTable(value.require<Lattice::Table>(), path);
                 continue;
             }
 
@@ -86,14 +84,14 @@ private:
 
         Lattice::Array args;
         if (value.is<Lattice::Array>())
-            args = std::get<Lattice::Array>(value);
+            args = value.get<Lattice::Array>();
         else
             args.push_back(value);
 
         if (args.empty() || !args[0].is<std::string>())
             throw Lattice::Exception(tag, "bind '{}' needs a trigger string", verb);
 
-        const auto& trigger = std::get<std::string>(args[0]);
+        const auto trigger = args[0].get<std::string>();
         ActionMode mode = ActionMode::OnPress;
         double delta = 0.0;
 
@@ -101,7 +99,7 @@ private:
             const auto& arg = args[i];
 
             if (arg.is<std::string>()) {
-                const auto& token = std::get<std::string>(arg);
+                const auto token = arg.get<std::string>();
 
                 if (isOp(token))
                     op = token;
@@ -117,10 +115,10 @@ private:
         }
 
         if (op == "toggle")
-            actionMap->bindToggle(verb, trigger, mode);
+            actionMap_->bindToggle(verb, trigger, mode);
         else if (op == "add" || op == "sub")
-            actionMap->bindAdd(verb, trigger, delta, mode);
+            actionMap_->bindAdd(verb, trigger, op == "sub" ? -delta : delta, mode);
         else
-            actionMap->bind(verb, trigger, mode);
+            actionMap_->bind(verb, trigger, mode);
     }
 };

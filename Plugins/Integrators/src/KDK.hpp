@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Lattice/Kernel/NodeViews.hpp"
+#include <Lattice/Kernel/NodeViews.hpp>
 #include <Lattice/Tools/Logger.hpp>
 
 #include <ParticleDynamics/include/ParticleAPI.hpp>
@@ -9,7 +9,7 @@ namespace Integrators {
 
 class KDK final : public ParticleDynamics::IntegratorAPI {
 public:
-    KDK(Lattice::NodeBuildView components) {
+    KDK(NodeBuild components) {
     }
 
     void step() override { }

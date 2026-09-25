@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#include "Lattice/Kernel/Consts.hpp"
-#include "Lattice/Kernel/ObjectRegistry.hpp"
+#include <Lattice/Kernel/Consts.hpp>
+#include <Lattice/Kernel/ObjectRegistry.hpp>
 
 
 namespace Lattice {
@@ -33,7 +33,7 @@ struct ContextScope {
 using ContextRegistry = ObjectRegistry<ContextScope, ContextScopeId, NodeId>;
 
 class NodeContext {
-    NodeRegistry& nodes_;
+    NodeRegistry& registry_;
     
     RoleRegistry roles_;
     ContextRegistry scopes_;
@@ -41,7 +41,7 @@ class NodeContext {
     std::vector<ContextScopeId> activeScopes_;
 
 public:
-    explicit NodeContext(NodeRegistry& nodes) : nodes_(nodes) {}
+    explicit NodeContext(NodeRegistry& registry) : registry_(registry) {}
 
     RoleId role(std::string_view name);
     RoleId findRole(std::string_view name) const;

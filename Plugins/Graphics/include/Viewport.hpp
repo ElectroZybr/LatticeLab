@@ -1,17 +1,17 @@
 #pragma once
 
 #include <algorithm>
-#include <format>
 #include <span>
 #include <glm/glm.hpp>
-#include "GPU/include/Buffer.hpp"
-#include "GPU/include/Pipeline.hpp"
-#include "Lattice/Kernel/Node.hpp"
-#include <GPU/include/CommandList.hpp>
-#include <GPU/include/Device.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <Lattice/Kernel/NodeViews.hpp>
+
+#include "Buffer.hpp"
+#include "Pipeline.hpp"
+#include "CommandList.hpp"
+#include "Device.hpp"
 #include "Camera.hpp"
-#include "TransformController.hpp"
+
 
 enum class ViewportSizeMode {
     Fixed,
@@ -20,29 +20,8 @@ enum class ViewportSizeMode {
 
 class Viewport : public Lattice::Component {
 public:
-    Viewport(Lattice::Node& node) {
-        node.makeFocusScope();
-        camera_ = node.add<Camera>("MainCamera").focus();
-        camera_->setPosition({0.0f, 0.0f, 2.0f});
-        node.slot<TransformController>("Camera");
-        node.bind("cursor", &cursor_);
-    }
-
-    void configure(Lattice::Node& node) {
-        auto controller = node.find<TransformController>("Camera");
-        if (controller.node() && !controller.exists())
-            controller.use("FreeCameraController");
-
-        if (!node.find<GPU::Device>().exists())
-            return;
-
-        device_ = node.require<GPU::Device>();
-
-        GPU::BufferDesc desc{};
-        desc.size = sizeof(glm::mat4);
-        desc.usage = GPU::BufferUsage::Uniform | GPU::BufferUsage::CopyDestination;
-        uniform_ = device_.add<GPU::Buffer>(std::format("uniform-{}", node.getId()), desc);
-    }
+    explicit Viewport(NodeBuild node);
+    void configure(NodeConfigure node);
 
     glm::uvec2 position() const noexcept { return position_; }
     void setPosition(glm::uvec2 position) noexcept { position_ = position; }
@@ -75,7 +54,7 @@ public:
         if (!bindings_) {
             GPU::Binding bind{};
             bind.binding = 0;
-            bind.buffer = uniform_.getPtr();
+            bind.buffer = uniform_.get();
             bind.size = sizeof(glm::mat4);
             bindings_ = device_->createBindingSet(pipeline, 0, std::span(&bind, 1));
         }
@@ -96,6 +75,7 @@ public:
 private:
     Ref<Camera> camera_;
     Ref<GPU::Device> device_;
+    std::optional<Focus<GPU::Device>> deviceFocus_;
     glm::uvec2 position_{};
     glm::uvec2 size_{1280, 720};
     ViewportSizeMode sizeMode_ = ViewportSizeMode::Fill;
@@ -104,5 +84,5 @@ private:
     glm::vec2 cursor_{};
 
     std::unique_ptr<GPU::BindingSet> bindings_;
-    Ref<GPU::Buffer> uniform_;
+    std::unique_ptr<GPU::Buffer> uniform_;
 };
