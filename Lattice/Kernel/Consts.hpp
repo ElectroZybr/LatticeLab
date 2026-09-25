@@ -13,19 +13,18 @@ enum class NodeKind : uint8_t {
     Component,
     Slot,
     Binding,
-    Mount
+    Mount,
+    SharedMount
 };
 
 using NodeId = uint32_t;
 using RoleId = uint32_t;
 using BlueprintId = uint32_t;
-using CapabilityId = uint32_t;
 using ContextScopeId = uint32_t;
 
 inline constexpr NodeId InvalidNodeId = std::numeric_limits<NodeId>::max();
 inline constexpr RoleId InvalidRoleId = std::numeric_limits<RoleId>::max();
 inline constexpr BlueprintId InvalidBlueprintId = std::numeric_limits<BlueprintId>::max();
-inline constexpr CapabilityId InvalidCapabilityId = std::numeric_limits<CapabilityId>::max();
 inline constexpr ContextScopeId InvalidContextScopeId = std::numeric_limits<ContextScopeId>::max();
 
 inline constexpr std::string_view DefaultInstanceName{};

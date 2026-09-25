@@ -1,43 +1,22 @@
-#include <fstream>
-#include <iterator>
 #include <Lattice/Kernel/NodeViews.hpp>
+#include "Shell/src/glfwWindow/glfwWindow.hpp"
 
 #include "Render.hpp"
 #include "Viewport.hpp"
 #include "WindowAPI.hpp"
-#include "TransformController.hpp"
+
 
 Render::Render(NodeBuild renderer) {
-    device_ = renderer.mount<GPU::Device>();
+    auto deviceBuild = renderer.mount<GPU::Device>();
+    device_ = deviceBuild.ref();
     resourceName_ = std::format("render-{}", renderer.id());
-    renderer.add<Viewport>("Main");
-    
+    surface_ = deviceBuild.add<GPU::Surface>(resourceName_);
+    window_ = renderer.addSlot<WindowAPI>();
 }
 
 void Render::configure(NodeConfigure renderer) {
-    window_ = renderer.find<WindowAPI>();
     viewports_ = renderer.children<Viewport>();
-    if (!window_ || window_->shouldClose()) return;
-    const auto native = window_->native();
-    if (native.kind == NativeWindow::Kind::None) return;
-    if (surface_ && native_ != native) releaseFrameResources();
-    if (!surface_) {
-        try {
-            surface_ = device_.add<GPU::Surface>(resourceName_, GPU::SurfaceDesc{native});
-            std::ifstream file("Plugins/Graphics/src/shaders/circle.wgsl");
-            if (!file) throw Lattice::Exception("Render", "cannot read circle.wgsl");
-            GPU::ShaderDesc shader;
-            shader.source.assign(std::istreambuf_iterator<char>(file), {});
-            shader_ = device_.add<GPU::Shader>(resourceName_, shader);
-            pipeline_ = device_.add<GPU::Pipeline>(resourceName_, GPU::PipelineDesc{shader_.getPtr(), surface_->format()});
-            native_ = native;
-        } catch (...) {
-            releaseFrameResources();
-            throw;
-        }
-    }
-    const auto size = window_->framebufferSize();
-    surface_->resize(size.x > 0 ? uint32_t(size.x) : 0, size.y > 0 ? uint32_t(size.y) : 0);
+    if (!window_.exists()) window_.choice<glfwWindow>();
 }
 
 void Render::frame(float) {
@@ -51,7 +30,7 @@ void Render::frame(float) {
         auto commands = device_->createCommandList();
         auto& pass = commands->beginRenderPass(*surface_, {0.1f, 0.2f, 0.3f, 1.0f});
         for (Viewport* viewport : viewports_)
-            viewport->render(pass, *pipeline_, framebuffer);
+            viewport->render(pass, framebuffer);
         pass.end();
         commands->submit();
         surface_->present();
@@ -66,11 +45,11 @@ Render::~Render() {
 }
 
 void Render::releaseFrameResources() {
-    device_.remove<GPU::Pipeline>(resourceName_);
-    device_.remove<GPU::Shader>(resourceName_);
-    device_.remove<GPU::Surface>(resourceName_);
-    pipeline_ = {};
-    shader_ = {};
-    surface_ = {};
-    native_ = {};
+    // device_.remove<GPU::Pipeline>(resourceName_);
+    // device_.remove<GPU::Shader>(resourceName_);
+    // device_.remove<GPU::Surface>(resourceName_);
+    // pipeline_ = {};
+    // shader_ = {};
+    // surface_ = {};
+    // native_ = {};
 }

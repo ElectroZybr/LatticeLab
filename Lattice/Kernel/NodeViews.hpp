@@ -3,8 +3,10 @@
 #include <Lattice/Kernel/NodeFactory.hpp>
 #include <Lattice/Kernel/NodeHandlers.hpp>
 #include <Lattice/Kernel/Blueprints.hpp>
+#include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/NodeQuery.hpp>
 #include <Lattice/Kernel/NodeSystem.hpp>
+#include <Lattice/Kernel/TypeName.hpp>
 
 
 // global types
@@ -51,17 +53,38 @@ public:
     MountBuild& operator=(MountBuild&&) = delete;
 
     template<class U>
-    Ref<U> add(std::string_view instance = Lattice::DefaultInstanceName) {
-        auto bp = nodeSystem_->blueprints.id<U>();
-        auto id = nodeSystem_->factory.component(target_, bp, instance);
-        return Ref<U>{static_cast<U*>(nodeSystem_->factory.resolve(id, bp))};
+    Ref<U> addLocal(std::string_view instance = Lattice::DefaultInstanceName) {
+        const auto api = nodeSystem_->blueprints.id<U>();
+        const auto id = nodeSystem_->factory.addLocal(owner_, target_, api, instance);
+        return Ref<U>{static_cast<U*>(nodeSystem_->query.resolve(id, api))};
     }
 
-    T* get() const {
-        return static_cast<T*>(nodeSystem_->query.resolve(target_, nodeSystem_->blueprints.id<T>()));
+    template<class U>
+    Ref<U> addLocal(std::string_view instance, const typename U::Desc& desc) {
+        const auto api = nodeSystem_->blueprints.id<U>();
+        const auto id = nodeSystem_->factory.addLocal(owner_, target_, api, instance, &desc);
+        return Ref<U>{static_cast<U*>(nodeSystem_->query.resolve(id, api))};
     }
 
-    T* operator->() const { return get(); }
+    template<class U>
+    Ref<U> addShare(std::string_view instance = Lattice::DefaultInstanceName) {
+        const auto api = nodeSystem_->blueprints.id<U>();
+        const auto id = nodeSystem_->factory.addShare(owner_, target_, api, instance);
+        return Ref<U>{static_cast<U*>(nodeSystem_->query.resolve(id, api))};
+    }
+
+    template<class U>
+    Ref<U> addShare(std::string_view instance, const typename U::Desc& desc) {
+        const auto api = nodeSystem_->blueprints.id<U>();
+        const auto id = nodeSystem_->factory.addShare(owner_, target_, api, instance, &desc);
+        return Ref<U>{static_cast<U*>(nodeSystem_->query.resolve(id, api))};
+    }
+
+    Ref<T> ref() const {
+        return Ref<T>{
+            static_cast<T*>(nodeSystem_->query.resolve(target_, nodeSystem_->blueprints.id<T>()))
+        };
+    }
 
     Lattice::NodeId owner() const noexcept { return owner_; }
     Lattice::NodeId target() const noexcept { return target_; }
@@ -85,7 +108,7 @@ public:
 
     template<class T> 
     Ref<T> add(std::string_view instance = Lattice::DefaultInstanceName) {
-        auto api = nodeSystem_.blueprints.find(typeKey<T>());
+        auto api = nodeSystem_.blueprints.find(Lattice::typeKey<T>());
         auto node = nodeSystem_.factory.component(id_, api, instance);
         return Ref<T>{static_cast<T*>(nodeSystem_.factory.resolve(node, api))};
     }
@@ -97,11 +120,16 @@ public:
     }
     
     Lattice::NodeId addFolder(std::string_view name) { return nodeSystem_.factory.folder(id_, name); }
+    
+    template<class API>
+    void share() {
+        nodeSystem_.factory.share(id_, nodeSystem_.blueprints.id<API>());
+    }
 
     template<class API> 
     Children<API> addImpls() {
         std::vector<API*> result;
-        auto api = nodeSystem_.blueprints.find(typeKey<API>());
+        auto api = nodeSystem_.blueprints.find(Lattice::typeKey<API>());
 
         for (auto impl : nodeSystem_.blueprints.getImpls(api)) {
             const std::string name = nodeSystem_.blueprints.require(impl).name;
@@ -113,13 +141,9 @@ public:
     }
 
     template<class T>
-    MountBuild<T> mount(std::string_view instance = Lattice::DefaultInstanceName) {
+    MountBuild<T> mount() {
         const auto api = nodeSystem_.blueprints.id<T>();
-        const auto target = nodeSystem_.query.shared(id_, api, instance);
-
-        if (target == Lattice::InvalidNodeId)
-            throw Lattice::Exception("NodeBuild", "Shared '{}' with instance '{}' not found", typeKey<T>(), instance);
-
+        const auto target = nodeSystem_.query.shared(id_, api);
         return MountBuild<T>{nodeSystem_, id_, target};
     }
 
@@ -146,7 +170,7 @@ public:
             current = nodeSystem_.registry.require(current).parent;
         }
 
-        throw Exception("NodeBuild", "Ancestor '{}' not found for node #{}", typeKey<T>(), id_);
+        throw Lattice::Exception("NodeBuild", "Ancestor '{}' not found for node #{}", Lattice::typeKey<T>(), id_);
     }
 
     // helpers
@@ -168,7 +192,7 @@ public:
         : id_(id), nodeSystem_(nodeSystem){}
 
     template<typename T>
-    Focus<T> focus(std::string_view role = typeKey<T>()) {
+    Focus<T> focus(std::string_view role = Lattice::typeKey<T>()) {
         return Focus<T>{nodeSystem_.context, nodeSystem_.query, nodeSystem_.context.nearestScope(id_), nodeSystem_.context.role(role)};
     }
 
@@ -201,18 +225,18 @@ public:
 
     template<class T>
     Ref<T> find(std::string_view instance = Lattice::DefaultInstanceName) const {
-        const auto found = findId(typeKey<T>(), instance);
+        const auto found = findId(Lattice::typeKey<T>(), instance);
         return Ref<T>{found == Lattice::InvalidNodeId ? nullptr : resolve<T>(found)};
     }
 
     template<class T>
     Ref<T> require(std::string_view instance = Lattice::DefaultInstanceName) const {
-        return Ref<T>{resolve<T>(requireId(typeKey<T>(), instance))};
+        return Ref<T>{resolve<T>(requireId(Lattice::typeKey<T>(), instance))};
     }
 
     template<class T>
     std::optional<Slot<T>> findSlot(std::string_view instance = Lattice::DefaultInstanceName) const {
-        const Lattice::NodeId found = findId(typeKey<T>(), instance);
+        const Lattice::NodeId found = findId(Lattice::typeKey<T>(), instance);
         if (found == Lattice::InvalidNodeId || nodeSystem_.registry.require(found).kind != Lattice::NodeKind::Slot)
             return std::nullopt;
         return Slot<T>{nodeSystem_.factory, nodeSystem_.query, nodeSystem_.blueprints, found};
@@ -222,13 +246,13 @@ public:
     Slot<T> requireSlot(std::string_view instance = Lattice::DefaultInstanceName) const {
         auto slot = findSlot<T>(instance);
         if (!slot)
-            throw Exception("NodeConfigure", "Slot '{}' with instance '{}' not found", typeKey<T>(), instance);
+            throw Lattice::Exception("NodeConfigure", "Slot '{}' with instance '{}' not found", Lattice::typeKey<T>(), instance);
         return *slot;
     }
 
     template<class T>
     T* resolve(Lattice::NodeId id) const {
-        return static_cast<T*>(nodeSystem_.query.resolve(id, typeKey<T>()));
+        return static_cast<T*>(nodeSystem_.query.resolve(id, Lattice::typeKey<T>()));
     }
 
     ExportsView exports() {

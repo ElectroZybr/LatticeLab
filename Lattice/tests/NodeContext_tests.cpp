@@ -39,9 +39,10 @@ TEST(NodeContext_SetGet, RuntimeFixture,
     const ContextScopeId scope = fixture.run_ctx.nodes.context.createScope(fixture.root);
     const RoleId role = fixture.run_ctx.nodes.context.role("Component");
 
+    fixture.run_ctx.nodes.context.addCandidate(scope, role, target);
     fixture.run_ctx.nodes.context.set(scope, role, target);
 
-    REQUIRE(fixture.run_ctx.nodes.context.get(scope, role) == target);
+    REQUIRE(fixture.run_ctx.nodes.context.resolveInfo(scope, role).target == target);
 }
 
 TEST(NodeContext_SetUpdatesEntry, RuntimeFixture,
@@ -55,34 +56,34 @@ TEST(NodeContext_SetUpdatesEntry, RuntimeFixture,
 
     fixture.run_ctx.nodes.context.set(scope, role, b);
 
-    REQUIRE(fixture.run_ctx.nodes.context.get(scope, role) == b);
+    REQUIRE(fixture.run_ctx.nodes.context.resolveInfo(scope, role).target == b);
     REQUIRE(fixture.run_ctx.nodes.context.scope(scope)->roles.size() == 1);
 }
 
 TEST(NodeContext_ResolveLocal, RuntimeFixture,
-    "Локальная роль должна резолвиться из текущего scope.")
+    "Несколько локальных кандидатов без выбора должны быть неоднозначны.")
 {
     const NodeId branch = fixture.run_ctx.nodes.factory.folder(fixture.root, "branch");
-    const NodeId a = fixture.run_ctx.nodes.factory.component(branch, "Component", "1");
+    fixture.run_ctx.nodes.factory.component(branch, "Component", "1");
     fixture.run_ctx.nodes.factory.component(branch, "Component", "2");
 
     const ContextScopeId scope = fixture.run_ctx.nodes.context.findScope(branch);
     const RoleId role = fixture.run_ctx.nodes.context.findRole("Component");
 
-    REQUIRE(fixture.run_ctx.nodes.context.resolve(scope, role) == a);
+    REQUIRE(fixture.run_ctx.nodes.context.resolveInfo(scope, role).state == ContextResolutionState::Ambiguous);
 }
 
 TEST(NodeContext_ResolveInherited, RuntimeFixture,
-    "Если локальной роли нет, она должна наследоваться из родительского scope.")
+    "Неоднозначность родительского scope должна наследоваться.")
 {
-    const NodeId rootA = fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "1");
+    fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "1");
     fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "2");
 
     const NodeId branch = fixture.run_ctx.nodes.factory.folder(fixture.root, "branch");
     const ContextScopeId branchScope = fixture.run_ctx.nodes.context.createScope(branch);
     const RoleId role = fixture.run_ctx.nodes.context.findRole("Component");
 
-    REQUIRE(fixture.run_ctx.nodes.context.resolve(branchScope, role) == rootA);
+    REQUIRE(fixture.run_ctx.nodes.context.resolveInfo(branchScope, role).state == ContextResolutionState::Ambiguous);
 }
 
 TEST(NodeContext_ResetRestoresInheritance, RuntimeFixture,
@@ -91,20 +92,24 @@ TEST(NodeContext_ResetRestoresInheritance, RuntimeFixture,
     const NodeId rootA = fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "1");
     fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "2");
 
+    const RoleId role = fixture.run_ctx.nodes.context.findRole("Component");
+    const ContextScopeId rootScope = fixture.run_ctx.nodes.context.findScope(fixture.root);
+    fixture.run_ctx.nodes.context.set(rootScope, role, rootA);
+
     const NodeId branch = fixture.run_ctx.nodes.factory.folder(fixture.root, "branch");
-    fixture.run_ctx.nodes.factory.component(branch, "Component", "1");
+    const NodeId branchA = fixture.run_ctx.nodes.factory.component(branch, "Component", "1");
     fixture.run_ctx.nodes.factory.component(branch, "Component", "2");
 
     const ContextScopeId scope = fixture.run_ctx.nodes.context.findScope(branch);
-    const RoleId role = fixture.run_ctx.nodes.context.findRole("Component");
+    fixture.run_ctx.nodes.context.set(scope, role, branchA);
 
     fixture.run_ctx.nodes.context.reset(scope, role);
 
     REQUIRE(fixture.run_ctx.nodes.context.resolve(scope, role) == rootA);
 }
 
-TEST(NodeContext_EmptyMasksParent, RuntimeFixture,
-    "Явный InvalidNodeId должен маскировать значение родительского scope.")
+TEST(NodeContext_LocalScopeInheritsParentAmbiguity, RuntimeFixture,
+    "Пустой локальный scope должен наследовать неоднозначность родителя.")
 {
     fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "1");
     fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "2");
@@ -113,9 +118,7 @@ TEST(NodeContext_EmptyMasksParent, RuntimeFixture,
     const ContextScopeId scope = fixture.run_ctx.nodes.context.createScope(branch);
     const RoleId role = fixture.run_ctx.nodes.context.findRole("Component");
 
-    fixture.run_ctx.nodes.context.set(scope, role, InvalidNodeId);
-
-    REQUIRE(fixture.run_ctx.nodes.context.resolve(scope, role) == InvalidNodeId);
+    REQUIRE(fixture.run_ctx.nodes.context.resolveInfo(scope, role).state == ContextResolutionState::Ambiguous);
 }
 
 TEST(NodeContext_ParentScope, RuntimeFixture,
@@ -134,14 +137,14 @@ TEST(NodeContext_ParentScope, RuntimeFixture,
 }
 
 TEST(NodeContext_GlobalResolveRoot, RuntimeFixture,
-    "Глобальный resolve должен использовать root scope.")
+    "Глобальный resolve должен сообщать неоднозначность root scope.")
 {
-    const NodeId a = fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "1");
+    fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "1");
     fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "2");
 
     const RoleId role = fixture.run_ctx.nodes.context.findRole("Component");
 
-    REQUIRE(fixture.run_ctx.nodes.context.resolve(role) == a);
+    REQUIRE(fixture.run_ctx.nodes.context.resolveInfo(role).state == ContextResolutionState::Ambiguous);
 }
 
 TEST(NodeContext_ActiveOverlay, RuntimeFixture,
@@ -157,6 +160,7 @@ TEST(NodeContext_ActiveOverlay, RuntimeFixture,
     const ContextScopeId scope = fixture.run_ctx.nodes.context.findScope(branch);
     const RoleId role = fixture.run_ctx.nodes.context.findRole("Component");
 
+    fixture.run_ctx.nodes.context.set(scope, role, branchA);
     fixture.run_ctx.nodes.context.activate(scope);
 
     REQUIRE(fixture.run_ctx.nodes.context.resolve(role) == branchA);
@@ -178,20 +182,20 @@ TEST(NodeContext_ActivateTwice, RuntimeFixture,
     REQUIRE(fixture.run_ctx.nodes.context.activeScopes()[0] == scope);
 }
 
-TEST(NodeContext_ExplicitEmptySurvivesFactory, RuntimeFixture,
-    "Создание новых одинаковых компонентов не должно перезаписывать явный Empty в context.")
+TEST(NodeContext_FactoryAccumulatesCandidates, RuntimeFixture,
+    "Создание одинаковых компонентов должно сохранять полный набор кандидатов.")
 {
-    const NodeId a = fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "1");
+    fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "1");
     fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "2");
 
     const ContextScopeId scope = fixture.run_ctx.nodes.context.findScope(fixture.root);
     const RoleId role = fixture.run_ctx.nodes.context.findRole("Component");
 
-    fixture.run_ctx.nodes.context.set(scope, role, InvalidNodeId);
     fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "3");
 
-    REQUIRE(fixture.run_ctx.nodes.context.lookup(scope, role).has_value());
-    REQUIRE(fixture.run_ctx.nodes.context.get(scope, role) == InvalidNodeId);
+    const auto result = fixture.run_ctx.nodes.context.resolveInfo(scope, role);
+    REQUIRE(result.state == ContextResolutionState::Ambiguous);
+    REQUIRE(result.candidates.size() == 3);
 }
 
 TEST(NodeContext_MultipleActiveScopes, RuntimeFixture,
@@ -230,8 +234,13 @@ TEST(NodeContext_OverlayOrder, RuntimeFixture,
     fixture.run_ctx.nodes.factory.component(b, "Component", "2");
 
     const RoleId role = context.findRole("Component");
+    const ContextScopeId rootScope = context.findScope(fixture.root);
     const ContextScopeId sa = context.findScope(a);
     const ContextScopeId sb = context.findScope(b);
+
+    context.set(rootScope, role, rootA);
+    context.set(sa, role, a1);
+    context.set(sb, role, b1);
 
     REQUIRE(context.resolve(role) == rootA);
 
@@ -255,12 +264,15 @@ TEST(NodeContext_DeactivateRestoresPreviousOverlay, RuntimeFixture,
     fixture.run_ctx.nodes.factory.component(a, "Component", "2");
 
     const NodeId b = fixture.run_ctx.nodes.factory.folder(fixture.root, "b");
-    fixture.run_ctx.nodes.factory.component(b, "Component", "1");
+    const NodeId b1 = fixture.run_ctx.nodes.factory.component(b, "Component", "1");
     fixture.run_ctx.nodes.factory.component(b, "Component", "2");
 
     const RoleId role = context.findRole("Component");
     const ContextScopeId sa = context.findScope(a);
     const ContextScopeId sb = context.findScope(b);
+
+    context.set(sa, role, a1);
+    context.set(sb, role, b1);
 
     context.activate(sa);
     context.activate(sb);
@@ -278,11 +290,15 @@ TEST(NodeContext_DeactivateRestoresRoot, RuntimeFixture,
     fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "root2");
 
     const NodeId branch = fixture.run_ctx.nodes.factory.folder(fixture.root, "branch");
-    fixture.run_ctx.nodes.factory.component(branch, "Component", "1");
+    const NodeId branchA = fixture.run_ctx.nodes.factory.component(branch, "Component", "1");
     fixture.run_ctx.nodes.factory.component(branch, "Component", "2");
 
     const RoleId role = context.findRole("Component");
+    const ContextScopeId rootScope = context.findScope(fixture.root);
     const ContextScopeId scope = context.findScope(branch);
+
+    context.set(rootScope, role, rootA);
+    context.set(scope, role, branchA);
 
     context.activate(scope);
     context.deactivate(scope);
@@ -290,26 +306,8 @@ TEST(NodeContext_DeactivateRestoresRoot, RuntimeFixture,
     REQUIRE(context.resolve(role) == rootA);
 }
 
-TEST(NodeContext_ActiveEmptyMasksPrevious, RuntimeFixture,
-    "Явный Empty в активном overlay должен маскировать предыдущие значения.")
-{
-    auto& context = fixture.run_ctx.nodes.context;
-
-    fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "root1");
-    fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "root2");
-
-    const NodeId branch = fixture.run_ctx.nodes.factory.folder(fixture.root, "branch");
-    const ContextScopeId scope = context.createScope(branch);
-    const RoleId role = context.findRole("Component");
-
-    context.set(scope, role, InvalidNodeId);
-    context.activate(scope);
-
-    REQUIRE(context.resolve(role) == InvalidNodeId);
-}
-
-TEST(NodeContext_DeactivateEmptyRestoresRoot, RuntimeFixture,
-    "После деактивации Empty-overlay должно восстановиться значение root scope.")
+TEST(NodeContext_ActiveSelectionOverridesPrevious, RuntimeFixture,
+    "Явный выбор в активном overlay должен перекрывать root scope.")
 {
     auto& context = fixture.run_ctx.nodes.context;
 
@@ -317,13 +315,41 @@ TEST(NodeContext_DeactivateEmptyRestoresRoot, RuntimeFixture,
     fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "root2");
 
     const NodeId branch = fixture.run_ctx.nodes.factory.folder(fixture.root, "branch");
-    const ContextScopeId scope = context.createScope(branch);
+    const NodeId branchA = fixture.run_ctx.nodes.factory.component(branch, "Component", "1");
+    fixture.run_ctx.nodes.factory.component(branch, "Component", "2");
+
+    const ContextScopeId rootScope = context.findScope(fixture.root);
+    const ContextScopeId scope = context.findScope(branch);
     const RoleId role = context.findRole("Component");
 
-    context.set(scope, role, InvalidNodeId);
+    context.set(rootScope, role, rootA);
+    context.set(scope, role, branchA);
     context.activate(scope);
 
-    REQUIRE(context.resolve(role) == InvalidNodeId);
+    REQUIRE(context.resolve(role) == branchA);
+}
+
+TEST(NodeContext_DeactivateSelectionRestoresRoot, RuntimeFixture,
+    "После деактивации выбранного overlay должно восстановиться значение root scope.")
+{
+    auto& context = fixture.run_ctx.nodes.context;
+
+    const NodeId rootA = fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "root1");
+    fixture.run_ctx.nodes.factory.component(fixture.root, "Component", "root2");
+
+    const NodeId branch = fixture.run_ctx.nodes.factory.folder(fixture.root, "branch");
+    const NodeId branchA = fixture.run_ctx.nodes.factory.component(branch, "Component", "1");
+    fixture.run_ctx.nodes.factory.component(branch, "Component", "2");
+
+    const ContextScopeId rootScope = context.findScope(fixture.root);
+    const ContextScopeId scope = context.findScope(branch);
+    const RoleId role = context.findRole("Component");
+
+    context.set(rootScope, role, rootA);
+    context.set(scope, role, branchA);
+    context.activate(scope);
+
+    REQUIRE(context.resolve(role) == branchA);
 
     context.deactivate(scope);
 

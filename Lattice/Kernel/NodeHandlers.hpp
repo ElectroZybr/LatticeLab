@@ -59,7 +59,7 @@ public:
     NodeId id() const noexcept { return id_; }
 
     bool exists() const { return valid() && get() != nullptr; }
-    explicit operator bool() const noexcept { return valid(); }
+    explicit operator bool() const { return exists(); }
 
     void choice(BlueprintId impl) {
         assert(id_ != InvalidNodeId && "Slot is not initialized");

@@ -7,10 +7,12 @@
 #include <Lattice/Kernel/NodeViews.hpp>
 
 #include "Buffer.hpp"
-#include "Pipeline.hpp"
 #include "CommandList.hpp"
 #include "Device.hpp"
 #include "Camera.hpp"
+
+#include "TransformController.hpp"
+#include "TransformMode.hpp"
 
 
 enum class ViewportSizeMode {
@@ -19,9 +21,39 @@ enum class ViewportSizeMode {
 };
 
 class Viewport : public Lattice::Component {
+    Focus<Camera> camera_;
+    glm::uvec2 position_{};
+    glm::uvec2 size_{1280, 720};
+    ViewportSizeMode sizeMode_ = ViewportSizeMode::Fill;
+
+    // cursor
+    glm::vec2 cursor_{};
+
+    std::unique_ptr<GPU::BindingSet> bindings_;
+    std::unique_ptr<GPU::Buffer> uniform_;
+
 public:
-    explicit Viewport(NodeBuild node);
-    void configure(NodeConfigure node);
+    explicit Viewport(NodeBuild node) {
+        node.add<Camera>("MainCamera");
+        auto controller = node.addSlot<TransformController>("Camera");
+        controller.choice<FreeCameraController>();
+        node.param("cursor", cursor_);
+
+        auto device_ = node.mount<GPU::Device>();
+        device_.add<class U>()
+    }
+
+    void configure(NodeConfigure node) {
+        camera_ = node.focus<Camera>();
+        camera_->setPosition({0.0f, 0.0f, 2.0f});
+        
+        if (!device_) return;
+
+        GPU::BufferDesc desc{};
+        desc.size = sizeof(glm::mat4);
+        desc.usage = GPU::BufferUsage::Uniform | GPU::BufferUsage::CopyDestination;
+        uniform_ = device_->createBuffer(desc);
+    }
 
     glm::uvec2 position() const noexcept { return position_; }
     void setPosition(glm::uvec2 position) noexcept { position_ = position; }
@@ -37,7 +69,7 @@ public:
         sizeMode_ = ViewportSizeMode::Fill;
     }
 
-    void render(GPU::RenderPass& pass, GPU::Pipeline& pipeline, glm::uvec2 surfaceSize) {
+    void render(GPU::RenderPass& pass, glm::uvec2 surfaceSize) {
         if (!camera_ || !device_ || !uniform_ || position_.x >= surfaceSize.x || position_.y >= surfaceSize.y)
             return;
 
@@ -71,18 +103,4 @@ public:
     }
 
     glm::vec2 cursor() { return cursor_; }
-
-private:
-    Ref<Camera> camera_;
-    Ref<GPU::Device> device_;
-    std::optional<Focus<GPU::Device>> deviceFocus_;
-    glm::uvec2 position_{};
-    glm::uvec2 size_{1280, 720};
-    ViewportSizeMode sizeMode_ = ViewportSizeMode::Fill;
-
-    // cursor
-    glm::vec2 cursor_{};
-
-    std::unique_ptr<GPU::BindingSet> bindings_;
-    std::unique_ptr<GPU::Buffer> uniform_;
 };

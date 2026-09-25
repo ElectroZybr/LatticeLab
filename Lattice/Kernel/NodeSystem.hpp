@@ -24,10 +24,10 @@ public:
 
     NodeSystem(Blueprints& blueprints)
         : blueprints(blueprints)
+        , factory(*this)
+        , context(registry)
         , query(registry, blueprints, context)
-        , ops(*this)
-        , factory(*this) 
-        , context(registry) {}
+        , ops(*this) {}
 
     ::NodeBuild build(NodeId id);
     ::NodeConfigure configure(NodeId id);
