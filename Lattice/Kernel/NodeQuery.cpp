@@ -10,6 +10,11 @@ namespace Lattice {
 
 bool NodeQuery::provides(NodeId id, BlueprintId api) const {
     const auto& node = registry_.require(id);
+
+    if ((node.kind == NodeKind::Mount || node.kind == NodeKind::SharedMount) &&
+        node.relation != InvalidNodeId)
+        return provides(node.relation, api);
+
     return blueprints_.isA(node.bp, api) ||
            blueprints_.isA(node.object.bp, api);
 }
@@ -46,9 +51,7 @@ NodeId NodeQuery::require(NodeId from, BlueprintId api, std::string_view instanc
         throw Exception("NodeQuery", "Object '{}' with instance '{}' not found",
                         blueprints_.require(api).name, instance);
 
-    const auto& node = registry_.require(id);
-
-    if (!node.object.ptr)
+    if (!resolve(id, api))
         throw Exception("NodeQuery", "Slot '{}' with instance '{}' is empty",
                         blueprints_.require(api).name, instance);
 
@@ -100,6 +103,12 @@ std::vector<NodeId> NodeQuery::collect(NodeId from, std::string_view api) const 
 void* NodeQuery::resolve(NodeId id, BlueprintId api) const {
     const auto& node = registry_.require(id);
 
+    if (node.kind == NodeKind::Mount || node.kind == NodeKind::SharedMount) {
+        if (node.relation == InvalidNodeId)
+            return nullptr;
+        return resolve(node.relation, api);
+    }
+
     if (!node.object.ptr)
         return nullptr;
 
@@ -115,25 +124,22 @@ void* NodeQuery::resolve(NodeId id, std::string_view api) const {
     return resolve(id, bp);
 }
 
-NodeId NodeQuery::shared(NodeId from, BlueprintId api, std::string_view instance) const {
-    const RoleId role = context_.role(blueprints_.require(api).name);
-    const ContextScopeId scope = context_.nearestScope(from);
-    const NodeId target = context_.resolve(scope, role);
+NodeId NodeQuery::shared(NodeId from, BlueprintId api) const {
+    const RoleId role = context_.findRole(blueprints_.require(api).name);
 
-    if (target == InvalidNodeId)
-        throw Exception("NodeQuery", "Shared '{}' is unresolved", blueprints_.require(api).name);
+    if (role == InvalidRoleId)
+        throw Exception("NodeQuery", "Shared '{}' not found", blueprints_.require(api).name);
 
-    const Node& node = registry_.require(target);
+    const auto scope = context_.nearestScope(from);
+    const auto result = context_.resolveInfo(scope, role);
 
-    if (!blueprints_.isA(node.object.bp, api))
-        throw Exception("NodeQuery", "Context role '{}' does not resolve to requested API '{}'",
-            context_.roleName(role), blueprints_.require(api).name);
+    if (result.state == ContextResolutionState::Missing)
+        throw Exception("NodeQuery", "Shared '{}' not found", blueprints_.require(api).name);
 
-    if (!instance.empty() && node.name != instance)
-        throw Exception("NodeQuery", "Shared '{}' with instance '{}' not found",
-            blueprints_.require(api).name, instance);
+    if (result.state == ContextResolutionState::Ambiguous)
+        throw Exception("NodeQuery", "Shared '{}' is ambiguous", blueprints_.require(api).name);
 
-    return target;
+    return result.target;
 }
 
 }

@@ -18,11 +18,9 @@ public:
     void frame(float dt = 0.0f);
     void releaseFrameResources();
 private:
-    Mount<GPU::Device> device_;
     Slot<WindowAPI> window_;
     Ref<GPU::Surface> surface_;
-    Ref<GPU::Shader> shader_;
-    Ref<GPU::Pipeline> pipeline_;
+    Ref<GPU::Device> device_;
     NativeWindow native_;
     std::string resourceName_;
     Children<Viewport> viewports_;

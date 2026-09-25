@@ -48,8 +48,7 @@ public:
 
     NodeId shared(
         NodeId from, 
-        NodeId api, 
-        std::string_view instance = DefaultInstanceName
+        BlueprintId api
     ) const;
 
     std::vector<NodeId> collect(NodeId from, BlueprintId api) const;

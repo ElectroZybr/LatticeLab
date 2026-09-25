@@ -332,7 +332,7 @@ TEST(Slot_ConstructorFailureClearsChildren, RuntimeFixture) {
     REQUIRE(focus->id() == 2);
 }
 
-TEST(Node_RepeatedMountAndUnnamedTypes, RuntimeFixture) {
+TEST(Node_RepeatedCreationAndUnnamedTypes, RuntimeFixture) {
     registerSlotTypes(fixture);
     auto& nodes = fixture.run_ctx.nodes;
     auto a = nodes.build(fixture.root).add<SlotImplA>();
@@ -340,9 +340,56 @@ TEST(Node_RepeatedMountAndUnnamedTypes, RuntimeFixture) {
     REQUIRE(a->id() == 1);
     REQUIRE(b->id() == 2);
     REQUIRE(nodes.build(fixture.root).add<SlotImplA>().get() == a.get());
+}
+
+TEST(Node_MountSharedCandidate, RuntimeFixture) {
+    registerSlotTypes(fixture);
+    auto& nodes = fixture.run_ctx.nodes;
+
     const auto api = fixture.run_ctx.blueprints.id<SlotAPI>();
-    const auto mount = nodes.factory.mount(fixture.root, api, "mounted");
-    REQUIRE(nodes.factory.mount(fixture.root, api, "mounted") == mount);
+    const auto impl = fixture.run_ctx.blueprints.id<SlotImplA>();
+    const NodeId provider = nodes.factory.component(fixture.root, impl, "provider");
+    nodes.factory.share(provider, api);
+
+    const NodeId consumer = nodes.factory.folder(fixture.root, "consumer");
+    auto mounted = nodes.build(consumer).mount<SlotAPI>();
+
+    REQUIRE(mounted.target() == provider);
+    REQUIRE(mounted.ref()->id() == 1);
+
+    mounted.addLocal<SlotInput>("input");
+    const NodeId reference = nodes.registry.find(
+        "input",
+        consumer,
+        fixture.run_ctx.blueprints.id<SlotInput>(),
+        provider
+    );
+    REQUIRE(reference != InvalidNodeId);
+    REQUIRE(nodes.registry.require(reference).kind == NodeKind::Mount);
+    REQUIRE(nodes.registry.require(nodes.registry.require(reference).relation).parent == provider);
+}
+
+TEST(Node_MountRejectsAmbiguousCandidates, RuntimeFixture) {
+    registerSlotTypes(fixture);
+    auto& nodes = fixture.run_ctx.nodes;
+
+    const auto api = fixture.run_ctx.blueprints.id<SlotAPI>();
+    const NodeId a = nodes.factory.component(
+        fixture.root,
+        fixture.run_ctx.blueprints.id<SlotImplA>(),
+        "a"
+    );
+    const NodeId b = nodes.factory.component(
+        fixture.root,
+        fixture.run_ctx.blueprints.id<SlotImplB>(),
+        "b"
+    );
+
+    nodes.factory.share(a, api);
+    nodes.factory.share(b, api);
+
+    const NodeId consumer = nodes.factory.folder(fixture.root, "consumer");
+    REQUIRE(slotThrows([&] { nodes.build(consumer).mount<SlotAPI>(); }));
 }
 
 }

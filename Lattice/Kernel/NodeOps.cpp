@@ -70,7 +70,8 @@ std::vector<NodeId> NodeOps::collectTree(NodeId id) const {
 void NodeOps::configure(NodeId id) {
     auto& node = nodeSystem_.registry.require(id);
 
-    if (!node.object.ptr || node.kind == NodeKind::Mount || node.object.configured)
+    if (!node.object.ptr || node.kind == NodeKind::Mount ||
+        node.kind == NodeKind::SharedMount || node.object.configured)
         return;
 
     const auto& blueprint = nodeSystem_.blueprints.require(node.object.bp);
@@ -82,6 +83,16 @@ void NodeOps::configure(NodeId id) {
 }
 
 void NodeOps::configureBranch(NodeId id) {
+    const auto* node = nodeSystem_.registry.get(id);
+    if (!node)
+        return;
+
+    if (node->kind == NodeKind::Mount || node->kind == NodeKind::SharedMount) {
+        if (node->relation != InvalidNodeId && nodeSystem_.registry.get(node->relation))
+            configureBranch(node->relation);
+        return;
+    }
+
     configure(id);
 
     const auto span = nodeSystem_.registry.children(id);
@@ -90,6 +101,43 @@ void NodeOps::configureBranch(NodeId id) {
 }
 
 void NodeOps::destroyBranch(NodeId id) {
+    auto* node = nodeSystem_.registry.get(id);
+    if (!node)
+        return;
+
+    if (node->kind == NodeKind::Mount || node->kind == NodeKind::SharedMount) {
+        const NodeKind kind = node->kind;
+        const NodeId target = node->relation;
+
+        clearContents(id);
+        nodeSystem_.context.removeTarget(id);
+        if (const ContextScopeId scope = nodeSystem_.context.findScope(id); scope != InvalidContextScopeId)
+            nodeSystem_.context.destroyScope(scope);
+        nodeSystem_.registry.destroy(id);
+
+        if (!nodeSystem_.registry.get(target))
+            return;
+
+        if (kind == NodeKind::Mount) {
+            destroyBranch(target);
+            return;
+        }
+
+        if (nodeSystem_.registry.references(target).empty())
+            destroyBranch(target);
+        return;
+    }
+
+    // The physical owner wins over both local and shared logical lifetimes.
+    // Detach all incoming references before destroying the physical object.
+    const auto span = nodeSystem_.registry.references(id);
+    const std::vector<NodeId> references(span.begin(), span.end());
+
+    for (NodeId reference : references) {
+        nodeSystem_.registry.unlink(reference);
+        destroyBranch(reference);
+    }
+
     clearContents(id);
 
     nodeSystem_.context.removeTarget(id);
@@ -104,11 +152,12 @@ void NodeOps::clearContents(NodeId id) {
     const auto children = std::vector<NodeId>(nodeSystem_.registry.children(id).begin(), nodeSystem_.registry.children(id).end());
 
     for (NodeId child : children)
-        destroyBranch(child);
+        if (nodeSystem_.registry.get(child))
+            destroyBranch(child);
 
     auto& node = nodeSystem_.registry.require(id);
 
-    if (node.object.ptr) {
+    if (node.object.ptr && node.kind != NodeKind::Mount && node.kind != NodeKind::SharedMount) {
         const auto& bp = nodeSystem_.blueprints.require(node.object.bp);
 
         if (bp.meta.destroy)
@@ -192,6 +241,12 @@ void NodeOps::dumpTree(NodeId id, NodeId highlighted) const {
                     line = child.name.empty()
                         ? std::format("<m>[&{}]</> <bl>&</>", nodeSystem_.blueprints.require(child.bp).shortName())
                         : std::format("<m>[&{}]</> <bl>&</>", child.name);
+                    break;
+
+                case NodeKind::SharedMount:
+                    line = child.name.empty()
+                        ? std::format("<m>[&&{}]</> <bl>&&</>", nodeSystem_.blueprints.require(child.bp).shortName())
+                        : std::format("<m>[&&{}]</> <bl>&&</>", child.name);
                     break;
             }
 
