@@ -1,14 +1,19 @@
 #pragma once
 
-#include "CommandList.hpp"
-#include <Lattice/Kernel/Component.hpp>
-
 #include <cstdint>
 #include <memory>
 #include <span>
 #include <string>
 
+#include <Lattice/Kernel/Consts.hpp>
+
 namespace GPU {
+
+struct Buffer;
+class CommandList;
+class BindingSet;
+class Pipeline;
+class Binding;
 
 enum class DeviceType {
     Discrete,
@@ -31,7 +36,7 @@ class Device : public Lattice::Component {
 public:
     using Desc = DeviceDesc;
     virtual ~Device() = default;
-    virtual std::unique_ptr<GPU::CommandList> createCommandList() = 0;
+    virtual std::unique_ptr<CommandList> createCommandList() = 0;
     virtual std::unique_ptr<BindingSet> createBindingSet(Pipeline& pipeline, uint32_t group, std::span<const Binding> bindings) = 0;
     virtual void writeBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data) = 0;
 };

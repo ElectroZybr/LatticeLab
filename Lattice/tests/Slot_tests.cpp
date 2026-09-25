@@ -1,245 +1,348 @@
-// #include <Lattice/Tools/Fixture.hpp>
-// #include <Lattice/Tools/Tests.hpp>
-// #include <Lattice/Lattice.hpp>
+#include <Lattice/Tools/Fixture.hpp>
+#include <Lattice/Tools/Tests.hpp>
+#include <Lattice/Lattice.hpp>
+
+namespace Lattice {
+
+struct SlotAPI {
+    virtual ~SlotAPI() = default;
+    virtual int id() const = 0;
+};
+
+struct SlotImplA : SlotAPI {
+    bool configured = false;
+
+    explicit SlotImplA(NodeBuild) {}
+    int id() const override { return 1; }
+
+    void configure(NodeConfigure) {
+        configured = true;
+    }
+};
+
+struct SlotImplB : SlotAPI {
+    explicit SlotImplB(NodeBuild) {}
+    int id() const override { return 2; }
+    void configure(NodeConfigure) {}
+};
+
+struct SlotInput {
+    bool configured = false;
+
+    explicit SlotInput(NodeBuild) {}
+
+    void configure(NodeConfigure) {
+        configured = true;
+    }
+};
+
+struct SlotWindowImpl : SlotAPI {
+    explicit SlotWindowImpl(NodeBuild node) {
+        node.add<SlotInput>();
+    }
+
+    void configure(NodeConfigure) {}
+
+    int id() const override {
+        return 7;
+    }
+};
+
+struct SlotRender {
+    int configures = 0;
+    Slot<SlotAPI> window;
+
+    explicit SlotRender(NodeBuild node)
+        : window(node.addSlot<SlotAPI>()) {}
+
+    void configure(NodeConfigure) {
+        ++configures;
+    }
+};
+
+struct SlotHost {
+    explicit SlotHost(NodeBuild node) {
+        node.addSlot<SlotAPI>();
+        node.add<SlotRender>();
+    }
+
+    void configure(NodeConfigure node) {
+        node.requireSlot<SlotAPI>().choice<SlotWindowImpl>();
+    }
+};
+
+struct SlotNeighbor {
+    int configures = 0;
+    SlotAPI* api = nullptr;
+
+    explicit SlotNeighbor(NodeBuild) {}
+
+    void configure(NodeConfigure node) {
+        ++configures;
+        api = node.find<SlotAPI>().get();
+    }
+};
+
+static void registerSlotTypes(RuntimeFixture& fixture) {
+    BlueprintRegister::add<SlotAPI>(fixture.run_ctx.blueprints);
+    BlueprintRegister::add<SlotImplA, SlotAPI>(fixture.run_ctx.blueprints);
+    BlueprintRegister::add<SlotImplB, SlotAPI>(fixture.run_ctx.blueprints);
+    BlueprintRegister::add<SlotInput>(fixture.run_ctx.blueprints);
+    BlueprintRegister::add<SlotWindowImpl, SlotAPI>(fixture.run_ctx.blueprints);
+    BlueprintRegister::add<SlotRender>(fixture.run_ctx.blueprints);
+    BlueprintRegister::add<SlotHost>(fixture.run_ctx.blueprints);
+    BlueprintRegister::add<SlotNeighbor>(fixture.run_ctx.blueprints);
+}
 
 
-// namespace Lattice {
+TEST(Slot_EmptyNode, RuntimeFixture,
+    "Пустой слот должен существовать как нода без runtime object.")
+{
+    registerSlotTypes(fixture);
 
-// struct SlotAPI {
-//     virtual ~SlotAPI() = default;
-//     virtual int id() const = 0;
-// };
+    const NodeId id = fixture.run_ctx.nodes.factory.slot(
+        fixture.root,
+        fixture.run_ctx.blueprints.id<SlotAPI>()
+    );
 
-// struct SlotImplA : SlotAPI {
-//     explicit SlotImplA(Node&) {}
-//     int id() const override { return 1; }
-//     bool configured = false;
-//     void configure(Node&) { configured = true; }
-// };
+    Slot<SlotAPI> slot{
+        fixture.run_ctx.nodes.factory,
+        fixture.run_ctx.nodes.query,
+        fixture.run_ctx.blueprints,
+        id
+    };
 
-// struct SlotImplB : SlotAPI {
-//     explicit SlotImplB(Node&) {}
-//     int id() const override { return 2; }
-//     void configure(Node&) {}
-// };
+    const auto& node = fixture.run_ctx.nodes.registry.require(id);
 
-// struct SlotInput {
-//     bool configured = false;
-//     void configure(Node&) { configured = true; }
-// };
+    REQUIRE(node.kind == NodeKind::Slot);
+    REQUIRE(node.bp == fixture.run_ctx.blueprints.id<SlotAPI>());
+    REQUIRE(node.object.ptr == nullptr);
+    REQUIRE(node.object.bp == InvalidBlueprintId);
+    REQUIRE(!slot.exists());
+}
 
-// struct SlotWindowImpl : SlotAPI {
-//     explicit SlotWindowImpl(Node& branch) {
-//         branch.add<SlotInput>();
-//     }
-//     void configure(Node&) {}
-//     int id() const override { return 7; }
-// };
+TEST(Slot_ChoiceReplacesImpl, RuntimeFixture,
+    "Повторный choice должен уничтожить старое содержимое slot и поставить новую реализацию.")
+{
+    registerSlotTypes(fixture);
 
-// struct SlotRender {
-//     int configures = 0;
-//     Slot<SlotAPI> window;
-//     void configure(Node& branch) {
-//         ++configures;
-//         window = branch.find<SlotAPI>();
-//     }
-// };
+    const NodeId id = fixture.run_ctx.nodes.factory.slot(
+        fixture.root,
+        fixture.run_ctx.blueprints.id<SlotAPI>()
+    );
 
-// struct SlotHost {
-//     explicit SlotHost(Node& branch) {
-//         branch.slot<SlotAPI>();
-//         branch.add<SlotRender>();
-//     }
+    Slot<SlotAPI> slot{
+        fixture.run_ctx.nodes.factory,
+        fixture.run_ctx.nodes.query,
+        fixture.run_ctx.blueprints,
+        id
+    };
 
-//     void configure(Node& branch) {
-//         branch.find<SlotAPI>().use("SlotWindowImpl");
-//     }
-// };
+    slot.choice<SlotWindowImpl>();
 
-// struct SlotNeighbor {
-//     int configures = 0;
-//     SlotAPI* api = nullptr;
-//     void configure(Node& branch) {
-//         ++configures;
-//         api = branch.find<SlotAPI>().get();
-//     }
-// };
+    REQUIRE(slot->id() == 7);
+    REQUIRE(fixture.run_ctx.nodes.query.collect(id, fixture.run_ctx.blueprints.id<SlotInput>()).size() == 1);
 
-// static void registerSlotTypes(RuntimeFixture& fixture) {
-//     fixture.blueprints.add<SlotAPI>();
-//     fixture.blueprints.add<SlotImplA, SlotAPI>();
-//     fixture.blueprints.add<SlotImplB, SlotAPI>();
-//     fixture.blueprints.add<SlotInput>();
-//     fixture.blueprints.add<SlotWindowImpl, SlotAPI>();
-//     fixture.blueprints.add<SlotRender>();
-//     fixture.blueprints.add<SlotHost>();
-//     fixture.blueprints.add<SlotNeighbor>();
-// }
+    slot.choice<SlotImplB>();
 
-// TEST(Slot_EmptyNode, RuntimeFixture,
-//     "Пустой слот: нода есть, object == nullptr.")
-// {
-//     registerSlotTypes(fixture);
+    REQUIRE(slot.id() == id);
+    REQUIRE(slot->id() == 2);
+    REQUIRE(fixture.run_ctx.nodes.query.collect(id, fixture.run_ctx.blueprints.id<SlotInput>()).empty());
+}
 
-//     auto slot = fixture.root.slot<SlotAPI>();
+TEST(Slot_RejectsWrongImpl, RuntimeFixture,
+    "Slot не должен принимать blueprint, который не реализует его API.")
+{
+    registerSlotTypes(fixture);
 
-//     REQUIRE(slot.node());
-//     REQUIRE(slot.node()->name().empty());
-//     REQUIRE(slot.node()->getKind() == NodeKind::Slot);
-//     REQUIRE(slot.node()->getObject() == nullptr);
-//     REQUIRE(!slot.exists());
-//     REQUIRE(fixture.root.find<SlotAPI>().node() == slot.node());
-// }
+    const NodeId id = fixture.run_ctx.nodes.factory.slot(
+        fixture.root,
+        fixture.run_ctx.blueprints.id<SlotAPI>()
+    );
 
-// TEST(Slot_RequireEmptyThrows, RuntimeFixture,
-//     "require на пустом слоте бросает, find возвращает ноду.")
-// {
-//     registerSlotTypes(fixture);
-//     fixture.root.slot<SlotAPI>();
+    Slot<SlotAPI> slot{
+        fixture.run_ctx.nodes.factory,
+        fixture.run_ctx.nodes.query,
+        fixture.run_ctx.blueprints,
+        id
+    };
 
-//     REQUIRE(fixture.root.find<SlotAPI>().node());
-//     REQUIRE(!fixture.root.find<SlotAPI>().exists());
+    bool thrown = false;
 
-//     bool thrown = false;
-//     try {
-//         fixture.root.require<SlotAPI>();
-//     } catch (const Exception&) {
-//         thrown = true;
-//     }
-//     REQUIRE(thrown);
-// }
+    try {
+        slot.choice(fixture.run_ctx.blueprints.id<SlotInput>());
+    } catch (const Exception&) {
+        thrown = true;
+    }
 
-// TEST(Slot_UseFillsSameNode, RuntimeFixture,
-//     "use(impl) заполняет ту же ноду: стабильный id, без дочернего импла.")
-// {
-//     registerSlotTypes(fixture);
+    REQUIRE(thrown);
+    REQUIRE(!slot.exists());
+}
 
-//     auto slot = fixture.root.slot<SlotAPI>();
-//     const ObjectId id = slot.node()->getId();
+TEST(Slot_ChoiceSameImpl, RuntimeFixture,
+    "Повторный выбор уже установленной реализации не должен пересоздавать объект.")
+{
+    registerSlotTypes(fixture);
 
-//     slot.use("SlotImplA");
+    const NodeId id = fixture.run_ctx.nodes.factory.slot(
+        fixture.root,
+        fixture.run_ctx.blueprints.id<SlotAPI>()
+    );
 
-//     REQUIRE(slot.node()->getId() == id);
-//     REQUIRE(slot.exists());
-//     REQUIRE(slot->id() == 1);
-//     REQUIRE(slot.node()->getKind() == NodeKind::Slot);
-//     REQUIRE(slot.node()->directCollect<SlotImplA>().empty());
-//     REQUIRE(fixture.root.require<SlotAPI>().getPtr() == slot.get());
-// }
+    Slot<SlotAPI> slot{
+        fixture.run_ctx.nodes.factory,
+        fixture.run_ctx.nodes.query,
+        fixture.run_ctx.blueprints,
+        id
+    };
 
-// TEST(Slot_UseReplacesImpl, RuntimeFixture,
-//     "Повторный use сносит детей слота и ставит новый импл в ту же ноду.")
-// {
-//     registerSlotTypes(fixture);
+    slot.choice<SlotImplA>();
+    SlotAPI* first = slot.get();
 
-//     auto slot = fixture.root.slot<SlotAPI>();
-//     const ObjectId id = slot.node()->getId();
+    slot.choice<SlotImplA>();
 
-//     slot.use("SlotWindowImpl");
-//     REQUIRE(slot.node()->directCollect<SlotInput>().size() == 1);
+    REQUIRE(slot.get() == first);
+}
 
-//     slot.use("SlotImplB");
+TEST(Slot_CreatesContextRole, RuntimeFixture,
+    "Создание slot должно сразу зарегистрировать его как target соответствующей роли.")
+{
+    registerSlotTypes(fixture);
 
-//     REQUIRE(slot.node()->getId() == id);
-//     REQUIRE(slot->id() == 2);
-//     REQUIRE(slot.node()->directCollect<SlotInput>().empty());
-// }
+    const NodeId id = fixture.run_ctx.nodes.factory.slot(
+        fixture.root,
+        fixture.run_ctx.blueprints.id<SlotAPI>()
+    );
 
-// TEST(Slot_RequireWalksFloorNotContext, RuntimeFixture,
-//     "require ищет слот на этаже (дети, затем дети предков), не через Context.")
-// {
-//     registerSlotTypes(fixture);
+    const ContextScopeId scope = fixture.run_ctx.nodes.context.findScope(fixture.root);
+    const RoleId role = fixture.run_ctx.nodes.context.findRole(typeKey<SlotAPI>());
 
-//     fixture.root.slot<SlotAPI>();
-//     fixture.root.find<SlotAPI>().use("SlotImplA");
+    REQUIRE(scope != InvalidContextScopeId);
+    REQUIRE(role != InvalidRoleId);
+    REQUIRE(fixture.run_ctx.nodes.context.resolve(scope, role) == id);
+}
 
-//     Node& branch = fixture.root.addFolder("branch");
+TEST(Slot_FocusTracksImplementation, RuntimeFixture,
+    "Focus на роль slot должен видеть текущую реализацию после choice.")
+{
+    registerSlotTypes(fixture);
 
-//     REQUIRE(fixture.run_ctx.resolveFocus(InvalidFocusScopeId, fixture.run_ctx.roles.find(typeKey<SlotAPI>())) == InvalidObjectId);
-//     REQUIRE(branch.require<SlotAPI>()->id() == 1);
-// }
+    const NodeId id = fixture.run_ctx.nodes.factory.slot(
+        fixture.root,
+        fixture.run_ctx.blueprints.id<SlotAPI>()
+    );
 
-// TEST(Slot_FloorDoesNotCrossSiblings, RuntimeFixture,
-//     "Поиск на этаже не заходит в соседние ветки.")
-// {
-//     registerSlotTypes(fixture);
+    Slot<SlotAPI> slot{
+        fixture.run_ctx.nodes.factory,
+        fixture.run_ctx.nodes.query,
+        fixture.run_ctx.blueprints,
+        id
+    };
 
-//     Node& a = fixture.root.addFolder("A");
-//     a.slot<SlotAPI>();
-//     a.find<SlotAPI>().use("SlotImplA");
+    auto focus = fixture.run_ctx.nodes.configure(fixture.root).focus<SlotAPI>();
 
-//     Node& b = fixture.root.addFolder("B");
+    REQUIRE(!focus);
 
-//     REQUIRE(a.find<SlotAPI>().exists());
-//     REQUIRE(!b.find<SlotAPI>().node());
-// }
+    slot.choice<SlotImplA>();
 
-// TEST(Slot_TreeOwnership, RuntimeFixture,
-//     "Render — сосед слота, инпуты — дети импла, не наоборот.")
-// {
-//     registerSlotTypes(fixture);
+    REQUIRE(focus);
+    REQUIRE(focus.id() == id);
+    REQUIRE(focus->id() == 1);
 
-//     fixture.root.add<SlotHost>();
-//     fixture.root.configureBranch();
+    slot.choice<SlotImplB>();
 
-//     auto host = fixture.root.find<SlotHost>();
-//     auto window = host.node()->find<SlotAPI>();
-//     auto render = host.node()->find<SlotRender>();
+    REQUIRE(focus.id() == id);
+    REQUIRE(focus->id() == 2);
+}
 
-//     REQUIRE(window.exists());
-//     REQUIRE(window->id() == 7);
-//     REQUIRE(window.node()->getParent() == host.node());
-//     REQUIRE(render.node()->getParent() == host.node());
-//     REQUIRE(window.node()->directCollect<SlotInput>().size() == 1);
-//     REQUIRE(window.node()->directCollect<SlotRender>().empty());
-//     REQUIRE(render->window.get() == window.get());
-//     REQUIRE(window.node()->directCollect<SlotInput>()[0]->configured);
-// }
+namespace {
+struct RollbackChild {
+    static inline int alive = 0;
+    RollbackChild() { ++alive; }
+    ~RollbackChild() { --alive; }
+};
+struct ThrowingSlotImpl : SlotAPI {
+    explicit ThrowingSlotImpl(NodeBuild node) {
+        node.add<RollbackChild>();
+        throw Exception("SlotTest", "Constructor failed");
+    }
+    int id() const override { return 3; }
+};
+template<class F> bool slotThrows(F&& operation) {
+    try { operation(); } catch (const Exception&) { return true; }
+    return false;
+}
+}
 
-// TEST(Slot_LateUseReconfiguresFloor, RuntimeFixture,
-//     "После позднего use повторный configure только у сиблингов этажа слота.")
-// {
-//     registerSlotTypes(fixture);
+TEST(Slot_RequireEmptyAndRejectComponent, RuntimeFixture) {
+    registerSlotTypes(fixture);
+    auto& nodes = fixture.run_ctx.nodes;
+    auto slot = nodes.build(fixture.root).addSlot<SlotAPI>();
+    auto view = nodes.configure(fixture.root);
+    REQUIRE(view.findSlot<SlotAPI>().has_value());
+    auto required = view.requireSlot<SlotAPI>();
+    REQUIRE(required.id() == slot.id());
+    REQUIRE(!required);
+    required.choice<SlotImplA>();
+    REQUIRE(slot->id() == 1);
+    nodes.build(fixture.root).add<SlotImplA>("component");
+    REQUIRE(!view.findSlot<SlotAPI>("component"));
+    REQUIRE(slotThrows([&] { view.requireSlot<SlotAPI>("component"); }));
+    REQUIRE(!view.findSlot<SlotAPI>("missing"));
+    REQUIRE(slotThrows([&] { view.requireSlot<SlotAPI>("missing"); }));
+}
 
-//     fixture.root.slot<SlotAPI>();
-//     fixture.root.add<SlotNeighbor>();
-//     fixture.root.configureBranch();
+TEST(Slot_RepeatedCreation, RuntimeFixture) {
+    registerSlotTypes(fixture);
+    auto& nodes = fixture.run_ctx.nodes;
+    auto first = nodes.build(fixture.root).addSlot<SlotAPI>();
+    first.choice<SlotImplA>();
+    auto again = nodes.build(fixture.root).addSlot<SlotAPI>();
+    REQUIRE(first.id() == again.id());
+    REQUIRE(first.get() == again.get());
+    REQUIRE(nodes.registry.children(fixture.root).size() == 1);
+}
 
-//     auto neighbor = fixture.root.require<SlotNeighbor>();
-//     REQUIRE(neighbor->configures == 1);
-//     REQUIRE(neighbor->api == nullptr);
+TEST(Slot_AbstractChoicePreservesContents, RuntimeFixture) {
+    registerSlotTypes(fixture);
+    auto& nodes = fixture.run_ctx.nodes;
+    auto slot = nodes.build(fixture.root).addSlot<SlotAPI>();
+    slot.choice<SlotWindowImpl>();
+    auto* previous = slot.get();
+    REQUIRE(slotThrows([&] { slot.choice<SlotAPI>(); }));
+    REQUIRE(slot.get() == previous);
+    REQUIRE(nodes.registry.children(slot.id()).size() == 1);
+}
 
-//     const ObjectId id = fixture.root.find<SlotAPI>().node()->getId();
-//     fixture.root.find<SlotAPI>().use("SlotImplA");
+TEST(Slot_ConstructorFailureClearsChildren, RuntimeFixture) {
+    registerSlotTypes(fixture);
+    BlueprintRegister::add<RollbackChild>(fixture.run_ctx.blueprints);
+    BlueprintRegister::add<ThrowingSlotImpl, SlotAPI>(fixture.run_ctx.blueprints);
+    auto& nodes = fixture.run_ctx.nodes;
+    auto slot = nodes.build(fixture.root).addSlot<SlotAPI>();
+    slot.choice<SlotImplA>();
+    auto focus = nodes.configure(fixture.root).focus<SlotAPI>();
+    REQUIRE(slotThrows([&] { slot.choice<ThrowingSlotImpl>(); }));
+    REQUIRE(!slot);
+    REQUIRE(RollbackChild::alive == 0);
+    REQUIRE(nodes.registry.children(slot.id()).empty());
+    REQUIRE(focus.id() == slot.id());
+    REQUIRE(!focus);
+    slot.choice<SlotImplB>();
+    REQUIRE(focus->id() == 2);
+}
 
-//     REQUIRE(fixture.root.find<SlotAPI>().node()->getId() == id);
-//     REQUIRE(neighbor->configures == 2);
-//     REQUIRE(neighbor->api);
-//     REQUIRE(neighbor->api->id() == 1);
-// }
+TEST(Node_RepeatedMountAndUnnamedTypes, RuntimeFixture) {
+    registerSlotTypes(fixture);
+    auto& nodes = fixture.run_ctx.nodes;
+    auto a = nodes.build(fixture.root).add<SlotImplA>();
+    auto b = nodes.build(fixture.root).add<SlotImplB>();
+    REQUIRE(a->id() == 1);
+    REQUIRE(b->id() == 2);
+    REQUIRE(nodes.build(fixture.root).add<SlotImplA>().get() == a.get());
+    const auto api = fixture.run_ctx.blueprints.id<SlotAPI>();
+    const auto mount = nodes.factory.mount(fixture.root, api, "mounted");
+    REQUIRE(nodes.factory.mount(fixture.root, api, "mounted") == mount);
+}
 
-// TEST(Slot_CollectFromFloor, RuntimeFixture,
-//     "collect собирает API с этажа (потомки родителя), не каждый тик.")
-// {
-//     registerSlotTypes(fixture);
-
-//     fixture.root.add<SlotHost>();
-//     Node& map = fixture.root.addFolder("ActionMap");
-//     fixture.root.configureBranch();
-
-//     auto inputs = map.collect<SlotInput>();
-//     REQUIRE(inputs.size() == 1);
-// }
-
-// TEST(Slot_UseFromParent, RuntimeFixture,
-//     "use<API, Impl>() с родителя заполняет слот-ребёнка.")
-// {
-//     registerSlotTypes(fixture);
-
-//     fixture.root.slot<SlotAPI>();
-//     fixture.root.use<SlotAPI, SlotImplA>();
-
-//     REQUIRE(fixture.root.require<SlotAPI>()->id() == 1);
-// }
-
-// } // namespace Lattice
+}

@@ -22,9 +22,9 @@ add_requires(
 includes("Lattice/Tools/Generators/plugin_codegen.lua")
 includes("Lattice")
 
--- for _, dir in ipairs(os.dirs("Plugins/*")) do
---     includes(dir)
--- end
+for _, dir in ipairs(os.dirs("Plugins/*")) do
+    includes(dir)
+end
 
 target("LatticeLab")
     set_kind("binary")

@@ -3,8 +3,7 @@
 
 int runApplication(int argc, char** argv) {
     Lattice::Runtime runtime;
-    runtime.run(argc, argv);
-    return 1;
+    return runtime.run(argc, argv);
 }
 
 int main(int argc, char** argv) { return runApplication(argc, argv); }

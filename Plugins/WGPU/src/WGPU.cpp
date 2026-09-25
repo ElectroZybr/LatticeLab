@@ -1,34 +1,48 @@
-#include "WGPU.hpp"
 #include <atomic>
+#include <string>
+#include <string_view>
+#include <webgpu/wgpu.h>
 
-#include <cstring>
+#include "WGPU.hpp"
+#include "WGPUDevice.hpp"
 
-#if defined(_WIN32)
-    #include <windows.h>
-#endif
-
+#include <Lattice/Kernel/NodeViews.hpp>
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Tools/Logger.hpp>
 
 namespace WGPU {
 
+WGPU::WGPU(NodeBuild node, const Desc&) {
+    createInstance();
+    auto device = node.add<GPU::Device>();
+}
+
+WGPU::~WGPU() {
+    if (instance_)
+        wgpuInstanceRelease(instance_);
+}
+
+WGPUInstance WGPU::native() const noexcept {
+    return instance_;
+}
+
 void WGPU::createInstance() {
-    WGPUInstanceDescriptor desc = {};
+    WGPUInstanceDescriptor desc{};
 
     #ifndef NDEBUG
-        WGPUInstanceExtras extras = {};
-        extras.chain.sType = (WGPUSType)WGPUSType_InstanceExtras;
+        WGPUInstanceExtras extras{};
+        extras.chain.sType = static_cast<WGPUSType>(WGPUSType_InstanceExtras);
         extras.flags = WGPUInstanceFlag_Debug | WGPUInstanceFlag_Validation;
         desc.nextInChain = &extras.chain;
     #endif
 
     instance_ = wgpuCreateInstance(&desc);
     if (!instance_)
-        throw Lattice::Exception(tag, "failed to create instance");
+        throw Lattice::Exception("WGPU", "failed to create instance");
 }
 
 std::vector<WGPUAdapter> WGPU::enumerateAdapters() {
-    WGPUInstanceEnumerateAdapterOptions options = {};
+    WGPUInstanceEnumerateAdapterOptions options{};
     options.backends = WGPUInstanceBackend_All;
 
     const size_t count = wgpuInstanceEnumerateAdapters(instance_, &options, nullptr);
@@ -42,20 +56,9 @@ std::vector<WGPUAdapter> WGPU::enumerateAdapters() {
 
 WGPUAdapter WGPU::selectAdapter(std::span<WGPUAdapter> adapters) {
     if (adapters.empty())
-        throw Lattice::Exception(tag, "no GPU adapters found");
+        throw Lattice::Exception("WGPU", "no GPU adapters found");
 
     return adapters.front();
-}
-
-std::string WGPU::deviceName() {
-    auto adapters = enumerateAdapters();
-    WGPUAdapterInfo info{};
-    wgpuAdapterGetInfo(selectAdapter(adapters), &info);
-    std::string name = info.device.length ? std::string(info.device.data, info.device.length) : "GPU";
-    wgpuAdapterInfoFreeMembers(info);
-    for (auto adapter : adapters)
-        wgpuAdapterRelease(adapter);
-    return name;
 }
 
 WGPUDevice WGPU::createDevice(WGPUAdapter& selectedAdapter) {
@@ -68,7 +71,7 @@ WGPUDevice WGPU::createDevice(WGPUAdapter& selectedAdapter) {
         }
     } cleanup{adapters};
     const auto adapter = selectAdapter(adapters);
-    WGPUDeviceDescriptor desc = {};
+    WGPUDeviceDescriptor desc{};
 
     desc.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
     desc.deviceLostCallbackInfo.callback =
@@ -87,7 +90,7 @@ WGPUDevice WGPU::createDevice(WGPUAdapter& selectedAdapter) {
         std::atomic_bool done = false;
     } data;
 
-    WGPURequestDeviceCallbackInfo callback = {};
+    WGPURequestDeviceCallbackInfo callback{};
     callback.mode = WGPUCallbackMode_AllowSpontaneous;
     callback.callback =
         [](WGPURequestDeviceStatus status, WGPUDevice device, WGPUStringView message, void* userdata1, void*) {
@@ -108,12 +111,11 @@ WGPUDevice WGPU::createDevice(WGPUAdapter& selectedAdapter) {
         wgpuInstanceProcessEvents(instance_);
 
     if (!data.device)
-        throw Lattice::Exception(tag, "failed to create device: {}", data.error);
+        throw Lattice::Exception("WGPU", "failed to create device: {}", data.error);
 
     wgpuAdapterAddRef(adapter);
     selectedAdapter = adapter;
     return data.device;
-
 }
 
 }

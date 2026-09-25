@@ -31,7 +31,7 @@ namespace ParticleDynamics {
     
 class ParticleStorage : public StdData::SoA {
 public:
-    explicit ParticleStorage(Lattice::NodeBuildView branch) {
+    explicit ParticleStorage(NodeBuild branch) {
 
         addCol<Pos::X>();
         addCol<Pos::Y>();

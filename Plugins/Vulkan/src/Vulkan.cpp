@@ -2,6 +2,55 @@
 
 namespace Vk {
 
+void Device::configure(NodeBuild node) {
+    auto backend = node.require<Vulkan>();
+    physicalDevice_ = backend->physicalDevice(info_.id);
+    createDevice();
+    createCommandPool();
+}
+
+void Device::createDevice() {
+    uint32_t count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice_, &count, nullptr);
+    std::vector<VkQueueFamilyProperties> families(count);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice_, &count, families.data());
+
+    for (uint32_t i = 0; i < count; ++i) {
+        if (families[i].queueFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT)) {
+            queueFamily_ = i;
+            break;
+        }
+    }
+    if (queueFamily_ == UINT32_MAX)
+        throw Lattice::Exception("Vulkan::Device", "physical device has no usable queue");
+
+    constexpr float priority = 1.0f;
+    VkDeviceQueueCreateInfo queue{};
+    queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue.queueFamilyIndex = queueFamily_;
+    queue.queueCount = 1;
+    queue.pQueuePriorities = &priority;
+
+    VkDeviceCreateInfo desc{};
+    desc.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    desc.queueCreateInfoCount = 1;
+    desc.pQueueCreateInfos = &queue;
+
+    if (vkCreateDevice(physicalDevice_, &desc, nullptr, &device_) != VK_SUCCESS)
+        throw Lattice::Exception("Vulkan::Device", "failed to create logical device");
+
+    vkGetDeviceQueue(device_, queueFamily_, 0, &queue_);
+}
+
+void Device::createCommandPool() {
+    VkCommandPoolCreateInfo desc{};
+    desc.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    desc.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    desc.queueFamilyIndex = queueFamily_;
+    if (vkCreateCommandPool(device_, &desc, nullptr, &commandPool_) != VK_SUCCESS)
+        throw Lattice::Exception("Vulkan::Device", "failed to create command pool");
+}
+
 void Vulkan::createInstance() {
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;

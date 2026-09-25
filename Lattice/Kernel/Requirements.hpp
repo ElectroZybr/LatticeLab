@@ -6,7 +6,7 @@
 #include <vector>
 
 #include <Lattice/Kernel/TypeName.hpp>
-#include "Lattice/Kernel/Blueprints.hpp"
+#include <Lattice/Kernel/Blueprints.hpp>
 
 namespace Lattice {
 

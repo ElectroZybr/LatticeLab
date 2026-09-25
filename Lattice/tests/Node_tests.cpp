@@ -10,7 +10,7 @@ class BasicTestComponent {
 public:
     bool configured = false;
 
-    void configure(NodeConfigureView) {
+    void configure(NodeConfigure) {
         configured = true;
     }
 };
@@ -246,7 +246,9 @@ TEST(Node_RemoveMissing, RuntimeFixture) {
 
     nodes.build(fixture.root).add<BasicTestComponent>();
 
-    nodes.ops.destroyBranch(nodes.query.find(fixture.root, typeKey<BasicTestComponent>(), "missing"));
+    const auto missing = nodes.query.find(fixture.root, typeKey<BasicTestComponent>(), "missing");
+    REQUIRE(missing == InvalidNodeId);
+    if (missing != InvalidNodeId) nodes.ops.destroyBranch(missing);
 
     REQUIRE(nodes.configure(fixture.root).find<BasicTestComponent>().exists());
 }

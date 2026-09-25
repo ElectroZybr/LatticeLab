@@ -3,7 +3,7 @@
 #include <string>
 
 #include <Lattice/Kernel/Blueprints.hpp>
-#include "Lattice/Kernel/Consts.hpp"
+#include <Lattice/Kernel/Consts.hpp>
 
 namespace Lattice {
 

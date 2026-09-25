@@ -1,40 +1,21 @@
 #pragma once
 
-#include "Buffer.hpp"
-#include "WGPUDevice.hpp"
+#include <cstdint>
 #include <webgpu/webgpu.h>
 
-#include "Lattice/Kernel/Node.hpp"
+#include "Buffer.hpp"
 
+class NodeBuild;
 
 namespace WGPU {
-// ---------- resources ----------
+
 class Buffer final : public GPU::Buffer {
 public:
-    explicit Buffer(Lattice::Node& node, const Desc& desc) {
-        const auto device = node.requireParent<Device>();
+    explicit Buffer(NodeBuild node, const Desc& desc);
+    ~Buffer() override;
 
-        WGPUBufferDescriptor nativeDesc = {};
-        auto name = node.name();
-        nativeDesc.label = WGPUStringView{name.data(), name.size()};
-        nativeDesc.size = desc.size;
-        nativeDesc.usage = static_cast<WGPUBufferUsage>(desc.usage);
-        nativeDesc.mappedAtCreation = false;
-
-        buffer_ = wgpuDeviceCreateBuffer(device->native(), &nativeDesc);
-
-        if (!buffer_)
-            throw Lattice::Exception("WGPU::Buffer", "failed to create buffer");
-        size_ = desc.size;
-    }
-
-    ~Buffer() override {
-        if (buffer_)
-            wgpuBufferRelease(buffer_);
-    }
-
-    WGPUBuffer native() const noexcept { return buffer_; }
-    uint64_t size() const noexcept { return size_; }
+    WGPUBuffer native() const noexcept;
+    uint64_t size() const noexcept;
 
 private:
     WGPUBuffer buffer_ = nullptr;

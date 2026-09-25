@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <Lattice/Kernel/Component.hpp>
+#include <Lattice/Kernel/Consts.hpp>
 
 namespace GPU {
 

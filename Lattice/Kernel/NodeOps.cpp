@@ -21,7 +21,7 @@ NodeId NodeOps::resolvePath(NodeId from, std::string_view path) const {
         const std::string_view name = path.substr(begin, end - begin);
 
         if (!name.empty()) {
-            current = nodes_.find(name, current);
+            current = nodeSystem_.registry.find(name, current);
 
             if (current == InvalidNodeId)
                 return InvalidNodeId;
@@ -34,10 +34,10 @@ NodeId NodeOps::resolvePath(NodeId from, std::string_view path) const {
 }
 
 NodeId NodeOps::root(NodeId id) const {
-    nodes_.require(id);
+    nodeSystem_.registry.require(id);
 
-    while (nodes_.require(id).parent != InvalidNodeId)
-        id = nodes_.require(id).parent;
+    while (nodeSystem_.registry.require(id).parent != InvalidNodeId)
+        id = nodeSystem_.registry.require(id).parent;
 
     return id;
 }
@@ -47,7 +47,7 @@ bool NodeOps::isUnder(NodeId id, NodeId ancestor) const {
         if (id == ancestor)
             return true;
 
-        id = nodes_.require(id).parent;
+        id = nodeSystem_.registry.require(id).parent;
     }
 
     return false;
@@ -57,7 +57,7 @@ std::vector<NodeId> NodeOps::collectTree(NodeId id) const {
     std::vector<NodeId> result;
 
     auto collect = [&](auto&& self, NodeId current) -> void {
-        for (NodeId child : nodes_.children(current)) {
+        for (NodeId child : nodeSystem_.registry.children(current)) {
             result.push_back(child);
             self(self, child);
         }
@@ -68,23 +68,23 @@ std::vector<NodeId> NodeOps::collectTree(NodeId id) const {
 }
 
 void NodeOps::configure(NodeId id) {
-    auto& node = nodes_.require(id);
+    auto& node = nodeSystem_.registry.require(id);
 
     if (!node.object.ptr || node.kind == NodeKind::Mount || node.object.configured)
         return;
 
-    const auto& blueprint = blueprints_.require(node.object.bp);
+    const auto& blueprint = nodeSystem_.blueprints.require(node.object.bp);
 
     if (blueprint.meta.configure)
-        blueprint.meta.configure(node.object.ptr, NodeConfigureView{id, query_, context_});
+        blueprint.meta.configure(node.object.ptr, NodeConfigure{id, nodeSystem_});
 
-    nodes_.require(id).object.configured = true;
+    nodeSystem_.registry.require(id).object.configured = true;
 }
 
 void NodeOps::configureBranch(NodeId id) {
     configure(id);
 
-    const auto span = nodes_.children(id);
+    const auto span = nodeSystem_.registry.children(id);
     const std::vector<NodeId> children(span.begin(), span.end());
     for (NodeId child : children) configureBranch(child);
 }
@@ -92,24 +92,24 @@ void NodeOps::configureBranch(NodeId id) {
 void NodeOps::destroyBranch(NodeId id) {
     clearContents(id);
 
-    context_.removeTarget(id);
+    nodeSystem_.context.removeTarget(id);
 
-    if (const ContextScopeId scope = context_.findScope(id); scope != InvalidContextScopeId)
-        context_.destroyScope(scope);
+    if (const ContextScopeId scope = nodeSystem_.context.findScope(id); scope != InvalidContextScopeId)
+        nodeSystem_.context.destroyScope(scope);
 
-    nodes_.destroy(id);
+    nodeSystem_.registry.destroy(id);
 }
 
 void NodeOps::clearContents(NodeId id) {
-    const auto children = std::vector<NodeId>(nodes_.children(id).begin(), nodes_.children(id).end());
+    const auto children = std::vector<NodeId>(nodeSystem_.registry.children(id).begin(), nodeSystem_.registry.children(id).end());
 
     for (NodeId child : children)
         destroyBranch(child);
 
-    auto& node = nodes_.require(id);
+    auto& node = nodeSystem_.registry.require(id);
 
     if (node.object.ptr) {
-        const auto& bp = blueprints_.require(node.object.bp);
+        const auto& bp = nodeSystem_.blueprints.require(node.object.bp);
 
         if (bp.meta.destroy)
             bp.meta.destroy(node.object.ptr);
@@ -121,7 +121,7 @@ void NodeOps::clearContents(NodeId id) {
 std::string NodeOps::stringPath(NodeId id) const {
     std::vector<NodeId> path;
 
-    for (NodeId current = id; current != InvalidNodeId; current = nodes_.require(current).parent)
+    for (NodeId current = id; current != InvalidNodeId; current = nodeSystem_.registry.require(current).parent)
         path.push_back(current);
 
     std::ranges::reverse(path);
@@ -129,7 +129,7 @@ std::string NodeOps::stringPath(NodeId id) const {
     std::string result;
 
     for (NodeId current : path) {
-        const auto& node = nodes_.require(current);
+        const auto& node = nodeSystem_.registry.require(current);
 
         if (!result.empty())
             result += '/';
@@ -139,7 +139,7 @@ std::string NodeOps::stringPath(NodeId id) const {
             continue;
         }
 
-        const auto name = blueprints_.require(node.bp).shortName();
+        const auto name = nodeSystem_.blueprints.require(node.bp).shortName();
 
         if (node.name.empty())
             result += name;
@@ -151,12 +151,12 @@ std::string NodeOps::stringPath(NodeId id) const {
 }
 
 void NodeOps::dumpTree(NodeId id, NodeId highlighted) const {
-    const auto& root = nodes_.require(id);
+    const auto& root = nodeSystem_.registry.require(id);
     Logger::Tree tree(root.name.empty() ? "Root" : root.name);
 
     auto append = [&](auto&& self, NodeId current, size_t depth) -> void {
-        for (NodeId childId : nodes_.children(current)) {
-            const auto& child = nodes_.require(childId);
+        for (NodeId childId : nodeSystem_.registry.children(current)) {
+            const auto& child = nodeSystem_.registry.require(childId);
             std::string line;
 
             switch (child.kind) {
@@ -165,7 +165,7 @@ void NodeOps::dumpTree(NodeId id, NodeId highlighted) const {
                     break;
 
                 case NodeKind::Component: {
-                    const auto type = blueprints_.require(child.bp).shortName();
+                    const auto type = nodeSystem_.blueprints.require(child.bp).shortName();
                     line = child.name.empty()
                         ? std::format("{} <g>C</>", type)
                         : std::format("{}<gr>::{}</> <g>C</>", type, child.name);
@@ -173,13 +173,13 @@ void NodeOps::dumpTree(NodeId id, NodeId highlighted) const {
                 }
 
                 case NodeKind::Slot: {
-                    const auto type = blueprints_.require(child.bp).shortName();
+                    const auto type = nodeSystem_.blueprints.require(child.bp).shortName();
                     line = child.name.empty()
                         ? std::string(type)
                         : std::format("{}<gr>::{}</>", type, child.name);
 
                     line += child.object.ptr
-                        ? std::format("<gr>::<c>{}<//> <c>S</>", blueprints_.require(child.object.bp).shortName())
+                        ? std::format("<gr>::<c>{}<//> <c>S</>", nodeSystem_.blueprints.require(child.object.bp).shortName())
                         : "<gr>::<c>empty<//> <c>S</>";
                     break;
                 }
@@ -190,7 +190,7 @@ void NodeOps::dumpTree(NodeId id, NodeId highlighted) const {
 
                 case NodeKind::Mount:
                     line = child.name.empty()
-                        ? std::format("<m>[&{}]</> <bl>&</>", blueprints_.require(child.bp).shortName())
+                        ? std::format("<m>[&{}]</> <bl>&</>", nodeSystem_.blueprints.require(child.bp).shortName())
                         : std::format("<m>[&{}]</> <bl>&</>", child.name);
                     break;
             }
@@ -214,32 +214,32 @@ void NodeOps::dumpContext() const {
 
     const auto label = [this](NodeId id) -> std::string {
         if (id == InvalidNodeId) return "Empty";
-        return nodes_.get(id) ? stringPath(id) : std::format("missing #{}", id);
+        return nodeSystem_.registry.get(id) ? stringPath(id) : std::format("missing #{}", id);
     };
 
     tree.node("<b><c>Scopes<//>", 0);
 
-    for (ContextScopeId id = 0; id < context_.scopeCount(); ++id) {
-        const auto* scope = context_.scope(id);
+    for (ContextScopeId id = 0; id < nodeSystem_.context.scopeCount(); ++id) {
+        const auto* scope = nodeSystem_.context.scope(id);
         if (!scope) continue;
 
         std::string state;
-        if (id == context_.root()) state += " <m>[root]</>";
-        if (context_.isActive(id)) state += " <m>[active]</>";
+        if (id == nodeSystem_.context.root()) state += " <m>[root]</>";
+        if (nodeSystem_.context.isActive(id)) state += " <m>[active]</>";
 
-        const auto type = scope->type == InvalidBlueprintId ? std::string_view{"untyped"} : blueprints_.require(scope->type).name;
+        const auto type = scope->type == InvalidBlueprintId ? std::string_view{"untyped"} : nodeSystem_.blueprints.require(scope->type).name;
 
         tree.node(std::format("{}{} <gr>#{} [{}]</>", label(scope->owner), state, id, type), 1);
 
         for (const auto& entry : scope->roles)
-            tree.node(std::format("{} ➜ <gr>{}</>", context_.roleName(entry.role), label(entry.target)), 2);
+            tree.node(std::format("{} ➜ <gr>{}</>", nodeSystem_.context.roleName(entry.role), label(entry.target)), 2);
     }
 
     tree.node("<b><c>Resolved roles<//>", 0);
 
-    for (RoleId role = 0; role < context_.roleCount(); ++role) {
-        if (!context_.hasRole(role)) continue;
-        tree.node(std::format("{} ➜ <gr>{}</>", context_.roleName(role), label(context_.resolve(role))), 1);
+    for (RoleId role = 0; role < nodeSystem_.context.roleCount(); ++role) {
+        if (!nodeSystem_.context.hasRole(role)) continue;
+        tree.node(std::format("{} ➜ <gr>{}</>", nodeSystem_.context.roleName(role), label(nodeSystem_.context.resolve(role))), 1);
     }
 
     tree.print();

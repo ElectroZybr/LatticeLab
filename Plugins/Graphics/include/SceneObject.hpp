@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include "Lattice/Kernel/Component.hpp"
+#include <Lattice/Kernel/Consts.hpp>
 
 struct Transform {
     glm::vec3 position{0.0f};

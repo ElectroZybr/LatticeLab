@@ -1,11 +1,9 @@
 #pragma once
 
-#include <Lattice/Kernel/Component.hpp>
+#include <Lattice/Kernel/Consts.hpp>
 
 #include <string_view>
 #include <glm/vec2.hpp>
-
-#include <Lattice/Kernel/RefSlot.hpp>
 
 #include <GPU/include/NativeWindow.hpp>
 

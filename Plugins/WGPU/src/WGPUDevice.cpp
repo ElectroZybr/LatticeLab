@@ -1,15 +1,17 @@
-#include "WGPUDevice.hpp"
 #include "WGPU.hpp"
-#include "RenderPass.hpp"
+#include "WGPUDevice.hpp"
+#include "WGPUCommandList.hpp"
+#include "WGPURenderPass.hpp"
 #include "WGPUBuffer.hpp"
-#include "Surface.hpp"
+#include "WGPUSurface.hpp"
 
 #include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Kernel/NodeViews.hpp>
 
 namespace WGPU {
 
-Device::Device(Lattice::Node& node, const Desc&) {
-    auto backend = node.requireParent<WGPU>();
+Device::Device(NodeBuild node, const Desc&) {
+    auto backend = node.ancestor<WGPU>();
     device_ = backend->createDevice(adapter_);
     instance_ = backend->native();
     wgpuInstanceAddRef(instance_);
@@ -27,13 +29,31 @@ Device::~Device() {
         wgpuInstanceRelease(instance_);
 }
 
+WGPUDevice Device::native() const noexcept {
+    return device_;
+}
+
+WGPUAdapter Device::adapter() const noexcept {
+    return adapter_;
+}
+
+WGPUInstance Device::instance() const noexcept {
+    return instance_;
+}
+
 std::unique_ptr<GPU::CommandList> Device::createCommandList() {
     return std::make_unique<CommandList>(device_, queue_);
 }
 
-std::unique_ptr<GPU::BindingSet> Device::createBindingSet(GPU::Pipeline& pipeline, uint32_t group, std::span<const GPU::Binding> bindings) {
+std::unique_ptr<GPU::BindingSet> Device::createBindingSet(
+    GPU::Pipeline& pipeline,
+    uint32_t group,
+    std::span<const GPU::Binding> bindings
+) {
     auto* native = dynamic_cast<Pipeline*>(&pipeline);
-    if (!native) throw Lattice::Exception("WGPU::Device", "expected WGPU pipeline");
+    if (!native)
+        throw Lattice::Exception("WGPU::Device", "expected WGPU pipeline");
+
     return std::make_unique<BindingSet>(device_, *native, group, bindings);
 }
 
@@ -41,6 +61,7 @@ void Device::writeBuffer(GPU::Buffer& buffer, uint64_t offset, std::span<const s
     auto* native = dynamic_cast<Buffer*>(&buffer);
     if (!native)
         throw Lattice::Exception("WGPU::Device", "expected WGPU buffer");
+
     wgpuQueueWriteBuffer(queue_, native->native(), offset, data.data(), data.size());
 }
 

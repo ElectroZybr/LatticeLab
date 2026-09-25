@@ -1,39 +1,36 @@
 #pragma once
 
-#include "Lattice/Kernel/NodeContext.hpp"
-#include "Lattice/Kernel/NodeViews.hpp"
-#include "Lattice/Kernel/NodeOps.hpp"
-#include "Lattice/Kernel/NodeQuery.hpp"
-#include "Lattice/Kernel/NodeFactory.hpp"
-#include "Lattice/Kernel/NodeRegistry.hpp"
+#include <Lattice/Kernel/NodeFactory.hpp>
+#include <Lattice/Kernel/NodeRegistry.hpp>
+#include <Lattice/Kernel/NodeQuery.hpp>
+#include <Lattice/Kernel/NodeContext.hpp>
+#include <Lattice/Kernel/NodeOps.hpp>
+#include <Lattice/Kernel/Exports.hpp>
+
+class NodeBuild;
+class NodeConfigure;
 
 namespace Lattice {
 
 class NodeSystem {
-    Blueprints& blueprints_;
 public:
+    Blueprints& blueprints;
     NodeRegistry registry;
     NodeFactory factory;
     NodeContext context;
     NodeQuery query;
+    Exports exports;
     NodeOps ops;
 
     NodeSystem(Blueprints& blueprints)
-        : blueprints_(blueprints)
-        , query(registry, blueprints)
-        , ops(registry, blueprints, query, context)
-        , factory(registry, blueprints, context, ops, query) 
+        : blueprints(blueprints)
+        , query(registry, blueprints, context)
+        , ops(*this)
+        , factory(*this) 
         , context(registry) {}
 
-    NodeBuildView build(NodeId id) {
-        registry.require(id);
-        return {id, factory, blueprints_, query};
-    }
-
-    NodeConfigureView configure(NodeId id) {
-        registry.require(id);
-        return {id, query, context};
-    }
+    ::NodeBuild build(NodeId id);
+    ::NodeConfigure configure(NodeId id);
 };
 
 }

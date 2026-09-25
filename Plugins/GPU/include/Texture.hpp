@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Lattice/Kernel/Component.hpp>
+#include <Lattice/Kernel/Consts.hpp>
 
 #include <cstdint>
 

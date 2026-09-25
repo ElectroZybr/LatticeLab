@@ -3,7 +3,7 @@
 #include <Lattice/Kernel/Consts.hpp>
 
 
-#include "Lattice/Kernel/Value.hpp"
+#include <Lattice/Kernel/Value.hpp>
 
 
 class LoaderAPI : public Lattice::Component {

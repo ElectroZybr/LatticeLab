@@ -3,7 +3,7 @@
 // Kernel dependences
 #include <Lattice/Kernel/Plugin.hpp>
 #include <Lattice/Kernel/ServiceAPI.hpp>
-#include <Lattice/Kernel/Node.hpp>
+#include <Lattice/Kernel/NodeViews.hpp>
 
 // Plugin dependences
 #include "ActionRouter.hpp"
@@ -17,27 +17,23 @@
 
 class Window final : public ServiceAPI {
 public:
-    explicit Window(Lattice::Node& branch) {
-        branch.slot<WindowAPI>();
-        branch.add<Render>();
-        branch.add<ActionRouter>().focus();
+    explicit Window(NodeBuild branch) {
+        window = branch.addSlot<WindowAPI>();
+        render = branch.add<Render>();
+        router = branch.add<ActionRouter>();
     }
 
-    void configure(Lattice::Node& branch) {
-        actionMap = branch.require<ActionRouter>();
-        render = branch.require<Render>();
-        window = branch.find<WindowAPI>();
-        if (!window) window.use<glfwWindow>();
-
-        branch.on("print", [this]() { print(); });
+    void configure(NodeConfigure branch) {
+        if (!window.exists()) window.choice<glfwWindow>();
     }
     
     void run() override {
-        actionMap->bindAxis2("look", "MouseDelta+MouseLeft");
-        actionMap->bindAxis2("orbit", "MouseDelta+MouseLeft");
-        actionMap->bindAxis2("pan", "MouseDelta+Ctrl+MouseLeft");
-        actionMap->bindAxis2("zoom", "MouseWheel");
-        actionMap->bindAxis2("cursor", "MousePos");
+        router->bindAxis2("look", "MouseDelta+MouseLeft");
+        router->bindAxis2("orbit", "MouseDelta+MouseLeft");
+        router->bindAxis2("pan", "MouseDelta+Ctrl+MouseLeft");
+        router->bindAxis2("zoom", "MouseWheel");
+        router->bindAxis2("cursor", "MousePos");
+
         auto previous = std::chrono::steady_clock::now();
         while (!stopRequested()) {
             if (window) {
@@ -48,7 +44,7 @@ public:
                 }
             }
 
-            actionMap->tick();
+            router->tick();
             const auto now = std::chrono::steady_clock::now();
             const float dt = std::min(std::chrono::duration<float>(now - previous).count(), 0.1f);
             previous = now;
@@ -63,12 +59,9 @@ public:
     }
 
 private:
-    Ref<ActionRouter> actionMap;
-    Ref<Render> render;
     Slot<WindowAPI> window;
+    Ref<ActionRouter> router;
+    Ref<Render> render;
 
     uint16_t fps = 0;
-    void print() {
-        Logger::action("printer", "test");
-    }
 };
