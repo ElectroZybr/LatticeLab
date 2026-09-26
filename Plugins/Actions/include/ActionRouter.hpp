@@ -73,7 +73,7 @@ private:
     };
 
 public:
-    void configure(NodeBuild branch);
+    void configure(NodeConfigure branch);
     void tick();
     void registerInput(InputAPI& input);
 
@@ -97,7 +97,7 @@ public:
     void clearBinds() { bindings_.clear(); }
     
 private:
-    Lattice::ExportsView exports;
+    ExportsView exports;
     std::vector<InputAPI*> inputs_;
     BindRegistry bindings_;
     TriggerRegistry triggers_;

@@ -15,10 +15,7 @@ target("Graphics")
     add_includedirs("../GPU/include")
     add_includedirs("../Shell/include")
 
-    add_deps("Lattice", "GPU")
-    if is_plat("linux") then
-        add_rpathdirs("$ORIGIN/../GPU")
-    end
+    add_deps("Lattice")
 
 -- target("Graphics.tests")
 --     set_kind("shared")

@@ -12,14 +12,16 @@ namespace WGPU {
 
 class Surface final : public GPU::Surface {
 public:
-    Surface(NodeBuild node, const Desc& desc);
+    Surface(NodeBuild node);
     ~Surface() override;
 
     GPU::TextureFormat format() const override;
+    void attach(const NativeWindow& window) override;
     void resize(uint32_t width, uint32_t height) override;
     bool acquire() override;
     void present() override;
     void releaseFrame() override;
+    void releaseSurface();
 
     WGPUTextureView view() const noexcept;
     WGPUDevice device() const noexcept;

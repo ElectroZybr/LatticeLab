@@ -1,9 +1,14 @@
+#include <format>
+#include <string>
 #include <Lattice/Kernel/NodeFactory.hpp>
 #include <Lattice/Kernel/NodeViews.hpp>
 #include <Lattice/Kernel/NodeRegistry.hpp>
 #include <Lattice/Kernel/NodeContext.hpp>
 #include <Lattice/Kernel/Node.hpp>
 #include <Lattice/Kernel/NodeOps.hpp>
+#include "Lattice/Kernel/Blueprints.hpp"
+#include "Lattice/Kernel/Consts.hpp"
+#include "Lattice/Tools/Logger.hpp"
 
 namespace Lattice {
 
@@ -47,6 +52,15 @@ NodeId NodeFactory::createNode(
         nodeSystem_.context.addCandidate(scope, role, previous);
         nodeSystem_.context.addCandidate(scope, role, id);
     }
+
+    std::string label;
+    
+    if (bp != InvalidBlueprintId) 
+        label += nodeSystem_.blueprints.require(bp).name;
+    if (!name.empty())
+        label += std::format(":{}", name);
+
+    Logger::info("NodeFactory", "added node '{}'", label);
 
     return id;
 }

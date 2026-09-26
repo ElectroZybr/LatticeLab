@@ -17,10 +17,9 @@ public:
 
     Verlet(NodeBuild branch) {}
 
-    void configure(NodeBuild branch) {
+    void configure(NodeConfigure branch) {
         // интегратор требует для работы буфер. Если нет - исключение
         particles = branch.require<ParticleDynamics::ParticleStorage>();
-        // TODO: restore when bindings are available in the new API.
         // branch.bind("dt", &dt, 0, 0.1, true);
         particles->addCol<PrevForceX>();
         particles->addCol<PrevForceY>();
