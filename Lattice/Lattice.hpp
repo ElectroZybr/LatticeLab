@@ -7,6 +7,7 @@
 #include <Lattice/Kernel/Blueprints.hpp>
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/NodeHandlers.hpp>
+#include <Lattice/Kernel/TreeView.hpp>
 
 // Tools
 #include <Lattice/Tools/Logger.hpp>

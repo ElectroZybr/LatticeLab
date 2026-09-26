@@ -1,36 +1,37 @@
-#include <Lattice/Kernel/ServiceAPI.hpp>
-#include <Lattice/Kernel/NodeViews.hpp>
-#include <Lattice/Tools/Logger.hpp>
+#pragma once
 
+#include <Lattice/Kernel/NodeViews.hpp>
+#include <Lattice/Kernel/ServiceAPI.hpp>
+#include <Lattice/Kernel/TreeView.hpp>
+
+#include <CLI/include/Command.hpp>
+#include <CLI/include/Terminal.hpp>
+
+namespace CLIPlugin {
+
+/**
+ @file CLI.hpp
+ @brief Интерактивный интерфейс управления runtime Lattice.
+
+ обрабатывает подключенные терминалы, разрешает доступные exports и предоставляет навигацию по runtime-дереву.
+*/
 
 class CLI final : public ServiceAPI {
-    ExportsView exports;
-    LogSystem::SinkId logSink = 0;
-
 public:
-    explicit CLI(NodeBuild branch) {}
-
-    void configure(NodeConfigure branch) {
-        exports = branch.exports();
-    }
-
-    void run() override {
-        // LogSystem::setConsoleOutput(false);
-
-        logSink = LogSystem::addSink([this](const LogEvent& event) {
-            onLog(event);
-        });
-
-        while (!stopRequested()) {
-            // input/event loop
-        }
-
-        LogSystem::removeSink(logSink);
-        // LogSystem::setConsoleOutput(true);
-    }
+    explicit CLI(NodeBuild branch);
+    void configure(NodeConfigure branch);
 
 private:
-    void onLog(const LogEvent& event) {
-        Logger::info("CLI", "{}", event.text.render());
-    }
+    void run() override;
+    void broadcast(std::string_view text);
+    bool pollTerminals();
+    void list(Lattice::ActionContext& context) const;
+    void showTree(Lattice::ActionContext& context) const;
+    void changeDirectory(Lattice::ActionContext& context, std::string path) const;
+
+    Children<CLIPlugin::Terminal> terminals_;
+    CLIPlugin::CommandDispatcher commands_;
+    Lattice::TreeView tree_;
 };
+
+}

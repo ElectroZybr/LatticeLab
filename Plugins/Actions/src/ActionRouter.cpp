@@ -9,6 +9,7 @@
 
 void ActionRouter::configure(NodeConfigure branch) {
     exports = branch.exports();
+    context_ = branch.id();
     for (auto* input : branch.collect<InputAPI>())
         if (input) registerInput(*input);
 }
@@ -280,7 +281,10 @@ void ActionRouter::tick() {
 
             switch (binding->target) {
                 case Target::Action:
-                    target.invoke(target.object);
+                    {
+                        Lattice::ActionContext context{context_};
+                        target.invoke(target.object, context, {});
+                    }
                     break;
 
                 case Target::Toggle:
