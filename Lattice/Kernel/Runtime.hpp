@@ -128,9 +128,9 @@ public:
                 for (const auto& entry : config.entries())
                     if (entry.enabled)
                         buildBranch(entry);
-                // root.on("dumpTree", [this]() { root.dumpTree(); });
-                // root.on("dumpContext", [this]() { run_ctx.printTree(); });
-                // root.on("dumpBlueprints", [this]() { run_ctx.blueprints.dumpTree(); });
+                auto build = run_ctx.nodes.build(root);
+                build.action("dumpContext", [this]() { run_ctx.nodes.ops.dumpContext(); });
+                build.action("dumpBlueprints", [this]() { run_ctx.blueprints.dumpTree(); });
                 scope.finish("<b>Build finished</>");
             }
 
@@ -147,11 +147,6 @@ public:
                         startService(entry);
                 scope.finish("<b>Start finished</>");
             }
-
-            run_ctx.nodes.ops.dumpTree(root);
-            // run_ctx.blueprints.dumpTree();
-            // run_ctx.nodes.ops.dumpContext();
-            run_ctx.nodes.exports.dump();
 
             if (host != InvalidNodeId) {
                 auto* service = run_ctx.nodes.configure(root).resolve<ServiceAPI>(host);

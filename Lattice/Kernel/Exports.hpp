@@ -1,9 +1,13 @@
 #pragma once
 
 #include <functional>
+#include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include <Lattice/Kernel/Consts.hpp>
 #include <Lattice/Kernel/Exception.hpp>
@@ -39,8 +43,24 @@ struct Param {
     void (*set)(void*, const Value&) = nullptr;
 };
 
+class ActionContext {
+public:
+    explicit ActionContext(NodeId node = InvalidNodeId) : node_(node) {}
+
+    NodeId node() const noexcept { return node_; }
+    void setNode(NodeId node) noexcept { node_ = node; }
+
+    void emit(Value value) { output_.push_back(std::move(value)); }
+    const std::vector<Value>& output() const noexcept { return output_; }
+
+private:
+    NodeId node_ = InvalidNodeId;
+    std::vector<Value> output_;
+};
+
 struct Action {
-    std::function<void()> invoke;
+    std::function<void(ActionContext&, std::span<const Value>)> invoke;
+    std::vector<Value> argumentTypes;
 };
 
 struct Export {
@@ -53,7 +73,8 @@ struct ResolvedExport {
     void* object = nullptr;
     Value (*get)(const void*) = nullptr;
     void (*set)(void*, const Value&) = nullptr;
-    void (*invoke)(void*) = nullptr;
+    void (*invoke)(void*, ActionContext&, std::span<const Value>) = nullptr;
+    std::span<const Value> argumentTypes;
 
     explicit operator bool() const noexcept {
         return object || get || set || invoke;
@@ -99,7 +120,7 @@ public:
         return id;
     }
 
-    template<typename F>
+    template<typename... Args, typename F>
     ExportId action(NodeId owner, std::string_view name, F&& callback) {
         const ExportKey key{owner, std::string(name)};
 
@@ -115,8 +136,23 @@ public:
         });
 
         params_.push_back({});
+        using Callback = std::decay_t<F>;
         actions_.push_back({
-            .invoke = std::forward<F>(callback)
+            .invoke = [callback = Callback(std::forward<F>(callback))](
+                ActionContext& context,
+                std::span<const Value> arguments
+            ) mutable {
+                if (arguments.size() != sizeof...(Args))
+                    throw Exception(
+                        "Action",
+                        "Expected {} arguments, received {}",
+                        sizeof...(Args),
+                        arguments.size()
+                    );
+
+                invokeCallback<Args...>(callback, context, arguments, std::index_sequence_for<Args...>{});
+            },
+            .argumentTypes = {argumentType<Args>()...}
         });
 
         index_.emplace(key, id);
@@ -157,11 +193,20 @@ public:
         set(id, Value{std::move(value)});
     }
 
-    void invoke(ExportId id) {
+    void invoke(
+        ExportId id,
+        ActionContext& context,
+        std::span<const Value> arguments = {}
+    ) {
         if (id >= exports_.size() || exports_[id].kind != ExportKind::Action || !actions_[id].invoke)
             throw Exception("Exports", "Export #{} is not callable", id);
 
-        actions_[id].invoke();
+        actions_[id].invoke(context, arguments);
+    }
+
+    void invoke(ExportId id) {
+        ActionContext context;
+        invoke(id, context);
     }
 
     ResolvedExport resolve(ExportId id) {
@@ -180,9 +225,10 @@ public:
 
         return {
             .object = &action,
-            .invoke = [](void* object) {
-                static_cast<Action*>(object)->invoke();
-            }
+            .invoke = [](void* object, ActionContext& context, std::span<const Value> arguments) {
+                static_cast<Action*>(object)->invoke(context, arguments);
+            },
+            .argumentTypes = action.argumentTypes
         };
     }
 
@@ -217,6 +263,52 @@ public:
         }
 
         tree.print();
+    }
+
+private:
+    template<typename>
+    static constexpr bool AlwaysFalse = false;
+
+    template<typename T>
+    static Value argumentType() {
+        using U = std::remove_cvref_t<T>;
+
+        if constexpr (std::is_same_v<U, std::string>)
+            return Value{std::string{}};
+        else if constexpr (std::is_same_v<U, bool>)
+            return Value{false};
+        else if constexpr (std::is_integral_v<U>)
+            return Value{int64_t{0}};
+        else if constexpr (std::is_floating_point_v<U>)
+            return Value{0.0};
+        else if constexpr (
+            std::is_same_v<U, glm::vec2> ||
+            std::is_same_v<U, glm::vec3> ||
+            std::is_same_v<U, glm::vec4>
+        )
+            return Value{U{}};
+        else
+            static_assert(AlwaysFalse<U>, "Unsupported action argument type");
+    }
+
+    template<typename T>
+    static std::remove_cvref_t<T> argument(const Value& value) {
+        return value.as<std::remove_cvref_t<T>>();
+    }
+
+    template<typename... Args, typename F, size_t... Indices>
+    static void invokeCallback(
+        F& callback,
+        ActionContext& context,
+        std::span<const Value> arguments,
+        std::index_sequence<Indices...>
+    ) {
+        if constexpr (std::is_invocable_v<F&, ActionContext&, std::remove_cvref_t<Args>...>)
+            std::invoke(callback, context, argument<Args>(arguments[Indices])...);
+        else if constexpr (std::is_invocable_v<F&, std::remove_cvref_t<Args>...>)
+            std::invoke(callback, argument<Args>(arguments[Indices])...);
+        else
+            static_assert(AlwaysFalse<F>, "Action callback does not match its declared arguments");
     }
 };
 

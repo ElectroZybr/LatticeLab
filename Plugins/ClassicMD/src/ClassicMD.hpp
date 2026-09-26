@@ -3,6 +3,7 @@
 #include <Lattice/Kernel/NodeViews.hpp>
 #include <ParticleDynamics/include/ParticleAPI.hpp>
 #include <glm/ext/vector_float3.hpp>
+#include "Integrators/src/Verlet.hpp"
 #include "AtomData.hpp"
 #include "AtomStorage.hpp"
 
@@ -19,7 +20,7 @@ public:
         }
 
     void configure(NodeBuild universe) {
-        // integrator.use<Integrators::Verlet>();
+        integrator.choice<Integrators::Verlet>();
     //     universe.on("CreateVerlet", [this]() { integrator.use("Verlet"); });
     //     universe.on("selectUniverse", [&universe] { universe.requireContext().activateFocus(universe.getFocusScopeId()); });
     }

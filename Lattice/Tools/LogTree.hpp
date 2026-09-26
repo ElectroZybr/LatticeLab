@@ -63,7 +63,37 @@ public:
         Logger::blank();
     }
 
+    Text text() const {
+        std::string markup = std::format("<b><w>{}<//>", root_.name_);
+        appendTreeNode(root_, "", markup);
+        return Text(markup);
+    }
+
 private:
+    static void appendTreeNode(
+        const TreeNode& node,
+        const std::string& prefix,
+        std::string& output
+    ) {
+        for (size_t i = 0; i < node.children_.size(); ++i) {
+            const auto& child = node.children_[i];
+            const bool last = i + 1 == node.children_.size();
+
+            output += std::format(
+                "\n{}{}─ <w>{}</>",
+                prefix,
+                last ? "└" : "├",
+                child->name_
+            );
+
+            appendTreeNode(
+                *child,
+                prefix + (last ? "   " : "│  "),
+                output
+            );
+        }
+    }
+
     static void printTreeNode(const TreeNode& node, const std::string& prefix) {
         for (size_t i = 0; i < node.children_.size(); ++i) {
             const auto& child = node.children_[i];

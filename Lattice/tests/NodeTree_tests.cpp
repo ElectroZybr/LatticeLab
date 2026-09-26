@@ -161,6 +161,69 @@ TEST(Node_DirectChildren, RuntimeFixture,
     REQUIRE(nestedNode.size() == 1);
 }
 
+TEST(TreeView_ReadOnlyNavigation, RuntimeFixture,
+    "TreeView должен возвращать стабильные id и скопированные подписи без доступа к NodeRegistry.") {
+    auto& nodes = fixture.run_ctx.nodes;
+    BlueprintRegister::add<TestComponent>(fixture.run_ctx.blueprints);
+
+    const NodeId branch = nodes.factory.folder(fixture.root, "branch");
+    nodes.build(branch).add<TestComponent>("instance");
+
+    const TreeView tree = nodes.configure(branch).tree();
+    const auto children = tree.children(branch);
+
+    REQUIRE(tree.contains(fixture.root));
+    REQUIRE(tree.root(branch) == fixture.root);
+    REQUIRE(tree.parent(branch) == fixture.root);
+    REQUIRE(tree.label(branch) == "branch");
+    REQUIRE(tree.path(branch) == "Root/branch");
+    REQUIRE(children.size() == 1);
+    REQUIRE(tree.label(children.front()) == "TestComponent:instance");
+    REQUIRE(tree.path(children.front()) == "Root/branch/TestComponent:instance");
+
+    const TreeNodeInfo component = tree.info(children.front());
+    REQUIRE(component.id == children.front());
+    REQUIRE(component.parent == branch);
+    REQUIRE(component.kind == NodeKind::Component);
+    REQUIRE(component.name == "instance");
+    REQUIRE(component.type == "TestComponent");
+    REQUIRE(component.blueprint == nodes.blueprints.id<TestComponent>());
+    REQUIRE(component.implementationBlueprint == nodes.blueprints.id<TestComponent>());
+    REQUIRE(component.hasObject);
+    REQUIRE(!component.configured);
+
+    std::vector<TreeEntry> subtree;
+    for (const TreeEntry entry : tree.subtree(fixture.root))
+        subtree.push_back(entry);
+
+    REQUIRE(subtree.size() == 3);
+    REQUIRE(subtree[0].id == fixture.root);
+    REQUIRE(subtree[0].depth == 0);
+    REQUIRE(subtree[1].id == branch);
+    REQUIRE(subtree[1].depth == 1);
+    REQUIRE(subtree[2].id == children.front());
+    REQUIRE(subtree[2].depth == 2);
+}
+
+TEST(TreeView_NodeMetadata, RuntimeFixture,
+    "TreeView должен различать объявленный API слота и выбранную реализацию.") {
+    auto& nodes = fixture.run_ctx.nodes;
+    BlueprintRegister::add<TestAPI>(fixture.run_ctx.blueprints);
+    BlueprintRegister::add<TestImplA, TestAPI>(fixture.run_ctx.blueprints);
+
+    auto slot = nodes.build(fixture.root).addSlot<TestAPI>("selected");
+    slot.choice<TestImplA>();
+
+    const TreeNodeInfo info = nodes.configure(fixture.root).tree().info(slot.id());
+    REQUIRE(info.kind == NodeKind::Slot);
+    REQUIRE(info.name == "selected");
+    REQUIRE(info.type == "TestAPI");
+    REQUIRE(info.implementation == "TestImplA");
+    REQUIRE(info.blueprint == nodes.blueprints.id<TestAPI>());
+    REQUIRE(info.implementationBlueprint == nodes.blueprints.id<TestImplA>());
+    REQUIRE(info.hasObject);
+}
+
 TEST(Node_AddImpls, RuntimeFixture,
     "addImpls возвращает реализации API; collect различает конкретные типы.")
 {

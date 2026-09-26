@@ -69,6 +69,37 @@ void LogSystem::removeSink(SinkId id) {
     sinks_.erase(id);
 }
 
+LogSystem::ConsoleWriterId LogSystem::setConsoleWriter(ConsoleWriter writer) {
+    std::lock_guard lock(mutex_);
+    const ConsoleWriterId id = nextConsoleWriterId_++;
+    consoleWriter_ = std::move(writer);
+    consoleWriterId_ = id;
+    return id;
+}
+
+void LogSystem::resetConsoleWriter(ConsoleWriterId id) {
+    std::lock_guard lock(mutex_);
+    if (consoleWriterId_ != id)
+        return;
+
+    consoleWriter_ = {};
+    consoleWriterId_ = 0;
+}
+
+void LogSystem::writeConsole(std::string_view text) {
+    ConsoleWriter writer;
+    {
+        std::lock_guard lock(mutex_);
+        writer = consoleWriter_;
+    }
+
+    std::lock_guard consoleLock(consoleMutex_);
+    if (writer)
+        writer(text);
+    else
+        std::cout << text << std::flush;
+}
+
 void LogSystem::write(Level level, const Text& text) {
     std::vector<Sink> sinks;
 
@@ -127,14 +158,14 @@ void LoggerImpl::print(Level level, const Text& text, bool isScopeFinal) {
         lines_.push_back(packLine(level, scopeCount_, isScopeFinal));
     }
 
-    std::cout << std::string(indent_, ' ') << text.render() << '\n';
+    LogSystem::writeConsole(std::string(indent_, ' ') + text.render() + '\n');
 }
 
 void LoggerImpl::printBlank() {
     if (scopeCount_ != 0)
         lines_.push_back(packLine(Level::Blank, scopeCount_, false));
 
-    std::cout << '\n';
+    LogSystem::writeConsole("\n");
 }
 
 void LoggerImpl::pushScope(LogMode mode, size_t maxDepth) {
@@ -152,8 +183,9 @@ void LoggerImpl::popScope(bool success, bool hasFinal) {
     const size_t end = lines_.size();
     const size_t count = end - begin;
 
+    std::string output;
     if (count != 0 && scopeCount_ > 1)
-        std::cout << "\033[" << count << "A";
+        output += std::format("\033[{}A", count);
 
     const bool verbose = hasMode(scope.mode, LogMode::Verbose);
 
@@ -197,15 +229,16 @@ void LoggerImpl::popScope(bool success, bool hasFinal) {
 
         if (keep) {
             if (scopeCount_ > 1)
-                std::cout << "\r\033[1B";
+                output += "\r\033[1B";
             lines_[write++] = static_cast<uint8_t>(packed | kPinnedBit);
         } else {
             if (scopeCount_ > 1)
-                std::cout << "\r\033[M";
+                output += "\r\033[M";
         }
     }
 
-    std::cout << std::flush;
+    if (!output.empty())
+        LogSystem::writeConsole(output);
 
     --scopeCount_;
 

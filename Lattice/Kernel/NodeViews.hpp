@@ -6,6 +6,7 @@
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/NodeQuery.hpp>
 #include <Lattice/Kernel/NodeSystem.hpp>
+#include <Lattice/Kernel/TreeView.hpp>
 #include <Lattice/Kernel/TypeName.hpp>
 
 
@@ -26,7 +27,22 @@ public:
     }
 
     Lattice::ResolvedExport resolve(Lattice::RoleId role) const {
-        const Lattice::NodeId owner = nodeSystem_->context.resolve(role);
+        return resolveOwner(role, nodeSystem_->context.resolve(role));
+    }
+
+    Lattice::ResolvedExport resolve(Lattice::RoleId role, Lattice::NodeId from) const {
+        const auto scope = nodeSystem_->context.nearestScope(from);
+        const Lattice::NodeId owner = scope == Lattice::InvalidContextScopeId
+            ? nodeSystem_->context.resolve(role)
+            : nodeSystem_->context.resolve(scope, role);
+        return resolveOwner(role, owner);
+    }
+
+private:
+    Lattice::ResolvedExport resolveOwner(
+        Lattice::RoleId role,
+        Lattice::NodeId owner
+    ) const {
         if (owner == Lattice::InvalidNodeId) return {};
 
         const auto name = nodeSystem_->context.roleName(role);
@@ -149,13 +165,19 @@ public:
 
     template<typename T>
     Lattice::ExportId param(std::string_view name, T& value) {
-        return nodeSystem_.exports.param(id_, name, value);
+        const auto id = nodeSystem_.exports.param(id_, name, value);
+        registerExport(name);
+        return id;
     }
 
-    template<typename F>
+    template<typename... Args, typename F>
     Lattice::ExportId action(std::string_view name, F&& callback) {
-        return nodeSystem_.exports.action(id_, name, std::forward<F>(callback));
+        const auto id = nodeSystem_.exports.action<Args...>(id_, name, std::forward<F>(callback));
+        registerExport(name);
+        return id;
     }
+
+    Lattice::TreeView tree() const { return Lattice::TreeView{nodeSystem_}; }
 
     template<class T>
     Ref<T> ancestor() const {
@@ -180,6 +202,22 @@ public:
     Lattice::NodeKind kind() const { return nodeSystem_.registry.require(id_).kind; }
     Lattice::BlueprintId blueprint() const { return nodeSystem_.registry.require(id_).bp; }
     Lattice::BlueprintId implementation() const { return nodeSystem_.registry.require(id_).object.bp; }
+
+private:
+    void registerExport(std::string_view name) {
+        const Lattice::NodeId parent = nodeSystem_.registry.require(id_).parent;
+        Lattice::ContextScopeId scope = nodeSystem_.context.nearestScope(
+            parent == Lattice::InvalidNodeId ? id_ : parent
+        );
+        if (scope == Lattice::InvalidContextScopeId) {
+            Lattice::NodeId root = id_;
+            while (nodeSystem_.registry.require(root).parent != Lattice::InvalidNodeId)
+                root = nodeSystem_.registry.require(root).parent;
+            scope = nodeSystem_.context.createScope(root);
+        }
+
+        nodeSystem_.context.addCandidate(scope, nodeSystem_.context.role(name), id_);
+    }
 };
 
 
@@ -258,6 +296,8 @@ public:
     ExportsView exports() {
         return ExportsView{nodeSystem_};
     }
+
+    Lattice::TreeView tree() const { return Lattice::TreeView{nodeSystem_}; }
 
     // helpers
     Lattice::NodeId id() const noexcept { return id_; }

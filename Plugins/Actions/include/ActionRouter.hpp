@@ -98,6 +98,7 @@ public:
     
 private:
     ExportsView exports;
+    Lattice::NodeId context_ = Lattice::InvalidNodeId;
     std::vector<InputAPI*> inputs_;
     BindRegistry bindings_;
     TriggerRegistry triggers_;
