@@ -76,6 +76,8 @@ WGPUSurface createSurface(WGPUInstance instance, const NativeWindow& window) {
 struct Surface::State {
     std::shared_ptr<void> windowOwner;
     WGPUSurface surface = nullptr;
+    WGPUInstance instance = nullptr;
+    WGPUAdapter adapter = nullptr;
     WGPUDevice device = nullptr;
     WGPUTexture texture = nullptr;
     WGPUTextureView view = nullptr;
@@ -95,34 +97,69 @@ struct Surface::State {
     }
 };
 
-Surface::Surface(NodeBuild node, const Desc& desc)
-    : state_(std::make_unique<State>()) {
-    auto device = node.ancestor<Device>();
-    state_->windowOwner = desc.window.owner;
-    state_->device = device->native();
-    wgpuDeviceAddRef(state_->device);
-    state_->surface = createSurface(device->instance(), desc.window);
+void Surface::attach(const NativeWindow& window) {
+    if (window.kind == NativeWindow::Kind::None)
+        throw Lattice::Exception("WGPU::Surface", "native window is required");
+
+    releaseFrame();
+    releaseSurface();
+
+    state_->windowOwner = window.owner;
+    state_->format = GPU::TextureFormat::Undefined;
+
+    state_->surface = createSurface(state_->instance, window);
 
     if (!state_->surface)
         throw Lattice::Exception("WGPU::Surface", "failed to create surface");
 
     WGPUSurfaceCapabilities caps{};
-    if (wgpuSurfaceGetCapabilities(state_->surface, device->adapter(), &caps) != WGPUStatus_Success)
+
+    if (wgpuSurfaceGetCapabilities(state_->surface, state_->adapter, &caps) != WGPUStatus_Success) {
+        releaseSurface();
         throw Lattice::Exception("WGPU::Surface", "device cannot present to this window");
+    }
 
     for (size_t i = 0; i < caps.formatCount; ++i) {
         if (caps.formats[i] == WGPUTextureFormat_BGRA8Unorm) {
             state_->format = GPU::TextureFormat::BGRA8Unorm;
             break;
         }
+
         if (caps.formats[i] == WGPUTextureFormat_RGBA8Unorm)
             state_->format = GPU::TextureFormat::RGBA8Unorm;
     }
-    if (caps.alphaModeCount) state_->alpha = caps.alphaModes[0];
+
+    if (caps.alphaModeCount)
+        state_->alpha = caps.alphaModes[0];
+
     wgpuSurfaceCapabilitiesFreeMembers(caps);
 
-    if (state_->format == GPU::TextureFormat::Undefined)
+    if (state_->format == GPU::TextureFormat::Undefined) {
+        releaseSurface();
         throw Lattice::Exception("WGPU::Surface", "no supported presentation format");
+    }
+}
+
+Surface::Surface(NodeBuild node)
+    : state_(std::make_unique<State>()) {
+
+    auto device = node.ancestor<Device>();
+
+    state_->device = device->native();
+    state_->instance = device->instance();
+    state_->adapter = device->adapter();
+
+    wgpuDeviceAddRef(state_->device);
+}
+
+void Surface::releaseSurface() {
+    if (!state_->surface)
+        return;
+
+    wgpuSurfaceRelease(state_->surface);
+    state_->surface = nullptr;
+    state_->windowOwner.reset();
+    state_->format = GPU::TextureFormat::Undefined;
 }
 
 Surface::~Surface() = default;

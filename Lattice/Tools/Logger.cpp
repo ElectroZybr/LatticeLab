@@ -57,18 +57,44 @@ constexpr size_t unpackDepth(uint8_t packed) noexcept {
 
 }
 
-void LogSystem::write(Level level, const Text& text) {
+LogSystem::SinkId LogSystem::addSink(Sink sink) {
     std::lock_guard lock(mutex_);
+    const SinkId id = nextSinkId_++;
+    sinks_.emplace(id, std::move(sink));
+    return id;
+}
 
-    if (!file_.is_open())
-        return;
+void LogSystem::removeSink(SinkId id) {
+    std::lock_guard lock(mutex_);
+    sinks_.erase(id);
+}
 
-    const auto& style = LogStyle::get(level);
+void LogSystem::write(Level level, const Text& text) {
+    std::vector<Sink> sinks;
 
-    file_ << timestampForLogLine()
-          << ' '
-          << std::format("[{}] {}", style.label, text.plain())
-          << '\n';
+    {
+        std::lock_guard lock(mutex_);
+
+        if (file_.is_open()) {
+            const auto& style = LogStyle::get(level);
+            file_ << timestampForLogLine()
+                  << ' '
+                  << std::format("[{}] {}", style.label, text.plain())
+                  << '\n';
+        }
+
+        sinks.reserve(sinks_.size());
+        for (const auto& [id, sink] : sinks_)
+            sinks.push_back(sink);
+    }
+
+    const LogEvent event{
+        .level = level,
+        .text = text
+    };
+
+    for (auto& sink : sinks)
+        sink(event);
 }
 
 void LoggerImpl::print(Level level, const Text& text, bool isScopeFinal) {

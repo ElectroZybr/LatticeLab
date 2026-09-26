@@ -100,11 +100,11 @@ public:
         : id_(id), nodeSystem_(nodeSystem) {}
 
     // move-only
-    NodeBuild(const NodeBuild&) = delete;
-    NodeBuild& operator=(const NodeBuild&) = delete;
+    // NodeBuild(const NodeBuild&) = delete;
+    // NodeBuild& operator=(const NodeBuild&) = delete;
 
-    NodeBuild(NodeBuild&&) = default;
-    NodeBuild& operator=(NodeBuild&&) = delete;
+    // NodeBuild(NodeBuild&&) = default;
+    // NodeBuild& operator=(NodeBuild&&) = delete;
 
     template<class T> 
     Ref<T> add(std::string_view instance = Lattice::DefaultInstanceName) {

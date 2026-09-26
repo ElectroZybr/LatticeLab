@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <mutex>
 #include <utility>
 #include <vector>
@@ -13,9 +14,13 @@
 #include <Lattice/Tools/Text.hpp>
 
 
+struct LogEvent {
+    Level level;
+    Text text;
+};
+
 class LoggerImpl {
 public:
-
     void print(Level level, const Text& text, bool isScopeFinal = false);
     void printBlank();
     void pushScope(LogMode mode, size_t maxDepth);
@@ -68,16 +73,31 @@ private:
 
 class LogSystem {
 public:
+    using SinkId = uint64_t;
+    using Sink = std::function<void(const LogEvent&)>;
+
     static LoggerImpl& current() { return logger_; }
+
     static void write(Level level, const Text& text);
+
+    static SinkId addSink(Sink sink);
+    static void removeSink(SinkId id);
+
+    // static void setConsoleOutput(bool enabled) { consoleOutput_ = enabled; }
+    // static bool consoleOutput() { return consoleOutput_; }
+
     static void setPath(const std::filesystem::path& path);
-    static const std::filesystem::path& getPath() { return path_;}
+    static const std::filesystem::path& getPath() { return path_; }
 
 private:
     inline static std::filesystem::path path_;
     inline static std::ofstream file_;
     inline static std::mutex mutex_;
     inline static thread_local LoggerImpl logger_;
+
+    inline static std::unordered_map<SinkId, Sink> sinks_;
+    inline static SinkId nextSinkId_ = 1;
+    inline static bool consoleOutput_ = true;
 };
 
 

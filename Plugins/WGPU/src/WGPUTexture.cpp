@@ -31,7 +31,7 @@ constexpr WGPUTextureFormat nativeFormat(GPU::TextureFormat format) {
 
 }
 
-Texture::Texture(Lattice::NodeBuild node, const Desc& desc) {
+Texture::Texture(NodeBuild node, const Desc& desc) {
     const auto device = node.ancestor<Device>();
 
     WGPUTextureDescriptor nativeDesc{};

@@ -11,6 +11,7 @@ struct RuntimeObject {
     void* ptr = nullptr;
     BlueprintId bp = InvalidBlueprintId;
     bool configured = false;
+    bool building = false;
 };
 
 struct Node {

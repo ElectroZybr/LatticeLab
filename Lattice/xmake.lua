@@ -21,3 +21,11 @@ target("Lattice.tests")
     end
 
     add_deps("Lattice")
+
+-- -- публичные инструменты Lattice
+-- target("LatticeTools")
+--     set_kind("static")
+--     set_languages("c++23")
+--     add_files("Tools/*.cpp")
+--     add_headerfiles("Tools/(Tools/**.hpp)")
+--     add_includedirs("Tools/", {public = true})

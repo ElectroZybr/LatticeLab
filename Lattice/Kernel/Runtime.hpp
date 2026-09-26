@@ -118,7 +118,7 @@ public:
             if (testMode) { // режим прогона тестов
                 dlLoader.load("Lattice", ".tests");
                 dlLoader.load("Plugins", ".tests");
-                return TestBlueprints::instance().runAll() == 0 ? 0 : 1;
+                return Test::instance().runAll() == 0 ? 0 : 1;
             }
 
             if (benchMode) {}
@@ -149,8 +149,8 @@ public:
             }
 
             run_ctx.nodes.ops.dumpTree(root);
-            run_ctx.blueprints.dumpTree();
-            run_ctx.nodes.ops.dumpContext();
+            // run_ctx.blueprints.dumpTree();
+            // run_ctx.nodes.ops.dumpContext();
             run_ctx.nodes.exports.dump();
 
             if (host != InvalidNodeId) {

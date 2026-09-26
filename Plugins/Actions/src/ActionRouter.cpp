@@ -7,7 +7,7 @@
 #include <Lattice/Tools/Logger.hpp>
 
 
-void ActionRouter::configure(NodeBuild branch) {
+void ActionRouter::configure(NodeConfigure branch) {
     exports = branch.exports();
     for (auto* input : branch.collect<InputAPI>())
         if (input) registerInput(*input);

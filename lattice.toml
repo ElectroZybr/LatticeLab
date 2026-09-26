@@ -1,4 +1,5 @@
 [Startup]
 # ClassicMD.Universe1 = "on"
-# Window.1 = ["on", "host"]
+# WindowSystem.1 = ["on", "host"]
 # IOSubsystem = "on"
+CLI = "on"

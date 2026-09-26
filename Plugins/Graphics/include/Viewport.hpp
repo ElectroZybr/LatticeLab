@@ -1,19 +1,9 @@
 #pragma once
 
-#include <algorithm>
-#include <span>
 #include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <Lattice/Kernel/NodeViews.hpp>
+#include <Lattice/Kernel/Consts.hpp>
 
-#include "Buffer.hpp"
-#include "CommandList.hpp"
-#include "Device.hpp"
-#include "Camera.hpp"
-
-#include "TransformController.hpp"
-#include "TransformMode.hpp"
-
+#include <GPU/include/CommandList.hpp>
 
 enum class ViewportSizeMode {
     Fixed,
@@ -21,86 +11,31 @@ enum class ViewportSizeMode {
 };
 
 class Viewport : public Lattice::Component {
-    Focus<Camera> camera_;
-    glm::uvec2 position_{};
-    glm::uvec2 size_{1280, 720};
-    ViewportSizeMode sizeMode_ = ViewportSizeMode::Fill;
-
-    // cursor
-    glm::vec2 cursor_{};
-
-    std::unique_ptr<GPU::BindingSet> bindings_;
-    std::unique_ptr<GPU::Buffer> uniform_;
-
 public:
-    explicit Viewport(NodeBuild node) {
-        node.add<Camera>("MainCamera");
-        auto controller = node.addSlot<TransformController>("Camera");
-        controller.choice<FreeCameraController>();
-        node.param("cursor", cursor_);
-
-        auto device_ = node.mount<GPU::Device>();
-        device_.add<class U>()
-    }
-
-    void configure(NodeConfigure node) {
-        camera_ = node.focus<Camera>();
-        camera_->setPosition({0.0f, 0.0f, 2.0f});
-        
-        if (!device_) return;
-
-        GPU::BufferDesc desc{};
-        desc.size = sizeof(glm::mat4);
-        desc.usage = GPU::BufferUsage::Uniform | GPU::BufferUsage::CopyDestination;
-        uniform_ = device_->createBuffer(desc);
-    }
+    virtual ~Viewport() = default;
+    virtual void render(GPU::RenderPass& pass, glm::uvec2 surfaceSize) = 0;
 
     glm::uvec2 position() const noexcept { return position_; }
     void setPosition(glm::uvec2 position) noexcept { position_ = position; }
 
     glm::uvec2 size() const noexcept { return size_; }
-
     void setSize(glm::uvec2 size) noexcept {
         size_ = size;
         sizeMode_ = ViewportSizeMode::Fixed;
     }
 
-    void fitSurface() noexcept {
-        sizeMode_ = ViewportSizeMode::Fill;
-    }
+    void fitSurface() noexcept { sizeMode_ = ViewportSizeMode::Fill; }
 
-    void render(GPU::RenderPass& pass, glm::uvec2 surfaceSize) {
-        if (!camera_ || !device_ || !uniform_ || position_.x >= surfaceSize.x || position_.y >= surfaceSize.y)
-            return;
+    glm::vec2 cursor() const noexcept { return cursor_; }
+    void setCursor(glm::vec2 cursor) noexcept { cursor_ = cursor; }
 
-        const auto available = surfaceSize - position_;
-        const auto requested = sizeMode_ == ViewportSizeMode::Fill ? available : size_;
-        const glm::uvec2 extent{
-            std::min(requested.x, available.x),
-            std::min(requested.y, available.y)
-        };
+protected:
+    bool resolveRect(glm::uvec2 surfaceSize, GPU::Rect& rect) const noexcept;
+    glm::vec2& cursorValue() noexcept { return cursor_; }
 
-        if (!extent.x || !extent.y)
-            return;
-
-        if (!bindings_) {
-            GPU::Binding bind{};
-            bind.binding = 0;
-            bind.buffer = uniform_.get();
-            bind.size = sizeof(glm::mat4);
-            bindings_ = device_->createBindingSet(pipeline, 0, std::span(&bind, 1));
-        }
-
-        const GPU::Rect rect{position_.x, position_.y, extent.x, extent.y};
-        const auto matrix = camera_->viewProjection(float(extent.x) / float(extent.y));
-        device_->writeBuffer(*uniform_, 0, std::as_bytes(std::span(&matrix, 1)));
-
-        pass.setViewport(rect);
-        pass.setScissor(rect);
-        pass.setPipeline(pipeline);
-        pass.setBindings(0, *bindings_);
-        pass.draw(6);
-    }
-
-    glm::vec2 cursor() { return cursor_; }
+private:
+    glm::uvec2 position_{};
+    glm::uvec2 size_{1280, 720};
+    ViewportSizeMode sizeMode_ = ViewportSizeMode::Fill;
+    glm::vec2 cursor_{};
 };
