@@ -31,7 +31,29 @@ TEST(Exports_ActionContextAndTypedArguments, RuntimeFixture,
     REQUIRE(received == "child");
     REQUIRE(context.node() == child);
     REQUIRE(context.output().size() == 1);
-    REQUIRE(context.output().front().get<std::string>() == "done");
+    REQUIRE(std::get<Value>(context.output().front()).get<std::string>() == "done");
+}
+
+TEST(Exports_ActionContextStructuredView, RuntimeFixture,
+    "ActionContext должен возвращать non-owning типизированное представление.") {
+    struct View {
+        int value = 0;
+    } view{42};
+
+    const ExportId action = fixture.build(fixture.root).action(
+        "view",
+        [&](ActionContext& context) {
+            context.present(view);
+        }
+    );
+
+    ActionContext context{fixture.root};
+    fixture.run_ctx.nodes.exports.invoke(action, context);
+
+    REQUIRE(context.output().size() == 1);
+    const auto& output = std::get<ActionView>(context.output().front());
+    REQUIRE(output.is<View>());
+    REQUIRE(output.as<View>().value == 42);
 }
 
 TEST(Exports_LegacyActionCallback, RuntimeFixture,

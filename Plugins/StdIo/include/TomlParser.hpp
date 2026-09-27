@@ -33,7 +33,7 @@ public:
 private:
     static void parseTable(
         const toml::table& table,
-        Lattice::Table& output
+        Lattice::Object& output
     ) {
         for (const auto& [key, node] : table) {
             output.emplace(std::string(key.str()), parseValue(node));
@@ -42,7 +42,7 @@ private:
 
     static Lattice::Value parseValue(const toml::node& node) {
         if (const auto* table = node.as_table()) {
-            Lattice::Table child;
+            Lattice::Object child;
             parseTable(*table, child);
             return child;
         }

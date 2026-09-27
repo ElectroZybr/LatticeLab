@@ -11,3 +11,12 @@ target("StdData")
 
     add_deps("Lattice")
 
+target("StdData.tests")
+    set_kind("shared")
+    set_targetdir(".")
+
+    add_files("tests/Table_tests.cpp")
+    add_includedirs("../..")
+    add_includedirs("include")
+
+    add_deps("Lattice")

@@ -24,7 +24,7 @@ public:
             throw Lattice::Exception(tag, "Failed to open '{}'", path.string());
 
         Document document;
-        Lattice::Table dataset;
+        Lattice::Object dataset;
         std::string line;
         size_t lineNumber = 0;
         std::string section = "Dataset";

@@ -10,7 +10,7 @@ class Document {
 public:
     Document() = default;
 
-    explicit Document(Lattice::Table root)
+    explicit Document(Lattice::Object root)
         : root_(std::move(root)) {}
 
     const Lattice::Value* get(std::string_view key) const {
@@ -35,14 +35,14 @@ public:
         return get(name);
     }
 
-    const Lattice::Table& root() const {
+    const Lattice::Object& root() const {
         return root_;
     }
 
-    Lattice::Table& root() {
+    Lattice::Object& root() {
         return root_;
     }
 
 private:
-    Lattice::Table root_;
+    Lattice::Object root_;
 };

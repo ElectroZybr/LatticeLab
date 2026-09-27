@@ -31,7 +31,7 @@ TEST(NamedSoA_SelectedUniverseSurvivesViewportActivation, Lattice::RuntimeFixtur
     viewport.setFocus("camera", viewport.getId());
     NamedSoALoader loader;
     loader.configure(fixture.root);
-    const Lattice::Value data = Lattice::Table{
+    const Lattice::Value data = Lattice::Object{
         {"target", std::string("AtomData")},
         {"columns", Lattice::Array{std::string("Element"), std::string("Mass")}},
         {"rows", Lattice::Array{Lattice::Array{std::string("H"), 1.008}}}

@@ -22,10 +22,10 @@
 //         if (!exports.exists())
 //             throw Lattice::Exception(tag, "loader is not configured");
 
-//         if (!section.is<Lattice::Table>())
+//         if (!section.is<Lattice::Object>())
 //             return;
 
-//         const auto& table = std::get<Lattice::Table>(section);
+//         const auto& table = std::get<Lattice::Object>(section);
 //         const auto targetIt = table.find("target");
 //         const auto columnsIt = table.find("columns");
 //         const auto rowsIt = table.find("rows");

@@ -7,10 +7,12 @@
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <Lattice/Kernel/Consts.hpp>
 #include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Kernel/TypeName.hpp>
 #include <Lattice/Kernel/Value.hpp>
 #include "Lattice/Tools/LogTree.hpp"
 
@@ -45,6 +47,45 @@ struct Param {
     void (*set)(void*, const Value&) = nullptr;
 };
 
+/**
+ * Non-owning reference to a structured action result.
+ *
+ * The referenced object must remain alive until the caller has consumed the
+ * ActionContext output.
+ */
+class ActionView {
+public:
+    template<typename T>
+    explicit ActionView(T& object) noexcept
+        : object_(&object), type_(typeKey<std::remove_cvref_t<T>>()) {}
+
+    std::string_view type() const noexcept { return type_; }
+
+    template<typename T>
+    bool is() const noexcept {
+        return type_ == typeKey<std::remove_cvref_t<T>>();
+    }
+
+    template<typename T>
+    const std::remove_cvref_t<T>& as() const {
+        using View = std::remove_cvref_t<T>;
+        if (!is<View>())
+            throw Exception(
+                "ActionView",
+                "View contains '{}', requested '{}'",
+                type_,
+                typeKey<View>()
+            );
+        return *static_cast<const View*>(object_);
+    }
+
+private:
+    const void* object_ = nullptr;
+    std::string_view type_;
+};
+
+using ActionOutput = std::variant<Value, ActionView>;
+
 class ActionContext {
 public:
     explicit ActionContext(NodeId node = InvalidNodeId) : node_(node) {}
@@ -52,12 +93,21 @@ public:
     NodeId node() const noexcept { return node_; }
     void setNode(NodeId node) noexcept { node_ = node; }
 
-    void emit(Value value) { output_.push_back(std::move(value)); }
-    const std::vector<Value>& output() const noexcept { return output_; }
+    void emit(Value value) { output_.emplace_back(std::move(value)); }
+
+    template<typename T>
+    void present(const T& view) {
+        output_.emplace_back(std::in_place_type<ActionView>, view);
+    }
+
+    template<typename T>
+    void present(const T&&) = delete;
+
+    std::span<const ActionOutput> output() const noexcept { return output_; }
 
 private:
     NodeId node_ = InvalidNodeId;
-    std::vector<Value> output_;
+    std::vector<ActionOutput> output_;
 };
 
 struct Action {

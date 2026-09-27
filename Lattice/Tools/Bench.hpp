@@ -1,8 +1,8 @@
+#pragma once
+
 #include <chrono>
 #include <cstddef>
 #include <vector>
-// #include <Lattice/Tools/Logger.hpp>
-
 
 #define BENCH1(name) \
     BENCH2(name, "")
