@@ -31,7 +31,8 @@ namespace ParticleDynamics {
     
 class ParticleStorage : public StdData::SoA {
 public:
-    explicit ParticleStorage(NodeBuild branch) {
+    explicit ParticleStorage(NodeBuild branch)
+        : SoA(std::move(branch)) {
 
         addCol<Pos::X>();
         addCol<Pos::Y>();

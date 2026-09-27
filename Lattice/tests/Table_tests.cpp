@@ -62,4 +62,69 @@ TEST(Table_DefaultImplementationBuildsAsNode, RuntimeFixture,
     REQUIRE(configure.resolve<BasicTable>(node) != nullptr);
 }
 
+TEST(Table_BaseExportsViewAction, RuntimeFixture,
+    "Базовый Table должен добавлять view каждой реализации.") {
+    const NodeId node = fixture.run_ctx.nodes.builder.build(
+        fixture.root,
+        fixture.run_ctx.blueprints.id<Table>(),
+        "results"
+    );
+
+    const ExportId view = fixture.run_ctx.nodes.exports.find(node, "view");
+    REQUIRE(view != InvalidExportId);
+
+    ActionContext context{node};
+    fixture.run_ctx.nodes.exports.invoke(view, context);
+
+    REQUIRE(context.output().size() == 1);
+    const auto& output = std::get<ActionView>(context.output().front());
+    REQUIRE(output.is<Table>());
+
+    auto configure = fixture.run_ctx.nodes.configure(fixture.root);
+    REQUIRE(&output.as<Table>() == configure.resolve<Table>(node));
+}
+
+TEST(Table_BaseAddsRows, RuntimeFixture,
+    "Table должен добавлять строки через общий API и export.") {
+    const NodeId node = fixture.run_ctx.nodes.builder.build(
+        fixture.root,
+        fixture.run_ctx.blueprints.id<Table>(),
+        "results"
+    );
+    auto configure = fixture.run_ctx.nodes.configure(fixture.root);
+    Table* table = configure.resolve<Table>(node);
+
+    REQUIRE(table->addRows(2) == 0);
+    REQUIRE(table->addRow() == 2);
+    REQUIRE(table->rows() == 3);
+
+    const ExportId addRow = fixture.run_ctx.nodes.exports.find(node, "addRow");
+    REQUIRE(addRow != InvalidExportId);
+
+    ActionContext context{node};
+    fixture.run_ctx.nodes.exports.invoke(addRow, context);
+    REQUIRE(table->rows() == 4);
+    REQUIRE(std::get<Value>(context.output().front()).get<int64_t>() == 3);
+}
+
+TEST(Table_BaseAddsTypedRows, RuntimeFixture,
+    "Table::addRow должен записывать типизированные значения без Value.") {
+    BasicTable table;
+    table.addColumn<std::string>("name");
+    table.addColumn<double>("mass");
+    table.addColumn<Particle>("particle");
+
+    Table& generic = table;
+    const size_t row = generic.addRow(
+        std::string{"O"},
+        15.999,
+        Particle{8, -2.0}
+    );
+
+    REQUIRE(row == 0);
+    REQUIRE(table.values<std::string>("name")[0] == "O");
+    REQUIRE(table.values<double>("mass")[0] == 15.999);
+    REQUIRE(table.values<Particle>("particle")[0] == (Particle{8, -2.0}));
+}
+
 }

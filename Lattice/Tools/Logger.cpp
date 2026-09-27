@@ -100,7 +100,7 @@ void LogSystem::writeConsole(std::string_view text) {
         std::cout << text << std::flush;
 }
 
-void LogSystem::write(Level level, const Text& text) {
+void LogSystem::write(Level level, const TextFormatter& text) {
     std::vector<Sink> sinks;
 
     {
@@ -128,7 +128,7 @@ void LogSystem::write(Level level, const Text& text) {
         sink(event);
 }
 
-void LoggerImpl::print(Level level, const Text& text, bool isScopeFinal) {
+void LoggerImpl::print(Level level, const TextFormatter& text, bool isScopeFinal) {
     LogSystem::write(level, text);
 
     if (scopeCount_ != 0) {

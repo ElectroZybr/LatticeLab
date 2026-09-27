@@ -1,14 +1,21 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
+#include <limits>
 #include <optional>
 #include <span>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
 #include <Lattice/Kernel/Consts.hpp>
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/TypeName.hpp>
+#include <Lattice/Kernel/NodeViews.hpp>
+
+
+class NodeBuild;
 
 namespace Lattice {
 
@@ -97,18 +104,64 @@ private:
 };
 
 /**
- * Read-only runtime contract for tabular data.
+ * Runtime contract for tabular data.
  *
- * Implementations own storage and mutation APIs. Consumers depend only on the
- * schema and non-owning column views exposed here.
+ * Implementations own storage and typed mutation APIs. The common contract
+ * exposes schema, non-owning column views and row growth.
  */
 class Table : public Component {
 public:
+    Table() = default;
+    explicit Table(::NodeBuild branch) {
+        branch.action("view", [this](ActionContext& context) {
+            context.present(*this);
+        });
+        branch.action("addRow", [this](ActionContext& context) {
+            context.emit(Value{static_cast<int64_t>(addRow())});
+        });
+    }
     virtual ~Table() = default;
 
     virtual size_t rows() const noexcept = 0;
     virtual size_t columns() const noexcept = 0;
     virtual ColumnView column(size_t index) const = 0;
+    virtual void resize(size_t rows) = 0;
+
+    size_t addRow() {
+        return addRows(1);
+    }
+
+    template<typename... Values>
+        requires (sizeof...(Values) > 0)
+    size_t addRow(Values&&... values) {
+        if (sizeof...(Values) != columns())
+            throw Exception(
+                "Table",
+                "Row contains {} values, table has {} columns",
+                sizeof...(Values),
+                columns()
+            );
+
+        validateRow<0, Values...>();
+        const size_t row = addRow();
+
+        try {
+            assignRow<0>(row, std::forward<Values>(values)...);
+        } catch (...) {
+            resize(row);
+            throw;
+        }
+
+        return row;
+    }
+
+    size_t addRows(size_t count) {
+        const size_t first = rows();
+        if (count > std::numeric_limits<size_t>::max() - first)
+            throw Exception("Table", "Row count overflow");
+        resize(first + count);
+        return first;
+    }
 
     std::optional<size_t> findColumn(std::string_view name) const {
         for (size_t index = 0; index < columns(); ++index) {
@@ -123,6 +176,43 @@ public:
         if (!index)
             throw Exception("Table", "Column '{}' not found", name);
         return column(*index);
+    }
+
+protected:
+    virtual void* mutableElement(size_t column, size_t row) = 0;
+
+private:
+    template<size_t Index>
+    void validateRow() const {}
+
+    template<size_t Index, typename First, typename... Rest>
+    void validateRow() const {
+        using Value = std::remove_cvref_t<First>;
+        const ColumnView target = column(Index);
+        if (!target.type().template is<Value>())
+            throw Exception(
+                "Table",
+                "Column '{}' contains '{}', row value is '{}'",
+                target.name(),
+                target.type().name,
+                typeKey<Value>()
+            );
+
+        if constexpr (sizeof...(Rest) > 0)
+            validateRow<Index + 1, Rest...>();
+    }
+
+    template<size_t Index>
+    void assignRow(size_t) {}
+
+    template<size_t Index, typename First, typename... Rest>
+    void assignRow(size_t row, First&& first, Rest&&... rest) {
+        using Value = std::remove_cvref_t<First>;
+        *static_cast<Value*>(mutableElement(Index, row)) =
+            std::forward<First>(first);
+
+        if constexpr (sizeof...(Rest) > 0)
+            assignRow<Index + 1>(row, std::forward<Rest>(rest)...);
     }
 };
 

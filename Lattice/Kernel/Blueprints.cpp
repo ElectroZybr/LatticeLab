@@ -4,7 +4,8 @@
 #include <format>
 
 #include <Lattice/Kernel/Exception.hpp>
-#include <Lattice/Tools/LogTree.hpp>
+#include <Lattice/Tools/Logger.hpp>
+#include <Lattice/Tools/TreeFormatter.hpp>
 
 namespace Lattice {
 
@@ -236,7 +237,7 @@ std::vector<BlueprintId> Blueprints::getImpls(BlueprintId api, bool constructibl
 }
 
 void Blueprints::dumpTree() const {
-    Logger::Tree tree("Blueprints");
+    Lattice::TreeFormatter tree("Blueprints");
 
     auto append = [&](auto&& self, BlueprintId id, size_t depth) -> void {
         tree.node(
@@ -262,7 +263,8 @@ void Blueprints::dumpTree() const {
             append(append, id, 0);
     }
 
-    tree.print();
+    Logger::message(tree.format());
+    Logger::blank();
 }
 
 void Blueprints::validateName(std::string_view name) {

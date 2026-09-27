@@ -1,6 +1,6 @@
 #include <Lattice/Kernel/Requirements.hpp>
 #include <Lattice/Tools/Logger.hpp>
-#include "Lattice/Tools/LogTree.hpp"
+#include "Lattice/Tools/TreeFormatter.hpp"
 
 #include <format>
 #include <unordered_set>
@@ -47,7 +47,7 @@ std::vector<std::string> collectUniqueList(std::string_view name, const Blueprin
     return result;
 }
 
-void appendComposition(Logger::Tree& tree, std::string_view name, size_t depth, const Blueprints& blueprints, std::unordered_set<std::string>& seen) {
+void appendComposition(Lattice::TreeFormatter& tree, std::string_view name, size_t depth, const Blueprints& blueprints, std::unordered_set<std::string>& seen) {
     if (!seen.insert(std::string(name)).second)
         return;
 
@@ -82,7 +82,7 @@ std::vector<std::string> uniqueList(std::string_view name, const Blueprints& blu
 std::vector<std::string> printUniqueList(std::string_view name, const Blueprints& blueprints) {
     const auto requirements = collectUniqueList(name, blueprints);
 
-    Logger::Tree tree{"Dependencies"};
+    Lattice::TreeFormatter tree{"Dependencies"};
 
     for (const auto& requirement : requirements) {
         const bool exists = (blueprints.resolve(requirement) != Blueprints::InvalidId);
@@ -90,7 +90,8 @@ std::vector<std::string> printUniqueList(std::string_view name, const Blueprints
         tree.node(std::format("{}{}", exists ? Color::paint("✓ ", Color::ok) : Color::paint("✗ ", Color::error), requirement));
     }
 
-    tree.print();
+    Logger::message(tree.format());
+    Logger::blank();
     return requirements;
 }
 
@@ -100,11 +101,12 @@ void printCompositionTree(std::string_view name, const Blueprints& blueprints) {
         return;
     }
 
-    Logger::Tree tree{std::string(name)};
+    Lattice::TreeFormatter tree{std::string(name)};
     std::unordered_set<std::string> seen;
 
     appendComposition(tree, name, 0, blueprints, seen);
-    tree.print();
+    Logger::message(tree.format());
+    Logger::blank();
 }
 
 bool check(std::string_view name, const Blueprints& blueprints) {

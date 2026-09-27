@@ -13,3 +13,5 @@
 
 // Tools
 #include <Lattice/Tools/Logger.hpp>
+#include <Lattice/Tools/TableFormatter.hpp>
+#include <Lattice/Tools/TreeFormatter.hpp>

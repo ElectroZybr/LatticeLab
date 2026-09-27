@@ -3,7 +3,7 @@
 #include <chrono>
 #include <thread>
 
-#include <Lattice/Tools/LogTree.hpp>
+#include <Lattice/Tools/TreeFormatter.hpp>
 #include <Lattice/Tools/Logger.hpp>
 
 #include <CLI/include/LocalTerminal.hpp>
@@ -141,13 +141,13 @@ void CLI::configure(NodeConfigure branch) {
 
 void CLI::list(Lattice::ActionContext& context) const {
     for (Lattice::NodeId child : tree_.children(context.node()))
-        context.emit(Lattice::Value{Text::format("<b><c>{}<//>", tree_.label(child)).render()});
+        context.emit(Lattice::Value{TextFormatter::format("<b><c>{}<//>", tree_.label(child)).render()});
 }
 
 void CLI::help(Lattice::ActionContext& context) const {
     const auto entries = exports_.available(context.node());
 
-    Logger::Tree output(std::format("Context {}", tree_.path(context.node())));
+    Lattice::TreeFormatter output(std::format("Context {}", tree_.path(context.node())));
     const auto appendSection = [&](bool global) {
         for (const auto entry : entries) {
             if (entry.global != global)
@@ -192,11 +192,11 @@ void CLI::help(Lattice::ActionContext& context) const {
         appendSection(false);
     }
 
-    context.emit(Lattice::Value{output.text().render()});
+    context.emit(Lattice::Value{output.format().render()});
 }
 
 void CLI::showTree(Lattice::ActionContext& context) const {
-    Logger::Tree logTree(tree_.label(context.node()));
+    Lattice::TreeFormatter logTree(tree_.label(context.node()));
     bool root = true;
     for (const Lattice::TreeEntry entry : tree_.subtree(context.node())) {
         if (root) {
@@ -206,7 +206,7 @@ void CLI::showTree(Lattice::ActionContext& context) const {
         logTree.node(formatTreeNode(tree_.info(entry.id)), entry.depth - 1);
     }
 
-    context.emit(Lattice::Value{logTree.text().render()});
+    context.emit(Lattice::Value{logTree.format().render()});
 }
 
 void CLI::changeDirectory(Lattice::ActionContext& context, std::string path) const {

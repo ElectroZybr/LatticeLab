@@ -13,7 +13,8 @@ struct Mass    {using type = float;};
 
 class AtomData final : public StdData::NamedSoA {
 public:
-    explicit AtomData(NodeBuild branch) {
+    explicit AtomData(NodeBuild branch)
+        : NamedSoA(std::move(branch)) {
         addCol<Element>();
         addCol<Mass>();
         addCol<Valence>();

@@ -13,7 +13,7 @@ namespace CLIPlugin {
 namespace {
 
 void reply(Terminal& terminal, Level level, std::string_view text) {
-    Text message;
+    TextFormatter message;
     message.append(text);
     terminal.write(Logger::line(level, "CLI", message).render() + '\n');
 }
