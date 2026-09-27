@@ -57,23 +57,80 @@ std::string formatTreeNode(const Lattice::TreeNodeInfo& node) {
     return line + std::format(" <gr>#{}</>", node.id);
 }
 
+std::string_view valueType(const Lattice::Value& value) {
+    if (value.is<std::string>()) return "string";
+    if (value.is<bool>()) return "bool";
+    if (value.is<int64_t>()) return "int";
+    if (value.is<double>()) return "number";
+    if (value.is<glm::vec2>()) return "vec2";
+    if (value.is<glm::vec3>()) return "vec3";
+    if (value.is<glm::vec4>()) return "vec4";
+    if (value.is<Lattice::Array>()) return "array";
+    return "table";
 }
+
+std::string formatExport(
+    const ExportsView& exports,
+    const Lattice::VisibleExport& entry,
+    std::string_view name
+) {
+    if (entry.state == Lattice::ContextResolutionState::Ambiguous) {
+        std::string candidates;
+        for (Lattice::NodeId candidate : exports.candidates(entry)) {
+            if (!candidates.empty()) candidates += ", ";
+            candidates += std::format("#{}", candidate);
+        }
+        return std::format("<r>{}</> <gr>ambiguous: {}</>", name, candidates);
+    }
+
+    if (exports.kind(entry) == Lattice::ExportKind::Param) {
+        const auto value = exports.value(entry);
+        return std::format(
+            "<g>@</> {} <gr>=</> <c>{}</> <gr>#{}</>",
+            name,
+            value ? value->toString() : "unreadable",
+            entry.exportId
+        );
+    }
+
+    std::string arguments;
+    for (const Lattice::Value& argument : exports.argumentTypes(entry))
+        arguments += std::format(" <gr><{}></>", valueType(argument));
+
+    return std::format("<y>λ</> {}{} <gr>#{}</>", name, arguments, entry.exportId);
+}
+
+}
+
+void CLI::logo() const {
+    Logger::message(R"(<c>
+    __    ___  ____________________________   ________    ____
+   / /   /   |/_  __/_  __/  _/ ____/ ____/  / ____/ /   /  _/
+  / /   / /| | / /   / /  / // /   / __/    / /   / /    / /
+ / /___/ ___ |/ /   / / _/ // /___/ /___   / /___/ /____/ /
+/_____/_/  |_/_/   /_/ /___/\____/_____/   \____/_____/___/
+</>)");
+}
+
 
 CLI::CLI(NodeBuild branch) {
     tree_ = branch.tree();
-    branch.action("ls", [this](Lattice::ActionContext& context) { list(context); });
-    branch.action<std::string>(
+    branch.globalAction("ls", [this](Lattice::ActionContext& context) { list(context); });
+    branch.globalAction("help", [this](Lattice::ActionContext& context) { help(context); });
+    branch.globalAction<std::string>(
         "cd",
         [this](Lattice::ActionContext& context, std::string path) {
             changeDirectory(context, std::move(path));
         }
     );
-    branch.action("tree", [this](Lattice::ActionContext& context) { showTree(context); });
+    branch.globalAction("tree", [this](Lattice::ActionContext& context) { showTree(context); });
+    branch.globalAction("logo", [this] { logo(); });
     branch.add<CLIPlugin::LocalTerminal>("local");
 }
 
 void CLI::configure(NodeConfigure branch) {
-    commands_.setExports(branch.exports());
+    exports_ = branch.exports();
+    commands_.setExports(exports_);
     commands_.setTree(tree_);
     terminals_ = branch.children<CLIPlugin::Terminal>();
 
@@ -85,6 +142,57 @@ void CLI::configure(NodeConfigure branch) {
 void CLI::list(Lattice::ActionContext& context) const {
     for (Lattice::NodeId child : tree_.children(context.node()))
         context.emit(Lattice::Value{Text::format("<b><c>{}<//>", tree_.label(child)).render()});
+}
+
+void CLI::help(Lattice::ActionContext& context) const {
+    const auto entries = exports_.available(context.node());
+
+    Logger::Tree output(std::format("Context {}", tree_.path(context.node())));
+    const auto appendSection = [&](bool global) {
+        for (const auto entry : entries) {
+            if (entry.global != global)
+                continue;
+
+            std::string names{exports_.name(entry)};
+            if (entry.exportId != Lattice::InvalidExportId) {
+                bool first = true;
+                for (const auto candidate : entries) {
+                    if (candidate.global != global || candidate.exportId != entry.exportId)
+                        continue;
+                    if (candidate.role == entry.role)
+                        break;
+                    first = false;
+                    break;
+                }
+                if (!first)
+                    continue;
+
+                for (const auto alias : entries) {
+                    if (alias.global != global ||
+                        alias.exportId != entry.exportId ||
+                        alias.role == entry.role)
+                        continue;
+                    names += " | ";
+                    names += exports_.name(alias);
+                }
+            }
+
+            output.node(formatExport(exports_, entry, names), 1);
+        }
+    };
+
+    output.node("<b><c>Global<//>", 0);
+    appendSection(true);
+
+    bool hasLocal = false;
+    for (const auto entry : entries)
+        hasLocal = hasLocal || !entry.global;
+    if (hasLocal) {
+        output.node("<b><m>Local<//>", 0);
+        appendSection(false);
+    }
+
+    context.emit(Lattice::Value{output.text().render()});
 }
 
 void CLI::showTree(Lattice::ActionContext& context) const {
@@ -114,8 +222,19 @@ void CLI::run() {
         [this](std::string_view text) { broadcast(text); }
     );
 
-    for (CLIPlugin::Terminal* terminal : terminals_)
+    for (CLIPlugin::Terminal* terminal : terminals_) {
         terminal->attach();
+
+        const auto resolved = commands_.getExports().resolve(
+            commands_.getExports().role("logo"),
+            terminal->current()
+        );
+
+        if (resolved && resolved.invoke) {
+            Lattice::ActionContext context{terminal->current()};
+            resolved.invoke(resolved.object, context, {});
+        }
+    }
 
     while (!stopRequested()) {
         if (!pollTerminals()) {
@@ -149,11 +268,8 @@ bool CLI::pollTerminals() {
             continue;
         }
 
-        if (input.line &&
-            commands_.execute(*terminal, *input.line) == CLIPlugin::CommandResult::Detach) {
-            terminal->detach();
-            continue;
-        }
+        if (input.line)
+            commands_.execute(*terminal, *input.line);
 
         anyAttached = true;
     }

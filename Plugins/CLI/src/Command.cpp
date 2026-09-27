@@ -1,5 +1,7 @@
+#include <charconv>
 #include <exception>
 #include <format>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -20,45 +22,61 @@ void reply(Terminal& terminal, std::string_view text) {
     reply(terminal, Level::Info, text);
 }
 
+std::optional<Lattice::ExportId> parseExportId(std::string_view command) {
+    if (command.size() < 2 || command.front() != '#')
+        return std::nullopt;
+
+    Lattice::ExportId id = Lattice::InvalidExportId;
+    const char* begin = command.data() + 1;
+    const char* end = command.data() + command.size();
+    const auto [position, error] = std::from_chars(begin, end, id);
+    if (error != std::errc{} || position != end)
+        return std::nullopt;
+    return id;
 }
 
-CommandResult CommandDispatcher::execute(
+}
+
+void CommandDispatcher::execute(
     Terminal& terminal,
     std::string_view command
 ) const {
     command = trim(command);
     if (command.empty())
-        return CommandResult::Continue;
+        return;
 
     const size_t separator = command.find_first_of(" \t");
-    const std::string_view name = command.substr(0, separator);
+    const std::string_view selector = command.substr(0, separator);
     const std::string_view argument = separator == std::string_view::npos
         ? std::string_view{}
         : trim(command.substr(separator + 1));
 
-    if (name == "quit" || name == "exit")
-        return CommandResult::Detach;
-
-    if (name == "help") {
-        reply(terminal, "Commands: help, quit, <action>, <parameter>, <parameter> <value>");
-        return CommandResult::Continue;
-    }
-
     try {
-        const Lattice::ResolvedExport resolved = exports_.resolve(
-            exports_.role(name),
-            terminal.current()
-        );
+        Lattice::ResolvedExport resolved;
+        std::string_view name = selector;
+        if (selector.starts_with('#')) {
+            const auto id = parseExportId(selector);
+            if (!id) {
+                reply(terminal, Level::Warning, std::format("Invalid export id '{}'", selector));
+                return;
+            }
+            resolved = exports_.resolveExport(*id, terminal.current());
+            if (resolved)
+                name = exports_.name(*id);
+        } else {
+            resolved = exports_.resolve(exports_.role(selector), terminal.current());
+        }
+
         if (!resolved) {
-            reply(terminal, Level::Warning, std::format("Unknown command '{}'", name));
-            return CommandResult::Continue;
+            reply(terminal, Level::Warning, std::format("Unknown command '{}'", selector));
+            return;
         }
 
         if (resolved.invoke) {
             const auto sourceArguments = parseArguments(argument);
             if (!sourceArguments) {
                 reply(terminal, Level::Warning, "Invalid quoted argument");
-                return CommandResult::Continue;
+                return;
             }
 
             if (sourceArguments->size() != resolved.argumentTypes.size()) {
@@ -71,7 +89,7 @@ CommandResult CommandDispatcher::execute(
                         sourceArguments->size()
                     )
                 );
-                return CommandResult::Continue;
+                return;
             }
 
             std::vector<Lattice::Value> arguments;
@@ -84,7 +102,7 @@ CommandResult CommandDispatcher::execute(
                         terminal, Level::Warning,
                         std::format("Invalid argument {} for action '{}'", index + 1, name)
                     );
-                    return CommandResult::Continue;
+                    return;
                 }
                 arguments.push_back(std::move(*value));
             }
@@ -111,24 +129,24 @@ CommandResult CommandDispatcher::execute(
             }
             if (!output.empty())
                 terminal.write(output);
-            return CommandResult::Continue;
+            return;
         }
 
         if (!resolved.get) {
             reply(terminal, Level::Warning, std::format("Export '{}' is not readable", name));
-            return CommandResult::Continue;
+            return;
         }
 
         const Lattice::Value current = resolved.get(resolved.object);
         if (argument.empty()) {
             reply(terminal, std::format("{} = {}", name, current.toString()));
-            return CommandResult::Continue;
+            return;
         }
 
         const auto value = parseValue(argument, current);
         if (!value || !resolved.set) {
             reply(terminal, Level::Warning, std::format("Cannot assign '{}' to '{}'", argument, name));
-            return CommandResult::Continue;
+            return;
         }
 
         resolved.set(resolved.object, *value);
@@ -136,8 +154,6 @@ CommandResult CommandDispatcher::execute(
     } catch (const std::exception& error) {
         reply(terminal, Level::Error, std::format("Command failed: {}", error.what()));
     }
-
-    return CommandResult::Continue;
 }
 
 }

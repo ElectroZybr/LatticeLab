@@ -167,7 +167,7 @@ void NodeContext::removeCandidate(ContextScopeId scopeId, RoleId roleId, NodeId 
 void NodeContext::set(ContextScopeId scopeId, RoleId roleId, NodeId target) {
     registry_.require(target);
 
-    auto resolution = resolveInfo(scopeId, roleId);
+    const ContextResolution resolution = resolveInfo(scopeId, roleId);
 
     if (std::ranges::find(resolution.candidates, target) == resolution.candidates.end())
         throw Exception(
@@ -200,7 +200,7 @@ ContextResolution NodeContext::resolveInfo(ContextScopeId scopeId, RoleId roleId
     roles_.require(roleId);
 
     NodeId target = InvalidNodeId;
-    std::vector<NodeId> candidates;
+    std::span<const NodeId> candidates;
 
     for (ContextScopeId scope = scopeId;
          scope != InvalidContextScopeId;
@@ -227,7 +227,7 @@ ContextResolution NodeContext::resolveInfo(ContextScopeId scopeId, RoleId roleId
         return {
             .state = ContextResolutionState::Resolved,
             .target = target,
-            .candidates = std::move(candidates)
+            .candidates = candidates
         };
 
     if (candidates.empty())
@@ -237,13 +237,13 @@ ContextResolution NodeContext::resolveInfo(ContextScopeId scopeId, RoleId roleId
         return {
             .state = ContextResolutionState::Resolved,
             .target = candidates.front(),
-            .candidates = std::move(candidates)
+            .candidates = candidates
         };
 
     return {
         .state = ContextResolutionState::Ambiguous,
         .target = InvalidNodeId,
-        .candidates = std::move(candidates)
+        .candidates = candidates
     };
 }
 
@@ -275,12 +275,12 @@ ContextResolution NodeContext::resolveInfo(RoleId roleId) const {
 }
 
 NodeId NodeContext::resolve(ContextScopeId scope, RoleId role) const {
-    const auto result = resolveInfo(scope, role);
+    const ContextResolution result = resolveInfo(scope, role);
     return result ? result.target : InvalidNodeId;
 }
 
 NodeId NodeContext::resolve(RoleId role) const {
-    const auto result = resolveInfo(role);
+    const ContextResolution result = resolveInfo(role);
     return result ? result.target : InvalidNodeId;
 }
 

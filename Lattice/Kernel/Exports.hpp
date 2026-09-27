@@ -16,6 +16,8 @@
 
 namespace Lattice {
 
+enum class ContextResolutionState : uint8_t;
+
 using ExportId = uint32_t;
 inline constexpr ExportId InvalidExportId = std::numeric_limits<ExportId>::max();
 
@@ -79,6 +81,15 @@ struct ResolvedExport {
     explicit operator bool() const noexcept {
         return object || get || set || invoke;
     }
+};
+
+struct VisibleExport {
+    RoleId role = InvalidRoleId;
+    NodeId owner = InvalidNodeId;
+    ExportId exportId = InvalidExportId;
+    ContextScopeId scope = InvalidContextScopeId;
+    ContextResolutionState state{};
+    bool global = false;
 };
 
 class Exports {
@@ -165,6 +176,17 @@ public:
         return it == index_.end() ? InvalidExportId : it->second;
     }
 
+    void alias(NodeId owner, std::string_view name, ExportId target) {
+        if (target >= exports_.size() || exports_[target].owner != owner)
+            throw Exception("Exports", "Export #{} does not belong to node #{}", target, owner);
+
+        const ExportKey key{owner, std::string(name)};
+        if (index_.contains(key))
+            throw Exception("Exports", "Export #{}:'{}' already exists", owner, name);
+
+        index_.emplace(std::move(key), target);
+    }
+
     const Export* get(ExportId id) const {
         return id < exports_.size() ? &exports_[id] : nullptr;
     }
@@ -233,11 +255,14 @@ public:
     }
 
     void remove(NodeId owner) {
+        std::erase_if(index_, [owner](const auto& item) {
+            return item.first.owner == owner;
+        });
+
         for (ExportId id = 0; id < exports_.size(); ++id) {
             if (exports_[id].owner != owner)
                 continue;
 
-            index_.erase(ExportKey{owner, exports_[id].name});
             exports_[id].owner = InvalidNodeId;
             params_[id] = {};
             actions_[id] = {};

@@ -9,16 +9,12 @@
 
 namespace CLIPlugin {
 
-enum class CommandResult {
-    Continue,
-    Detach
-};
-
 class CommandDispatcher {
 public:
     void setExports(ExportsView exports) { exports_ = exports; }
     void setTree(Lattice::TreeView tree) { tree_ = tree; }
-    CommandResult execute(Terminal& terminal, std::string_view command) const;
+    void execute(Terminal& terminal, std::string_view command) const;
+    ExportsView getExports() { return exports_; }
 
 private:
     ExportsView exports_;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <filesystem>
 #include <csignal>
 #include <string>
@@ -31,7 +32,7 @@ class Runtime {
     NodeId host = InvalidNodeId;
     DLLoader dlLoader;
     PluginManager pluginManager;
-    bool running = true;
+    std::atomic<bool> running{true};
     inline static volatile std::sig_atomic_t interrupted = 0;
     
 public:
@@ -129,8 +130,9 @@ public:
                     if (entry.enabled)
                         buildBranch(entry);
                 auto build = run_ctx.nodes.build(root);
-                build.action("dumpContext", [this]() { run_ctx.nodes.ops.dumpContext(); });
                 build.action("dumpBlueprints", [this]() { run_ctx.blueprints.dumpTree(); });
+                const ExportId quit = build.globalAction("quit", [this] { requestExit(); });
+                build.globalAlias("exit", quit);
                 scope.finish("<b>Build finished</>");
             }
 
@@ -211,6 +213,16 @@ public:
     }
 
 private:
+    void requestExit() {
+        running = false;
+
+        if (host == InvalidNodeId)
+            return;
+
+        if (auto* service = run_ctx.nodes.configure(root).resolve<ServiceAPI>(host))
+            service->stop();
+    }
+
     void loadStartup() {
         // const ObjectId id = run_ctx.resolveFocus(InvalidFocusScopeId, run_ctx.roles.find("load"));
         // if (id == InvalidObjectId) {

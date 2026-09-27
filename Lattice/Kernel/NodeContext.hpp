@@ -43,7 +43,7 @@ enum class ContextResolutionState : uint8_t {
 struct ContextResolution {
     ContextResolutionState state = ContextResolutionState::Missing;
     NodeId target = InvalidNodeId;
-    std::vector<NodeId> candidates;
+    std::span<const NodeId> candidates;
 
     explicit operator bool() const noexcept {
         return state == ContextResolutionState::Resolved;
@@ -88,6 +88,7 @@ public:
     void reset(ContextScopeId scope, RoleId role);
 
     // resolution
+    // candidates is a non-owning view invalidated by context mutation.
     ContextResolution resolveInfo(ContextScopeId scope, RoleId role) const;
     ContextResolution resolveInfo(RoleId role) const;
 

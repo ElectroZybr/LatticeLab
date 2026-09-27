@@ -46,4 +46,118 @@ TEST(Exports_LegacyActionCallback, RuntimeFixture,
     REQUIRE(invoked);
 }
 
+TEST(Exports_LocalScopeIsCreatedLazily, RuntimeFixture,
+    "Первый локальный export должен создать scope владельца и быть виден только из его ветки.") {
+    auto& nodes = fixture.run_ctx.nodes;
+    const NodeId branch = nodes.factory.folder(fixture.root, "branch");
+    bool invoked = false;
+
+    REQUIRE(nodes.context.findScope(branch) == InvalidContextScopeId);
+    nodes.build(branch).action("local", [&] { invoked = true; });
+
+    const ContextScopeId scope = nodes.context.findScope(branch);
+    REQUIRE(scope != InvalidContextScopeId);
+
+    ExportsView exports = nodes.configure(branch).exports();
+    const RoleId role = exports.role("local");
+    REQUIRE(!exports.resolve(role, fixture.root));
+
+    ResolvedExport local = exports.resolve(role, branch);
+    REQUIRE(local.invoke != nullptr);
+    ActionContext context{branch};
+    local.invoke(local.object, context, {});
+    REQUIRE(invoked);
+}
+
+TEST(Exports_GlobalDoesNotCreateOwnerScope, RuntimeFixture,
+    "Глобальный export должен быть доступен из любой ветки без создания scope владельца.") {
+    auto& nodes = fixture.run_ctx.nodes;
+    const NodeId owner = nodes.factory.folder(fixture.root, "owner");
+    const NodeId branch = nodes.factory.folder(fixture.root, "branch");
+    bool invoked = false;
+
+    nodes.build(owner).globalAction("global", [&] { invoked = true; });
+    REQUIRE(nodes.context.findScope(owner) == InvalidContextScopeId);
+
+    ExportsView exports = nodes.configure(branch).exports();
+    const RoleId role = exports.role("global");
+    ResolvedExport global = exports.resolve(role, branch);
+    REQUIRE(global.invoke != nullptr);
+
+    const auto visible = exports.available(branch);
+    auto visibleIt = visible.begin();
+    REQUIRE(visibleIt != visible.end());
+    REQUIRE(exports.name(*visibleIt) == "global");
+    REQUIRE(visibleIt->global);
+    REQUIRE(visibleIt->state == ContextResolutionState::Resolved);
+    ++visibleIt;
+    REQUIRE(visibleIt == visible.end());
+
+    ActionContext context{branch};
+    global.invoke(global.object, context, {});
+    REQUIRE(invoked);
+}
+
+TEST(Exports_LocalShadowsGlobal, RuntimeFixture,
+    "Локальный export с тем же именем должен перекрывать глобальный внутри своей ветки.") {
+    auto& nodes = fixture.run_ctx.nodes;
+    const NodeId globalOwner = nodes.factory.folder(fixture.root, "global-owner");
+    const NodeId branch = nodes.factory.folder(fixture.root, "branch");
+    int selected = 0;
+
+    const ExportId globalId = nodes.build(globalOwner).globalAction("select", [&] { selected = 1; });
+    const ExportId localId = nodes.build(branch).action("select", [&] { selected = 2; });
+
+    ExportsView exports = nodes.configure(branch).exports();
+    const RoleId role = exports.role("select");
+
+    ActionContext rootContext{fixture.root};
+    ResolvedExport global = exports.resolve(role, fixture.root);
+    global.invoke(global.object, rootContext, {});
+    REQUIRE(selected == 1);
+
+    ActionContext branchContext{branch};
+    ResolvedExport local = exports.resolve(role, branch);
+    local.invoke(local.object, branchContext, {});
+    REQUIRE(selected == 2);
+
+    REQUIRE(exports.resolveExport(localId, branch));
+    REQUIRE(!exports.resolveExport(globalId, branch));
+    REQUIRE(exports.resolveExport(globalId, fixture.root));
+
+    const auto visible = exports.available(branch);
+    auto visibleIt = visible.begin();
+    REQUIRE(visibleIt != visible.end());
+    REQUIRE(visibleIt->owner == branch);
+    REQUIRE(!visibleIt->global);
+    ++visibleIt;
+    REQUIRE(visibleIt == visible.end());
+}
+
+TEST(Exports_GlobalAliasSharesExport, RuntimeFixture,
+    "Alias должен разрешаться в тот же export без дублирования action.") {
+    auto& nodes = fixture.run_ctx.nodes;
+    const NodeId owner = nodes.factory.folder(fixture.root, "owner");
+    const NodeId branch = nodes.factory.folder(fixture.root, "branch");
+    int invoked = 0;
+
+    auto build = nodes.build(owner);
+    const ExportId target = build.globalAction("quit", [&] { ++invoked; });
+    build.globalAlias("exit", target);
+
+    ExportsView exports = nodes.configure(branch).exports();
+    ResolvedExport quit = exports.resolve(exports.role("quit"), branch);
+    ResolvedExport exit = exports.resolve(exports.role("exit"), branch);
+
+    REQUIRE(quit);
+    REQUIRE(exit);
+    REQUIRE(exports.resolveExport(target, branch));
+    REQUIRE(exports.name(target) == "quit");
+
+    ActionContext context{branch};
+    quit.invoke(quit.object, context, {});
+    exit.invoke(exit.object, context, {});
+    REQUIRE(invoked == 2);
+}
+
 }
