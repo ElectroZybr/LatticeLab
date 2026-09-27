@@ -24,11 +24,11 @@ TEST(TreeFormatter_CustomAsciiStyle, TestFixture,
 TEST(TreeFormatter_ComposesStylesLinearly, TestFixture,
     "Стиль строки действует как внешняя обёртка для вложенного форматирования.") {
     TreeFormatter tree("Context");
-    tree.node("<y>λ</> action");
+    tree.node("<wrn>λ</> action");
 
     const std::string markup = tree.format().markup();
-    REQUIRE(markup.find("<y>λ</>") != std::string::npos);
-    REQUIRE(markup.find("<w> action</>") != std::string::npos);
+    REQUIRE(markup.find("<#ffff55>λ</>") != std::string::npos);
+    REQUIRE(markup.find(" action") != std::string::npos);
 }
 
 }

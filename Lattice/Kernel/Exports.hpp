@@ -169,10 +169,10 @@ public:
         params_.push_back({
             .object = &value,
             .get = [](const void* object) -> Value {
-                return Value{*static_cast<const T*>(object)};
+                return ParamAdapter<T>::get(*static_cast<const T*>(object));
             },
             .set = [](void* object, const Value& value) {
-                *static_cast<T*>(object) = value.get<T>();
+                ParamAdapter<T>::set(*static_cast<T*>(object), value);
             }
         });
 
@@ -334,8 +334,8 @@ public:
                 value = param.get ? param.get(param.object).toString() : "<unreadable>";
             }
 
-            const std::string_view kind = entry.kind == ExportKind::Param ? "<g>@</>" : "<y>λ</>";
-            tree.node(std::format("{}{}<gr> = {}</>", kind, entry.name, value), 0);
+            const std::string_view kind = entry.kind == ExportKind::Param ? "<ok>@</>" : "<wrn>λ</>";
+            tree.node(std::format("{}{}<mut2> = {}</>", kind, entry.name, value), 0);
         }
 
         Logger::message(tree.format());

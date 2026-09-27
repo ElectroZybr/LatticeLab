@@ -19,42 +19,42 @@ std::string formatTreeNode(const Lattice::TreeNodeInfo& node) {
 
     switch (node.kind) {
         case Lattice::NodeKind::Folder:
-            line = std::format("{} <m>F</>", node.name);
+            line = std::format("{} <magenta>F</>", node.name);
             break;
 
         case Lattice::NodeKind::Component:
             line = node.name.empty()
-                ? std::format("{} <g>C</>", node.type)
-                : std::format("{}<gr>::{}</> <g>C</>", node.type, node.name);
+                ? std::format("{} <param>C</>", node.type)
+                : std::format("{}<mut2>::{}</> <param>C</>", node.type, node.name);
             break;
 
         case Lattice::NodeKind::Slot:
             line = node.name.empty()
                 ? node.type
-                : std::format("{}<gr>::{}</>", node.type, node.name);
+                : std::format("{}<mut2>::{}</>", node.type, node.name);
             line += node.hasObject
-                ? std::format("<gr>::<c>{}<//> <c>S</>", node.implementation)
-                : "<gr>::<c>empty<//> <c>S</>";
+                ? std::format("<mut2>::</><a2>{}</> <a2>S</>", node.implementation)
+                : "<mut2>::</><a2>empty</> <a2>S</>";
             break;
 
         case Lattice::NodeKind::Binding:
-            line = std::format("{} <y>λ</>", node.name);
+            line = std::format("{} <action>λ</>", node.name);
             break;
 
         case Lattice::NodeKind::Mount:
             line = node.name.empty()
-                ? std::format("<m>[&{}]</> <bl>&</>", node.type)
-                : std::format("<m>[&{}]</> <bl>&</>", node.name);
+                ? std::format("<magenta>[&{}]</> <h2>&</>", node.type)
+                : std::format("<magenta>[&{}]</> <h2>&</>", node.name);
             break;
 
         case Lattice::NodeKind::SharedMount:
             line = node.name.empty()
-                ? std::format("<m>[&&{}]</> <bl>&&</>", node.type)
-                : std::format("<m>[&&{}]</> <bl>&&</>", node.name);
+                ? std::format("<magenta>[&&{}]</> <h2>&&</>", node.type)
+                : std::format("<magenta>[&&{}]</> <h2>&&</>", node.name);
             break;
     }
 
-    return line + std::format(" <gr>#{}</>", node.id);
+    return line + std::format(" <mut2>#{}</>", node.id);
 }
 
 std::string_view valueType(const Lattice::Value& value) {
@@ -80,30 +80,38 @@ std::string formatExport(
             if (!candidates.empty()) candidates += ", ";
             candidates += std::format("#{}", candidate);
         }
-        return std::format("<r>{}</> <gr>ambiguous: {}</>", name, candidates);
+        return std::format("<err>{}</> <mut>ambiguous: {}</>", name, candidates);
     }
 
     if (exports.kind(entry) == Lattice::ExportKind::Param) {
         const auto value = exports.value(entry);
+        std::string formattedValue = value ? value->toString() : "unreadable";
+        if (name.starts_with("theme.") && value && value->is<std::string>()) {
+            TextFormatter preview;
+            preview.append("●", Lattice::parseTextStyle(value->get<std::string>()));
+            formattedValue = std::format("{} <a2>{}</>", preview.markup(), formattedValue);
+        } else {
+            formattedValue = std::format("<a2>{}</>", formattedValue);
+        }
         return std::format(
-            "<g>@</> {} <gr>=</> <c>{}</> <gr>#{}</>",
+            "<param>@</> {} <mut2>=</> {} <mut2>#{}</>",
             name,
-            value ? value->toString() : "unreadable",
+            formattedValue,
             entry.exportId
         );
     }
 
     std::string arguments;
     for (const Lattice::Value& argument : exports.argumentTypes(entry))
-        arguments += std::format(" <gr><{}></>", valueType(argument));
+        arguments += std::format(" <mut2><{}></>", valueType(argument));
 
-    return std::format("<y>λ</> {}{} <gr>#{}</>", name, arguments, entry.exportId);
+    return std::format("<action>λ</> {}{} <mut2>#{}</>", name, arguments, entry.exportId);
 }
 
 }
 
 void CLI::logo() const {
-    Logger::message(R"(<c>
+    Logger::message(R"(<a2>
     __    ___  ____________________________   ________    ____
    / /   /   |/_  __/_  __/  _/ ____/ ____/  / ____/ /   /  _/
   / /   / /| | / /   / /  / // /   / __/    / /   / /    / /
@@ -115,6 +123,12 @@ void CLI::logo() const {
 
 CLI::CLI(NodeBuild branch) {
     tree_ = branch.tree();
+    theme_.add("param", TextStyle::rgb(0x28D08A));
+    theme_.add("action", TextStyle::rgb(0xffff55));
+
+    for (auto& entry : theme_.entries())
+        branch.param(std::format("theme.{}", entry.name), entry.style);
+
     branch.globalAction("ls", [this](Lattice::ActionContext& context) { list(context); });
     branch.globalAction("help", [this](Lattice::ActionContext& context) { help(context); });
     branch.globalAction<std::string>(
@@ -141,13 +155,13 @@ void CLI::configure(NodeConfigure branch) {
 
 void CLI::list(Lattice::ActionContext& context) const {
     for (Lattice::NodeId child : tree_.children(context.node()))
-        context.emit(Lattice::Value{TextFormatter::format("<b><c>{}<//>", tree_.label(child)).render()});
+        context.emit(Lattice::Value{TextFormatter::format(theme_, "<h>{}</>", tree_.label(child)).render()});
 }
 
 void CLI::help(Lattice::ActionContext& context) const {
     const auto entries = exports_.available(context.node());
 
-    Lattice::TreeFormatter output(std::format("Context {}", tree_.path(context.node())));
+    Lattice::TreeFormatter output(std::format("Context {}", tree_.path(context.node())), theme_);
     const auto appendSection = [&](bool global) {
         for (const auto entry : entries) {
             if (entry.global != global)
@@ -181,14 +195,14 @@ void CLI::help(Lattice::ActionContext& context) const {
         }
     };
 
-    output.node("<b><c>Global<//>", 0);
+    output.node("<a><b>Global<//>", 0);
     appendSection(true);
 
     bool hasLocal = false;
     for (const auto entry : entries)
         hasLocal = hasLocal || !entry.global;
     if (hasLocal) {
-        output.node("<b><m>Local<//>", 0);
+        output.node("<a2><b>Local<//>", 0);
         appendSection(false);
     }
 
@@ -196,7 +210,7 @@ void CLI::help(Lattice::ActionContext& context) const {
 }
 
 void CLI::showTree(Lattice::ActionContext& context) const {
-    Lattice::TreeFormatter logTree(tree_.label(context.node()));
+    Lattice::TreeFormatter logTree(tree_.label(context.node()), theme_);
     bool root = true;
     for (const Lattice::TreeEntry entry : tree_.subtree(context.node())) {
         if (root) {

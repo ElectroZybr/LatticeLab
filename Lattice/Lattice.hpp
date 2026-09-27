@@ -13,5 +13,8 @@
 
 // Tools
 #include <Lattice/Tools/Logger.hpp>
+#include <Lattice/Tools/TextStyle.hpp>
+#include <Lattice/Tools/TextTheme.hpp>
+#include <Lattice/Tools/TextPattern.hpp>
 #include <Lattice/Tools/TableFormatter.hpp>
 #include <Lattice/Tools/TreeFormatter.hpp>

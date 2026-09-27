@@ -40,17 +40,6 @@ namespace {
 #define BUILD_VERSION "unknown"
 #endif
 
-        constexpr std::string_view kReset = Color::reset;
-        constexpr std::string_view kDim = Color::gray;
-        constexpr std::string_view kTitle = Color::brightCyan;
-        constexpr std::string_view kLabel = Color::brightBlue;
-        constexpr std::string_view kValue = Color::brightWhite;
-        constexpr std::string_view kDevice = Color::brightYellow;
-
-        std::string colorize(std::string_view text, std::string_view color) {
-            return Color::paint(text, color);
-        }
-
         std::string trim(std::string text) {
             const auto begin = text.find_first_not_of(" \t\r\n");
             if (begin == std::string::npos) {
@@ -860,36 +849,36 @@ namespace {
         const SystemInfo info = collectSystemInfo();
         Lattice::TreeFormatter tree("System");
 
-        tree.node(std::format("{} {}", Color::paint("OS:", Color::brightBlue), Color::paint(info.os, Color::brightWhite)), 0);
-        tree.node(std::format("{} {}", Color::paint("Arch:", Color::brightBlue), Color::paint(info.arch, Color::brightWhite)), 0);
-        tree.node(std::format("{} {}", Color::paint("RAM:", Color::brightBlue), Color::paint(formatBytes(info.totalRamBytes), Color::brightWhite)), 0);
+        tree.node(std::format("<h>OS:</> {}", info.os), 0);
+        tree.node(std::format("<h>Arch:</> {}", info.arch), 0);
+        tree.node(std::format("<h>RAM:</> {}", formatBytes(info.totalRamBytes)), 0);
 
-        tree.node(Color::paint("Build", Color::brightCyan), 0);
-        tree.node(std::format("{} {}", Color::paint("Version:", Color::brightBlue), Color::paint(info.engine.version, Color::brightWhite)), 1);
-        tree.node(std::format("{} {}", Color::paint("Build:", Color::brightBlue), Color::paint(info.engine.build, Color::brightWhite)), 1);
-        tree.node(std::format("{} {}", Color::paint("Compiler:", Color::brightBlue), Color::paint(info.engine.compiler, Color::brightWhite)), 1);
+        tree.node("<a>Build</>", 0);
+        tree.node(std::format("<h>Version:</> {}", info.engine.version), 1);
+        tree.node(std::format("<h>Build:</> {}", info.engine.build), 1);
+        tree.node(std::format("<h>Compiler:</> {}", info.engine.compiler), 1);
 
-        tree.node(Color::paint("Devices", Color::brightCyan), 0);
-        tree.node(std::format("{} {}", Color::paint("CPU[0]:", Color::brightYellow), Color::paint(info.cpu.name, Color::brightWhite)), 1);
-        tree.node(std::format("{} {}", Color::paint("Cores:", Color::brightBlue), Color::paint(info.cpu.cores ? std::to_string(info.cpu.cores) : "unknown", Color::brightWhite)), 2);
-        tree.node(std::format("{} {}", Color::paint("Threads:", Color::brightBlue), Color::paint(info.cpu.threads ? std::to_string(info.cpu.threads) : "unknown", Color::brightWhite)), 2);
-        tree.node(std::format("{} {}", Color::paint("SIMD:", Color::brightBlue), Color::paint(info.cpu.simd, Color::brightWhite)), 2);
+        tree.node("<a>Devices</>", 0);
+        tree.node(std::format("<wrn>CPU[0]:</> {}", info.cpu.name), 1);
+        tree.node(std::format("<h>Cores:</> {}", info.cpu.cores ? std::to_string(info.cpu.cores) : "unknown"), 2);
+        tree.node(std::format("<h>Threads:</> {}", info.cpu.threads ? std::to_string(info.cpu.threads) : "unknown"), 2);
+        tree.node(std::format("<h>SIMD:</> {}", info.cpu.simd), 2);
 
         if (info.gpus.empty()) {
-            tree.node(std::format("{} {}", Color::paint("GPU[0]:", Color::brightYellow), Color::paint("unknown", Color::brightWhite)), 1);
+            tree.node("<wrn>GPU[0]:</> unknown", 1);
         } else {
             for (std::size_t i = 0; i < info.gpus.size(); ++i) {
                 const auto& gpu = info.gpus[i];
 
-                tree.node(std::format("{} {}", Color::paint(std::format("GPU[{}]:", i), Color::brightYellow), Color::paint(gpu.name, Color::brightWhite)), 1);
+                tree.node(std::format("<wrn>GPU[{}]:</> {}", i, gpu.name), 1);
                 if (!gpu.pciAddress.empty())
-                    tree.node(std::format("{} {}", Color::paint("PCI:", Color::brightBlue), Color::paint(gpu.pciAddress, Color::brightWhite)), 2);
+                    tree.node(std::format("<h>PCI:</> {}", gpu.pciAddress), 2);
                 if (!gpu.driver.empty())
-                    tree.node(std::format("{} {}", Color::paint("Driver:", Color::brightBlue), Color::paint(gpu.driver, Color::brightWhite)), 2);
+                    tree.node(std::format("<h>Driver:</> {}", gpu.driver), 2);
                 if (!gpu.computeInfo.empty())
-                    tree.node(std::format("{} {}", Color::paint("Compute:", Color::brightBlue), Color::paint(gpu.computeInfo, Color::brightWhite)), 2);
+                    tree.node(std::format("<h>Compute:</> {}", gpu.computeInfo), 2);
 
-                tree.node(std::format("{} {}", Color::paint("VRAM:", Color::brightBlue), Color::paint(formatVram(gpu.vramBytes), Color::brightWhite)), 2);
+                tree.node(std::format("<h>VRAM:</> {}", formatVram(gpu.vramBytes)), 2);
             }
         }
 

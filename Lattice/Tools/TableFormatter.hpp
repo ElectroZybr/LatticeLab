@@ -82,11 +82,11 @@ public:
     struct Style {
         BorderGlyphs borders = Borders::Rounded;
         Rules rules = Rules::Outer | Rules::Header | Rules::Columns;
-        TextStyle border = TextStyle::Gray;
-        TextStyle header = TextStyle::Bold | TextStyle::White;
+        TextStyle border = TextStyle::rgb(0x555555);
+        TextStyle header = TextStyle::Bold | TextStyle::rgb(0x5555ff);
         TextStyle cell = TextStyle::None;
         TextStyle alternateCell = TextStyle::None;
-        TextStyle truncation = TextStyle::Gray;
+        TextStyle truncation = TextStyle::rgb(0x555555);
         size_t paddingLeft = 1;
         size_t paddingRight = 1;
     };

@@ -2,121 +2,19 @@
 
 #include <algorithm>
 #include <cstdint>
+
+#include <Lattice/Tools/TextMarkup.hpp>
 #include <format>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
 #include <utility>
 #include <cctype>
 
-#include <Lattice/Kernel/Exception.hpp>
-
-
-namespace Color {
-
-inline constexpr std::string_view reset = "\033[0m";
-inline constexpr std::string_view bold  = "\033[1m";
-
-// Base colors
-inline constexpr std::string_view black   = "\033[30m";
-inline constexpr std::string_view red     = "\033[31m";
-inline constexpr std::string_view green   = "\033[32m";
-inline constexpr std::string_view yellow  = "\033[33m";
-inline constexpr std::string_view blue    = "\033[34m";
-inline constexpr std::string_view magenta = "\033[35m";
-inline constexpr std::string_view cyan    = "\033[36m";
-inline constexpr std::string_view white   = "\033[37m";
-
-// Bright colors
-inline constexpr std::string_view gray          = "\033[90m";
-inline constexpr std::string_view brightRed     = "\033[91m";
-inline constexpr std::string_view brightGreen   = "\033[92m";
-inline constexpr std::string_view brightYellow  = "\033[93m";
-inline constexpr std::string_view brightBlue    = "\033[94m";
-inline constexpr std::string_view brightMagenta = "\033[95m";
-inline constexpr std::string_view brightCyan    = "\033[96m";
-inline constexpr std::string_view brightWhite   = "\033[97m";
-
-// Semantic styles
-inline constexpr std::string_view error   = brightRed;
-inline constexpr std::string_view ok      = brightGreen;
-inline constexpr std::string_view warning = brightYellow;
-inline constexpr std::string_view prompt  = brightMagenta;
-
-
-inline std::string paint(std::string_view text, std::string_view color) {
-    std::string out;
-
-    out.reserve(color.size() + text.size() + reset.size());
-
-    out += color;
-    out += text;
-    out += reset;
-
-    return out;
-}
-
-} // namespace Color
 
 
 namespace Lattice {
-
-
-enum class TextStyle : uint32_t {
-    None = 0,
-
-    // Modifiers
-    Bold = 1u << 0,
-    Dim  = 1u << 1,
-
-    // Base colors
-    Black   = 1u << 2,
-    Red     = 1u << 3,
-    Green   = 1u << 4,
-    Yellow  = 1u << 5,
-    Blue    = 1u << 6,
-    Magenta = 1u << 7,
-    Cyan    = 1u << 8,
-    White   = 1u << 9,
-
-    // Bright colors
-    Gray          = 1u << 10,
-    BrightRed     = 1u << 11,
-    BrightGreen   = 1u << 12,
-    BrightYellow  = 1u << 13,
-    BrightBlue    = 1u << 14,
-    BrightMagenta = 1u << 15,
-    BrightCyan    = 1u << 16,
-    BrightWhite   = 1u << 17
-};
-
-
-constexpr TextStyle operator|(TextStyle a, TextStyle b) noexcept {
-    return static_cast<TextStyle>(
-        static_cast<uint32_t>(a) |
-        static_cast<uint32_t>(b)
-    );
-}
-
-
-constexpr TextStyle operator&(TextStyle a, TextStyle b) noexcept {
-    return static_cast<TextStyle>(
-        static_cast<uint32_t>(a) &
-        static_cast<uint32_t>(b)
-    );
-}
-
-
-constexpr TextStyle operator~(TextStyle value) noexcept {
-    return static_cast<TextStyle>(
-        ~static_cast<uint32_t>(value)
-    );
-}
-
-
-constexpr bool hasStyle(TextStyle value, TextStyle style) noexcept {
-    return (value & style) != TextStyle::None;
-}
 
 
 struct TextSpan {
@@ -130,8 +28,12 @@ public:
 
     TextFormatter() = default;
 
-    explicit TextFormatter(std::string_view text) {
-        parse(text);
+    explicit TextFormatter(std::string_view text, const TextTheme* theme = nullptr) {
+        parse(text, theme);
+    }
+
+    TextFormatter(std::string_view text, const TextTheme& theme) {
+        parse(text, &theme);
     }
 
 
@@ -145,6 +47,19 @@ public:
                 fmt,
                 std::forward<TArgs>(args)...
             )
+        );
+    }
+
+
+    template<typename... TArgs>
+    static TextFormatter format(
+        const TextTheme& theme,
+        std::format_string<TArgs...> fmt,
+        TArgs&&... args
+    ) {
+        return TextFormatter(
+            std::format(fmt, std::forward<TArgs>(args)...),
+            theme
         );
     }
 
@@ -185,107 +100,25 @@ public:
     }
 
 
-    void parse(std::string_view text) {
+    void parse(std::string_view text, const TextTheme* theme = nullptr) {
         spans_.clear();
+        diagnostics_.clear();
+        if (!theme)
+            theme = &TextTheme::system();
 
-        std::vector<TextStyle> stack;
-        stack.push_back(TextStyle::None);
-
-        size_t position = 0;
-        size_t textStart = 0;
-
-        while (position < text.size()) {
-
-            if (text[position] != '<') {
-                ++position;
-                continue;
-            }
-
-            const size_t end = text.find('>', position);
-
-            if (end == std::string_view::npos) {
-                ++position;
-                continue;
-            }
-
-            const std::string_view tag =
-                text.substr(
-                    position + 1,
-                    end - position - 1
-                );
-
-            // Closing tag: </>, <//>, <///>, ...
-            if (isCloseTag(tag)) {
-
-                append(
-                    text.substr(
-                        textStart,
-                        position - textStart
-                    ),
-                    stack.back()
-                );
-
-                const size_t count = tag.size();
-
-                if (count >= stack.size()) {
-                    throw Exception(
-                        "TextFormatter",
-                        "Too many closing tags '<{}>'",
-                        tag
-                    );
-                }
-
-                for (size_t i = 0; i < count; ++i)
-                    stack.pop_back();
-
-                position = end + 1;
-                textStart = position;
-
-                continue;
-            }
-
-            // Opening style tag
-            if (isStyleTag(tag)) {
-
-                append(
-                    text.substr(
-                        textStart,
-                        position - textStart
-                    ),
-                    stack.back()
-                );
-
-                const TextStyle style = styleFromTag(tag);
-
-                stack.push_back(
-                    combineStyle(
-                        stack.back(),
-                        style
-                    )
-                );
-
-                position = end + 1;
-                textStart = position;
-
-                continue;
-            }
-
-            // Not a markup tag. Treat it as normal text.
-            ++position;
-        }
-
-        append(
-            text.substr(textStart),
-            stack.back()
+        TextMarkup::parse(
+            text,
+            *theme,
+            [this, theme](std::string_view content, const TextMarkup::StyleChain& chain) {
+                append(content, TextMarkup::resolve(chain, *theme));
+            },
+            [this](TextDiagnostic diagnostic) {
+                diagnostics_.push_back(std::move(diagnostic));
+            },
+            "TextFormatter"
         );
-
-        if (stack.size() != 1) {
-            throw Exception(
-                "TextFormatter",
-                "Unclosed text style tag"
-            );
-        }
     }
+
 
     void append(std::string_view text, TextStyle style = TextStyle::None) {
         if (text.empty())
@@ -305,6 +138,7 @@ public:
     void append(const TextFormatter& text) {
         for (const auto& span : text.spans_)
             append(span.text, span.style);
+        appendDiagnostics(text.diagnostics_);
     }
 
 
@@ -315,9 +149,18 @@ public:
         for (const auto& span : text.spans_) {
             append(
                 span.text,
-                combineStyle(style, span.style)
+                style | span.style
             );
         }
+        appendDiagnostics(text.diagnostics_);
+    }
+
+    void appendDiagnostics(std::span<const TextDiagnostic> diagnostics) {
+        diagnostics_.insert(diagnostics_.end(), diagnostics.begin(), diagnostics.end());
+    }
+
+    std::span<const TextDiagnostic> diagnostics() const noexcept {
+        return diagnostics_;
     }
 
 
@@ -335,14 +178,19 @@ public:
         std::string result;
 
         for (const auto& span : spans_) {
-            std::string_view tags[3];
-            const size_t count = collectTags(span.style, tags);
-
-            for (size_t i = 0; i < count; ++i) {
+            size_t count = 0;
+            const auto appendTag = [&](std::string_view tag) {
                 result += '<';
-                result += tags[i];
+                result += tag;
                 result += '>';
-            }
+                ++count;
+            };
+
+            if (hasStyle(span.style, TextStyle::Bold)) appendTag("b");
+            if (hasStyle(span.style, TextStyle::Dim)) appendTag("d");
+
+            if (span.style.color.kind == TextColor::Kind::Rgb)
+                appendTag(std::format("#{:06x}", span.style.color.value));
 
             result += span.text;
 
@@ -362,13 +210,11 @@ public:
 
         for (const auto& span : spans_) {
 
-            if (span.style == TextStyle::None)
-                result += Color::gray;
-            else
+            if (span.style != TextStyle::None)
                 result += ansi(span.style);
 
             result += span.text;
-            result += Color::reset;
+            result += "\033[0m";
         }
 
         return result;
@@ -592,151 +438,12 @@ public:
             }
         }
 
+        result.appendDiagnostics(diagnostics_);
         return result;
     }
 
 
 private:
-
-    // All colors occupy one logical category.
-    static constexpr TextStyle colorMask =
-        TextStyle::Black |
-        TextStyle::Red |
-        TextStyle::Green |
-        TextStyle::Yellow |
-        TextStyle::Blue |
-        TextStyle::Magenta |
-        TextStyle::Cyan |
-        TextStyle::White |
-        TextStyle::Gray |
-        TextStyle::BrightRed |
-        TextStyle::BrightGreen |
-        TextStyle::BrightYellow |
-        TextStyle::BrightBlue |
-        TextStyle::BrightMagenta |
-        TextStyle::BrightCyan |
-        TextStyle::BrightWhite;
-
-
-    static bool isColor(TextStyle style) noexcept {
-        return (style & colorMask) != TextStyle::None;
-    }
-
-
-    static TextStyle combineStyle(
-        TextStyle current,
-        TextStyle added
-    ) noexcept {
-
-        // A color replaces the inherited color.
-        if (isColor(added)) {
-            current = current & ~colorMask;
-        }
-
-        // Modifiers such as Bold and Dim are accumulated.
-        return current | added;
-    }
-
-
-    static bool isCloseTag(
-        std::string_view tag
-    ) noexcept {
-
-        if (tag.empty())
-            return false;
-
-        for (const char c : tag) {
-            if (c != '/')
-                return false;
-        }
-
-        return true;
-    }
-
-
-    static size_t collectTags(
-        TextStyle style,
-        std::string_view* tags
-    ) noexcept {
-
-        size_t count = 0;
-
-        if (hasStyle(style, TextStyle::Bold))
-            tags[count++] = "b";
-
-        if (hasStyle(style, TextStyle::Dim))
-            tags[count++] = "d";
-
-        if (hasStyle(style, TextStyle::Black))
-            tags[count++] = "k";
-        else if (hasStyle(style, TextStyle::Red))
-            tags[count++] = "r";
-        else if (hasStyle(style, TextStyle::Green))
-            tags[count++] = "g";
-        else if (hasStyle(style, TextStyle::Yellow))
-            tags[count++] = "y";
-        else if (hasStyle(style, TextStyle::Blue))
-            tags[count++] = "bl";
-        else if (hasStyle(style, TextStyle::Magenta))
-            tags[count++] = "m";
-        else if (hasStyle(style, TextStyle::Cyan))
-            tags[count++] = "c";
-        else if (hasStyle(style, TextStyle::White))
-            tags[count++] = "w";
-        else if (hasStyle(style, TextStyle::Gray))
-            tags[count++] = "gr";
-        else if (hasStyle(style, TextStyle::BrightRed))
-            tags[count++] = "br";
-        else if (hasStyle(style, TextStyle::BrightGreen))
-            tags[count++] = "bg";
-        else if (hasStyle(style, TextStyle::BrightYellow))
-            tags[count++] = "by";
-        else if (hasStyle(style, TextStyle::BrightBlue))
-            tags[count++] = "bbl";
-        else if (hasStyle(style, TextStyle::BrightMagenta))
-            tags[count++] = "bm";
-        else if (hasStyle(style, TextStyle::BrightCyan))
-            tags[count++] = "bc";
-        else if (hasStyle(style, TextStyle::BrightWhite))
-            tags[count++] = "bw";
-
-        return count;
-    }
-
-
-    static TextStyle styleFromTag(
-        std::string_view tag
-    ) {
-
-        if (tag == "b")  return TextStyle::Bold;
-        if (tag == "d")  return TextStyle::Dim;
-
-        if (tag == "k")  return TextStyle::Black;
-        if (tag == "r")  return TextStyle::Red;
-        if (tag == "g")  return TextStyle::Green;
-        if (tag == "y")  return TextStyle::Yellow;
-        if (tag == "bl") return TextStyle::Blue;
-        if (tag == "m")  return TextStyle::Magenta;
-        if (tag == "c")  return TextStyle::Cyan;
-        if (tag == "w")  return TextStyle::White;
-
-        if (tag == "gr")  return TextStyle::Gray;
-        if (tag == "br")  return TextStyle::BrightRed;
-        if (tag == "bg")  return TextStyle::BrightGreen;
-        if (tag == "by")  return TextStyle::BrightYellow;
-        if (tag == "bbl") return TextStyle::BrightBlue;
-        if (tag == "bm")  return TextStyle::BrightMagenta;
-        if (tag == "bc")  return TextStyle::BrightCyan;
-        if (tag == "bw")  return TextStyle::BrightWhite;
-
-        throw Exception(
-            "TextFormatter",
-            "Unknown style tag '<{}>'",
-            tag
-        );
-    }
-
-
     static std::string ansi(
         TextStyle style
     ) {
@@ -744,88 +451,22 @@ private:
         std::string result;
 
         if (hasStyle(style, TextStyle::Bold))
-            result += Color::bold;
+            result += "\033[1m";
 
         if (hasStyle(style, TextStyle::Dim))
-            result += Color::gray;
+            result += "\033[2m";
 
-        if (hasStyle(style, TextStyle::Black))
-            result += Color::black;
-
-        else if (hasStyle(style, TextStyle::Red))
-            result += Color::red;
-
-        else if (hasStyle(style, TextStyle::Green))
-            result += Color::green;
-
-        else if (hasStyle(style, TextStyle::Yellow))
-            result += Color::yellow;
-
-        else if (hasStyle(style, TextStyle::Blue))
-            result += Color::blue;
-
-        else if (hasStyle(style, TextStyle::Magenta))
-            result += Color::magenta;
-
-        else if (hasStyle(style, TextStyle::Cyan))
-            result += Color::cyan;
-
-        else if (hasStyle(style, TextStyle::White))
-            result += Color::white;
-
-        else if (hasStyle(style, TextStyle::Gray))
-            result += Color::gray;
-
-        else if (hasStyle(style, TextStyle::BrightRed))
-            result += Color::brightRed;
-
-        else if (hasStyle(style, TextStyle::BrightGreen))
-            result += Color::brightGreen;
-
-        else if (hasStyle(style, TextStyle::BrightYellow))
-            result += Color::brightYellow;
-
-        else if (hasStyle(style, TextStyle::BrightBlue))
-            result += Color::brightBlue;
-
-        else if (hasStyle(style, TextStyle::BrightMagenta))
-            result += Color::brightMagenta;
-
-        else if (hasStyle(style, TextStyle::BrightCyan))
-            result += Color::brightCyan;
-
-        else if (hasStyle(style, TextStyle::BrightWhite))
-            result += Color::brightWhite;
+        if (style.color.kind == TextColor::Kind::Rgb) {
+            const uint32_t rgb = style.color.value;
+            result += std::format(
+                "\033[38;2;{};{};{}m",
+                (rgb >> 16) & 0xff,
+                (rgb >> 8) & 0xff,
+                rgb & 0xff
+            );
+        }
 
         return result;
-    }
-
-
-    static bool isStyleTag(
-        std::string_view tag
-    ) noexcept {
-
-        return
-            tag == "b"   ||
-            tag == "d"   ||
-
-            tag == "k"   ||
-            tag == "r"   ||
-            tag == "g"   ||
-            tag == "y"   ||
-            tag == "bl"  ||
-            tag == "m"   ||
-            tag == "c"   ||
-            tag == "w"   ||
-
-            tag == "gr"  ||
-            tag == "br"  ||
-            tag == "bg"  ||
-            tag == "by"  ||
-            tag == "bbl" ||
-            tag == "bm"  ||
-            tag == "bc"  ||
-            tag == "bw";
     }
 
 
@@ -870,6 +511,7 @@ private:
 
 
     std::vector<TextSpan> spans_;
+    std::vector<TextDiagnostic> diagnostics_;
 };
 
 

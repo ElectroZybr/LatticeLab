@@ -87,7 +87,7 @@ std::vector<std::string> printUniqueList(std::string_view name, const Blueprints
     for (const auto& requirement : requirements) {
         const bool exists = (blueprints.resolve(requirement) != Blueprints::InvalidId);
 
-        tree.node(std::format("{}{}", exists ? Color::paint("✓ ", Color::ok) : Color::paint("✗ ", Color::error), requirement));
+        tree.node(std::format("{}{}", exists ? "<ok>✓ </>" : "<err>✗ </>", requirement));
     }
 
     Logger::message(tree.format());

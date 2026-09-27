@@ -2,7 +2,6 @@
 
 #include <string_view>
 
-#include <Lattice/Tools/TextFormatter.hpp>
 #include <Lattice/Tools/LogMode.hpp>
 
 struct LogStyle {
@@ -13,14 +12,13 @@ struct LogStyle {
 };
 
 inline constexpr LogStyle logStyles[] = {
-    {"",          "<gr>"},
-    {"OK",        "<g>✓"},
-    {"ACTION",    "<c>➜"},
-    {"INFO",      "<gr>•"},
-    {"WARN",      "<y>⚠"},
-    {"ERROR",     "<r>⚠"},
-    {"EXCEPTION", "<r>✗"},
-    {"",          ""},
+    {"",          "<mut>"},
+    {"OK",        "<ok>✓"},
+    {"ACTION",    "<a2>➜"},
+    {"INFO",      "<mut>•"},
+    {"WARN",      "<wrn>⚠"},
+    {"ERROR",     "<err>⚠"},
+    {"EXCEPTION", "<err>✗"},
 };
 
 inline const LogStyle& LogStyle::get(Level level) {
