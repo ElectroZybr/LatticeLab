@@ -49,7 +49,7 @@
 //         loader = root.require<KeybindsLoader>().getPtr();
 //     }
 
-//     void load(const Lattice::Table& keybinds) {
+//     void load(const Lattice::Object& keybinds) {
 //         Document document;
 //         document.root().emplace("keybinds", keybinds);
 //         const Lattice::Value* section = document.section(loader->section());
@@ -63,7 +63,7 @@
 // {
 //     int fires = 0;
 //     fixture.root.on("print", [&] { ++fires; });
-//     fixture.load(Lattice::Table{
+//     fixture.load(Lattice::Object{
 //         {"print", std::string("P")},
 //     });
 
@@ -80,7 +80,7 @@
 // {
 //     int fires = 0;
 //     fixture.root.on("quit", [&] { ++fires; });
-//     fixture.load(Lattice::Table{
+//     fixture.load(Lattice::Object{
 //         {"quit", Lattice::Array{std::string("Ctrl+Q"), int64_t{12}}},
 //     });
 
@@ -97,7 +97,7 @@
 // {
 //     double dt = 1.0;
 //     fixture.root.bind("dt", &dt);
-//     fixture.load(Lattice::Table{
+//     fixture.load(Lattice::Object{
 //         {"dt.add", Lattice::Array{std::string("]"), 0.5, std::string("hold")}},
 //         {"dt.sub", Lattice::Array{std::string("["), -0.5, std::string("hold")}},
 //     });
@@ -123,8 +123,8 @@
 // {
 //     double dt = 0.0;
 //     fixture.root.bind("dt", &dt);
-//     fixture.load(Lattice::Table{
-//         {"dt", Lattice::Table{
+//     fixture.load(Lattice::Object{
+//         {"dt", Lattice::Object{
 //             {"add", Lattice::Array{std::string("]"), 0.5}},
 //         }},
 //     });
@@ -141,7 +141,7 @@
 // {
 //     bool flag = false;
 //     fixture.root.bind("flag", &flag);
-//     fixture.load(Lattice::Table{
+//     fixture.load(Lattice::Object{
 //         {"flag.toggle", std::string("Space")},
 //     });
 
@@ -155,7 +155,7 @@
 // TEST(Keybinds_ReloadDoesNotDuplicate, KeybindsFixture,
 //     "Повторная загрузка той же таблицы не должна плодить бинды.")
 // {
-//     const Lattice::Table keybinds{
+//     const Lattice::Object keybinds{
 //         {"print", std::string("P")},
 //         {"dt.add", Lattice::Array{std::string("]"), 0.001, std::string("hold")}},
 //         {"dt.sub", Lattice::Array{std::string("["), -0.001, std::string("hold")}},

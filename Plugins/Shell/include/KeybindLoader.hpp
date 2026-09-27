@@ -23,13 +23,13 @@ public:
     std::string_view section() const override { return "keybinds"; }
 
     void load(const Lattice::Value& section) override {
-        if (!section.is<Lattice::Table>())
+        if (!section.is<Lattice::Object>())
             return;
 
         if (!actionMap_)
             throw Lattice::Exception(tag, "loader is not configured");
 
-        loadTable(section.require<Lattice::Table>(), "");
+        loadTable(section.require<Lattice::Object>(), "");
     }
 
 private:
@@ -64,12 +64,12 @@ private:
         return {std::move(path), std::move(last)};
     }
 
-    void loadTable(const Lattice::Table& table, const std::string& prefix) {
+    void loadTable(const Lattice::Object& table, const std::string& prefix) {
         for (const auto& [key, value] : table) {
             const std::string path = prefix.empty() ? key : prefix + "." + key;
 
-            if (value.is<Lattice::Table>()) {
-                loadTable(value.require<Lattice::Table>(), path);
+            if (value.is<Lattice::Object>()) {
+                loadTable(value.require<Lattice::Object>(), path);
                 continue;
             }
 

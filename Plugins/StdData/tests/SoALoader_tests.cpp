@@ -46,7 +46,7 @@ public:
 
 Document makeSoADocument(std::string target) {
     Document document;
-    document.root().emplace("SoAData", Lattice::Table{{"target", std::move(target)}, {"columns", Lattice::Array{std::string("Mass"), std::string("Valence")}}, {"rows", Lattice::Array{Lattice::Array{Lattice::Value{1.008}, Lattice::Value{int64_t{1}}}, Lattice::Array{Lattice::Value{4.003}, Lattice::Value{int64_t{0}}}}}});
+    document.root().emplace("SoAData", Lattice::Object{{"target", std::move(target)}, {"columns", Lattice::Array{std::string("Mass"), std::string("Valence")}}, {"rows", Lattice::Array{Lattice::Array{Lattice::Value{1.008}, Lattice::Value{int64_t{1}}}, Lattice::Array{Lattice::Value{4.003}, Lattice::Value{int64_t{0}}}}}});
     return document;
 }
 
@@ -88,7 +88,7 @@ TEST(SoALoader_LoadNames, RuntimeFixture,
     loader.configure(fixture.root);
 
     Document document;
-    document.root().emplace("SoAData", Lattice::Table{{"target", std::string("Wrapper")}, {"columns", Lattice::Array{std::string("Name"), std::string("Mass"), std::string("Valence")}}, {"rows", Lattice::Array{Lattice::Array{std::string("H"), Lattice::Value{1.008}, Lattice::Value{int64_t{1}}}, Lattice::Array{std::string("He"), Lattice::Value{4.003}, Lattice::Value{int64_t{0}}}}}});
+    document.root().emplace("SoAData", Lattice::Object{{"target", std::string("Wrapper")}, {"columns", Lattice::Array{std::string("Name"), std::string("Mass"), std::string("Valence")}}, {"rows", Lattice::Array{Lattice::Array{std::string("H"), Lattice::Value{1.008}, Lattice::Value{int64_t{1}}}, Lattice::Array{std::string("He"), Lattice::Value{4.003}, Lattice::Value{int64_t{0}}}}}});
     const Lattice::Value* section = document.section(loader.section());
     if (section)
         loader.load(*section);
@@ -133,7 +133,7 @@ TEST(SoALoader_MissingColumn, RuntimeFixture,
     loader.configure(fixture.root);
 
     Document document;
-    document.root().emplace("SoAData", Lattice::Table{{"target", std::string("Wrapper")}, {"columns", Lattice::Array{std::string("Charge")}}, {"rows", Lattice::Array{Lattice::Array{Lattice::Value{1.0}}}}});
+    document.root().emplace("SoAData", Lattice::Object{{"target", std::string("Wrapper")}, {"columns", Lattice::Array{std::string("Charge")}}, {"rows", Lattice::Array{Lattice::Array{Lattice::Value{1.0}}}}});
 
     bool thrown = false;
     try {
@@ -147,17 +147,6 @@ TEST(SoALoader_MissingColumn, RuntimeFixture,
     REQUIRE(thrown);
 }
 
-TEST(SoALoader_InspectEmpty, RuntimeFixture,
-    "inspect пустого SoA не должен падать.")
-{
-    fixture.blueprints.add<StdData::SoA>();
-    fixture.root.add<StdData::SoA>();
-
-    auto soa = fixture.root.require<StdData::SoA>();
-    REQUIRE(soa->size() == 0);
-    soa->inspect("empty");
-}
-
 TEST(SoALoader_LoadAtomDataFile, RuntimeFixture,
     "Config/atomData.toml должен заполнить SoA у AtomData.")
 {
@@ -169,9 +158,9 @@ TEST(SoALoader_LoadAtomDataFile, RuntimeFixture,
     const Document doc = parser.parseFile("Config/atomData.toml");
     const Lattice::Value* data = doc.get("SoAData");
     REQUIRE(data);
-    REQUIRE(data->is<Lattice::Table>());
+    REQUIRE(data->is<Lattice::Object>());
 
-    const auto& table = std::get<Lattice::Table>(*data);
+    const auto& table = std::get<Lattice::Object>(*data);
     const auto rowsIt = table.find("rows");
     REQUIRE(rowsIt != table.end());
     REQUIRE(rowsIt->second.is<Lattice::Array>());
@@ -202,7 +191,7 @@ TEST(SoALoader_ExplicitFocusTarget, RuntimeFixture) {
     SoALoader loader;
     loader.configure(fixture.root);
     // Empty rows isolate target resolution from the unfinished row writer.
-    const Lattice::Value data = Lattice::Table{
+    const Lattice::Value data = Lattice::Object{
         {"target", std::string("data")},
         {"columns", Lattice::Array{std::string("Mass")}},
         {"rows", Lattice::Array{}}

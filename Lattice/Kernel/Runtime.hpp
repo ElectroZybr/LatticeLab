@@ -17,6 +17,7 @@
 #include <Lattice/Kernel/DLLoader.hpp>
 #include <Lattice/Kernel/Context.hpp>
 #include <Lattice/Kernel/BlueprintRegister.hpp>
+#include <Lattice/Kernel/BasicTable.hpp>
 #include <Lattice/Kernel/Model.hpp>
 #include <Lattice/Tools/SystemInfo.hpp>
 #include "Lattice/Tools/LogScope.hpp"
@@ -62,6 +63,8 @@ public:
     Runtime() : pluginManager(run_ctx.blueprints, dlLoader) {
         // регистрация интерфейсов ядра
         BlueprintRegister::add<Component>(run_ctx.blueprints);
+        BlueprintRegister::add<Table, Component>(run_ctx.blueprints);
+        BlueprintRegister::add<BasicTable, Table>(run_ctx.blueprints);
         BlueprintRegister::add<ServiceAPI>(run_ctx.blueprints);
         BlueprintRegister::add<SubsystemAPI>(run_ctx.blueprints);
         BlueprintRegister::add<Model, ServiceAPI>(run_ctx.blueprints);

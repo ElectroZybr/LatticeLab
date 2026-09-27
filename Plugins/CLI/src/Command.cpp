@@ -123,9 +123,15 @@ void CommandDispatcher::execute(
                 terminal.setCurrent(context.node(), tree_.path(context.node()));
 
             std::string output;
-            for (const Lattice::Value& value : context.output()) {
-                output += value.toString();
-                output += '\n';
+            for (const Lattice::ActionOutput& item : context.output()) {
+                if (const auto* value = std::get_if<Lattice::Value>(&item)) {
+                    output += value->toString();
+                    output += '\n';
+                    continue;
+                }
+
+                const auto& view = std::get<Lattice::ActionView>(item);
+                output += std::format("Unsupported action view '{}'\n", view.type());
             }
             if (!output.empty())
                 terminal.write(output);

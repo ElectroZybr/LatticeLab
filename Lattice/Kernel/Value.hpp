@@ -29,7 +29,7 @@ namespace Lattice {
  - vec3
  - vec4
  - Array
- - Table
+ - Object
 
  Value не предназначен для хранения основных runtime-данных.
  После загрузки данные должны преобразовываться в специализированные структуры.
@@ -38,20 +38,20 @@ namespace Lattice {
 struct Value;
 
 using Array = std::vector<Value>;
-using Table = std::unordered_map<std::string, Value>;
+using Object = std::unordered_map<std::string, Value>;
 
 using StringPtr = std::shared_ptr<std::string>;
 using ArrayPtr = std::shared_ptr<Array>;
-using TablePtr = std::shared_ptr<Table>;
+using ObjectPtr = std::shared_ptr<Object>;
 
 struct Value : std::variant<StringPtr, int64_t, double, bool, 
-    glm::vec2, glm::vec3, glm::vec4, ArrayPtr, TablePtr> {
+    glm::vec2, glm::vec3, glm::vec4, ArrayPtr, ObjectPtr> {
 
     using variant::variant;
     Value(std::string value) : variant(std::make_shared<std::string>(std::move(value))) {}
     Value(const char* value) : variant(std::make_shared<std::string>(value)) {}
     Value(Array value) : variant(std::make_shared<Array>(std::move(value))) {}
-    Value(Table value) : variant(std::make_shared<Table>(std::move(value))) {}
+    Value(Object value) : variant(std::make_shared<Object>(std::move(value))) {}
 
     template<typename T>
     bool is() const {
@@ -59,8 +59,8 @@ struct Value : std::variant<StringPtr, int64_t, double, bool,
             return std::holds_alternative<StringPtr>(*this);
         else if constexpr (std::is_same_v<T, Array>)
             return std::holds_alternative<ArrayPtr>(*this);
-        else if constexpr (std::is_same_v<T, Table>)
-            return std::holds_alternative<TablePtr>(*this);
+        else if constexpr (std::is_same_v<T, Object>)
+            return std::holds_alternative<ObjectPtr>(*this);
         else
             return std::holds_alternative<T>(*this);
     }
@@ -73,8 +73,8 @@ struct Value : std::variant<StringPtr, int64_t, double, bool,
             return *std::get<StringPtr>(*this);
         else if constexpr (std::is_same_v<T, Array>) 
             return *std::get<ArrayPtr>(*this);
-        else if constexpr (std::is_same_v<T, Table>) 
-            return *std::get<TablePtr>(*this);
+        else if constexpr (std::is_same_v<T, Object>)
+            return *std::get<ObjectPtr>(*this);
         else if constexpr (std::is_integral_v<T> && !std::is_same_v<T, bool> && !std::is_same_v<T, int64_t>) 
             return static_cast<T>(std::get<int64_t>(*this));
         else return std::get<T>(*this);
@@ -86,8 +86,8 @@ struct Value : std::variant<StringPtr, int64_t, double, bool,
             return static_cast<const std::string&>(*std::get<StringPtr>(*this));
         else if constexpr (std::is_same_v<T, Array>)
             return static_cast<const Array&>(*std::get<ArrayPtr>(*this));
-        else if constexpr (std::is_same_v<T, Table>)
-            return static_cast<const Table&>(*std::get<TablePtr>(*this));
+        else if constexpr (std::is_same_v<T, Object>)
+            return static_cast<const Object&>(*std::get<ObjectPtr>(*this));
         else {
             if (!is<T>()) throw std::bad_variant_access{};
             return std::get<T>(*this);
@@ -147,7 +147,7 @@ struct Value : std::variant<StringPtr, int64_t, double, bool,
                 return result + "]";
             }
 
-            else if constexpr (std::is_same_v<T, TablePtr>) {
+            else if constexpr (std::is_same_v<T, ObjectPtr>) {
                 if (!value) return "{}";
 
                 std::string result = "{";

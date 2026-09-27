@@ -1,7 +1,12 @@
 #pragma once
 
-#include <Lattice/Lattice.hpp>
 #include <Lattice/Kernel/Model.hpp>
+#include "Lattice/Kernel/BlueprintRegister.hpp"
+#include "Lattice/Kernel/BasicTable.hpp"
+#include "Lattice/Kernel/Context.hpp"
+#include "Lattice/Kernel/DLLoader.hpp"
+#include "Lattice/Kernel/PluginManager.hpp"
+#include "Lattice/Tools/Tests.hpp"
 
 namespace Lattice {
 
@@ -16,6 +21,8 @@ struct RuntimeFixture : public TestFixture {
 
     RuntimeFixture() : pluginManager(run_ctx.blueprints, dlLoader) {
         BlueprintRegister::add<Component>(run_ctx.blueprints);
+        BlueprintRegister::add<Table, Component>(run_ctx.blueprints);
+        BlueprintRegister::add<BasicTable, Table>(run_ctx.blueprints);
         BlueprintRegister::add<ServiceAPI>(run_ctx.blueprints);
         BlueprintRegister::add<SubsystemAPI>(run_ctx.blueprints);
         BlueprintRegister::add<Model, ServiceAPI>(run_ctx.blueprints);
