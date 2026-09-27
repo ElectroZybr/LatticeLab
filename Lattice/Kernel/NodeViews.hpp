@@ -1,5 +1,9 @@
 #pragma once
 
+#include <algorithm>
+#include <iterator>
+#include <optional>
+
 #include <Lattice/Kernel/NodeFactory.hpp>
 #include <Lattice/Kernel/NodeHandlers.hpp>
 #include <Lattice/Kernel/Blueprints.hpp>
@@ -16,6 +20,118 @@ class ExportsView {
     Lattice::NodeSystem* nodeSystem_ = nullptr;
 
 public:
+    class AvailableExports {
+    public:
+        class Iterator {
+        public:
+            using iterator_category = std::input_iterator_tag;
+            using value_type = Lattice::VisibleExport;
+            using difference_type = std::ptrdiff_t;
+            using pointer = const value_type*;
+            using reference = const value_type&;
+
+            Iterator() = default;
+
+            reference operator*() const noexcept { return current_; }
+            pointer operator->() const noexcept { return &current_; }
+
+            Iterator& operator++() {
+                advance();
+                return *this;
+            }
+
+            Iterator operator++(int) {
+                Iterator previous = *this;
+                ++*this;
+                return previous;
+            }
+
+            friend bool operator==(const Iterator& iterator, std::default_sentinel_t) noexcept {
+                return iterator.current_.role == Lattice::InvalidRoleId;
+            }
+
+        private:
+            friend class AvailableExports;
+
+            Iterator(Lattice::NodeSystem* nodeSystem, Lattice::NodeId from)
+                : nodeSystem_(nodeSystem),
+                  scope_(nodeSystem ? nodeSystem->context.nearestScope(from) : Lattice::InvalidContextScopeId),
+                  rootScope_(nodeSystem ? nodeSystem->context.root() : Lattice::InvalidContextScopeId) {
+                advance();
+            }
+
+            void advance() {
+                current_ = {};
+                if (!nodeSystem_)
+                    return;
+
+                while (nextRole_ < nodeSystem_->context.roleCount()) {
+                    const Lattice::RoleId role = nextRole_++;
+                    if (!nodeSystem_->context.hasRole(role))
+                        continue;
+
+                    const Lattice::ContextResolution resolution =
+                        scope_ == Lattice::InvalidContextScopeId
+                            ? nodeSystem_->context.resolveInfo(role)
+                            : nodeSystem_->context.resolveInfo(scope_, role);
+                    if (resolution.state == Lattice::ContextResolutionState::Missing)
+                        continue;
+
+                    const Lattice::ContextResolution globalResolution =
+                        rootScope_ == Lattice::InvalidContextScopeId
+                            ? Lattice::ContextResolution{}
+                            : nodeSystem_->context.resolveInfo(rootScope_, role);
+
+                    Lattice::ExportId exportId = Lattice::InvalidExportId;
+                    if (resolution.state == Lattice::ContextResolutionState::Resolved) {
+                        exportId = nodeSystem_->exports.find(
+                            resolution.target,
+                            nodeSystem_->context.roleName(role)
+                        );
+                        if (exportId == Lattice::InvalidExportId)
+                            continue;
+                    }
+
+                    current_ = {
+                        .role = role,
+                        .owner = resolution.target,
+                        .exportId = exportId,
+                        .scope = scope_,
+                        .state = resolution.state,
+                        .global = (
+                            resolution.state == Lattice::ContextResolutionState::Resolved &&
+                            globalResolution.state == Lattice::ContextResolutionState::Resolved &&
+                            resolution.target == globalResolution.target
+                        ) || (
+                            resolution.state == Lattice::ContextResolutionState::Ambiguous &&
+                            globalResolution.state == Lattice::ContextResolutionState::Ambiguous &&
+                            std::ranges::equal(resolution.candidates, globalResolution.candidates)
+                        )
+                    };
+                    return;
+                }
+            }
+
+            Lattice::NodeSystem* nodeSystem_ = nullptr;
+            Lattice::ContextScopeId scope_ = Lattice::InvalidContextScopeId;
+            Lattice::ContextScopeId rootScope_ = Lattice::InvalidContextScopeId;
+            Lattice::RoleId nextRole_ = 0;
+            Lattice::VisibleExport current_;
+        };
+
+        Iterator begin() const { return Iterator{nodeSystem_, from_}; }
+        std::default_sentinel_t end() const noexcept { return {}; }
+
+    private:
+        friend class ExportsView;
+
+        AvailableExports(Lattice::NodeSystem* nodeSystem, Lattice::NodeId from)
+            : nodeSystem_(nodeSystem), from_(from) {}
+
+        Lattice::NodeSystem* nodeSystem_ = nullptr;
+        Lattice::NodeId from_ = Lattice::InvalidNodeId;
+    };
+
     ExportsView() = default;
     explicit ExportsView(Lattice::NodeSystem& nodeSystem) : nodeSystem_(&nodeSystem) {}
 
@@ -36,6 +152,65 @@ public:
             ? nodeSystem_->context.resolve(role)
             : nodeSystem_->context.resolve(scope, role);
         return resolveOwner(role, owner);
+    }
+
+    Lattice::ResolvedExport resolveExport(Lattice::ExportId id, Lattice::NodeId from) const {
+        const Lattice::Export* entry = nodeSystem_->exports.get(id);
+        if (!entry)
+            return {};
+
+        const Lattice::RoleId role = nodeSystem_->context.findRole(entry->name);
+        if (role == Lattice::InvalidRoleId)
+            return {};
+
+        const auto scope = nodeSystem_->context.nearestScope(from);
+        const Lattice::NodeId owner = scope == Lattice::InvalidContextScopeId
+            ? nodeSystem_->context.resolve(role)
+            : nodeSystem_->context.resolve(scope, role);
+        return owner == entry->owner ? nodeSystem_->exports.resolve(id) : Lattice::ResolvedExport{};
+    }
+
+    AvailableExports available(Lattice::NodeId from) const {
+        return AvailableExports{nodeSystem_, from};
+    }
+
+    std::string_view name(const Lattice::VisibleExport& entry) const {
+        return nodeSystem_->context.roleName(entry.role);
+    }
+
+    std::string_view name(Lattice::ExportId id) const {
+        const Lattice::Export* entry = nodeSystem_->exports.get(id);
+        return entry ? std::string_view{entry->name} : std::string_view{};
+    }
+
+    std::optional<Lattice::ExportKind> kind(const Lattice::VisibleExport& entry) const {
+        const Lattice::Export* exportEntry = nodeSystem_->exports.get(entry.exportId);
+        if (!exportEntry)
+            return std::nullopt;
+        return exportEntry->kind;
+    }
+
+    std::optional<Lattice::Value> value(const Lattice::VisibleExport& entry) const {
+        if (entry.exportId == Lattice::InvalidExportId)
+            return std::nullopt;
+        const Lattice::ResolvedExport resolved = nodeSystem_->exports.resolve(entry.exportId);
+        if (!resolved.get)
+            return std::nullopt;
+        return resolved.get(resolved.object);
+    }
+
+    std::span<const Lattice::Value> argumentTypes(const Lattice::VisibleExport& entry) const {
+        if (entry.exportId == Lattice::InvalidExportId)
+            return {};
+        return nodeSystem_->exports.resolve(entry.exportId).argumentTypes;
+    }
+
+    std::span<const Lattice::NodeId> candidates(const Lattice::VisibleExport& entry) const {
+        const Lattice::ContextResolution resolution =
+            entry.scope == Lattice::InvalidContextScopeId
+                ? nodeSystem_->context.resolveInfo(entry.role)
+                : nodeSystem_->context.resolveInfo(entry.scope, entry.role);
+        return resolution.candidates;
     }
 
 private:
@@ -166,15 +341,39 @@ public:
     template<typename T>
     Lattice::ExportId param(std::string_view name, T& value) {
         const auto id = nodeSystem_.exports.param(id_, name, value);
-        registerExport(name);
+        registerLocalExport(name);
+        return id;
+    }
+
+    template<typename T>
+    Lattice::ExportId globalParam(std::string_view name, T& value) {
+        const auto id = nodeSystem_.exports.param(id_, name, value);
+        registerGlobalExport(name);
         return id;
     }
 
     template<typename... Args, typename F>
     Lattice::ExportId action(std::string_view name, F&& callback) {
         const auto id = nodeSystem_.exports.action<Args...>(id_, name, std::forward<F>(callback));
-        registerExport(name);
+        registerLocalExport(name);
         return id;
+    }
+
+    template<typename... Args, typename F>
+    Lattice::ExportId globalAction(std::string_view name, F&& callback) {
+        const auto id = nodeSystem_.exports.action<Args...>(id_, name, std::forward<F>(callback));
+        registerGlobalExport(name);
+        return id;
+    }
+
+    void alias(std::string_view name, Lattice::ExportId target) {
+        nodeSystem_.exports.alias(id_, name, target);
+        registerLocalExport(name);
+    }
+
+    void globalAlias(std::string_view name, Lattice::ExportId target) {
+        nodeSystem_.exports.alias(id_, name, target);
+        registerGlobalExport(name);
     }
 
     Lattice::TreeView tree() const { return Lattice::TreeView{nodeSystem_}; }
@@ -204,18 +403,17 @@ public:
     Lattice::BlueprintId implementation() const { return nodeSystem_.registry.require(id_).object.bp; }
 
 private:
-    void registerExport(std::string_view name) {
-        const Lattice::NodeId parent = nodeSystem_.registry.require(id_).parent;
-        Lattice::ContextScopeId scope = nodeSystem_.context.nearestScope(
-            parent == Lattice::InvalidNodeId ? id_ : parent
-        );
-        if (scope == Lattice::InvalidContextScopeId) {
-            Lattice::NodeId root = id_;
-            while (nodeSystem_.registry.require(root).parent != Lattice::InvalidNodeId)
-                root = nodeSystem_.registry.require(root).parent;
-            scope = nodeSystem_.context.createScope(root);
-        }
+    void registerLocalExport(std::string_view name) {
+        const Lattice::ContextScopeId scope = nodeSystem_.context.createScope(id_);
+        nodeSystem_.context.addCandidate(scope, nodeSystem_.context.role(name), id_);
+    }
 
+    void registerGlobalExport(std::string_view name) {
+        Lattice::NodeId root = id_;
+        while (nodeSystem_.registry.require(root).parent != Lattice::InvalidNodeId)
+            root = nodeSystem_.registry.require(root).parent;
+
+        const Lattice::ContextScopeId scope = nodeSystem_.context.createScope(root);
         nodeSystem_.context.addCandidate(scope, nodeSystem_.context.role(name), id_);
     }
 };

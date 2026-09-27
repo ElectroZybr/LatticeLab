@@ -26,11 +26,15 @@ private:
     void broadcast(std::string_view text);
     bool pollTerminals();
     void list(Lattice::ActionContext& context) const;
+    void help(Lattice::ActionContext& context) const;
     void showTree(Lattice::ActionContext& context) const;
+    void logo() const;
+    
     void changeDirectory(Lattice::ActionContext& context, std::string path) const;
 
     Children<CLIPlugin::Terminal> terminals_;
     CLIPlugin::CommandDispatcher commands_;
+    ExportsView exports_;
     Lattice::TreeView tree_;
 };
 
