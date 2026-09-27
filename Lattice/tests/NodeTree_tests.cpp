@@ -39,16 +39,16 @@ Child-ветка должна видеть свои компоненты и ко
     auto& nodes = fixture.run_ctx.nodes;
     BlueprintRegister::add<TestComponent>(fixture.run_ctx.blueprints);
 
-    nodes.build(fixture.root).add<TestComponent>("root");
+    fixture.build(fixture.root).add<TestComponent>("root");
 
     const NodeId branchA = nodes.factory.folder(fixture.root, "BranchA");
-    nodes.build(branchA).add<TestComponent>("a");
+    fixture.build(branchA).add<TestComponent>("a");
 
     const NodeId branchB = nodes.factory.folder(fixture.root, "BranchB");
-    nodes.build(branchB).add<TestComponent>("b");
+    fixture.build(branchB).add<TestComponent>("b");
 
     const NodeId branchAChild = nodes.factory.folder(branchA, "BranchAChild");
-    nodes.build(branchAChild).add<TestComponent>("child");
+    fixture.build(branchAChild).add<TestComponent>("child");
 
     REQUIRE(nodes.configure(fixture.root).find<TestComponent>("root").exists());
     REQUIRE(nodes.configure(branchA).find<TestComponent>("root").exists());
@@ -69,10 +69,10 @@ TEST(Node_TreeShadowing, RuntimeFixture,
     auto& nodes = fixture.run_ctx.nodes;
     BlueprintRegister::add<TestComponent>(fixture.run_ctx.blueprints);
 
-    nodes.build(fixture.root).add<TestComponent>("shared");
+    fixture.build(fixture.root).add<TestComponent>("shared");
 
     const NodeId branch = nodes.factory.folder(fixture.root, "branch");
-    nodes.build(branch).add<TestComponent>("shared");
+    fixture.build(branch).add<TestComponent>("shared");
 
     auto rootComponent = nodes.configure(fixture.root).require<TestComponent>("shared");
     auto branchComponent = nodes.configure(branch).require<TestComponent>("shared");
@@ -89,12 +89,12 @@ TEST(Node_ShadowingDoesNotLeak, RuntimeFixture,
     auto& nodes = fixture.run_ctx.nodes;
     BlueprintRegister::add<TestComponent>(fixture.run_ctx.blueprints);
 
-    nodes.build(fixture.root).add<TestComponent>("shared");
+    fixture.build(fixture.root).add<TestComponent>("shared");
 
     const NodeId branchA = nodes.factory.folder(fixture.root, "A");
     const NodeId branchB = nodes.factory.folder(fixture.root, "B");
 
-    nodes.build(branchA).add<TestComponent>("shared");
+    fixture.build(branchA).add<TestComponent>("shared");
 
     auto a = nodes.configure(branchA).find<TestComponent>("shared");
     auto b = nodes.configure(branchB).find<TestComponent>("shared");
@@ -109,17 +109,17 @@ TEST(Node_TreeFolderCollect, RuntimeFixture,
     auto& nodes = fixture.run_ctx.nodes;
     BlueprintRegister::add<TestComponent>(fixture.run_ctx.blueprints);
 
-    nodes.build(fixture.root).add<TestComponent>("root");
+    fixture.build(fixture.root).add<TestComponent>("root");
 
     const NodeId branch = nodes.factory.folder(fixture.root, "branch");
-    nodes.build(branch).add<TestComponent>("a");
-    nodes.build(branch).add<TestComponent>("b");
+    fixture.build(branch).add<TestComponent>("a");
+    fixture.build(branch).add<TestComponent>("b");
 
     const NodeId child = nodes.factory.folder(branch, "child");
-    nodes.build(child).add<TestComponent>("c");
+    fixture.build(child).add<TestComponent>("c");
 
     const NodeId nested = nodes.factory.folder(child, "nested");
-    nodes.build(nested).add<TestComponent>("d");
+    fixture.build(nested).add<TestComponent>("d");
 
     auto root = nodes.query.collect(fixture.root, typeKey<TestComponent>());
     auto branchNode = nodes.query.collect(branch, typeKey<TestComponent>());
@@ -138,17 +138,17 @@ TEST(Node_DirectChildren, RuntimeFixture,
     auto& nodes = fixture.run_ctx.nodes;
     BlueprintRegister::add<TestComponent>(fixture.run_ctx.blueprints);
 
-    nodes.build(fixture.root).add<TestComponent>("root");
+    fixture.build(fixture.root).add<TestComponent>("root");
 
     const NodeId branch = nodes.factory.folder(fixture.root, "branch");
-    nodes.build(branch).add<TestComponent>("a");
-    nodes.build(branch).add<TestComponent>("b");
+    fixture.build(branch).add<TestComponent>("a");
+    fixture.build(branch).add<TestComponent>("b");
 
     const NodeId child = nodes.factory.folder(branch, "child");
-    nodes.build(child).add<TestComponent>("c");
+    fixture.build(child).add<TestComponent>("c");
 
     const NodeId nested = nodes.factory.folder(child, "nested");
-    nodes.build(nested).add<TestComponent>("d");
+    fixture.build(nested).add<TestComponent>("d");
 
     auto root = nodes.registry.children(fixture.root);
     auto branchNode = nodes.registry.children(branch);
@@ -167,7 +167,7 @@ TEST(TreeView_ReadOnlyNavigation, RuntimeFixture,
     BlueprintRegister::add<TestComponent>(fixture.run_ctx.blueprints);
 
     const NodeId branch = nodes.factory.folder(fixture.root, "branch");
-    nodes.build(branch).add<TestComponent>("instance");
+    fixture.build(branch).add<TestComponent>("instance");
 
     const TreeView tree = nodes.configure(branch).tree();
     const auto children = tree.children(branch);
@@ -211,7 +211,7 @@ TEST(TreeView_NodeMetadata, RuntimeFixture,
     BlueprintRegister::add<TestAPI>(fixture.run_ctx.blueprints);
     BlueprintRegister::add<TestImplA, TestAPI>(fixture.run_ctx.blueprints);
 
-    auto slot = nodes.build(fixture.root).addSlot<TestAPI>("selected");
+    auto slot = fixture.build(fixture.root).addSlot<TestAPI>("selected");
     slot.choice<TestImplA>();
 
     const TreeNodeInfo info = nodes.configure(fixture.root).tree().info(slot.id());
@@ -232,7 +232,7 @@ TEST(Node_AddImpls, RuntimeFixture,
     BlueprintRegister::add<TestImplA, TestAPI>(fixture.run_ctx.blueprints);
     BlueprintRegister::add<TestImplB, TestAPI>(fixture.run_ctx.blueprints);
 
-    auto impls = nodes.build(fixture.root).addImpls<TestAPI>();
+    auto impls = fixture.build(fixture.root).addImpls<TestAPI>();
 
     auto exactA = nodes.query.collect(fixture.root, typeKey<TestImplA>());
     auto nested = nodes.registry.children(nodes.factory.folder(fixture.root, "nested"));
@@ -248,22 +248,22 @@ TEST(Node_GlobalCollectDeepTree, RuntimeFixture,
     auto& nodes = fixture.run_ctx.nodes;
     BlueprintRegister::add<TestComponent>(fixture.run_ctx.blueprints);
 
-    nodes.build(fixture.root).add<TestComponent>("root");
+    fixture.build(fixture.root).add<TestComponent>("root");
 
     const NodeId branchA = nodes.factory.folder(fixture.root, "A");
-    nodes.build(branchA).add<TestComponent>("a");
+    fixture.build(branchA).add<TestComponent>("a");
 
     const NodeId branchB = nodes.factory.folder(fixture.root, "B");
-    nodes.build(branchB).add<TestComponent>("b");
+    fixture.build(branchB).add<TestComponent>("b");
 
     const NodeId childA = nodes.factory.folder(branchA, "ChildA");
-    nodes.build(childA).add<TestComponent>("aa");
+    fixture.build(childA).add<TestComponent>("aa");
 
     const NodeId childB = nodes.factory.folder(branchB, "ChildB");
-    nodes.build(childB).add<TestComponent>("bb");
+    fixture.build(childB).add<TestComponent>("bb");
 
     const NodeId deep = nodes.factory.folder(childA, "Deep");
-    nodes.build(deep).add<TestComponent>("aaa");
+    fixture.build(deep).add<TestComponent>("aaa");
 
     auto rootComponent = nodes.configure(fixture.root).require<TestComponent>("root");
     auto a = nodes.configure(branchA).require<TestComponent>("a");
@@ -290,14 +290,14 @@ TEST(Node_GlobalCollectDifferentInstances, RuntimeFixture,
     auto& nodes = fixture.run_ctx.nodes;
     BlueprintRegister::add<TestComponent>(fixture.run_ctx.blueprints);
 
-    nodes.build(fixture.root).add<TestComponent>("one");
-    nodes.build(fixture.root).add<TestComponent>("two");
-    nodes.build(fixture.root).add<TestComponent>("three");
+    fixture.build(fixture.root).add<TestComponent>("one");
+    fixture.build(fixture.root).add<TestComponent>("two");
+    fixture.build(fixture.root).add<TestComponent>("three");
 
     const NodeId branch = nodes.factory.folder(fixture.root, "branch");
 
-    nodes.build(branch).add<TestComponent>("four");
-    nodes.build(branch).add<TestComponent>("five");
+    fixture.build(branch).add<TestComponent>("four");
+    fixture.build(branch).add<TestComponent>("five");
 
     auto one = nodes.configure(fixture.root).require<TestComponent>("one");
     auto two = nodes.configure(fixture.root).require<TestComponent>("two");
@@ -325,8 +325,8 @@ TEST(Node_GlobalCollectSameNames, RuntimeFixture,
     const NodeId branchA = nodes.factory.folder(fixture.root, "A");
     const NodeId branchB = nodes.factory.folder(fixture.root, "B");
 
-    nodes.build(branchA).add<TestComponent>("shared");
-    nodes.build(branchB).add<TestComponent>("shared");
+    fixture.build(branchA).add<TestComponent>("shared");
+    fixture.build(branchB).add<TestComponent>("shared");
 
     auto a = nodes.configure(branchA).require<TestComponent>("shared");
     auto b = nodes.configure(branchB).require<TestComponent>("shared");
@@ -347,16 +347,16 @@ TEST(Node_GlobalCollectFromDeepNode, RuntimeFixture,
     auto& nodes = fixture.run_ctx.nodes;
     BlueprintRegister::add<TestComponent>(fixture.run_ctx.blueprints);
 
-    nodes.build(fixture.root).add<TestComponent>("root");
+    fixture.build(fixture.root).add<TestComponent>("root");
 
     const NodeId branchA = nodes.factory.folder(fixture.root, "A");
-    nodes.build(branchA).add<TestComponent>("a");
+    fixture.build(branchA).add<TestComponent>("a");
 
     const NodeId branchB = nodes.factory.folder(fixture.root, "B");
-    nodes.build(branchB).add<TestComponent>("b");
+    fixture.build(branchB).add<TestComponent>("b");
 
     const NodeId deep = nodes.factory.folder(branchA, "Deep");
-    nodes.build(deep).add<TestComponent>("deep");
+    fixture.build(deep).add<TestComponent>("deep");
 
     auto rootComponent = nodes.configure(fixture.root).require<TestComponent>("root");
     auto a = nodes.configure(branchA).require<TestComponent>("a");
@@ -381,11 +381,11 @@ TEST(Node_GlobalCollectByRole, RuntimeFixture,
     BlueprintRegister::add<TestImplA, TestAPI>(fixture.run_ctx.blueprints);
     BlueprintRegister::add<TestImplB, TestAPI>(fixture.run_ctx.blueprints);
 
-    nodes.build(fixture.root).add<TestImplA>("a");
-    nodes.build(fixture.root).add<TestImplB>("b");
+    fixture.build(fixture.root).add<TestImplA>("a");
+    fixture.build(fixture.root).add<TestImplB>("b");
 
     const NodeId branch = nodes.factory.folder(fixture.root, "branch");
-    nodes.build(branch).add<TestImplA>("c");
+    fixture.build(branch).add<TestImplA>("c");
 
     auto a = nodes.configure(fixture.root).require<TestAPI>("a");
     auto b = nodes.configure(fixture.root).require<TestAPI>("b");
@@ -406,13 +406,13 @@ TEST(Node_GlobalCollectIgnoresInstanceName, RuntimeFixture,
     auto& nodes = fixture.run_ctx.nodes;
     BlueprintRegister::add<TestComponent>(fixture.run_ctx.blueprints);
 
-    nodes.build(fixture.root).add<TestComponent>("one");
-    nodes.build(fixture.root).add<TestComponent>("two");
-    nodes.build(fixture.root).add<TestComponent>("three");
+    fixture.build(fixture.root).add<TestComponent>("one");
+    fixture.build(fixture.root).add<TestComponent>("two");
+    fixture.build(fixture.root).add<TestComponent>("three");
 
     const NodeId branch = nodes.factory.folder(fixture.root, "branch");
-    nodes.build(branch).add<TestComponent>("four");
-    nodes.build(branch).add<TestComponent>("five");
+    fixture.build(branch).add<TestComponent>("four");
+    fixture.build(branch).add<TestComponent>("five");
 
     auto Node = nodes.query.collect(nodes.ops.root(fixture.root), typeKey<TestComponent>());
 
@@ -424,10 +424,10 @@ TEST(Node_GlobalCollectIgnoresInstanceName, RuntimeFixture,
 
 //     BlueprintRegister::add<TestComponent>(fixture.run_ctx.blueprints);
 
-//     nodes.build(fixture.root).add<TestComponent>("shared");
+//     fixture.build(fixture.root).add<TestComponent>("shared");
 
 //     const NodeId branch = nodes.factory.folder(fixture.root, "branch");
-//     nodes.build(branch).add<TestComponent>("shared");
+//     fixture.build(branch).add<TestComponent>("shared");
 
 //     nodes.ops.destroyBranch(nodes.query.find(branch, typeKey<TestComponent>(), "shared"));
 //     REQUIRE(nodes.query.collect(branch, typeKey<TestComponent>()).empty());
@@ -441,10 +441,10 @@ TEST(Node_RemoveShadowDoesNotRevealWrongComponent, RuntimeFixture,
     auto& nodes = fixture.run_ctx.nodes;
     BlueprintRegister::add<TestComponent>(fixture.run_ctx.blueprints);
 
-    nodes.build(fixture.root).add<TestComponent>("shared");
+    fixture.build(fixture.root).add<TestComponent>("shared");
 
     const NodeId branch = nodes.factory.folder(fixture.root, "branch");
-    nodes.build(branch).add<TestComponent>("shared");
+    fixture.build(branch).add<TestComponent>("shared");
 
     REQUIRE(nodes.configure(branch).find<TestComponent>("shared").exists());
 
@@ -460,13 +460,13 @@ TEST(Node_ConfigureDeepTree, RuntimeFixture,
     auto& nodes = fixture.run_ctx.nodes;
     BlueprintRegister::add<TestComponent>(fixture.run_ctx.blueprints);
 
-    nodes.build(fixture.root).add<TestComponent>("root");
+    fixture.build(fixture.root).add<TestComponent>("root");
 
     const NodeId branch = nodes.factory.folder(fixture.root, "branch");
-    nodes.build(branch).add<TestComponent>("branch");
+    fixture.build(branch).add<TestComponent>("branch");
 
     const NodeId child = nodes.factory.folder(fixture.root, "Child");
-    nodes.build(child).add<TestComponent>("child");
+    fixture.build(child).add<TestComponent>("child");
 
     nodes.ops.configureBranch(fixture.root);
 
@@ -482,7 +482,7 @@ TEST(Node_ConfigureDoesNotConfigureTwice, RuntimeFixture,
     auto& nodes = fixture.run_ctx.nodes;
     BlueprintRegister::add<TestComponent>(fixture.run_ctx.blueprints);
 
-    nodes.build(fixture.root).add<TestComponent>();
+    fixture.build(fixture.root).add<TestComponent>();
 
     auto component = nodes.configure(fixture.root).require<TestComponent>();
 

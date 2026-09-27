@@ -1,13 +1,13 @@
 #pragma once
 
 #include <Lattice/Kernel/NodeFactory.hpp>
+#include <Lattice/Kernel/Builder.hpp>
 #include <Lattice/Kernel/NodeRegistry.hpp>
 #include <Lattice/Kernel/NodeQuery.hpp>
 #include <Lattice/Kernel/NodeContext.hpp>
 #include <Lattice/Kernel/NodeOps.hpp>
 #include <Lattice/Kernel/Exports.hpp>
 
-class NodeBuild;
 class NodeConfigure;
 
 namespace Lattice {
@@ -21,15 +21,16 @@ public:
     NodeQuery query;
     Exports exports;
     NodeOps ops;
+    Builder builder;
 
     NodeSystem(Blueprints& blueprints)
         : blueprints(blueprints)
         , factory(*this)
         , context(registry)
         , query(registry, blueprints, context)
-        , ops(*this) {}
+        , ops(*this)
+        , builder(*this) {}
 
-    ::NodeBuild build(NodeId id);
     ::NodeConfigure configure(NodeId id);
 };
 

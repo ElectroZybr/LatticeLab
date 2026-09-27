@@ -277,7 +277,7 @@ template<class F> bool slotThrows(F&& operation) {
 TEST(Slot_RequireEmptyAndRejectComponent, RuntimeFixture) {
     registerSlotTypes(fixture);
     auto& nodes = fixture.run_ctx.nodes;
-    auto slot = nodes.build(fixture.root).addSlot<SlotAPI>();
+    auto slot = fixture.build(fixture.root).addSlot<SlotAPI>();
     auto view = nodes.configure(fixture.root);
     REQUIRE(view.findSlot<SlotAPI>().has_value());
     auto required = view.requireSlot<SlotAPI>();
@@ -285,7 +285,7 @@ TEST(Slot_RequireEmptyAndRejectComponent, RuntimeFixture) {
     REQUIRE(!required);
     required.choice<SlotImplA>();
     REQUIRE(slot->id() == 1);
-    nodes.build(fixture.root).add<SlotImplA>("component");
+    fixture.build(fixture.root).add<SlotImplA>("component");
     REQUIRE(!view.findSlot<SlotAPI>("component"));
     REQUIRE(slotThrows([&] { view.requireSlot<SlotAPI>("component"); }));
     REQUIRE(!view.findSlot<SlotAPI>("missing"));
@@ -295,9 +295,9 @@ TEST(Slot_RequireEmptyAndRejectComponent, RuntimeFixture) {
 TEST(Slot_RepeatedCreation, RuntimeFixture) {
     registerSlotTypes(fixture);
     auto& nodes = fixture.run_ctx.nodes;
-    auto first = nodes.build(fixture.root).addSlot<SlotAPI>();
+    auto first = fixture.build(fixture.root).addSlot<SlotAPI>();
     first.choice<SlotImplA>();
-    auto again = nodes.build(fixture.root).addSlot<SlotAPI>();
+    auto again = fixture.build(fixture.root).addSlot<SlotAPI>();
     REQUIRE(first.id() == again.id());
     REQUIRE(first.get() == again.get());
     REQUIRE(nodes.registry.children(fixture.root).size() == 1);
@@ -306,7 +306,7 @@ TEST(Slot_RepeatedCreation, RuntimeFixture) {
 TEST(Slot_AbstractChoicePreservesContents, RuntimeFixture) {
     registerSlotTypes(fixture);
     auto& nodes = fixture.run_ctx.nodes;
-    auto slot = nodes.build(fixture.root).addSlot<SlotAPI>();
+    auto slot = fixture.build(fixture.root).addSlot<SlotAPI>();
     slot.choice<SlotWindowImpl>();
     auto* previous = slot.get();
     REQUIRE(slotThrows([&] { slot.choice<SlotAPI>(); }));
@@ -319,7 +319,7 @@ TEST(Slot_ConstructorFailureClearsChildren, RuntimeFixture) {
     BlueprintRegister::add<RollbackChild>(fixture.run_ctx.blueprints);
     BlueprintRegister::add<ThrowingSlotImpl, SlotAPI>(fixture.run_ctx.blueprints);
     auto& nodes = fixture.run_ctx.nodes;
-    auto slot = nodes.build(fixture.root).addSlot<SlotAPI>();
+    auto slot = fixture.build(fixture.root).addSlot<SlotAPI>();
     slot.choice<SlotImplA>();
     auto focus = nodes.configure(fixture.root).focus<SlotAPI>();
     REQUIRE(slotThrows([&] { slot.choice<ThrowingSlotImpl>(); }));
@@ -335,11 +335,11 @@ TEST(Slot_ConstructorFailureClearsChildren, RuntimeFixture) {
 TEST(Node_RepeatedCreationAndUnnamedTypes, RuntimeFixture) {
     registerSlotTypes(fixture);
     auto& nodes = fixture.run_ctx.nodes;
-    auto a = nodes.build(fixture.root).add<SlotImplA>();
-    auto b = nodes.build(fixture.root).add<SlotImplB>();
+    auto a = fixture.build(fixture.root).add<SlotImplA>();
+    auto b = fixture.build(fixture.root).add<SlotImplB>();
     REQUIRE(a->id() == 1);
     REQUIRE(b->id() == 2);
-    REQUIRE(nodes.build(fixture.root).add<SlotImplA>().get() == a.get());
+    REQUIRE(fixture.build(fixture.root).add<SlotImplA>().get() == a.get());
 }
 
 TEST(Node_MountSharedCandidate, RuntimeFixture) {
@@ -352,7 +352,7 @@ TEST(Node_MountSharedCandidate, RuntimeFixture) {
     nodes.factory.share(provider, api);
 
     const NodeId consumer = nodes.factory.folder(fixture.root, "consumer");
-    auto mounted = nodes.build(consumer).mount<SlotAPI>();
+    auto mounted = fixture.build(consumer).mount<SlotAPI>();
 
     REQUIRE(mounted.target() == provider);
     REQUIRE(mounted.ref()->id() == 1);
@@ -389,7 +389,7 @@ TEST(Node_MountRejectsAmbiguousCandidates, RuntimeFixture) {
     nodes.factory.share(b, api);
 
     const NodeId consumer = nodes.factory.folder(fixture.root, "consumer");
-    REQUIRE(slotThrows([&] { nodes.build(consumer).mount<SlotAPI>(); }));
+    REQUIRE(slotThrows([&] { fixture.build(consumer).mount<SlotAPI>(); }));
 }
 
 }

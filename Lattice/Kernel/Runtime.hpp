@@ -3,7 +3,9 @@
 #include <atomic>
 #include <filesystem>
 #include <csignal>
+#include <functional>
 #include <string>
+#include <vector>
 
 #include <Lattice/Kernel/ServiceAPI.hpp>
 #include <Lattice/Kernel/Consts.hpp>
@@ -26,6 +28,27 @@
 namespace Lattice {
 
 class Runtime {
+    class Root {
+    public:
+        struct Desc {
+            std::function<void()> dumpBlueprints;
+            std::function<void()> requestExit;
+        };
+
+        Root(::NodeBuild node, const Desc& desc) {
+            node.globalAction("dumpBlueprints", desc.dumpBlueprints);
+            const ExportId quit = node.globalAction("quit", desc.requestExit);
+            node.globalAlias("exit", quit);
+        }
+    };
+
+    struct StartupBranch {
+        NodeId node = InvalidNodeId;
+        std::string type;
+        std::string name;
+        bool host = false;
+    };
+
     static constexpr std::string_view tag = "Runtime";
     Context run_ctx;
     NodeId root = InvalidNodeId;
@@ -42,37 +65,13 @@ public:
         BlueprintRegister::add<ServiceAPI>(run_ctx.blueprints);
         BlueprintRegister::add<SubsystemAPI>(run_ctx.blueprints);
         BlueprintRegister::add<Model, ServiceAPI>(run_ctx.blueprints);
-        root = run_ctx.nodes.factory.folder(InvalidNodeId, "Root");
-    }
+        const BlueprintId rootBlueprint = BlueprintRegister::add<Root>(run_ctx.blueprints, "Root");
 
-    void buildBranch(const StartupEntry& entry) {
-        LogScope scope(tag, "Build branch '{}' with name '{}'", entry.type, entry.name);
-        const NodeId node = run_ctx.nodes.factory.component(root, entry.type, entry.name);
-
-        if (entry.host) {
-            if (host != InvalidNodeId)
-                throw Lattice::Exception(tag, "Runtime already has a host service");
-
-            host = node;
-            Logger::info(tag, "Host service '{}'", entry.type);
-        }
-
-        run_ctx.nodes.ops.configureBranch(node);
-        scope.finish("Build '{}' done", entry.type);
-    }
-
-    void startService(const StartupEntry& entry) {
-        if (!entry.enabled || entry.host)
-            return;
-
-        const NodeId node = run_ctx.nodes.query.require(root, entry.type, entry.name);
-        auto* service = run_ctx.nodes.configure(root).resolve<ServiceAPI>(node);
-        if (!service)
-            return;
-
-        service->start();
-
-        Logger::info(tag, "Started service '{}.{}'", entry.type, entry.name);
+        const Root::Desc rootDesc{
+            .dumpBlueprints = [this] { run_ctx.blueprints.dumpTree(); },
+            .requestExit = [this] { requestExit(); }
+        };
+        root = run_ctx.nodes.builder.build(InvalidNodeId, rootBlueprint, DefaultInstanceName, &rootDesc);
     }
 
     int run(int argc, char** argv) {
@@ -104,7 +103,7 @@ public:
                     configPath = argv[i];
                 } else if (arg == "--tests" || arg == "-t") {
                     testMode = true;
-            }
+                }
             }
 
             StartupConfig config(configPath);
@@ -124,17 +123,7 @@ public:
 
             if (benchMode) {}
             
-            { // Сборка дерева компонентов
-                LogScope scope(tag, "<b>System build</>");
-                for (const auto& entry : config.entries())
-                    if (entry.enabled)
-                        buildBranch(entry);
-                auto build = run_ctx.nodes.build(root);
-                build.action("dumpBlueprints", [this]() { run_ctx.blueprints.dumpTree(); });
-                const ExportId quit = build.globalAction("quit", [this] { requestExit(); });
-                build.globalAlias("exit", quit);
-                scope.finish("<b>Build finished</>");
-            }
+            const std::vector<StartupBranch> startupBranches = build(config);
 
             { // стартовые данные после configure всех веток
                 LogScope scope(tag, "<b>System boot</>");
@@ -144,9 +133,8 @@ public:
 
             { // запуск сервисов
                 LogScope scope(tag, "<b>System start</>");
-                for (const auto& entry : config.entries())
-                    if (entry.enabled)
-                        startService(entry);
+                for (const auto& branch : startupBranches)
+                    startService(branch);
                 scope.finish("<b>Start finished</>");
             }
 
@@ -213,6 +201,52 @@ public:
     }
 
 private:
+    std::vector<StartupBranch> build(const StartupConfig& config) {
+        LogScope scope(tag, "<b>System build</>");
+
+        std::vector<StartupBranch> branches;
+        auto batch = run_ctx.nodes.builder.begin();
+        NodeId startupHost = InvalidNodeId;
+
+        for (const auto& entry : config.entries()) {
+            if (!entry.enabled)
+                continue;
+
+            const BlueprintId blueprint = run_ctx.blueprints.resolve(entry.type);
+            if (blueprint == InvalidBlueprintId)
+                throw Exception(tag, "Unknown startup blueprint '{}'", entry.type);
+
+            const NodeId node = batch.add(root, blueprint, entry.name);
+            branches.push_back({node, entry.type, entry.name, entry.host});
+
+            if (!entry.host)
+                continue;
+
+            if (startupHost != InvalidNodeId)
+                throw Exception(tag, "Runtime already has a host service");
+
+            startupHost = node;
+            Logger::info(tag, "Host service '{}'", entry.type);
+        }
+
+        batch.commit();
+        host = startupHost;
+        scope.finish("<b>Build finished</>");
+        return branches;
+    }
+
+    void startService(const StartupBranch& branch) {
+        if (branch.host)
+            return;
+
+        auto* service = run_ctx.nodes.configure(root).resolve<ServiceAPI>(branch.node);
+        if (!service)
+            return;
+
+        service->start();
+        Logger::info(tag, "Started service '{}.{}'", branch.type, branch.name);
+    }
+
     void requestExit() {
         running = false;
 

@@ -95,7 +95,7 @@ NodeId NodeFactory::component(NodeId parent, BlueprintId api, std::string_view i
         if (!blueprint.meta.create)
             throw Exception("NodeFactory", "Blueprint '{}' has no create callback", blueprint.name);
 
-        void* object = blueprint.meta.create(nodeSystem_.build(id), desc);
+        void* object = blueprint.meta.create(nodeSystem_.builder.node(id), desc);
         nodeSystem_.registry.require(id).object = {object, impl, false};
 
         if (!object)
@@ -164,7 +164,7 @@ void NodeFactory::choice(NodeId id, BlueprintId impl) {
 
     nodeSystem_.ops.clearContents(id);
     try {
-        void* object = create(nodeSystem_.build(id), nullptr);
+        void* object = create(nodeSystem_.builder.node(id), nullptr);
         if (!object)
             throw Exception("NodeFactory", "Failed to create '{}'", nodeSystem_.blueprints.require(impl).name);
 
@@ -233,7 +233,7 @@ NodeId NodeFactory::resource(
         if (!blueprint.meta.create)
             throw Exception("NodeFactory", "Blueprint '{}' has no create callback", blueprint.name);
 
-        void* object = blueprint.meta.create(nodeSystem_.build(id), desc);
+        void* object = blueprint.meta.create(nodeSystem_.builder.node(id), desc);
         nodeSystem_.registry.require(id).object = {object, impl, false};
         if (!object)
             throw Exception("NodeFactory", "Blueprint '{}' returned null", blueprint.name);

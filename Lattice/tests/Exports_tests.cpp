@@ -10,7 +10,7 @@ TEST(Exports_ActionContextAndTypedArguments, RuntimeFixture,
     const NodeId child = fixture.run_ctx.nodes.factory.folder(fixture.root, "child");
     std::string received;
 
-    const ExportId action = fixture.run_ctx.nodes.build(fixture.root).action<std::string>(
+    const ExportId action = fixture.build(fixture.root).action<std::string>(
         "navigate",
         [&](ActionContext& context, std::string path) {
             received = std::move(path);
@@ -37,7 +37,7 @@ TEST(Exports_ActionContextAndTypedArguments, RuntimeFixture,
 TEST(Exports_LegacyActionCallback, RuntimeFixture,
     "Action без аргументов должен продолжать принимать обычный callback void().") {
     bool invoked = false;
-    const ExportId action = fixture.run_ctx.nodes.build(fixture.root).action(
+    const ExportId action = fixture.build(fixture.root).action(
         "legacy",
         [&] { invoked = true; }
     );
@@ -53,7 +53,7 @@ TEST(Exports_LocalScopeIsCreatedLazily, RuntimeFixture,
     bool invoked = false;
 
     REQUIRE(nodes.context.findScope(branch) == InvalidContextScopeId);
-    nodes.build(branch).action("local", [&] { invoked = true; });
+    fixture.build(branch).action("local", [&] { invoked = true; });
 
     const ContextScopeId scope = nodes.context.findScope(branch);
     REQUIRE(scope != InvalidContextScopeId);
@@ -76,7 +76,7 @@ TEST(Exports_GlobalDoesNotCreateOwnerScope, RuntimeFixture,
     const NodeId branch = nodes.factory.folder(fixture.root, "branch");
     bool invoked = false;
 
-    nodes.build(owner).globalAction("global", [&] { invoked = true; });
+    fixture.build(owner).globalAction("global", [&] { invoked = true; });
     REQUIRE(nodes.context.findScope(owner) == InvalidContextScopeId);
 
     ExportsView exports = nodes.configure(branch).exports();
@@ -105,8 +105,8 @@ TEST(Exports_LocalShadowsGlobal, RuntimeFixture,
     const NodeId branch = nodes.factory.folder(fixture.root, "branch");
     int selected = 0;
 
-    const ExportId globalId = nodes.build(globalOwner).globalAction("select", [&] { selected = 1; });
-    const ExportId localId = nodes.build(branch).action("select", [&] { selected = 2; });
+    const ExportId globalId = fixture.build(globalOwner).globalAction("select", [&] { selected = 1; });
+    const ExportId localId = fixture.build(branch).action("select", [&] { selected = 2; });
 
     ExportsView exports = nodes.configure(branch).exports();
     const RoleId role = exports.role("select");
@@ -141,7 +141,7 @@ TEST(Exports_GlobalAliasSharesExport, RuntimeFixture,
     const NodeId branch = nodes.factory.folder(fixture.root, "branch");
     int invoked = 0;
 
-    auto build = nodes.build(owner);
+    auto build = fixture.build(owner);
     const ExportId target = build.globalAction("quit", [&] { ++invoked; });
     build.globalAlias("exit", target);
 

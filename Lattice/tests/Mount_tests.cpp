@@ -77,8 +77,8 @@ TEST(Mount_AddLocalIdentityAndLifetime, RuntimeFixture,
     const NodeId callerA = nodes.factory.folder(fixture.root, "caller-a");
     const NodeId callerB = nodes.factory.folder(fixture.root, "caller-b");
 
-    auto mountA = nodes.build(callerA).mount<SharedOwner>();
-    auto mountB = nodes.build(callerB).mount<SharedOwner>();
+    auto mountA = fixture.build(callerA).mount<SharedOwner>();
+    auto mountB = fixture.build(callerB).mount<SharedOwner>();
     auto first = mountA.addLocal<Resource>("buffer", ResourceDesc{11});
     auto repeated = mountA.addLocal<Resource>("buffer", ResourceDesc{99});
     auto other = mountB.addLocal<Resource>("buffer", ResourceDesc{22});
@@ -126,8 +126,8 @@ TEST(Mount_AddShareCountsUniqueCallers, RuntimeFixture,
     const NodeId callerA = nodes.factory.folder(fixture.root, "caller-a");
     const NodeId callerB = nodes.factory.folder(fixture.root, "caller-b");
 
-    auto mountA = nodes.build(callerA).mount<SharedOwner>();
-    auto mountB = nodes.build(callerB).mount<SharedOwner>();
+    auto mountA = fixture.build(callerA).mount<SharedOwner>();
+    auto mountB = fixture.build(callerB).mount<SharedOwner>();
     auto first = mountA.addShare<Resource>("mesh", ResourceDesc{7});
     auto repeated = mountA.addShare<Resource>("mesh", ResourceDesc{99});
     auto secondCaller = mountB.addShare<Resource>("mesh", ResourceDesc{42});
@@ -165,8 +165,8 @@ TEST(Mount_AddShareDiesWithPhysicalOwner, RuntimeFixture,
     const NodeId callerA = nodes.factory.folder(fixture.root, "caller-a");
     const NodeId callerB = nodes.factory.folder(fixture.root, "caller-b");
 
-    nodes.build(callerA).mount<SharedOwner>().addShare<Resource>("mesh", ResourceDesc{1});
-    nodes.build(callerB).mount<SharedOwner>().addShare<Resource>("mesh", ResourceDesc{2});
+    fixture.build(callerA).mount<SharedOwner>().addShare<Resource>("mesh", ResourceDesc{1});
+    fixture.build(callerB).mount<SharedOwner>().addShare<Resource>("mesh", ResourceDesc{2});
     const auto api = fixture.run_ctx.blueprints.id<Resource>();
     const NodeId referenceA = nodes.registry.find("mesh", callerA, api, owner);
     const NodeId referenceB = nodes.registry.find("mesh", callerB, api, owner);
@@ -186,7 +186,7 @@ TEST(Mount_DescriptorlessAndRollback, RuntimeFixture,
     auto& nodes = fixture.run_ctx.nodes;
     const NodeId owner = createOwner(fixture);
     const NodeId caller = nodes.factory.folder(fixture.root, "caller");
-    auto mounted = nodes.build(caller).mount<SharedOwner>();
+    auto mounted = fixture.build(caller).mount<SharedOwner>();
 
     REQUIRE(mounted.addLocal<PlainResource>("plain").exists());
 
