@@ -21,5 +21,10 @@ struct RuntimeFixture : public TestFixture {
         BlueprintRegister::add<Model, ServiceAPI>(run_ctx.blueprints);
         root = run_ctx.nodes.factory.folder(InvalidNodeId, "Root");
     }
+
+    ::NodeBuild build(NodeId id) {
+        run_ctx.nodes.registry.require(id);
+        return ::NodeBuild{id, run_ctx.nodes};
+    }
 };
 }
