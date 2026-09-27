@@ -23,6 +23,7 @@
 #include "Lattice/Tools/LogScope.hpp"
 #include "Lattice/Tools/LogMode.hpp"
 #include "Lattice/Tools/Logger.hpp"
+#include "Lattice/Tools/TableFormatter.hpp"
 #include "Lattice/Tools/Tests.hpp"
 
 
@@ -92,7 +93,7 @@ public:
         } restoreSignals{previousInt, previousTerm};
         try {
             Logger::setDefaultMode(LogMode::Clean | LogMode::OnlyWarn);
-            Lattice::CliSystemInfo::printSystemInfo();
+            CliSystemInfo::printSystemInfo();
             std::filesystem::path configPath = "lattice.toml";
             bool testMode = false, benchMode = false;
 
@@ -102,7 +103,7 @@ public:
                     Logger::setDefaultMode(LogMode::Verbose | LogMode::Gap);
                 } else if (arg == "--config" || arg == "-c") {
                     if (++i >= argc)
-                        throw Lattice::Exception(tag, "missing path for {}", arg);
+                        throw Exception(tag, "missing path for {}", arg);
                     configPath = argv[i];
                 } else if (arg == "--tests" || arg == "-t") {
                     testMode = true;
@@ -140,6 +141,34 @@ public:
                     startService(branch);
                 scope.finish("<b>Start finished</>");
             }
+
+            BasicTable table;
+            table.addColumn<int>("nums");
+            table.addColumn<std::string>("str");
+
+            table.addRows(50);
+            table.addRow(1, std::string{"fdfsfddfasfdsafsadfsadf"});
+        
+            TableFormatter::Desc desc;
+
+            desc.style.borders = TableFormatter::Borders::Rounded;
+            desc.style.rules = TableFormatter::Rules::Outer;
+            desc.style.border = TextStyle::BrightGreen;
+            desc.style.header = TextStyle::Bold | TextStyle::BrightWhite;
+            desc.style.cell = TextStyle::White;
+            desc.style.alternateCell = TextStyle::Dim;
+
+            desc.style.paddingLeft = 1;
+            desc.style.paddingRight = 1;
+
+            desc.maxRows = TableFormatter::Desc::Unlimited;
+            desc.maxColumnWidth = 10;
+
+            TableFormatter formatter;
+
+            for (const TextFormatter line : formatter.view(table, desc))
+                Logger::message(line);
+
 
             if (host != InvalidNodeId) {
                 auto* service = run_ctx.nodes.configure(root).resolve<ServiceAPI>(host);
@@ -181,7 +210,7 @@ public:
     }
 
     void reportException(const std::exception& error) const {
-        auto* fatal = dynamic_cast<const Lattice::Exception*>(&error);
+        auto* fatal = dynamic_cast<const Exception*>(&error);
         Logger::message("\n<r>~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</>");
         if (fatal) {
             Logger::exception(fatal->tag(), "{}", error.what());

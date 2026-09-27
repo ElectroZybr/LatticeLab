@@ -3,7 +3,6 @@
 #include <Lattice/Kernel/Consts.hpp>
 
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstring>
@@ -16,18 +15,12 @@
 
 #include <Lattice/Kernel/TypeName.hpp>
 #include <Lattice/Kernel/Exception.hpp>
-#include <Lattice/Kernel/Table.hpp>
-#include <Lattice/Kernel/Value.hpp>
+#include <Lattice/Kernel/NodeViews.hpp>
+#include <Lattice/Kernel/TableAPI.hpp>
 #include <Lattice/Tools/Logger.hpp>
 
 
 namespace StdData {
-
-template<typename T>
-constexpr bool isCharArray = false;
-
-template<std::size_t N>
-constexpr bool isCharArray<std::array<char, N>> = true;
 
 /**
  @brief Контейнер табличных данных в формате Structure of Arrays.
@@ -40,6 +33,8 @@ class SoA : public Lattice::Table {
     static constexpr std::string_view tag = "SoA";
 public:
     SoA() = default;
+    explicit SoA(NodeBuild branch)
+        : Lattice::Table(std::move(branch)) {}
     SoA(const SoA&) = delete;
     SoA& operator=(const SoA&) = delete;
     SoA(SoA&& other) noexcept
@@ -81,7 +76,7 @@ public:
         relayout(newCapacity);
     }
 
-    void resize(size_t n) {
+    void resize(size_t n) override {
         reserve(n);
         size_ = n;
     }
@@ -125,6 +120,24 @@ public:
         );
     }
 
+protected:
+    void* mutableElement(size_t index, size_t row) override {
+        if (row >= size_)
+            throw Lattice::Exception(tag, "Row {} is out of range", row);
+
+        size_t visibleIndex = 0;
+        for (auto& column : columns_) {
+            if (!column.active)
+                continue;
+            if (visibleIndex++ == index)
+                return storage_ + column.offset + row * column.elementSize;
+        }
+
+        throw Lattice::Exception(tag, "Column {} is out of range", index);
+    }
+
+public:
+
     // -------
     // Add/remove column
     template<class Tag>
@@ -149,10 +162,6 @@ public:
         col.alignment   = alignof(T);
         col.type        = Lattice::tableType<T>();
         col.active      = true;
-
-        col.assign = [](std::byte* storage, size_t index, const Lattice::Value& value) {
-            assignCell(reinterpret_cast<T*>(storage)[index], value);
-        };
 
         relayout(capacity_);
 
@@ -256,18 +265,6 @@ public:
         return getCol<Tag>()[index];
     }
 
-    void set(std::string_view name, size_t index, const Lattice::Value& value) {
-        Column* col = findColumn(name);
-
-        if (!col)
-            throw Lattice::Exception(tag, "Column '{}' not found", name);
-
-        if (index >= size_)
-            throw Lattice::Exception(tag, "Index {} out of range for column '{}'", index, name);
-
-        col->assign(storage_ + col->offset, index, value);
-    }
-
     void swapRows(size_t a, size_t b) noexcept {
         if (a == b) return;
 
@@ -300,7 +297,6 @@ private:
         size_t alignment    = 0;
         Lattice::TableType type;
         bool active         = false;
-        void (*assign)(std::byte*, size_t, const Lattice::Value&) = nullptr;
     };
 
     size_t size_         = 0;
@@ -319,32 +315,6 @@ private:
     static size_t typeId() {
         static const size_t id = nextTypeId()++;
         return id;
-    }
-
-    template<typename T>
-    static void assignCell(T& dst, const Lattice::Value& value) {
-        if constexpr (isCharArray<T>) {
-            const auto text = value.as<std::string>();
-            dst = {};
-            const size_t n = std::min(text.size(), dst.size() ? dst.size() - 1 : 0);
-            std::memcpy(dst.data(), text.data(), n);
-        } else if constexpr (std::is_floating_point_v<T>) {
-            if (value.is<double>())
-                dst = static_cast<T>(value.get<double>());
-            else if (value.is<int64_t>())
-                dst = static_cast<T>(value.get<int64_t>());
-            else
-                throw Lattice::Exception(tag, "expected a number");
-        } else if constexpr (std::is_integral_v<T> && !std::is_same_v<T, bool>) {
-            if (value.is<int64_t>())
-                dst = static_cast<T>(value.get<int64_t>());
-            else if (value.is<double>())
-                dst = static_cast<T>(value.get<double>());
-            else
-                throw Lattice::Exception(tag, "expected an integer");
-        } else {
-            dst = value.as<T>();
-        }
     }
 
     static size_t alignUp(size_t value, size_t alignment) noexcept {

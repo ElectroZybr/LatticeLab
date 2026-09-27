@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <string_view>
+#include <utility>
 
 #include <Lattice/Kernel/NamedRegistry.hpp>
 #include "SoA.hpp"
@@ -17,6 +18,10 @@ namespace StdData {
 
 class NamedSoA : public SoA {
 public:
+    NamedSoA() = default;
+    explicit NamedSoA(NodeBuild branch)
+        : SoA(std::move(branch)) {}
+
     void clear() noexcept {
         SoA::clear();
         names_.clear();
@@ -30,10 +35,12 @@ public:
         return names_.has(name);
     }
 
-    [[nodiscard]] size_t addRow(std::string_view name) {
-        const size_t id = size();
+    template<typename... Values>
+    [[nodiscard]] size_t addRow(std::string_view name, Values&&... values) {
+        const size_t id = sizeof...(Values) == 0
+            ? SoA::addRow()
+            : SoA::addRow(std::forward<Values>(values)...);
         names_.add(name, id);
-        resize(id + 1);
         return id;
     }
 

@@ -13,17 +13,17 @@
 
 #include <Lattice/Tools/LogMode.hpp>
 #include <Lattice/Tools/LogStyle.hpp>
-#include <Lattice/Tools/Text.hpp>
+#include <Lattice/Tools/TextFormatter.hpp>
 
 
 struct LogEvent {
     Level level;
-    Text text;
+    TextFormatter text;
 };
 
 class LoggerImpl {
 public:
-    void print(Level level, const Text& text, bool isScopeFinal = false);
+    void print(Level level, const TextFormatter& text, bool isScopeFinal = false);
     void printBlank();
     void pushScope(LogMode mode, size_t maxDepth);
     void popScope(bool success, bool hasFinal = true);
@@ -82,7 +82,7 @@ public:
 
     static LoggerImpl& current() { return logger_; }
 
-    static void write(Level level, const Text& text);
+    static void write(Level level, const TextFormatter& text);
 
     static SinkId addSink(Sink sink);
     static void removeSink(SinkId id);
@@ -113,8 +113,8 @@ private:
 
 namespace Logger {
 
-inline Text line(Level level, std::string_view tag, const Text& message) {
-    return Text::format(
+inline TextFormatter line(Level level, std::string_view tag, const TextFormatter& message) {
+    return TextFormatter::format(
         "{} <gr><b>[<w>{}</>]<//> {}</>",
         LogStyle::get(level).style,
         tag,
@@ -138,18 +138,22 @@ inline void blank() {
     LogSystem::current().printBlank();
 }
 
-inline void print(Level level, std::string_view tag, const Text& message, bool isScopeFinal = false) {
+inline void message(const TextFormatter& text) {
+    LogSystem::current().print(Level::Message, text);
+}
+
+inline void print(Level level, std::string_view tag, const TextFormatter& message, bool isScopeFinal = false) {
     LogSystem::current().print(level, line(level, tag, message), isScopeFinal);
 }
 
 template <typename... Args>
 inline void print(Level level, std::string_view tag, std::format_string<Args...> format, Args&&... args) {
-    print(level, tag, Text::format(format, std::forward<Args>(args)...));
+    print(level, tag, TextFormatter::format(format, std::forward<Args>(args)...));
 }
 
 template <typename... Args>
 void message(std::format_string<Args...> format, Args&&... args) {
-    LogSystem::current().print(Level::Message, Text::format(format, std::forward<Args>(args)...));
+    LogSystem::current().print(Level::Message, TextFormatter::format(format, std::forward<Args>(args)...));
 }
 
 template <typename... Args>

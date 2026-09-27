@@ -4,7 +4,8 @@
 #include <Lattice/Kernel/NodeViews.hpp>
 #include <Lattice/Kernel/NodeContext.hpp>
 #include <Lattice/Kernel/Blueprints.hpp>
-#include <Lattice/Tools/LogTree.hpp>
+#include <Lattice/Tools/Logger.hpp>
+#include <Lattice/Tools/TreeFormatter.hpp>
 
 namespace Lattice {
 
@@ -201,7 +202,7 @@ std::string NodeOps::stringPath(NodeId id) const {
 
 void NodeOps::dumpTree(NodeId id, NodeId highlighted) const {
     const auto& root = nodeSystem_.registry.require(id);
-    Logger::Tree tree(root.name.empty() ? "Root" : root.name);
+    Lattice::TreeFormatter tree(root.name.empty() ? "Root" : root.name);
 
     auto append = [&](auto&& self, NodeId current, size_t depth) -> void {
         for (NodeId childId : nodeSystem_.registry.children(current)) {
@@ -261,11 +262,12 @@ void NodeOps::dumpTree(NodeId id, NodeId highlighted) const {
     };
 
     append(append, id, 0);
-    tree.print();
+    Logger::message(tree.format());
+    Logger::blank();
 }
 
 void NodeOps::dumpContext() const {
-    Logger::Tree tree("Context");
+    Lattice::TreeFormatter tree("Context");
 
     const auto label = [this](NodeId id) -> std::string {
         if (id == InvalidNodeId) return "Empty";
@@ -297,7 +299,8 @@ void NodeOps::dumpContext() const {
         tree.node(std::format("{} ➜ <gr>{}</>", nodeSystem_.context.roleName(role), label(nodeSystem_.context.resolve(role))), 1);
     }
 
-    tree.print();
+    Logger::message(tree.format());
+    Logger::blank();
 }
 
 }

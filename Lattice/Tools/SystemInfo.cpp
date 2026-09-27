@@ -1,7 +1,7 @@
 #include <Lattice/Tools/SystemInfo.hpp>
 #include <Lattice/Tools/LogStyle.hpp>
 #include <Lattice/Tools/Logger.hpp>
-#include <Lattice/Tools/LogTree.hpp>
+#include <Lattice/Tools/TreeFormatter.hpp>
 
 #include <algorithm>
 #include <array>
@@ -858,7 +858,7 @@ namespace {
 
     void printSystemInfo() {
         const SystemInfo info = collectSystemInfo();
-        Logger::Tree tree("System");
+        Lattice::TreeFormatter tree("System");
 
         tree.node(std::format("{} {}", Color::paint("OS:", Color::brightBlue), Color::paint(info.os, Color::brightWhite)), 0);
         tree.node(std::format("{} {}", Color::paint("Arch:", Color::brightBlue), Color::paint(info.arch, Color::brightWhite)), 0);
@@ -893,6 +893,7 @@ namespace {
             }
         }
 
-        tree.print();
+        Logger::message(tree.format());
+        Logger::blank();
     }
 }

@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-#include <Lattice/Tools/Text.hpp>
+#include <Lattice/Tools/TextFormatter.hpp>
 #include <Lattice/Tools/LogMode.hpp>
 
 struct LogStyle {

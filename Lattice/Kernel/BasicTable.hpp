@@ -7,7 +7,9 @@
 #include <unordered_map>
 #include <utility>
 
-#include <Lattice/Kernel/Table.hpp>
+#include <Lattice/Kernel/TableAPI.hpp>
+#include <Lattice/Kernel/NodeViews.hpp>
+
 
 namespace Lattice {
 
@@ -86,6 +88,8 @@ class BasicTable final : public Table {
 
 public:
     BasicTable() = default;
+    explicit BasicTable(::NodeBuild branch)
+        : Table(std::move(branch)) {}
     BasicTable(const BasicTable&) = delete;
     BasicTable& operator=(const BasicTable&) = delete;
     BasicTable(BasicTable&&) noexcept = default;
@@ -115,7 +119,7 @@ public:
         };
     }
 
-    void resize(size_t rows) {
+    void resize(size_t rows) override {
         for (auto& column : columns_)
             column.resize(rows);
         rows_ = rows;
@@ -155,6 +159,17 @@ public:
     template<typename T>
     std::span<const T> values(std::string_view name) const {
         return column(name).template values<T>();
+    }
+
+protected:
+    void* mutableElement(size_t column, size_t row) override {
+        if (column >= columns_.size())
+            throw Exception("BasicTable", "Column {} is out of range", column);
+        if (row >= rows_)
+            throw Exception("BasicTable", "Row {} is out of range", row);
+
+        ColumnStorage& storage = columns_[column];
+        return static_cast<std::byte*>(storage.data()) + row * storage.type().size;
     }
 
 private:

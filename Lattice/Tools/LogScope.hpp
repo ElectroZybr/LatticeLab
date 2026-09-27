@@ -17,7 +17,7 @@ public:
     {
         auto& log = LogSystem::current();
         start(log.currentOrDefault(), log.defaultMaxDepth(),
-              Text::format(format, std::forward<Args>(args)...));
+              TextFormatter::format(format, std::forward<Args>(args)...));
     }
 
     template <typename... Args>
@@ -30,7 +30,7 @@ public:
         start(
             LogModes::inherit(mode, log.currentOrDefault()),
             log.defaultMaxDepth(),
-            Text::format(format, std::forward<Args>(args)...)
+            TextFormatter::format(format, std::forward<Args>(args)...)
         );
     }
 
@@ -50,7 +50,7 @@ public:
         start(
             LogModes::inherit(mode, log.currentOrDefault()),
             maxDepth,
-            Text::format(format, std::forward<Args>(args)...)
+            TextFormatter::format(format, std::forward<Args>(args)...)
         );
     }
 
@@ -68,7 +68,7 @@ public:
         if (!active_)
             return;
 
-        close(Level::Ok, Text::format(format, std::forward<Args>(args)...));
+        close(Level::Ok, TextFormatter::format(format, std::forward<Args>(args)...));
     }
 
     template <typename... Args>
@@ -76,7 +76,7 @@ public:
         if (!active_)
             return;
 
-        close(Level::Exception, Text::format(format, std::forward<Args>(args)...));
+        close(Level::Exception, TextFormatter::format(format, std::forward<Args>(args)...));
     }
 
     void cancel() noexcept {
@@ -89,7 +89,7 @@ public:
 private:
     using Clock = std::chrono::steady_clock;
 
-    void start(LogMode mode, size_t maxDepth, const Text& message) {
+    void start(LogMode mode, size_t maxDepth, const TextFormatter& message) {
         auto& log = LogSystem::current();
         log.pushScope(mode, maxDepth);
         Logger::blank();
@@ -97,22 +97,22 @@ private:
         log.addDepth(1);
     }
 
-    void close(Level level, const Text& message) {
+    void close(Level level, const TextFormatter& message) {
         auto& log = LogSystem::current();
         const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
             Clock::now() - startTime_
         ).count();
 
-        Text finish = message;
+        TextFormatter finish = message;
         if (LogModes::shouldAnnotateWarn(
                 log.currentScopeMode(),
                 level == Level::Ok,
                 log.currentHadProblem()
             ))
         {
-            finish += Text::format(" <y>(warn)</>");
+            finish += TextFormatter::format(" <y>(warn)</>");
         }
-        finish += Text::format("<gr> ({} us)</>", elapsed);
+        finish += TextFormatter::format("<gr> ({} us)</>", elapsed);
 
         log.addDepth(-1);
         Logger::print(level, tag_, finish, true);

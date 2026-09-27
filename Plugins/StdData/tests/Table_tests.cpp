@@ -1,4 +1,5 @@
-#include <Lattice/Kernel/Table.hpp>
+#include <Lattice/Kernel/TableAPI.hpp>
+#include <Lattice/Tools/Fixture.hpp>
 #include <Lattice/Tools/Tests.hpp>
 
 #include "SoA.hpp"
@@ -32,6 +33,35 @@ TEST(SoA_ImplementsTableContract, Lattice::TestFixture,
     soa.removeCol<Mass>();
     REQUIRE(table.columns() == 1);
     REQUIRE(table.column(0).name() == "Charge");
+}
+
+TEST(SoA_InheritsTableViewAction, Lattice::RuntimeFixture,
+    "SoA должна получать базовые exports Table.") {
+    Lattice::BlueprintRegister::add<SoA, Lattice::Table>(fixture.run_ctx.blueprints);
+    const Lattice::NodeId node = fixture.run_ctx.nodes.builder.build(
+        fixture.root,
+        fixture.run_ctx.blueprints.id<SoA>(),
+        "data"
+    );
+
+    const Lattice::ExportId view = fixture.run_ctx.nodes.exports.find(node, "view");
+    REQUIRE(view != Lattice::InvalidExportId);
+
+    Lattice::ActionContext context{node};
+    fixture.run_ctx.nodes.exports.invoke(view, context);
+    REQUIRE(std::get<Lattice::ActionView>(context.output().front()).is<Lattice::Table>());
+}
+
+TEST(SoA_AddsTypedRowsThroughTable, Lattice::TestFixture,
+    "SoA должна поддерживать общий типизированный addRow.") {
+    SoA soa;
+    soa.addCol<Mass>();
+    soa.addCol<Charge>();
+
+    Lattice::Table& table = soa;
+    REQUIRE(table.addRow(1.008f, int{1}) == 0);
+    REQUIRE(soa.at<Mass>(0) == 1.008f);
+    REQUIRE(soa.at<Charge>(0) == 1);
 }
 
 }

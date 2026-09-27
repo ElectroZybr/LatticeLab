@@ -14,7 +14,8 @@
 #include <Lattice/Kernel/Exception.hpp>
 #include <Lattice/Kernel/TypeName.hpp>
 #include <Lattice/Kernel/Value.hpp>
-#include "Lattice/Tools/LogTree.hpp"
+#include <Lattice/Tools/Logger.hpp>
+#include "Lattice/Tools/TreeFormatter.hpp"
 
 namespace Lattice {
 
@@ -320,7 +321,7 @@ public:
     }
 
     void dump() const {
-        Logger::Tree tree("Exports");
+        Lattice::TreeFormatter tree("Exports");
 
         for (ExportId id = 0; id < exports_.size(); ++id) {
             const auto& entry = exports_[id];
@@ -337,7 +338,8 @@ public:
             tree.node(std::format("{}{}<gr> = {}</>", kind, entry.name, value), 0);
         }
 
-        tree.print();
+        Logger::message(tree.format());
+        Logger::blank();
     }
 
 private:

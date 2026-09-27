@@ -125,22 +125,22 @@ struct TextSpan {
 };
 
 
-class Text {
+class TextFormatter {
 public:
 
-    Text() = default;
+    TextFormatter() = default;
 
-    explicit Text(std::string_view text) {
+    explicit TextFormatter(std::string_view text) {
         parse(text);
     }
 
 
     template<typename... TArgs>
-    static Text format(
+    static TextFormatter format(
         std::format_string<TArgs...> fmt,
         TArgs&&... args
     ) {
-        return Text(
+        return TextFormatter(
             std::format(
                 fmt,
                 std::forward<TArgs>(args)...
@@ -149,37 +149,37 @@ public:
     }
 
 
-    static Text format(const Text& text) {
+    static TextFormatter format(const TextFormatter& text) {
         return text;
     }
 
 
-    Text& operator+=(const Text& other) {
+    TextFormatter& operator+=(const TextFormatter& other) {
         append(other);
         return *this;
     }
 
 
-    friend Text operator+(Text lhs, const Text& rhs) {
+    friend TextFormatter operator+(TextFormatter lhs, const TextFormatter& rhs) {
         lhs += rhs;
         return lhs;
     }
 
 
-    Text& operator+=(std::string_view text) {
+    TextFormatter& operator+=(std::string_view text) {
         append(text);
         return *this;
     }
 
 
-    friend Text operator+(Text lhs, std::string_view rhs) {
+    friend TextFormatter operator+(TextFormatter lhs, std::string_view rhs) {
         lhs += rhs;
         return lhs;
     }
 
 
-    friend Text operator+(std::string_view lhs, Text rhs) {
-        Text result(lhs);
+    friend TextFormatter operator+(std::string_view lhs, TextFormatter rhs) {
+        TextFormatter result(lhs);
         result += rhs;
         return result;
     }
@@ -229,7 +229,7 @@ public:
 
                 if (count >= stack.size()) {
                     throw Exception(
-                        "Text",
+                        "TextFormatter",
                         "Too many closing tags '<{}>'",
                         tag
                     );
@@ -281,7 +281,7 @@ public:
 
         if (stack.size() != 1) {
             throw Exception(
-                "Text",
+                "TextFormatter",
                 "Unclosed text style tag"
             );
         }
@@ -302,20 +302,20 @@ public:
         });
     }
 
-    void append(const Text& text) {
+    void append(const TextFormatter& text) {
         for (const auto& span : text.spans_)
             append(span.text, span.style);
     }
 
 
     void append(
-        const Text& text,
+        const TextFormatter& text,
         TextStyle style
     ) {
         for (const auto& span : text.spans_) {
             append(
                 span.text,
-                combineStyle(span.style, style)
+                combineStyle(style, span.style)
             );
         }
     }
@@ -403,24 +403,24 @@ public:
     }
 
 
-    Text wrap(
+    TextFormatter wrap(
         size_t width,
         size_t continuationIndent = 0
     ) const {
 
         if (width == 0)
             throw Exception(
-                "Text",
+                "TextFormatter",
                 "Wrap width cannot be zero"
             );
 
         if (continuationIndent >= width)
             throw Exception(
-                "Text",
+                "TextFormatter",
                 "Continuation indent must be less than wrap width"
             );
 
-        Text result;
+        TextFormatter result;
 
         size_t lineLength = 0;
 
@@ -730,7 +730,7 @@ private:
         if (tag == "bw")  return TextStyle::BrightWhite;
 
         throw Exception(
-            "Text",
+            "TextFormatter",
             "Unknown style tag '<{}>'",
             tag
         );
@@ -876,5 +876,5 @@ private:
 } // namespace Lattice
 
 
-using Lattice::Text;
+using Lattice::TextFormatter;
 using Lattice::TextStyle;
