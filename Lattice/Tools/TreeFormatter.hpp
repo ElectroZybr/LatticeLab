@@ -26,9 +26,9 @@ inline constexpr TreeGlyphs Ascii{"+", "\\", "|", "-"};
 
 struct TreeFormatStyle {
     TreeGlyphs glyphs = TreeStyles::Modern;
-    TextStyle root = TextStyle::Bold | TextStyle::White;
-    TextStyle node = TextStyle::White;
-    TextStyle lines = TextStyle::Gray;
+    TextStyle root = TextStyle::Bold | TextStyle::rgb(0x5555ff);
+    TextStyle node = TextStyle::None;
+    TextStyle lines = TextStyle::rgb(0x555555);
     size_t indentation = 2;
 };
 
@@ -60,6 +60,12 @@ public:
         TreeFormatStyle style = {}
     ) : root_(std::string(name)), style_(style) {}
 
+    TreeFormatter(
+        std::string_view name,
+        const TextTheme& theme,
+        TreeFormatStyle style = {}
+    ) : root_(std::string(name)), style_(style), theme_(&theme) {}
+
     TreeNode& branch(std::string_view name) {
         return root_.branch(name);
     }
@@ -82,7 +88,7 @@ public:
 
     TextFormatter format() const {
         TextFormatter output;
-        output.append(TextFormatter(root_.name_), style_.root);
+        output.append(TextFormatter(root_.name_, theme_), style_.root);
         appendTreeNode(root_, "", output);
         return output;
     }
@@ -105,7 +111,7 @@ private:
             );
             output.append(style_.glyphs.horizontal, style_.lines);
             output.append(" ");
-            output.append(TextFormatter(child->name_), style_.node);
+            output.append(TextFormatter(child->name_, theme_), style_.node);
 
             appendTreeNode(
                 *child,
@@ -119,6 +125,7 @@ private:
     TreeNode root_;
     std::vector<TreeNode*> parents_;
     TreeFormatStyle style_;
+    const TextTheme* theme_ = nullptr;
 };
 
 }

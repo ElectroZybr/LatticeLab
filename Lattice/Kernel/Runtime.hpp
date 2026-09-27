@@ -23,7 +23,6 @@
 #include "Lattice/Tools/LogScope.hpp"
 #include "Lattice/Tools/LogMode.hpp"
 #include "Lattice/Tools/Logger.hpp"
-#include "Lattice/Tools/TableFormatter.hpp"
 #include "Lattice/Tools/Tests.hpp"
 
 
@@ -116,7 +115,7 @@ public:
                 LogScope scope(tag, "<b>System loading</>");
                 // загрузка плагинов
                 pluginManager.load("Plugins");
-                scope.finish("<b>Loaded</>");
+                scope.finish("<ok>Loaded</>");
             }
             
             if (testMode) { // режим прогона тестов
@@ -132,42 +131,42 @@ public:
             { // стартовые данные после configure всех веток
                 LogScope scope(tag, "<b>System boot</>");
                 loadStartup();
-                scope.finish("<b>Boot finished</>");
+                scope.finish("<ok>Boot finished</>");
             }
 
             { // запуск сервисов
                 LogScope scope(tag, "<b>System start</>");
                 for (const auto& branch : startupBranches)
                     startService(branch);
-                scope.finish("<b>Start finished</>");
+                scope.finish("<ok>Start finished</>");
             }
 
-            BasicTable table;
-            table.addColumn<int>("nums");
-            table.addColumn<std::string>("str");
+            // BasicTable table;
+            // table.addColumn<int>("nums");
+            // table.addColumn<std::string>("str");
 
-            table.addRows(50);
-            table.addRow(1, std::string{"fdfsfddfasfdsafsadfsadf"});
+            // table.addRows(50);
+            // table.addRow(1, std::string{"fdfsfddfasfdsafsadfsadf"});
         
-            TableFormatter::Desc desc;
+            // TableFormatter::Desc desc;
 
-            desc.style.borders = TableFormatter::Borders::Rounded;
-            desc.style.rules = TableFormatter::Rules::Outer;
-            desc.style.border = TextStyle::BrightGreen;
-            desc.style.header = TextStyle::Bold | TextStyle::BrightWhite;
-            desc.style.cell = TextStyle::White;
-            desc.style.alternateCell = TextStyle::Dim;
+            // desc.style.borders = TableFormatter::Borders::Rounded;
+            // desc.style.rules = TableFormatter::Rules::Outer;
+            // desc.style.border = TextStyle::rgb(0x55ff55);
+            // desc.style.header = TextStyle::Bold | TextStyle::rgb(0xffffff);
+            // desc.style.cell = TextStyle::rgb(0xffffff);
+            // desc.style.alternateCell = TextStyle::Dim;
 
-            desc.style.paddingLeft = 1;
-            desc.style.paddingRight = 1;
+            // desc.style.paddingLeft = 1;
+            // desc.style.paddingRight = 1;
 
-            desc.maxRows = TableFormatter::Desc::Unlimited;
-            desc.maxColumnWidth = 10;
+            // desc.maxRows = TableFormatter::Desc::Unlimited;
+            // desc.maxColumnWidth = 10;
 
-            TableFormatter formatter;
+            // TableFormatter formatter;
 
-            for (const TextFormatter line : formatter.view(table, desc))
-                Logger::message(line);
+            // for (const TextFormatter line : formatter.view(table, desc))
+            //     Logger::message(line);
 
 
             if (host != InvalidNodeId) {
@@ -211,7 +210,7 @@ public:
 
     void reportException(const std::exception& error) const {
         auto* fatal = dynamic_cast<const Exception*>(&error);
-        Logger::message("\n<r>~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</>");
+        Logger::message("\n<err>~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</>");
         if (fatal) {
             Logger::exception(fatal->tag(), "{}", error.what());
             Logger::message("Dump components tree (failed node is red):");
@@ -221,9 +220,9 @@ public:
             Logger::message("Dump components tree:");
             run_ctx.nodes.ops.dumpTree(root);
         }
-        Logger::message("<r><b>Critical error. Application terminated.<//>");
+        Logger::message("<err>Critical error. Application terminated.</>");
         Logger::message("Crash log: {}", std::string(LogSystem::getPath()));
-        Logger::message("<r>~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</>\n");
+        Logger::message("<err>~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</>\n");
     }
 
     void reportUnknownException() const {
@@ -263,7 +262,7 @@ private:
 
         batch.commit();
         host = startupHost;
-        scope.finish("<b>Build finished</>");
+        scope.finish("<ok>Build finished</>");
         return branches;
     }
 

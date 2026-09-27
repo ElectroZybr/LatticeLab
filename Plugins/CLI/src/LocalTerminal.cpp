@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include <Lattice/Tools/TextFormatter.hpp>
+
 #if defined(_WIN32)
 #include <conio.h>
 #include <io.h>
@@ -17,6 +19,12 @@
 
 namespace CLIPlugin {
 namespace {
+
+std::string styled(std::string_view text, Lattice::TextStyle style) {
+    Lattice::TextFormatter formatted;
+    formatted.append(text, style);
+    return formatted.render();
+}
 
 size_t previousCharacter(std::string_view text, size_t position) {
     if (position == 0)
@@ -142,7 +150,7 @@ struct LocalTerminal::Impl {
                 const auto& style = owner.style();
                 std::cout
                     << "\r\033[2K"
-                    << style.promptColor << style.prompt << "\033[0m "
+                    << styled(style.prompt, style.promptColor) << ' '
                     << line
                     << '\n'
                     << std::flush;
@@ -250,9 +258,9 @@ struct LocalTerminal::Impl {
         std::cout
             << "\033[" << static_cast<int>(style.cursor) << " q"
             << "\r\033[2K"
-            << style.pathColor << path << "\033[0m"
+            << styled(path, style.pathColor)
             << '\n'
-            << style.promptColor << style.prompt << "\033[0m "
+            << styled(style.prompt, style.promptColor) << ' '
             << input;
 
         const size_t tail = characterCount(std::string_view(input).substr(cursor));

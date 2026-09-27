@@ -115,11 +115,30 @@ namespace Logger {
 
 inline TextFormatter line(Level level, std::string_view tag, const TextFormatter& message) {
     return TextFormatter::format(
-        "{} <gr><b>[<w>{}</>]<//> {}</>",
+        "{} <mut2><b>[<light>{}</>]<//> {}</>",
         LogStyle::get(level).style,
         tag,
         message.markup()
     );
+}
+
+inline void reportDiagnostics(const TextFormatter& text) {
+    for (const Lattice::TextDiagnostic& diagnostic : text.diagnostics()) {
+        TextFormatter details;
+        details.append(std::format(
+            "{} at {}:{}: {}\n  {}\n  {}^",
+            diagnostic.owner,
+            diagnostic.lineNumber,
+            diagnostic.column,
+            diagnostic.message,
+            diagnostic.line,
+            std::string(diagnostic.column - 1, ' ')
+        ));
+        LogSystem::current().print(
+            Level::Warning,
+            line(Level::Warning, "Text", details)
+        );
+    }
 }
 
 inline void setDefaultMode(LogMode mode) {
@@ -139,11 +158,14 @@ inline void blank() {
 }
 
 inline void message(const TextFormatter& text) {
+    reportDiagnostics(text);
     LogSystem::current().print(Level::Message, text);
 }
 
 inline void print(Level level, std::string_view tag, const TextFormatter& message, bool isScopeFinal = false) {
-    LogSystem::current().print(level, line(level, tag, message), isScopeFinal);
+    TextFormatter output = line(level, tag, message);
+    reportDiagnostics(output);
+    LogSystem::current().print(level, output, isScopeFinal);
 }
 
 template <typename... Args>
@@ -153,7 +175,7 @@ inline void print(Level level, std::string_view tag, std::format_string<Args...>
 
 template <typename... Args>
 void message(std::format_string<Args...> format, Args&&... args) {
-    LogSystem::current().print(Level::Message, TextFormatter::format(format, std::forward<Args>(args)...));
+    message(TextFormatter::format(format, std::forward<Args>(args)...));
 }
 
 template <typename... Args>

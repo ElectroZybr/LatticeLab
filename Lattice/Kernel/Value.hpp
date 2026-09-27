@@ -168,4 +168,21 @@ struct Value : std::variant<StringPtr, int64_t, double, bool,
     }
 };
 
+/**
+ * Converts a runtime parameter to and from the closed Value representation.
+ *
+ * Parameter types which are not part of Value can specialize this adapter
+ * without extending the kernel's generic data type.
+ */
+template<typename T>
+struct ParamAdapter {
+    static Value get(const T& value) {
+        return Value{value};
+    }
+
+    static void set(T& target, const Value& value) {
+        target = value.get<T>();
+    }
+};
+
 }

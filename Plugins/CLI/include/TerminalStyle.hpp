@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string>
 
+#include <Lattice/Tools/TextStyle.hpp>
+
 namespace CLIPlugin {
 
 enum class CursorStyle : uint8_t {
@@ -17,8 +19,8 @@ enum class CursorStyle : uint8_t {
 
 struct TerminalStyle {
     std::string prompt = "❯";
-    std::string promptColor = "\033[95m";
-    std::string pathColor = "\033[90m";
+    Lattice::TextStyle promptColor = Lattice::TextStyle::rgb(0xff55ff);
+    Lattice::TextStyle pathColor = Lattice::TextStyle::rgb(0xaaaaaa);
     CursorStyle cursor = CursorStyle::BlinkingBar;
     bool showPath = true;
 };

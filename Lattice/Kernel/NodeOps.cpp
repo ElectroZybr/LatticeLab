@@ -211,14 +211,14 @@ void NodeOps::dumpTree(NodeId id, NodeId highlighted) const {
 
             switch (child.kind) {
                 case NodeKind::Folder:
-                    line = std::format("{} <m>F</>", child.name);
+                    line = std::format("{} <a>F</>", child.name);
                     break;
 
                 case NodeKind::Component: {
                     const auto type = nodeSystem_.blueprints.require(child.bp).shortName();
                     line = child.name.empty()
-                        ? std::format("{} <g>C</>", type)
-                        : std::format("{}<gr>::{}</> <g>C</>", type, child.name);
+                        ? std::format("{} <ok>C</>", type)
+                        : std::format("{}<mut2>::{}</> <ok>C</>", type, child.name);
                     break;
                 }
 
@@ -226,35 +226,35 @@ void NodeOps::dumpTree(NodeId id, NodeId highlighted) const {
                     const auto type = nodeSystem_.blueprints.require(child.bp).shortName();
                     line = child.name.empty()
                         ? std::string(type)
-                        : std::format("{}<gr>::{}</>", type, child.name);
+                        : std::format("{}<mut2>::{}</>", type, child.name);
 
                     line += child.object.ptr
-                        ? std::format("<gr>::<c>{}<//> <c>S</>", nodeSystem_.blueprints.require(child.object.bp).shortName())
-                        : "<gr>::<c>empty<//> <c>S</>";
+                        ? std::format("<mut2>::</><h>{}</> <h>S</>", nodeSystem_.blueprints.require(child.object.bp).shortName())
+                        : "<mut2>::</><h>empty</> <h>S</>";
                     break;
                 }
 
                 case NodeKind::Binding:
-                    line = std::format("{} <y>λ</>", child.name);
+                    line = std::format("{} <wrn>λ</>", child.name);
                     break;
 
                 case NodeKind::Mount:
                     line = child.name.empty()
-                        ? std::format("<m>[&{}]</> <bl>&</>", nodeSystem_.blueprints.require(child.bp).shortName())
-                        : std::format("<m>[&{}]</> <bl>&</>", child.name);
+                        ? std::format("<a>[&{}]</> <h>&</>", nodeSystem_.blueprints.require(child.bp).shortName())
+                        : std::format("<a>[&{}]</> <h>&</>", child.name);
                     break;
 
                 case NodeKind::SharedMount:
                     line = child.name.empty()
-                        ? std::format("<m>[&&{}]</> <bl>&&</>", nodeSystem_.blueprints.require(child.bp).shortName())
-                        : std::format("<m>[&&{}]</> <bl>&&</>", child.name);
+                        ? std::format("<a>[&&{}]</> <h>&&</>", nodeSystem_.blueprints.require(child.bp).shortName())
+                        : std::format("<a>[&&{}]</> <h>&&</>", child.name);
                     break;
             }
 
             if (childId == highlighted)
-                line = std::format("<b><r>{} 🡸<//>", line);
+                line = std::format("<err>{} 🡸</>", line);
 
-            line += std::format(" <gr>#{}</>", childId);
+            line += std::format(" <mut2>#{}</>", childId);
 
             tree.node(line, depth);
             self(self, childId, depth + 1);
@@ -274,29 +274,29 @@ void NodeOps::dumpContext() const {
         return nodeSystem_.registry.get(id) ? stringPath(id) : std::format("missing #{}", id);
     };
 
-    tree.node("<b><c>Scopes<//>", 0);
+    tree.node("<h>Scopes</>", 0);
 
     for (ContextScopeId id = 0; id < nodeSystem_.context.scopeCount(); ++id) {
         const auto* scope = nodeSystem_.context.scope(id);
         if (!scope) continue;
 
         std::string state;
-        if (id == nodeSystem_.context.root()) state += " <m>[root]</>";
-        if (nodeSystem_.context.isActive(id)) state += " <m>[active]</>";
+        if (id == nodeSystem_.context.root()) state += " <a>[root]</>";
+        if (nodeSystem_.context.isActive(id)) state += " <a>[active]</>";
 
         const auto type = scope->type == InvalidBlueprintId ? std::string_view{"untyped"} : nodeSystem_.blueprints.require(scope->type).name;
 
-        tree.node(std::format("{}{} <gr>#{} [{}]</>", label(scope->owner), state, id, type), 1);
+        tree.node(std::format("{}{} <mut2>#{} [{}]</>", label(scope->owner), state, id, type), 1);
 
         for (const auto& entry : scope->roles)
-            tree.node(std::format("{} ➜ <gr>{}</>", nodeSystem_.context.roleName(entry.role), label(entry.target)), 2);
+            tree.node(std::format("{} ➜ <mut2>{}</>", nodeSystem_.context.roleName(entry.role), label(entry.target)), 2);
     }
 
-    tree.node("<b><c>Resolved roles<//>", 0);
+    tree.node("<h>Resolved roles</>", 0);
 
     for (RoleId role = 0; role < nodeSystem_.context.roleCount(); ++role) {
         if (!nodeSystem_.context.hasRole(role)) continue;
-        tree.node(std::format("{} ➜ <gr>{}</>", nodeSystem_.context.roleName(role), label(nodeSystem_.context.resolve(role))), 1);
+        tree.node(std::format("{} ➜ <mut2>{}</>", nodeSystem_.context.roleName(role), label(nodeSystem_.context.resolve(role))), 1);
     }
 
     Logger::message(tree.format());

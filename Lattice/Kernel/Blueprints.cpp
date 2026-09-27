@@ -241,7 +241,7 @@ void Blueprints::dumpTree() const {
 
     auto append = [&](auto&& self, BlueprintId id, size_t depth) -> void {
         tree.node(
-            std::format("{} <c>B</> <gr>#{}</>", require(id).name, id),
+            std::format("{} <h>B</> <mut2>#{}</>", require(id).name, id),
             depth
         );
 

@@ -40,8 +40,8 @@ Test& Test::instance() {
 
 int Test::runAll(LogMode mode) {
     int failed = 0;
-    Logger::message("<w>~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</>");
-    LogScope testing("Tests", mode, "<w><b>Running<//>");
+    Logger::message("<mut2>~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</>");
+    LogScope testing("Tests", mode, "<h>Running</>");
     for (TestCase& test : tests_) {
         auto& log = LogSystem::current();
         const LogMode effective = LogModes::inherit(mode, log.currentOrDefault());
@@ -58,25 +58,25 @@ int Test::runAll(LogMode mode) {
         } catch (const TestFailure&) {
         } catch (const std::exception& e) {
             currentTestFailed = true;
-            Logger::exception("Test", "<r><b>threw: {}<//>", e.what());
+            Logger::exception("Test", "<err>threw: {}</>", e.what());
         } catch (...) {
             currentTestFailed = true;
-            Logger::exception("Test", "<r><b>threw unknown exception<//>");
+            Logger::exception("Test", "<err>threw unknown exception</>");
         }
         if (currentTestFailed) {
             ++failed;
             if (!test.description.empty()) {
-                Logger::warning("Desc", "<y><b>{}<//>", test.description);
+                Logger::warning("Desc", "<wrn>{}</>", test.description);
             }
-            testScope.finishError("<r><b>'{}' failed<//>", test.name);
+            testScope.finishError("<err>'{}' failed</>", test.name);
         } else {
-            testScope.finish("<g><b>'{}' passed<//>", test.name);
+            testScope.finish("<ok><b>'{}' passed<//>", test.name);
         }
     }
     if (failed == 0) {
         testing.finish("all {} tests passed", tests_.size());
     } else {
-        testing.finishError("<b><g>{} passed,</> {} failure</>", tests_.size()-failed, failed);
+        testing.finishError("<ok><b>{} passed,<//> <err>{} failure</>", tests_.size()-failed, failed);
     }
     return failed;
 }

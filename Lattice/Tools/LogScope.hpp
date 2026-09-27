@@ -110,9 +110,9 @@ private:
                 log.currentHadProblem()
             ))
         {
-            finish += TextFormatter::format(" <y>(warn)</>");
+            finish += TextFormatter::format(" <wrn>(warn)</>");
         }
-        finish += TextFormatter::format("<gr> ({} us)</>", elapsed);
+        finish += TextFormatter::format("<mut2> ({} us)</>", elapsed);
 
         log.addDepth(-1);
         Logger::print(level, tag_, finish, true);

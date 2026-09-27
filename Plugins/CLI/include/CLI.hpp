@@ -3,6 +3,7 @@
 #include <Lattice/Kernel/NodeViews.hpp>
 #include <Lattice/Kernel/ServiceAPI.hpp>
 #include <Lattice/Kernel/TreeView.hpp>
+#include <Lattice/Tools/TextFormatter.hpp>
 
 #include <CLI/include/Command.hpp>
 #include <CLI/include/Terminal.hpp>
@@ -36,6 +37,7 @@ private:
     CLIPlugin::CommandDispatcher commands_;
     ExportsView exports_;
     Lattice::TreeView tree_;
+    Lattice::TextTheme theme_ = Lattice::TextTheme::system();
 };
 
 }
