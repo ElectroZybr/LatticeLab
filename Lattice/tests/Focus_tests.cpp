@@ -11,7 +11,7 @@
 //     void configure(Node& node) { camera = node.focus<FocusCamera>(); }
 // };
 // template<class F> bool throwsFocus(F&& f) {
-//     try { f(); } catch (const Exception&) { return true; }
+//     try { f(); } catch (const ExceptionBase&) { return true; }
 //     return false;
 // }
 // }

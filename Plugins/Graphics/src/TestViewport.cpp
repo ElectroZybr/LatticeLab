@@ -16,7 +16,7 @@ namespace {
 std::string loadTestShader() {
     std::ifstream file("Plugins/Graphics/src/shaders/circle.wgsl");
     if (!file)
-        throw Lattice::Exception("TestViewport", "cannot read circle.wgsl");
+        throw Lattice::Exception<TestViewport>("cannot read circle.wgsl");
     return {std::istreambuf_iterator<char>(file), {}};
 }
 

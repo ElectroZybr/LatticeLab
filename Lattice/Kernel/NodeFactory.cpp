@@ -85,7 +85,7 @@ NodeId NodeFactory::component(NodeId parent, BlueprintId api, std::string_view i
         if (node.kind == NodeKind::Component && node.bp == impl)
             return existing;
 
-        throw Exception("NodeFactory", "Node '{}' already exists under parent #{}", instance, parent);
+        throw Exception<NodeFactory>("Node '{}' already exists under parent #{}", instance, parent);
     }
 
     const NodeId id = createNode(parent, instance, impl, NodeKind::Component);
@@ -93,13 +93,13 @@ NodeId NodeFactory::component(NodeId parent, BlueprintId api, std::string_view i
 
     try {
         if (!blueprint.meta.create)
-            throw Exception("NodeFactory", "Blueprint '{}' has no create callback", blueprint.name);
+            throw Exception<NodeFactory>("Blueprint '{}' has no create callback", blueprint.name);
 
         void* object = blueprint.meta.create(nodeSystem_.builder.node(id), desc);
         nodeSystem_.registry.require(id).object = {object, impl, false};
 
         if (!object)
-            throw Exception("NodeFactory", "Blueprint '{}' returned null", blueprint.name);
+            throw Exception<NodeFactory>("Blueprint '{}' returned null", blueprint.name);
 
     } catch (...) {
         nodeSystem_.ops.destroyBranch(id);
@@ -113,14 +113,14 @@ NodeId NodeFactory::component(NodeId parent, BlueprintId api, std::string_view i
 NodeId NodeFactory::component(NodeId parent, std::string_view blueprint, std::string_view instance, const void* desc) {
     const BlueprintId id = nodeSystem_.blueprints.resolve(blueprint);
     if (id == InvalidBlueprintId)
-        throw Exception("NodeFactory", "Unknown blueprint '{}'", blueprint);
+        throw Exception<NodeFactory>("Unknown blueprint '{}'", blueprint);
     return component(parent, id, instance, desc);
 }
 
 NodeId NodeFactory::slot(NodeId parent, std::string_view api, std::string_view instance) {
     const BlueprintId id = nodeSystem_.blueprints.resolve(api);
     if (id == InvalidBlueprintId)
-        throw Exception("NodeFactory", "Unknown API '{}'", api);
+        throw Exception<NodeFactory>("Unknown API '{}'", api);
     return slot(parent, id, instance);
 }
 
@@ -148,10 +148,10 @@ void NodeFactory::choice(NodeId id, BlueprintId impl) {
     const BlueprintId current = nodeSystem_.registry.require(id).object.bp;
 
     if (nodeSystem_.registry.require(id).kind != NodeKind::Slot)
-        throw Exception("NodeFactory", "Node #{} is not a slot", id);
+        throw Exception<NodeFactory>("Node #{} is not a slot", id);
 
     if (!nodeSystem_.blueprints.isA(impl, api))
-        throw Exception("NodeFactory", "'{}' does not implement '{}'",
+        throw Exception<NodeFactory>("'{}' does not implement '{}'",
             nodeSystem_.blueprints.require(impl).name,
             nodeSystem_.blueprints.require(api).name);
 
@@ -160,13 +160,13 @@ void NodeFactory::choice(NodeId id, BlueprintId impl) {
 
     const auto create = nodeSystem_.blueprints.require(impl).meta.create;
     if (!create)
-        throw Exception("NodeFactory", "Blueprint '{}' is not constructible", nodeSystem_.blueprints.require(impl).name);
+        throw Exception<NodeFactory>("Blueprint '{}' is not constructible", nodeSystem_.blueprints.require(impl).name);
 
     nodeSystem_.ops.clearContents(id);
     try {
         void* object = create(nodeSystem_.builder.node(id), nullptr);
         if (!object)
-            throw Exception("NodeFactory", "Failed to create '{}'", nodeSystem_.blueprints.require(impl).name);
+            throw Exception<NodeFactory>("Failed to create '{}'", nodeSystem_.blueprints.require(impl).name);
 
         nodeSystem_.registry.require(id).object = {object, impl, false};
     } catch (...) {
@@ -180,7 +180,7 @@ void NodeFactory::share(NodeId id, BlueprintId api) {
     nodeSystem_.blueprints.require(api);
 
     if (!nodeSystem_.blueprints.isA(node.bp, api))
-        throw Exception("NodeFactory", "'{}' does not implement '{}'",
+        throw Exception<NodeFactory>("'{}' does not implement '{}'",
             nodeSystem_.blueprints.require(node.bp).name,
             nodeSystem_.blueprints.require(api).name);
 
@@ -201,7 +201,7 @@ NodeId NodeFactory::binding(NodeId parent, std::string_view name) {
         if (node.kind == NodeKind::Binding)
             return existing;
 
-        throw Exception("NodeFactory", "Node '{}' already exists under parent #{}", name, parent);
+        throw Exception<NodeFactory>("Node '{}' already exists under parent #{}", name, parent);
     }
 
     return createNode(parent, name, InvalidBlueprintId, NodeKind::Binding);
@@ -222,7 +222,7 @@ NodeId NodeFactory::resource(
         const auto& node = nodeSystem_.registry.require(existing);
         if (node.kind == NodeKind::Component && node.bp == api && node.object.ptr)
             return existing;
-        throw Exception("NodeFactory", "Mounted resource '{}' has an invalid node", instance);
+        throw Exception<NodeFactory>("Mounted resource '{}' has an invalid node", instance);
     }
 
     const BlueprintId impl = nodeSystem_.blueprints.resolveImplementation(api);
@@ -231,12 +231,12 @@ NodeId NodeFactory::resource(
 
     try {
         if (!blueprint.meta.create)
-            throw Exception("NodeFactory", "Blueprint '{}' has no create callback", blueprint.name);
+            throw Exception<NodeFactory>("Blueprint '{}' has no create callback", blueprint.name);
 
         void* object = blueprint.meta.create(nodeSystem_.builder.node(id), desc);
         nodeSystem_.registry.require(id).object = {object, impl, false};
         if (!object)
-            throw Exception("NodeFactory", "Blueprint '{}' returned null", blueprint.name);
+            throw Exception<NodeFactory>("Blueprint '{}' returned null", blueprint.name);
     } catch (...) {
         nodeSystem_.ops.destroyBranch(id);
         throw;
@@ -256,10 +256,10 @@ NodeId NodeFactory::reference(
     const auto& physical = nodeSystem_.registry.require(target);
 
     if (kind != NodeKind::Mount && kind != NodeKind::SharedMount)
-        throw Exception("NodeFactory", "Invalid mount reference kind");
+        throw Exception<NodeFactory>("Invalid mount reference kind");
 
     if (!nodeSystem_.blueprints.isA(physical.object.bp, api))
-        throw Exception("NodeFactory", "Mounted object does not implement requested API");
+        throw Exception<NodeFactory>("Mounted object does not implement requested API");
 
     const uint64_t discriminator = physical.parent;
     if (const NodeId existing = nodeSystem_.registry.find(instance, caller, api, discriminator);
@@ -267,7 +267,7 @@ NodeId NodeFactory::reference(
         const auto& node = nodeSystem_.registry.require(existing);
         if (node.kind == kind && node.relation == target)
             return existing;
-        throw Exception("NodeFactory", "Node '{}' already exists under caller #{}", instance, caller);
+        throw Exception<NodeFactory>("Node '{}' already exists under caller #{}", instance, caller);
     }
 
     const NodeId id = createNode(caller, instance, api, kind, discriminator);
@@ -292,7 +292,7 @@ NodeId NodeFactory::addLocal(
             nodeSystem_.registry.get(referenceNode.relation) &&
             nodeSystem_.registry.require(referenceNode.relation).parent == target)
             return referenceNode.relation;
-        throw Exception("NodeFactory", "Local resource '{}' conflicts under caller #{}", instance, caller);
+        throw Exception<NodeFactory>("Local resource '{}' conflicts under caller #{}", instance, caller);
     }
 
     const uint64_t discriminator = caller;
@@ -326,7 +326,7 @@ NodeId NodeFactory::addShare(
             nodeSystem_.registry.get(referenceNode.relation) &&
             nodeSystem_.registry.require(referenceNode.relation).parent == target)
             return referenceNode.relation;
-        throw Exception("NodeFactory", "Shared resource '{}' conflicts under caller #{}", instance, caller);
+        throw Exception<NodeFactory>("Shared resource '{}' conflicts under caller #{}", instance, caller);
     }
 
     const bool created = nodeSystem_.registry.find(instance, target, api, SharedIdentity) == InvalidNodeId;

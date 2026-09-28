@@ -16,11 +16,11 @@ void Render::configure(NodeConfigure node) {
     viewports_ = node.children<Viewport>();
 
     if (!window_)
-        throw Lattice::Exception("Render", "window is required");
+        throw Lattice::Exception<Render>("window is required");
 
     const NativeWindow native = window_->native();
     if (native.kind == NativeWindow::Kind::None)
-        throw Lattice::Exception("Render", "window has no native handle");
+        throw Lattice::Exception<Render>("window has no native handle");
 
     surface_->attach(native);
 }

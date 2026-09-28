@@ -195,7 +195,7 @@ TextFormatter TableFormatter::View::renderLine(size_t line) const {
     if (truncated_ && line == 0)
         return renderTruncation();
 
-    throw Exception("TableFormatter::View", "Line is out of range");
+    throw Exception<TableFormatter::View>("Line is out of range");
 }
 
 TextFormatter TableFormatter::View::renderHorizontal(bool top, bool bottom) const {

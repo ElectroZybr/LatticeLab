@@ -76,12 +76,12 @@
 //     REQUIRE(firstNode.directCollect<Owned>().size() == 1);
 //     bool rejected = false;
 //     try { fixture.root.requireParent<Owner>(); }
-//     catch (const Exception&) { rejected = true; }
+//     catch (const ExceptionBase&) { rejected = true; }
 //     REQUIRE(rejected);
 //     auto& folder = fixture.root.addFolder("unrelated");
 //     rejected = false;
 //     try { folder.requireParent<Owner>(); }
-//     catch (const Exception&) { rejected = true; }
+//     catch (const ExceptionBase&) { rejected = true; }
 //     REQUIRE(rejected);
 // }
 

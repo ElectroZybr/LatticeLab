@@ -43,7 +43,7 @@ Texture::Texture(NodeBuild node, const Desc& desc) {
 
     texture_ = wgpuDeviceCreateTexture(device->native(), &nativeDesc);
     if (!texture_)
-        throw Lattice::Exception("WGPU::Texture", "failed to create texture");
+        throw Lattice::Exception<Texture>("failed to create texture");
 }
 
 Texture::~Texture() {

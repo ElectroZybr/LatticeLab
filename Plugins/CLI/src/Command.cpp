@@ -112,8 +112,7 @@ void CommandDispatcher::execute(
             resolved.invoke(resolved.object, context, arguments);
 
             if (!tree_.contains(context.node()))
-                throw Lattice::Exception(
-                    "CLI",
+                throw Lattice::Exception<CommandDispatcher>(
                     "Action '{}' selected missing node #{}",
                     name,
                     context.node()

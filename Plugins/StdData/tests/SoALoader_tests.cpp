@@ -115,7 +115,7 @@ TEST(SoALoader_MissingTarget, RuntimeFixture,
         const Lattice::Value* section = document.section(loader.section());
         if (section)
             loader.load(*section);
-    } catch (const Lattice::Exception&) {
+    } catch (const Lattice::ExceptionBase&) {
         thrown = true;
     }
 
@@ -140,7 +140,7 @@ TEST(SoALoader_MissingColumn, RuntimeFixture,
         const Lattice::Value* section = document.section(loader.section());
         if (section)
             loader.load(*section);
-    } catch (const Lattice::Exception&) {
+    } catch (const Lattice::ExceptionBase&) {
         thrown = true;
     }
 
@@ -197,7 +197,7 @@ TEST(SoALoader_ExplicitFocusTarget, RuntimeFixture) {
         {"rows", Lattice::Array{}}
     };
     bool rejected = false;
-    try { loader.load(data); } catch (const Lattice::Exception&) { rejected = true; }
+    try { loader.load(data); } catch (const Lattice::ExceptionBase&) { rejected = true; }
     REQUIRE(rejected);
     fixture.root.setFocus("data", id);
     loader.load(data);
@@ -206,6 +206,6 @@ TEST(SoALoader_ExplicitFocusTarget, RuntimeFixture) {
     loader.load(data); // Inherits Root.
     local.setFocus("data", Lattice::InvalidObjectId);
     rejected = false;
-    try { loader.load(data); } catch (const Lattice::Exception&) { rejected = true; }
+    try { loader.load(data); } catch (const Lattice::ExceptionBase&) { rejected = true; }
     REQUIRE(rejected);
 }

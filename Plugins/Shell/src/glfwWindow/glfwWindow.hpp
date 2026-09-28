@@ -38,8 +38,6 @@ public:
     void setTitle(std::string_view title) override;
 
 private:
-    static constexpr std::string_view tag = "glfwWindow";
-    
     void setupCallbacks();
     void syncFromWindow();
     GLFWmonitor* currentMonitor() const;

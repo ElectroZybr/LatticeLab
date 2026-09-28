@@ -155,19 +155,19 @@ inline TextStyle parseTextStyle(std::string_view source) {
                 16
             );
             if (error != std::errc{} || end != token.data() + token.size())
-                throw Exception("TextStyle", "Invalid RGB color '{}'", token);
+                throw Exception<TextStyle>("Invalid RGB color '{}'", token);
             color = TextStyle::rgb(rgb);
         } else {
-            throw Exception("TextStyle", "Unknown style token '{}'", token);
+            throw Exception<TextStyle>("Unknown style token '{}'", token);
         }
 
         if (result.color.kind != TextColor::Kind::Default)
-            throw Exception("TextStyle", "Style contains more than one color");
+            throw Exception<TextStyle>("Style contains more than one color");
         result = result | color;
     }
 
     if (sawDefault && result != TextStyle{})
-        throw Exception("TextStyle", "'default' cannot be combined with another style");
+        throw Exception<TextStyle>("'default' cannot be combined with another style");
     return result;
 }
 

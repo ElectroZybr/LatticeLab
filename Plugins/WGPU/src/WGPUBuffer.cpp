@@ -15,7 +15,7 @@ Buffer::Buffer(NodeBuild node, const Desc& desc) {
 
     buffer_ = wgpuDeviceCreateBuffer(device->native(), &nativeDesc);
     if (!buffer_)
-        throw Lattice::Exception("WGPU::Buffer", "failed to create buffer");
+        throw Lattice::Exception<Buffer>("failed to create buffer");
 
     size_ = desc.size;
 }

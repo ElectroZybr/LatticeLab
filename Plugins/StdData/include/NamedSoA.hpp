@@ -48,7 +48,7 @@ public:
         const size_t id = find(name);
 
         if (!Lattice::NamedRegistry<size_t>::valid(id))
-            throw Lattice::Exception("NamedSoA", "Row '{}' not found", name);
+            throw Lattice::Exception<NamedSoA>("Row '{}' not found", name);
 
         return id;
     }

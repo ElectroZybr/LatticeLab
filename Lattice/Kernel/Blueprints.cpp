@@ -73,8 +73,7 @@ BlueprintId Blueprints::resolveImplementation(
                 continue;
 
             if (result != InvalidId)
-                throw Exception(
-                    "Blueprints",
+                throw Exception<Blueprints>(
                     "Multiple implementations of '{}': '{}' and '{}'",
                     require(api).name,
                     require(result).name,
@@ -97,8 +96,7 @@ BlueprintId Blueprints::resolveImplementation(
     const BlueprintId result = select(false);
 
     if (result == InvalidId)
-        throw Exception(
-            "Blueprints",
+        throw Exception<Blueprints>(
             "No constructible implementation of '{}'",
             require(api).name
         );
@@ -115,8 +113,7 @@ void* Blueprints::cast(BlueprintId from, BlueprintId to, void* object) const {
     auto walk = [&](auto&& self, BlueprintId id, void* ptr) -> void {
         if (id == to) {
             if (result && result != ptr)
-                throw Exception(
-                    "Blueprints",
+                throw Exception<Blueprints>(
                     "Ambiguous conversion '{}' -> '{}'",
                     require(from).name,
                     require(to).name
@@ -157,8 +154,7 @@ BlueprintId Blueprints::resolve(std::string_view name) const {
             continue;
 
         if (result != InvalidId)
-            throw Exception(
-                "Blueprints",
+            throw Exception<Blueprints>(
                 "Ambiguous name '{}': '{}' and '{}'",
                 name,
                 require(result).name,
@@ -176,8 +172,7 @@ void Blueprints::addBase(BlueprintId derived, BlueprintId base) {
     require(base);
 
     if (isA(base, derived))
-        throw Exception(
-            "Blueprints",
+        throw Exception<Blueprints>(
             "Inheritance cycle: '{}' -> '{}'",
             require(derived).name,
             require(base).name
@@ -268,7 +263,7 @@ void Blueprints::dumpTree() const {
 
 void Blueprints::validateName(std::string_view name) {
     if (name.empty())
-        throw Exception("Blueprints", "Blueprint name must not be empty");
+        throw Exception<Blueprints>("Blueprint name must not be empty");
 
     size_t begin = 0;
 
@@ -281,7 +276,7 @@ void Blueprints::validateName(std::string_view name) {
         const std::string_view part = name.substr(begin, end - begin);
 
         if (part.empty() || part.find_first_of(": \t\r\n") != std::string_view::npos)
-            throw Exception("Blueprints", "Invalid qualified name '{}'", name);
+            throw Exception<Blueprints>("Invalid qualified name '{}'", name);
 
         if (end == name.size())
             return;
@@ -289,7 +284,7 @@ void Blueprints::validateName(std::string_view name) {
         begin = end + 2;
     }
 
-    throw Exception("Blueprints", "Invalid qualified name '{}'", name);
+    throw Exception<Blueprints>("Invalid qualified name '{}'", name);
 }
 
 } // namespace Lattice

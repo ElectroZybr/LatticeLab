@@ -248,7 +248,7 @@ namespace Lattice {
 
         try {
             if (!regFn(blueprints))
-                throw Exception(tag, "plugin_register failed for '{}'", candidate->manifest.id);
+                throw Exception<PluginManager>("plugin_register failed for '{}'", candidate->manifest.id);
         } catch (const std::exception& error) {
             blueprints = std::move(snapshot);
             Logger::error(tag, "Registration failed for '{}': {}", candidate->manifest.id, error.what());

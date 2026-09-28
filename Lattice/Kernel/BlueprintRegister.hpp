@@ -44,7 +44,7 @@ BlueprintId add(Blueprints& blueprints, std::string_view name = typeKey<T>()) {
                 if constexpr (std::is_default_constructible_v<typename T::Desc>)
                     return new T(std::move(node), typename T::Desc{});
 
-                throw Exception("BlueprintTypes", "'{}' requires a descriptor", typeKey<T>());
+                throw Exception<T>("'{}' requires a descriptor", typeKey<T>());
             } else if constexpr (std::is_constructible_v<T, ::NodeBuild>) {
                 return new T(std::move(node));
             } else {

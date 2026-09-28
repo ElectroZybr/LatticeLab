@@ -1,6 +1,6 @@
 // #pragma once
 
-// #include <Lattice/Kernel/Exception.hpp>
+// #include <Lattice/Tools/Exception.hpp>
 // #include <Lattice/Kernel/NodeViews.hpp>
 // #include <Lattice/Tools/Logger.hpp>
 
@@ -20,7 +20,7 @@
 
 //     void load(const Lattice::Value& section) override {
 //         if (!exports.exists())
-//             throw Lattice::Exception(tag, "loader is not configured");
+//             throw Lattice::Exception<NamedSoALoader>("loader is not configured");
 
 //         if (!section.is<Lattice::Object>())
 //             return;
@@ -31,13 +31,13 @@
 //         const auto rowsIt = table.find("rows");
 
 //         if (targetIt == table.end() || !targetIt->second.is<std::string>())
-//             throw Lattice::Exception(tag, "Dataset.target is missing");
+//             throw Lattice::Exception<NamedSoALoader>("Dataset.target is missing");
 
 //         if (columnsIt == table.end() || !columnsIt->second.is<Lattice::Array>())
-//             throw Lattice::Exception(tag, "Dataset.columns is missing");
+//             throw Lattice::Exception<NamedSoALoader>("Dataset.columns is missing");
 
 //         if (rowsIt == table.end() || !rowsIt->second.is<Lattice::Array>())
-//             throw Lattice::Exception(tag, "Dataset.rows is missing");
+//             throw Lattice::Exception<NamedSoALoader>("Dataset.rows is missing");
 
 //         const auto& target = std::get<std::string>(targetIt->second);
 //         const auto& columnNames = std::get<Lattice::Array>(columnsIt->second);
@@ -80,15 +80,15 @@
 
 //         for (size_t row = 0; row < rowData.size(); ++row) {
 //             if (!rowData[row].is<Lattice::Array>())
-//                 throw Lattice::Exception(tag, "row {} must be an array", row);
+//                 throw Lattice::Exception<NamedSoALoader>("row {} must be an array", row);
 
 //             const auto& values = std::get<Lattice::Array>(rowData[row]);
 
 //             if (values.size() != columnNames.size())
-//                 throw Lattice::Exception(tag, "row {} has {} values, expected {}", row, values.size(), columnNames.size());
+//                 throw Lattice::Exception<NamedSoALoader>("row {} has {} values, expected {}", row, values.size(), columnNames.size());
 
 //             if (!values[0].is<std::string>())
-//                 throw Lattice::Exception(tag, "row {} identifier must be a string", row);
+//                 throw Lattice::Exception<NamedSoALoader>("row {} identifier must be a string", row);
 
 //             const auto& key = std::get<std::string>(values[0]);
 //             size_t index = soa->find(key);
@@ -115,7 +115,7 @@
 //         const Lattice::ObjectId id = ctx.resolveFocus(Lattice::InvalidFocusScopeId, ctx.findRole(target));
 
 //         if (id == Lattice::InvalidObjectId)
-//             throw Lattice::Exception(tag, "NamedSoA target '{}' is not active in context", target);
+//             throw Lattice::Exception<NamedSoALoader>("NamedSoA target '{}' is not active in context", target);
 
 //         Lattice::Node* node = ctx.objects.require(id).node;
 
@@ -124,7 +124,7 @@
 //         if (auto soa = node->find<StdData::NamedSoA>())
 //             return soa.get();
 
-//         throw Lattice::Exception(tag, "no NamedSoA buffer under target '{}'", target);
+//         throw Lattice::Exception<NamedSoALoader>("no NamedSoA buffer under target '{}'", target);
 //     }
 
 //     Ref<Lattice::Node> branch_;

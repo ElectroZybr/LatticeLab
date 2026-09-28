@@ -2,7 +2,6 @@
 
 #include <limits>
 #include <string>
-#include <string_view>
 #include <unordered_map>
 
 #include <Lattice/Tools/Exception.hpp>
@@ -35,7 +34,7 @@ public:
         if (overwrite) {
             lookup_.insert_or_assign(std::move(key), id);
         } else if (!lookup_.emplace(std::move(key), id).second) {
-            throw Lattice::Exception("NamedRegistry", "Name already exists");
+            throw Lattice::Exception<NamedRegistry>("Name already exists");
         }
         return id;
     }

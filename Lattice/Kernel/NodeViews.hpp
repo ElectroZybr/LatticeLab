@@ -11,7 +11,7 @@
 #include <Lattice/Kernel/NodeQuery.hpp>
 #include <Lattice/Kernel/NodeSystem.hpp>
 #include <Lattice/Kernel/TreeView.hpp>
-#include <Lattice/Kernel/TypeName.hpp>
+#include <Lattice/Tools/TypeName.hpp>
 
 
 // global types
@@ -391,7 +391,7 @@ public:
             current = nodeSystem_.registry.require(current).parent;
         }
 
-        throw Lattice::Exception("NodeBuild", "Ancestor '{}' not found for node #{}", Lattice::typeKey<T>(), id_);
+        throw Lattice::Exception<NodeBuild>("Ancestor '{}' not found for node #{}", Lattice::typeKey<T>(), id_);
     }
 
     // helpers
@@ -482,7 +482,7 @@ public:
     Slot<T> requireSlot(std::string_view instance = Lattice::DefaultInstanceName) const {
         auto slot = findSlot<T>(instance);
         if (!slot)
-            throw Lattice::Exception("NodeConfigure", "Slot '{}' with instance '{}' not found", Lattice::typeKey<T>(), instance);
+            throw Lattice::Exception<NodeConfigure>("Slot '{}' with instance '{}' not found", Lattice::typeKey<T>(), instance);
         return *slot;
     }
 

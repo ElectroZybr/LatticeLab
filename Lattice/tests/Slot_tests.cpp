@@ -171,7 +171,7 @@ TEST(Slot_RejectsWrongImpl, RuntimeFixture,
 
     try {
         slot.choice(fixture.run_ctx.blueprints.id<SlotInput>());
-    } catch (const Exception&) {
+    } catch (const ExceptionBase&) {
         thrown = true;
     }
 
@@ -264,12 +264,12 @@ struct RollbackChild {
 struct ThrowingSlotImpl : SlotAPI {
     explicit ThrowingSlotImpl(NodeBuild node) {
         node.add<RollbackChild>();
-        throw Exception("SlotTest", "Constructor failed");
+        throw Exception<ThrowingSlotImpl>("Constructor failed");
     }
     int id() const override { return 3; }
 };
 template<class F> bool slotThrows(F&& operation) {
-    try { operation(); } catch (const Exception&) { return true; }
+    try { operation(); } catch (const ExceptionBase&) { return true; }
     return false;
 }
 }

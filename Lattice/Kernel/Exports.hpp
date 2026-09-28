@@ -12,7 +12,7 @@
 
 #include <Lattice/Kernel/Consts.hpp>
 #include <Lattice/Tools/Exception.hpp>
-#include <Lattice/Kernel/TypeName.hpp>
+#include <Lattice/Tools/TypeName.hpp>
 #include <Lattice/Kernel/Value.hpp>
 #include <Lattice/Tools/Logger.hpp>
 #include "Lattice/Tools/TreeFormatter.hpp"
@@ -71,8 +71,7 @@ public:
     const std::remove_cvref_t<T>& as() const {
         using View = std::remove_cvref_t<T>;
         if (!is<View>())
-            throw Exception(
-                "ActionView",
+            throw Exception<ActionView>(
                 "View contains '{}', requested '{}'",
                 type_,
                 typeKey<View>()
@@ -156,7 +155,7 @@ public:
         const ExportKey key{owner, std::string(name)};
 
         if (index_.contains(key))
-            throw Exception("Exports", "Export #{}:'{}' already exists", owner, name);
+            throw Exception<Exports>("Export #{}:'{}' already exists", owner, name);
 
         const ExportId id = static_cast<ExportId>(exports_.size());
 
@@ -187,7 +186,7 @@ public:
         const ExportKey key{owner, std::string(name)};
 
         if (index_.contains(key))
-            throw Exception("Exports", "Export #{}:'{}' already exists", owner, name);
+            throw Exception<Exports>("Export #{}:'{}' already exists", owner, name);
 
         const ExportId id = static_cast<ExportId>(exports_.size());
 
@@ -205,8 +204,7 @@ public:
                 std::span<const Value> arguments
             ) mutable {
                 if (arguments.size() != sizeof...(Args))
-                    throw Exception(
-                        "Action",
+                    throw Exception<Action>(
                         "Expected {} arguments, received {}",
                         sizeof...(Args),
                         arguments.size()
@@ -229,11 +227,11 @@ public:
 
     void alias(NodeId owner, std::string_view name, ExportId target) {
         if (target >= exports_.size() || exports_[target].owner != owner)
-            throw Exception("Exports", "Export #{} does not belong to node #{}", target, owner);
+            throw Exception<Exports>("Export #{} does not belong to node #{}", target, owner);
 
         const ExportKey key{owner, std::string(name)};
         if (index_.contains(key))
-            throw Exception("Exports", "Export #{}:'{}' already exists", owner, name);
+            throw Exception<Exports>("Export #{}:'{}' already exists", owner, name);
 
         index_.emplace(std::move(key), target);
     }
@@ -244,7 +242,7 @@ public:
 
     Value value(ExportId id) const {
         if (id >= exports_.size() || exports_[id].kind != ExportKind::Param || !params_[id].get)
-            throw Exception("Exports", "Export #{} is not readable", id);
+            throw Exception<Exports>("Export #{} is not readable", id);
 
         return params_[id].get(params_[id].object);
     }
@@ -256,7 +254,7 @@ public:
 
     void set(ExportId id, const Value& value) {
         if (id >= exports_.size() || exports_[id].kind != ExportKind::Param || !params_[id].set)
-            throw Exception("Exports", "Export #{} is not writable", id);
+            throw Exception<Exports>("Export #{} is not writable", id);
 
         params_[id].set(params_[id].object, value);
     }
@@ -272,7 +270,7 @@ public:
         std::span<const Value> arguments = {}
     ) {
         if (id >= exports_.size() || exports_[id].kind != ExportKind::Action || !actions_[id].invoke)
-            throw Exception("Exports", "Export #{} is not callable", id);
+            throw Exception<Exports>("Export #{} is not callable", id);
 
         actions_[id].invoke(context, arguments);
     }

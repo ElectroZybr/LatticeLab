@@ -1,7 +1,7 @@
 // #pragma once
 
 // #include <Lattice/Kernel/Context.hpp>
-// #include <Lattice/Kernel/Exception.hpp>
+// #include <Lattice/Tools/Exception.hpp>
 // #include <Lattice/Kernel/NodeViews.hpp>
 // #include <Lattice/Tools/Logger.hpp>
 
@@ -21,7 +21,7 @@
 
 //     void load(const Lattice::Value& section) override {
 //         if (!exports.exists())
-//             throw Lattice::Exception(tag, "loader is not configured");
+//             throw Lattice::Exception<SoALoader>("loader is not configured");
 
 //         if (!section.is<Lattice::Object>())
 //             return;
@@ -33,13 +33,13 @@
 //         const auto rowsIt = table.find("rows");
 
 //         if (targetIt == table.end() || !targetIt->second.is<std::string>())
-//             throw Lattice::Exception(tag, "Dataset.target is missing");
+//             throw Lattice::Exception<SoALoader>("Dataset.target is missing");
 
 //         if (columnsIt == table.end() || !columnsIt->second.is<Lattice::Array>())
-//             throw Lattice::Exception(tag, "Dataset.columns is missing");
+//             throw Lattice::Exception<SoALoader>("Dataset.columns is missing");
 
 //         if (rowsIt == table.end() || !rowsIt->second.is<Lattice::Array>())
-//             throw Lattice::Exception(tag, "Dataset.rows is missing");
+//             throw Lattice::Exception<SoALoader>("Dataset.rows is missing");
 
 //         const auto& target = std::get<std::string>(targetIt->second);
 //         const auto& columnNames = std::get<Lattice::Array>(columnsIt->second);
@@ -52,26 +52,26 @@
 
 //         for (const auto& value : columnNames) {
 //             if (!value.is<std::string>())
-//                 throw Lattice::Exception(tag, "column name must be a string");
+//                 throw Lattice::Exception<SoALoader>("column name must be a string");
 
 //             const auto& name = std::get<std::string>(value);
 //             if (!soa->has(name))
-//                 throw Lattice::Exception(tag, "column '{}' not found in '{}'", name, target);
+//                 throw Lattice::Exception<SoALoader>("column '{}' not found in '{}'", name, target);
 //         }
 
 //         const size_t offset = soa->size();
 
 //         // for (size_t row = 0; row < rowData.size(); ++row) {
 //         //     if (!rowData[row].is<Array>())
-//         //         throw Lattice::Exception(tag, "row {} must be an array", row);
+//         //         throw Lattice::Exception<SoALoader>("row {} must be an array", row);
 
 //         //     const auto& values = std::get<Array>(rowData[row]);
 
 //         //     if (values.size() != columnNames.size())
-//         //         throw Lattice::Exception(tag, "row {} has {} values, expected {}", row, values.size(), columnNames.size());
+//         //         throw Lattice::Exception<SoALoader>("row {} has {} values, expected {}", row, values.size(), columnNames.size());
 
 //         //     if (!values[0].is<std::string>())
-//         //         throw Lattice::Exception(tag, "row {} target name must be a string", row);
+//         //         throw Lattice::Exception<SoALoader>("row {} target name must be a string", row);
 
 //         //     const auto& name = std::get<std::string>(values[0]);
 //         //     const auto index = soa->find(name);
@@ -94,7 +94,7 @@
 //         const Lattice::ObjectId id = ctx.resolveFocus(Lattice::InvalidFocusScopeId, ctx.findRole(target));
 
 //         if (id == Lattice::InvalidObjectId)
-//             throw Lattice::Exception(tag, "SoA target '{}' is not active in context", target);
+//             throw Lattice::Exception<SoALoader>("SoA target '{}' is not active in context", target);
 
 //         Lattice::Node* node = ctx.objects.require(id).node;
 //         if (auto* soa = node->get<StdData::SoA>())
@@ -102,6 +102,6 @@
 //         if (auto soa = node->find<StdData::SoA>())
 //             return soa.get();
 
-//         throw Lattice::Exception(tag, "no SoA buffer under target '{}'", target);
+//         throw Lattice::Exception<SoALoader>("no SoA buffer under target '{}'", target);
 //     }
 // };

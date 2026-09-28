@@ -170,8 +170,7 @@ void NodeContext::set(ContextScopeId scopeId, RoleId roleId, NodeId target) {
     const ContextResolution resolution = resolveInfo(scopeId, roleId);
 
     if (std::ranges::find(resolution.candidates, target) == resolution.candidates.end())
-        throw Exception(
-            "NodeContext",
+        throw Exception<NodeContext>(
             "Node #{} is not a candidate for role '{}'",
             target,
             roleName(roleId)

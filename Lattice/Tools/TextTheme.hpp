@@ -23,7 +23,7 @@ public:
 
     StyleId add(std::string_view name, TextStyle style) {
         if (isReserved(name))
-            throw Exception("TextTheme", "Style name '{}' is reserved", name);
+            throw Exception<TextTheme>("Style name '{}' is reserved", name);
 
         const StyleId id = static_cast<StyleId>(entries_.size());
         style_names_.add(name, id);

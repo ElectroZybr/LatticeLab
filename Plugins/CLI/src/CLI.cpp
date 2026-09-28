@@ -223,7 +223,7 @@ void CLI::showTree(Lattice::ActionContext& context) const {
 void CLI::changeDirectory(Lattice::ActionContext& context, std::string path) const {
     const Lattice::NodeId target = CLIPlugin::resolveTreePath(tree_, context.node(), path);
     if (target == Lattice::InvalidNodeId)
-        throw Lattice::Exception("CLI", "Path '{}' not found", path);
+        throw Lattice::Exception<CLI>("Path '{}' not found", path);
 
     context.setNode(target);
 }

@@ -178,7 +178,7 @@ void glfwWindow::configure(NodeConfigure node) {
     if (window_) return;
 
     if (!glfwInit()) {
-        throw Lattice::Exception(tag, "Failed to initialize GLFW");
+        throw Lattice::Exception<glfwWindow>("Failed to initialize GLFW");
     }
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -220,7 +220,7 @@ void glfwWindow::configure(NodeConfigure node) {
 
     if (!window_) {
         glfwTerminate();
-        throw Lattice::Exception(tag, "Failed to create GLFW window");
+        throw Lattice::Exception<glfwWindow>("Failed to create GLFW window");
     }
 
     windowOwner_ = std::shared_ptr<GLFWwindow>(window_, glfwDestroyWindow);

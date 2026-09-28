@@ -33,7 +33,7 @@ NodeId NodeQuery::find(NodeId from, BlueprintId api, std::string_view instance) 
 
             if (provides(child, api)) {
                 if (result != InvalidNodeId)
-                    throw Exception("NodeQuery", "Ambiguous '{}' with instance '{}' under #{}",
+                    throw Exception<NodeQuery>("Ambiguous '{}' with instance '{}' under #{}",
                                     blueprints_.require(api).name, instance, current);
                 result = child;
             }
@@ -48,11 +48,11 @@ NodeId NodeQuery::require(NodeId from, BlueprintId api, std::string_view instanc
     const NodeId id = find(from, api, instance);
 
     if (id == InvalidNodeId)
-        throw Exception("NodeQuery", "Object '{}' with instance '{}' not found",
+        throw Exception<NodeQuery>("Object '{}' with instance '{}' not found",
                         blueprints_.require(api).name, instance);
 
     if (!resolve(id, api))
-        throw Exception("NodeQuery", "Slot '{}' with instance '{}' is empty",
+        throw Exception<NodeQuery>("Slot '{}' with instance '{}' is empty",
                         blueprints_.require(api).name, instance);
 
     return id;
@@ -67,7 +67,7 @@ NodeId NodeQuery::require(NodeId from, std::string_view api, std::string_view in
     const BlueprintId id = blueprints_.resolve(api);
 
     if (id == InvalidBlueprintId)
-        throw Exception("NodeQuery", "Unknown blueprint '{}'", api);
+        throw Exception<NodeQuery>("Unknown blueprint '{}'", api);
 
     return require(from, id, instance);
 }
@@ -128,16 +128,16 @@ NodeId NodeQuery::shared(NodeId from, BlueprintId api) const {
     const RoleId role = context_.findRole(blueprints_.require(api).name);
 
     if (role == InvalidRoleId)
-        throw Exception("NodeQuery", "Shared '{}' not found", blueprints_.require(api).name);
+        throw Exception<NodeQuery>("Shared '{}' not found", blueprints_.require(api).name);
 
     const auto scope = context_.nearestScope(from);
     const auto result = context_.resolveInfo(scope, role);
 
     if (result.state == ContextResolutionState::Missing)
-        throw Exception("NodeQuery", "Shared '{}' not found", blueprints_.require(api).name);
+        throw Exception<NodeQuery>("Shared '{}' not found", blueprints_.require(api).name);
 
     if (result.state == ContextResolutionState::Ambiguous)
-        throw Exception("NodeQuery", "Shared '{}' is ambiguous", blueprints_.require(api).name);
+        throw Exception<NodeQuery>("Shared '{}' is ambiguous", blueprints_.require(api).name);
 
     return result.target;
 }

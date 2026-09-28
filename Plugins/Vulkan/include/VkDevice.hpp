@@ -32,27 +32,27 @@ public:
     }
 
     std::unique_ptr<GPU::Surface> createSurface(const GPU::SurfaceDesc&) override {
-        throw Lattice::Exception("Vulkan::Device", "createSurface is not implemented");
+        throw Lattice::Exception<Device>("createSurface is not implemented");
     }
 
     std::unique_ptr<GPU::Shader> createShader(const GPU::ShaderDesc&) override {
-        throw Lattice::Exception("Vulkan::Device", "createShader is not implemented");
+        throw Lattice::Exception<Device>("createShader is not implemented");
     }
 
     std::unique_ptr<GPU::Pipeline> createPipeline(const GPU::PipelineDesc&) override {
-        throw Lattice::Exception("Vulkan::Device", "createPipeline is not implemented");
+        throw Lattice::Exception<Device>("createPipeline is not implemented");
     }
 
     std::unique_ptr<GPU::Buffer> createBuffer(const GPU::BufferDesc&) override {
-        throw Lattice::Exception("Vulkan::Device", "createBuffer is not implemented");
+        throw Lattice::Exception<Device>("createBuffer is not implemented");
     }
 
     std::unique_ptr<GPU::BindingSet> createBindingSet(GPU::Pipeline&, uint32_t, std::span<const GPU::Binding>) override {
-        throw Lattice::Exception("Vulkan::Device", "createBindingSet is not implemented");
+        throw Lattice::Exception<Device>("createBindingSet is not implemented");
     }
 
     void writeBuffer(GPU::Buffer&, uint64_t, std::span<const std::byte>) override {
-        throw Lattice::Exception("Vulkan::Device", "writeBuffer is not implemented");
+        throw Lattice::Exception<Device>("writeBuffer is not implemented");
     }
 
 private:
