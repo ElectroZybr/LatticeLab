@@ -40,8 +40,8 @@ Test& Test::instance() {
 
 int Test::runAll(LogMode mode) {
     int failed = 0;
-    Logger::message("<mut2>~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</>");
-    LogScope testing("Tests", mode, "<h>Running</>");
+    Logger::message("<mut>~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</>");
+    LogScope testing("Tests", mode, "<b>Running</>");
     for (TestCase& test : tests_) {
         auto& log = LogSystem::current();
         const LogMode effective = LogModes::inherit(mode, log.currentOrDefault());

@@ -24,7 +24,6 @@ struct BlueprintMeta {
 struct Blueprint {
     std::string name;
     std::vector<BlueprintId> bases;
-    bool exists = true;
     BlueprintMeta meta;
     std::vector<void* (*)(void*)> upcasts;
 

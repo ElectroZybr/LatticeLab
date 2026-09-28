@@ -14,7 +14,6 @@ class NodeRegistry;
 
 struct Role {
     std::string name;
-    bool exists = true;
 };
 
 using RoleRegistry = ObjectRegistry<Role, RoleId, std::string>;
@@ -29,7 +28,6 @@ struct ContextScope {
     NodeId owner = InvalidNodeId;
     BlueprintId type = InvalidBlueprintId;
     std::vector<ContextEntry> roles;
-    bool exists = true;
 };
 
 using ContextRegistry = ObjectRegistry<ContextScope, ContextScopeId, NodeId>;

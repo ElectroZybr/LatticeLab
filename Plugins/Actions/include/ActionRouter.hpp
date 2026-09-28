@@ -60,8 +60,6 @@ private:
     static void setFlag(Binding& b, BindingFlags f, bool value) { if (value) b.flags |= f; else b.flags &= ~f; }
 
     struct Binding {
-        bool exists = true;
-
         Lattice::RoleId role = Lattice::InvalidRoleId;
         TriggerChain trigger;
         ActionMode mode = ActionMode::OnPress;
