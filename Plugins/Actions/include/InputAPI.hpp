@@ -12,7 +12,6 @@ enum class InputKind : uint8_t { Button, Axis, Axis2 };
 
 struct Trigger {
     std::string name;
-    bool exists = true;
     InputKind kind = InputKind::Button;
 };
 

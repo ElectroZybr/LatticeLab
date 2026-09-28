@@ -28,15 +28,16 @@ public:
 
     Id create(Object object, std::optional<Key> key, bool overwrite = false) {
         const Id id = freeIds_.empty() ? static_cast<Id>(objects_.size()) : freeIds_.back();
+
         if (key)
             names_.add(*key, id, overwrite);
-        if (!freeIds_.empty())
-            freeIds_.pop_back();
 
-        if (id == static_cast<Id>(objects_.size()))
-            objects_.push_back(std::move(object));
-        else
-            objects_[id] = std::move(object);
+        if (!freeIds_.empty()) {
+            freeIds_.pop_back();
+            objects_[id].emplace(std::move(object));
+        } else {
+            objects_.emplace_back(std::move(object));
+        }
 
         return id;
     }
@@ -56,10 +57,7 @@ public:
             return;
 
         names_.remove(id);
-
-        objects_[id] = Object{};
-        objects_[id].exists = false;
-
+        objects_[id].reset();
         freeIds_.push_back(id);
     }
 
@@ -84,27 +82,17 @@ public:
 
     // доступ по индексу, nullptr если не найден
     const Object* get(Id id) const {
-        if (!valid(id) || id >= objects_.size())
+        if (!valid(id) || id >= objects_.size() || !objects_[id])
             return nullptr;
 
-        const Object& object = objects_[id];
-
-        if (!object.exists)
-            return nullptr;
-
-        return &object;
+        return &*objects_[id];
     }
 
     Object* get(Id id) {
-        if (!valid(id) || id >= objects_.size())
+        if (!valid(id) || id >= objects_.size() || !objects_[id])
             return nullptr;
 
-        Object& object = objects_[id];
-
-        if (!object.exists)
-            return nullptr;
-
-        return &object;
+        return &*objects_[id];
     }
 
     // ищет id в реестре по строковому имени
@@ -136,7 +124,7 @@ public:
     }
 
 private:
-    std::vector<Object> objects_;
+    std::vector<std::optional<Object>> objects_;
     std::vector<Id> freeIds_;
     NamedRegistry<Id, Key, Hash> names_;
 };

@@ -20,7 +20,6 @@ struct Node {
     BlueprintId bp = InvalidBlueprintId;
     NodeId relation = InvalidNodeId;
     NodeKind kind = NodeKind::Folder;
-    bool exists = true;
     RuntimeObject object;
 };
 

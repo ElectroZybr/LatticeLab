@@ -9,7 +9,6 @@ namespace Lattice {
 
 struct RegistryDummy {
     std::string name;
-    bool exists = true;
     void* node = nullptr;
 };
 
