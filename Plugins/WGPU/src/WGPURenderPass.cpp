@@ -3,8 +3,7 @@
 #include "WGPURenderPass.hpp"
 #include "WGPUSurface.hpp"
 #include "WGPUBuffer.hpp"
-
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 
 namespace WGPU {
 

@@ -7,7 +7,7 @@
 
 #include <Lattice/Kernel/Consts.hpp>
 #include <Lattice/Kernel/TypeName.hpp>
-#include <Lattice/Kernel/ObjectRegistry.hpp>
+#include <Lattice/Tools/ObjectRegistry.hpp>
 
 class NodeBuild;
 class NodeConfigure;

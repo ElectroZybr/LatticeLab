@@ -4,7 +4,7 @@
 #include <string>
 
 #include <toml++/toml.hpp>
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 
 #include "Document.hpp"
 #include "ParserAPI.hpp"

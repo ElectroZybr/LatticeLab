@@ -7,7 +7,7 @@
 #include "WGPUDevice.hpp"
 
 #include <Lattice/Kernel/NodeViews.hpp>
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Tools/Logger.hpp>
 
 namespace WGPU {

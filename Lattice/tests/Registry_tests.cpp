@@ -1,4 +1,4 @@
-#include <Lattice/Kernel/ObjectRegistry.hpp>
+#include <Lattice/Tools/ObjectRegistry.hpp>
 #include <Lattice/Tools/Fixture.hpp>
 #include <Lattice/Tools/Tests.hpp>
 

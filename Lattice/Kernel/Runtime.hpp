@@ -13,7 +13,7 @@
 #include <Lattice/Kernel/StartupConfig.hpp>
 #include <Lattice/Kernel/Requirements.hpp>
 #include <Lattice/Kernel/Node.hpp>
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Kernel/DLLoader.hpp>
 #include <Lattice/Kernel/Context.hpp>
 #include <Lattice/Kernel/BlueprintRegister.hpp>

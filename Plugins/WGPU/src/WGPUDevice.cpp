@@ -4,8 +4,7 @@
 #include "WGPURenderPass.hpp"
 #include "WGPUBuffer.hpp"
 #include "WGPUSurface.hpp"
-
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Kernel/NodeViews.hpp>
 
 namespace WGPU {

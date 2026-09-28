@@ -3,8 +3,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
-
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Kernel/NodeViews.hpp>
 #include <Lattice/Kernel/Value.hpp>
 

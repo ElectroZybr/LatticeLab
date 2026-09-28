@@ -7,7 +7,7 @@
 #include <Lattice/Kernel/NodeFactory.hpp>
 #include <Lattice/Kernel/NodeHandlers.hpp>
 #include <Lattice/Kernel/Blueprints.hpp>
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Kernel/NodeQuery.hpp>
 #include <Lattice/Kernel/NodeSystem.hpp>
 #include <Lattice/Kernel/TreeView.hpp>

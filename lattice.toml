@@ -3,3 +3,4 @@ ClassicMD.Universe1 = "on"
 # WindowSystem.1 = ["on", "host"]
 # IOSubsystem = "on"
 CLI = ["on", "host"]
+BenchSubsystem = "on"

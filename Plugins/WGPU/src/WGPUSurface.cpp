@@ -8,8 +8,7 @@
 #include "WGPUSurface.hpp"
 #include "WGPUDevice.hpp"
 #include "WGPUShader.hpp"
-
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Kernel/NodeViews.hpp>
 
 namespace WGPU {

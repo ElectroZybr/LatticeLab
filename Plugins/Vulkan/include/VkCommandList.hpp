@@ -3,7 +3,7 @@
 #include <vulkan/vulkan.h>
 
 #include "CommandList.hpp"
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 
 namespace Vk {
 

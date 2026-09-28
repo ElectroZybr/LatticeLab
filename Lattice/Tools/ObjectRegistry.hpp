@@ -3,8 +3,8 @@
 #include <optional>
 #include <vector>
 
-#include <Lattice/Kernel/Exception.hpp>
-#include <Lattice/Kernel/NamedRegistry.hpp>
+#include <Lattice/Tools/Exception.hpp>
+#include <Lattice/Tools/NamedRegistry.hpp>
 
 namespace Lattice {
 

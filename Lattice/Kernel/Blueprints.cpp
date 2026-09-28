@@ -2,8 +2,7 @@
 
 #include <algorithm>
 #include <format>
-
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Tools/Logger.hpp>
 #include <Lattice/Tools/TreeFormatter.hpp>
 

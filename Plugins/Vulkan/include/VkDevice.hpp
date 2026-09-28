@@ -5,8 +5,7 @@
 
 #include "Device.hpp"
 #include "VkCommandList.hpp"
-
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Kernel/NodeViews.hpp>
 
 namespace Vk {

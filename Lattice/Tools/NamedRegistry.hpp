@@ -5,7 +5,7 @@
 #include <string_view>
 #include <unordered_map>
 
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 
 namespace Lattice {
 
