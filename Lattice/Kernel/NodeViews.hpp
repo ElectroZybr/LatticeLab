@@ -205,6 +205,12 @@ public:
         return nodeSystem_->exports.resolve(entry.exportId).argumentTypes;
     }
 
+    size_t requiredArguments(const Lattice::VisibleExport& entry) const {
+        if (entry.exportId == Lattice::InvalidExportId)
+            return 0;
+        return nodeSystem_->exports.resolve(entry.exportId).requiredArguments;
+    }
+
     std::span<const Lattice::NodeId> candidates(const Lattice::VisibleExport& entry) const {
         const Lattice::ContextResolution resolution =
             entry.scope == Lattice::InvalidContextScopeId

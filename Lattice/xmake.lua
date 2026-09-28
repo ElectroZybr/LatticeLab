@@ -29,3 +29,12 @@ target("Lattice.tests")
 --     add_files("Tools/*.cpp")
 --     add_headerfiles("Tools/(Tools/**.hpp)")
 --     add_includedirs("Tools/", {public = true})
+
+-- сборка бенчмарков
+target("Lattice.bench")
+    set_kind("shared")
+    set_targetdir(".")
+
+    add_files("bench/*.cpp")
+
+    add_deps("Lattice")

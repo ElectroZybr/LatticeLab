@@ -125,6 +125,7 @@ public:
             }
 
             if (benchMode) {}
+            dlLoader.load("Lattice", ".bench");
             
             const std::vector<StartupBranch> startupBranches = build(config);
 

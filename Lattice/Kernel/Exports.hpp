@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -113,6 +114,7 @@ private:
 struct Action {
     std::function<void(ActionContext&, std::span<const Value>)> invoke;
     std::vector<Value> argumentTypes;
+    size_t requiredArguments = 0;
 };
 
 struct Export {
@@ -127,6 +129,7 @@ struct ResolvedExport {
     void (*set)(void*, const Value&) = nullptr;
     void (*invoke)(void*, ActionContext&, std::span<const Value>) = nullptr;
     std::span<const Value> argumentTypes;
+    size_t requiredArguments = 0;
 
     explicit operator bool() const noexcept {
         return object || get || set || invoke;
@@ -183,6 +186,11 @@ public:
 
     template<typename... Args, typename F>
     ExportId action(NodeId owner, std::string_view name, F&& callback) {
+        static_assert(
+            optionalArgumentsAreTrailing<Args...>(),
+            "Optional action arguments must follow required arguments"
+        );
+
         const ExportKey key{owner, std::string(name)};
 
         if (index_.contains(key))
@@ -203,16 +211,28 @@ public:
                 ActionContext& context,
                 std::span<const Value> arguments
             ) mutable {
-                if (arguments.size() != sizeof...(Args))
-                    throw Exception<Action>(
-                        "Expected {} arguments, received {}",
-                        sizeof...(Args),
-                        arguments.size()
-                    );
+                constexpr size_t required = requiredArgumentCount<Args...>();
+                if (arguments.size() < required || arguments.size() > sizeof...(Args)) {
+                    if constexpr (required == sizeof...(Args)) {
+                        throw Exception<Action>(
+                            "Expected {} arguments, received {}",
+                            required,
+                            arguments.size()
+                        );
+                    } else {
+                        throw Exception<Action>(
+                            "Expected {} to {} arguments, received {}",
+                            required,
+                            sizeof...(Args),
+                            arguments.size()
+                        );
+                    }
+                }
 
                 invokeCallback<Args...>(callback, context, arguments, std::index_sequence_for<Args...>{});
             },
-            .argumentTypes = {argumentType<Args>()...}
+            .argumentTypes = {argumentType<Args>()...},
+            .requiredArguments = requiredArgumentCount<Args...>()
         });
 
         index_.emplace(key, id);
@@ -299,7 +319,8 @@ public:
             .invoke = [](void* object, ActionContext& context, std::span<const Value> arguments) {
                 static_cast<Action*>(object)->invoke(context, arguments);
             },
-            .argumentTypes = action.argumentTypes
+            .argumentTypes = action.argumentTypes,
+            .requiredArguments = action.requiredArguments
         };
     }
 
@@ -345,8 +366,37 @@ private:
     static constexpr bool AlwaysFalse = false;
 
     template<typename T>
+    struct OptionalArgument : std::false_type {
+        using Type = std::remove_cvref_t<T>;
+    };
+
+    template<typename T>
+    struct OptionalArgument<std::optional<T>> : std::true_type {
+        using Type = T;
+    };
+
+    template<typename T>
+    static constexpr bool IsOptionalArgument =
+        OptionalArgument<std::remove_cvref_t<T>>::value;
+
+    template<typename... Args>
+    static consteval bool optionalArgumentsAreTrailing() {
+        bool optionalSeen = false;
+        bool valid = true;
+        ((IsOptionalArgument<Args>
+            ? optionalSeen = true
+            : valid = valid && !optionalSeen), ...);
+        return valid;
+    }
+
+    template<typename... Args>
+    static consteval size_t requiredArgumentCount() {
+        return (size_t{0} + ... + (IsOptionalArgument<Args> ? 0 : 1));
+    }
+
+    template<typename T>
     static Value argumentType() {
-        using U = std::remove_cvref_t<T>;
+        using U = typename OptionalArgument<std::remove_cvref_t<T>>::Type;
 
         if constexpr (std::is_same_v<U, std::string>)
             return Value{std::string{}};
@@ -367,8 +417,20 @@ private:
     }
 
     template<typename T>
-    static std::remove_cvref_t<T> argument(const Value& value) {
-        return value.as<std::remove_cvref_t<T>>();
+    static std::remove_cvref_t<T> argument(
+        std::span<const Value> arguments,
+        size_t index
+    ) {
+        using U = std::remove_cvref_t<T>;
+
+        if constexpr (IsOptionalArgument<U>) {
+            using ValueType = typename OptionalArgument<U>::Type;
+            if (index >= arguments.size())
+                return std::nullopt;
+            return U{arguments[index].as<ValueType>()};
+        } else {
+            return arguments[index].as<U>();
+        }
     }
 
     template<typename... Args, typename F, size_t... Indices>
@@ -379,9 +441,9 @@ private:
         std::index_sequence<Indices...>
     ) {
         if constexpr (std::is_invocable_v<F&, ActionContext&, std::remove_cvref_t<Args>...>)
-            std::invoke(callback, context, argument<Args>(arguments[Indices])...);
+            std::invoke(callback, context, argument<Args>(arguments, Indices)...);
         else if constexpr (std::is_invocable_v<F&, std::remove_cvref_t<Args>...>)
-            std::invoke(callback, argument<Args>(arguments[Indices])...);
+            std::invoke(callback, argument<Args>(arguments, Indices)...);
         else
             static_assert(AlwaysFalse<F>, "Action callback does not match its declared arguments");
     }

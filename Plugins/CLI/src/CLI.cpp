@@ -100,8 +100,15 @@ std::string formatExport(
     }
 
     std::string arguments;
-    for (const Lattice::Value& argument : exports.argumentTypes(entry))
-        arguments += std::format(" <mut><{}></>", valueType(argument));
+    const auto argumentTypes = exports.argumentTypes(entry);
+    const size_t requiredArguments = exports.requiredArguments(entry);
+    for (size_t index = 0; index < argumentTypes.size(); ++index) {
+        arguments += std::format(
+            " <mut><{}{}></>",
+            index < requiredArguments ? "" : "?",
+            valueType(argumentTypes[index])
+        );
+    }
 
     return std::format("<action>λ</> {}{} <mut2>#{}</>", name, arguments, entry.exportId);
 }
