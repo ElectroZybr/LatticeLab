@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <cstdio>
 #include <functional>
-#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -60,14 +59,6 @@ public:
 
     using ProgressCallback = std::function<void(const Progress&)>;
 
-private:
-    struct Case {
-        std::string group;
-        std::string name;
-        std::string description;
-        void (*function)(Bench&);
-    };
-
     struct TimeValue {
         double value;
         const char* unit;
@@ -82,6 +73,14 @@ private:
             return {ns / 1'000.0, "us"};
         return {ns, "ns"};
     }
+
+private:
+    struct Case {
+        std::string group;
+        std::string name;
+        std::string description;
+        void (*function)(Bench&);
+    };
 
     ObjectRegistry<Case, BenchId, std::string> benches_;
     ProgressCallback defaultProgress_ = [](const Progress& progress) {
@@ -376,14 +375,26 @@ public:
         return results;
     }
 
-    std::vector<std::string_view> names() const {
-        std::vector<std::string_view> result;
+    struct Info {
+        std::string_view group;
+        std::string_view name;
+        std::string_view description;
+    };
+
+    std::vector<Info> list() const {
+        std::vector<Info> result;
 
         for (BenchId id = 0; id < benches_.size(); ++id) {
             const Case* benchCase = benches_.get(id);
 
-            if (benchCase)
-                result.push_back(benchCase->name);
+            if (!benchCase)
+                continue;
+
+            result.push_back({
+                .group = benchCase->group,
+                .name = benchCase->name,
+                .description = benchCase->description
+            });
         }
 
         return result;
@@ -403,28 +414,6 @@ public:
         }
 
         return result;
-    }
-
-    static void print(std::span<const Result> results, FILE* out = stdout) {
-        for (const Result& result : results) {
-            const TimeValue median = formatTime(result.medianNs);
-            const TimeValue minimum = formatTime(result.minNs);
-            const TimeValue mean = formatTime(result.meanNs);
-
-            std::fprintf(
-                out,
-                "%-24s N=%-8zu median=%8.2f %-2s  min=%8.2f %-2s  mean=%8.2f %-2s  iterations=%zu\n",
-                result.name.c_str(),
-                result.n,
-                median.value,
-                median.unit,
-                minimum.value,
-                minimum.unit,
-                mean.value,
-                mean.unit,
-                result.iterations
-            );
-        }
     }
 
     void setProgressCallback(ProgressCallback callback) {

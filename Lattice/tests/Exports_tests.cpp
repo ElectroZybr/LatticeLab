@@ -22,6 +22,7 @@ TEST(Exports_ActionContextAndTypedArguments, RuntimeFixture,
     ResolvedExport resolved = fixture.run_ctx.nodes.exports.resolve(action);
     REQUIRE(resolved.invoke != nullptr);
     REQUIRE(resolved.argumentTypes.size() == 1);
+    REQUIRE(resolved.requiredArguments == 1);
     REQUIRE(resolved.argumentTypes.front().is<std::string>());
 
     ActionContext context{fixture.root};
@@ -32,6 +33,28 @@ TEST(Exports_ActionContextAndTypedArguments, RuntimeFixture,
     REQUIRE(context.node() == child);
     REQUIRE(context.output().size() == 1);
     REQUIRE(std::get<Value>(context.output().front()).get<std::string>() == "done");
+}
+
+TEST(Exports_OptionalTrailingActionArgument, RuntimeFixture,
+    "Optional аргумент действия должен принимать как значение, так и его отсутствие.") {
+    std::optional<std::string> received;
+    const ExportId action = fixture.build(fixture.root).action<std::optional<std::string>>(
+        "run",
+        [&](std::optional<std::string> name) { received = std::move(name); }
+    );
+
+    ResolvedExport resolved = fixture.run_ctx.nodes.exports.resolve(action);
+    REQUIRE(resolved.argumentTypes.size() == 1);
+    REQUIRE(resolved.requiredArguments == 0);
+    REQUIRE(resolved.argumentTypes.front().is<std::string>());
+
+    ActionContext context{fixture.root};
+    resolved.invoke(resolved.object, context, {});
+    REQUIRE(!received);
+
+    const std::vector<Value> arguments{Value{"case"}};
+    resolved.invoke(resolved.object, context, arguments);
+    REQUIRE(received == "case");
 }
 
 TEST(Exports_ActionContextStructuredView, RuntimeFixture,

@@ -104,6 +104,9 @@ struct LocalTerminal::Impl {
 
         if (interactive) {
             clearPromptUnlocked();
+            if (transientVisible)
+                std::cout << '\n';
+            transientVisible = false;
             std::cout << "\033[0 q" << std::flush;
         }
 
@@ -126,8 +129,24 @@ struct LocalTerminal::Impl {
 
     void write(std::string_view text) {
         std::lock_guard lock(mutex);
-        if (started && interactive)
+
+        const bool transient = !text.empty() && text.front() == '\r';
+        if (started && interactive && transient) {
             clearPromptUnlocked();
+            std::cout << text << std::flush;
+            transientVisible = text.back() != '\n';
+            if (!transientVisible)
+                redrawUnlocked();
+            return;
+        }
+
+        if (started && interactive) {
+            clearPromptUnlocked();
+            if (transientVisible) {
+                std::cout << '\n';
+                transientVisible = false;
+            }
+        }
         std::cout << text;
         if (started && interactive)
             redrawUnlocked();
@@ -294,6 +313,7 @@ struct LocalTerminal::Impl {
     bool interactive = false;
     bool started = false;
     bool promptVisible = false;
+    bool transientVisible = false;
 
     #if defined(_WIN32)
         HANDLE inputHandle = INVALID_HANDLE_VALUE;

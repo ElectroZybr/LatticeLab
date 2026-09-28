@@ -79,13 +79,24 @@ void CommandDispatcher::execute(
                 return;
             }
 
-            if (sourceArguments->size() != resolved.argumentTypes.size()) {
+            if (
+                sourceArguments->size() < resolved.requiredArguments ||
+                sourceArguments->size() > resolved.argumentTypes.size()
+            ) {
+                const std::string expected =
+                    resolved.requiredArguments == resolved.argumentTypes.size()
+                        ? std::to_string(resolved.requiredArguments)
+                        : std::format(
+                            "{}-{}",
+                            resolved.requiredArguments,
+                            resolved.argumentTypes.size()
+                        );
                 reply(
                     terminal, Level::Warning,
                     std::format(
                         "Action '{}' expects {} argument(s), received {}",
                         name,
-                        resolved.argumentTypes.size(),
+                        expected,
                         sourceArguments->size()
                     )
                 );
