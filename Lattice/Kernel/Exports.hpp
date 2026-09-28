@@ -11,7 +11,7 @@
 #include <vector>
 
 #include <Lattice/Kernel/Consts.hpp>
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Kernel/TypeName.hpp>
 #include <Lattice/Kernel/Value.hpp>
 #include <Lattice/Tools/Logger.hpp>

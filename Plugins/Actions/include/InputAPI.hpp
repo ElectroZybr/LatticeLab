@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Lattice/Kernel/Consts.hpp>
-#include <Lattice/Kernel/ObjectRegistry.hpp>
+#include <Lattice/Tools/ObjectRegistry.hpp>
 
 #include <glm/glm.hpp>
 

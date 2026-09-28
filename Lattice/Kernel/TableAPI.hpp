@@ -10,7 +10,7 @@
 #include <utility>
 
 #include <Lattice/Kernel/Consts.hpp>
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Kernel/TypeName.hpp>
 #include <Lattice/Kernel/NodeViews.hpp>
 

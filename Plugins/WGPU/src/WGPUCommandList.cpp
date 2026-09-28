@@ -2,8 +2,7 @@
 
 #include "Surface.hpp"
 #include "WGPUSurface.hpp"
-
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 
 namespace WGPU {
 

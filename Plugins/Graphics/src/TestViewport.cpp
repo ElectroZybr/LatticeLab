@@ -5,7 +5,7 @@
 #include <span>
 
 #include <glm/gtc/type_ptr.hpp>
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 
 #include "Camera.hpp"
 #include "TransformController.hpp"

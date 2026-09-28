@@ -12,9 +12,11 @@ namespace CLIPlugin {
 
 /**
  @file CLI.hpp
- @brief Интерактивный интерфейс управления runtime Lattice.
+ @brief Интерактивный интерфейс управления runtime Lattice
 
- обрабатывает подключенные терминалы, разрешает доступные exports и предоставляет навигацию по runtime-дереву.
+ обрабатывает подключенные терминалы, позволяет работать с экспортируемыми параметрами
+ позволяет просматривать, вызывать, менять значения параметров и таблиц. 
+ предоставляет навигацию по дереву компонентов
 */
 
 class CLI final : public ServiceAPI {
@@ -26,10 +28,10 @@ private:
     void run() override;
     void broadcast(std::string_view text);
     bool pollTerminals();
-    void list(Lattice::ActionContext& context) const;
-    void help(Lattice::ActionContext& context) const;
+    void showList(Lattice::ActionContext& context) const;
+    void showHelp(Lattice::ActionContext& context) const;
     void showTree(Lattice::ActionContext& context) const;
-    void logo() const;
+    void showLogo() const;
     
     void changeDirectory(Lattice::ActionContext& context, std::string path) const;
 

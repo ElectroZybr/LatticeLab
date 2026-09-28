@@ -49,8 +49,8 @@ public:
         return scopeCount_ != 0 && scopes_[scopeCount_ - 1].hadProblem;
     }
 
-    void addDepth(int delta) {
-        indent_ = static_cast<size_t>(static_cast<int>(indent_) + delta);
+    void addDepth(size_t delta) {
+        indent_ += delta;
     }
 
 private:
@@ -115,7 +115,7 @@ namespace Logger {
 
 inline TextFormatter line(Level level, std::string_view tag, const TextFormatter& message) {
     return TextFormatter::format(
-        "{} <mut2><b>[<light>{}</>]<//> {}</>",
+        "{} <mut><b>[<light>{}</>]<//> {}</>",
         LogStyle::get(level).style,
         tag,
         message.markup()

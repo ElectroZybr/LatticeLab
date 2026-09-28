@@ -3,8 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 
 
 enum class Level : uint8_t {

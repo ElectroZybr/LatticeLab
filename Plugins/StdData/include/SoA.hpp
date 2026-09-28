@@ -14,7 +14,7 @@
 #include <vector>
 
 #include <Lattice/Kernel/TypeName.hpp>
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Kernel/NodeViews.hpp>
 #include <Lattice/Kernel/TableAPI.hpp>
 #include <Lattice/Tools/Logger.hpp>

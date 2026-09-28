@@ -17,6 +17,7 @@ namespace Lattice {
  * TextStyleId values once, while their current value is read from the theme on
  * every format() call. The referenced theme must outlive the pattern.
  */
+ 
 class TextPattern {
 public:
     explicit TextPattern(

@@ -4,7 +4,7 @@
 #include <string_view>
 #include <utility>
 
-#include <Lattice/Kernel/NamedRegistry.hpp>
+#include <Lattice/Tools/NamedRegistry.hpp>
 #include "SoA.hpp"
 
 namespace StdData {

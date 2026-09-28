@@ -5,8 +5,7 @@
 #include <format>
 #include <string>
 #include <string_view>
-
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Kernel/Value.hpp>
 
 namespace Lattice {

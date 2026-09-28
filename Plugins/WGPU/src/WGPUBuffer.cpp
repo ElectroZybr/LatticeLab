@@ -1,7 +1,6 @@
 #include "WGPUBuffer.hpp"
 #include "WGPUDevice.hpp"
-
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Kernel/NodeViews.hpp>
 
 namespace WGPU {

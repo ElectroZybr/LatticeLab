@@ -6,8 +6,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 
 #include "Document.hpp"
 #include "ParserAPI.hpp"

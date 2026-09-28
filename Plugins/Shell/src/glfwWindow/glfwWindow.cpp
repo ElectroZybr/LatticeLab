@@ -40,7 +40,7 @@
     #include <GLFW/glfw3native.h>
 
 #include <Lattice/Kernel/NodeViews.hpp>
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Tools/Logger.hpp>
 #include "glfwKeyboard.hpp"
 #include "glfwMouse.hpp"

@@ -5,8 +5,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Tools/TextTheme.hpp>
 
 namespace Lattice {
@@ -23,10 +22,10 @@ namespace TextMarkup {
 
 struct StyleOperation {
     TextStyle value;
-    TextStyleId semantic = InvalidTextStyleId;
+    TextTheme::StyleId semantic = TextTheme::InvalidTextStyleId;
 
     bool isSemantic() const noexcept {
-        return semantic != InvalidTextStyleId;
+        return semantic != TextTheme::InvalidTextStyleId;
     }
 
     TextStyle resolve(const TextTheme& theme) const {

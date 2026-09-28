@@ -1,6 +1,5 @@
 #include "Render.hpp"
-
-#include <Lattice/Kernel/Exception.hpp>
+#include <Lattice/Tools/Exception.hpp>
 #include "Shell/src/glfwWindow/glfwWindow.hpp"
 
 
