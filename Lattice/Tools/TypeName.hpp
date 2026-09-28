@@ -27,8 +27,12 @@ constexpr std::string_view typeKey() {
 template<typename T>
 constexpr std::string_view typeName() {
     constexpr auto full = typeKey<T>();
-    constexpr auto pos = full.rfind("::");
-    return pos == std::string_view::npos ? full : full.substr(pos + 2);
+    constexpr auto templateStart = full.find('<');
+    constexpr auto base = full.substr(0, templateStart);
+    constexpr auto namespaceEnd = base.rfind("::");
+    return namespaceEnd == std::string_view::npos
+        ? base
+        : base.substr(namespaceEnd + 2);
 }
 
 } // namespace Lattice

@@ -51,7 +51,7 @@ std::unique_ptr<GPU::BindingSet> Device::createBindingSet(
 ) {
     auto* native = dynamic_cast<Pipeline*>(&pipeline);
     if (!native)
-        throw Lattice::Exception("WGPU::Device", "expected WGPU pipeline");
+        throw Lattice::Exception<Device>("expected WGPU pipeline");
 
     return std::make_unique<BindingSet>(device_, *native, group, bindings);
 }
@@ -59,7 +59,7 @@ std::unique_ptr<GPU::BindingSet> Device::createBindingSet(
 void Device::writeBuffer(GPU::Buffer& buffer, uint64_t offset, std::span<const std::byte> data) {
     auto* native = dynamic_cast<Buffer*>(&buffer);
     if (!native)
-        throw Lattice::Exception("WGPU::Device", "expected WGPU buffer");
+        throw Lattice::Exception<Device>("expected WGPU buffer");
 
     wgpuQueueWriteBuffer(queue_, native->native(), offset, data.data(), data.size());
 }

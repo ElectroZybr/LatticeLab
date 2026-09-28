@@ -15,7 +15,7 @@ CommandList::CommandList(WGPUDevice device, WGPUQueue queue)
     if (!encoder_) {
         wgpuQueueRelease(queue_);
         queue_ = nullptr;
-        throw Lattice::Exception(tag, "failed to create encoder");
+        throw Lattice::Exception<CommandList>("failed to create encoder");
     }
 }
 
@@ -35,11 +35,11 @@ GPU::RenderPass& CommandList::beginRenderPass(
     GPU::Color clear
 ) {
     if (submitted_ || commandBuffer_)
-        throw Lattice::Exception(tag, "command list already finished");
+        throw Lattice::Exception<CommandList>("command list already finished");
 
     auto* native = dynamic_cast<Surface*>(&surface);
     if (!native || native->device() != device_ || !native->view())
-        throw Lattice::Exception(tag, "expected acquired surface from the same WGPU device");
+        throw Lattice::Exception<CommandList>("expected acquired surface from the same WGPU device");
 
     renderPass_.begin(encoder_, *native, clear);
     return renderPass_;
@@ -47,16 +47,16 @@ GPU::RenderPass& CommandList::beginRenderPass(
 
 void CommandList::submit() {
     if (renderPass_.active())
-        throw Lattice::Exception(tag, "end the render pass before submitting");
+        throw Lattice::Exception<CommandList>("end the render pass before submitting");
 
     if (submitted_)
-        throw Lattice::Exception(tag, "command list already submitted");
+        throw Lattice::Exception<CommandList>("command list already submitted");
 
     if (!commandBuffer_)
         commandBuffer_ = wgpuCommandEncoderFinish(encoder_, nullptr);
 
     if (!commandBuffer_)
-        throw Lattice::Exception(tag, "failed to finish encoder");
+        throw Lattice::Exception<CommandList>("failed to finish encoder");
 
     wgpuQueueSubmit(queue_, 1, &commandBuffer_);
     submitted_ = true;

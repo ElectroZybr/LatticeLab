@@ -11,7 +11,6 @@
 
 
 class TomlParser final : public ParserAPI {
-    static constexpr std::string_view tag = "TomlParser";
 public:
     std::string_view extension() const override { return ".toml"; }
     
@@ -69,6 +68,6 @@ private:
         if (const auto* value = node.as_boolean())
             return bool(value->get());
 
-        throw Lattice::Exception(tag, "Unsupported TOML value");
+        throw Lattice::Exception<TomlParser>("Unsupported TOML value");
     }
 };

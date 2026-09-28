@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-#include <Lattice/Kernel/TypeName.hpp>
+#include <Lattice/Tools/TypeName.hpp>
 #include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Kernel/NodeViews.hpp>
 #include <Lattice/Kernel/TableAPI.hpp>
@@ -112,8 +112,7 @@ public:
             };
         }
 
-        throw Lattice::Exception(
-            tag,
+        throw Lattice::Exception<SoA>(
             "Column {} is out of range [0, {})",
             index,
             visibleIndex
@@ -123,7 +122,7 @@ public:
 protected:
     void* mutableElement(size_t index, size_t row) override {
         if (row >= size_)
-            throw Lattice::Exception(tag, "Row {} is out of range", row);
+            throw Lattice::Exception<SoA>("Row {} is out of range", row);
 
         size_t visibleIndex = 0;
         for (auto& column : columns_) {
@@ -133,7 +132,7 @@ protected:
                 return storage_ + column.offset + row * column.elementSize;
         }
 
-        throw Lattice::Exception(tag, "Column {} is out of range", index);
+        throw Lattice::Exception<SoA>("Column {} is out of range", index);
     }
 
 public:
@@ -173,7 +172,7 @@ public:
         const size_t id = typeId<Tag>();
 
         if (id >= columns_.size() || !columns_[id].active) {
-            throw Lattice::Exception(tag, "Column '{}' not found", Lattice::typeName<Tag>());
+            throw Lattice::Exception<SoA>("Column '{}' not found", Lattice::typeName<Tag>());
         }
 
         columns_[id] = Column{};
@@ -228,7 +227,7 @@ public:
         using T = typename Tag::type;
         auto* column = findColumn<Tag>();
         if (!column) {
-            throw Lattice::Exception(tag, "Column '{}' not found", Lattice::typeName<Tag>());
+            throw Lattice::Exception<SoA>("Column '{}' not found", Lattice::typeName<Tag>());
         }
         return reinterpret_cast<T*>(storage_ + column->offset);
     }
@@ -238,7 +237,7 @@ public:
         using T = typename Tag::type;
         const auto* column = findColumn<Tag>();
         if (!column) {
-            throw Lattice::Exception(tag, "Column '{}' not found", Lattice::typeName<Tag>());
+            throw Lattice::Exception<SoA>("Column '{}' not found", Lattice::typeName<Tag>());
         }
         return reinterpret_cast<const T*>(storage_ + column->offset);
     }

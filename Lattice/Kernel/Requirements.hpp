@@ -5,7 +5,7 @@
 #include <string_view>
 #include <vector>
 
-#include <Lattice/Kernel/TypeName.hpp>
+#include <Lattice/Tools/TypeName.hpp>
 #include <Lattice/Kernel/Blueprints.hpp>
 
 namespace Lattice {

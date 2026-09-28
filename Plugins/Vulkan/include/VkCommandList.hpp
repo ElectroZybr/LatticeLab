@@ -19,14 +19,14 @@ public:
         alloc.commandBufferCount = 1;
 
         if (vkAllocateCommandBuffers(device_, &alloc, &buffer_) != VK_SUCCESS)
-            throw Lattice::Exception("Vulkan::CommandList", "failed to allocate command buffer");
+            throw Lattice::Exception<CommandList>("failed to allocate command buffer");
 
         VkCommandBufferBeginInfo begin{};
         begin.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
         if (vkBeginCommandBuffer(buffer_, &begin) != VK_SUCCESS)
-            throw Lattice::Exception("Vulkan::CommandList", "failed to begin command buffer");
+            throw Lattice::Exception<CommandList>("failed to begin command buffer");
     }
 
     ~CommandList() override {
@@ -37,7 +37,7 @@ public:
     void submit() override {
         if (!finished_) {
             if (vkEndCommandBuffer(buffer_) != VK_SUCCESS)
-                throw Lattice::Exception("Vulkan::CommandList", "failed to end command buffer");
+                throw Lattice::Exception<CommandList>("failed to end command buffer");
 
             finished_ = true;
         }
@@ -48,7 +48,7 @@ public:
         submit.pCommandBuffers = &buffer_;
 
         if (vkQueueSubmit(queue_, 1, &submit, VK_NULL_HANDLE) != VK_SUCCESS)
-            throw Lattice::Exception("Vulkan::CommandList", "failed to submit command buffer");
+            throw Lattice::Exception<CommandList>("failed to submit command buffer");
 
         vkQueueWaitIdle(queue_);
     }
@@ -58,7 +58,7 @@ public:
     }
 
     GPU::RenderPass& beginRenderPass(GPU::Surface&, GPU::Color = {}) override {
-        throw Lattice::Exception("Vulkan::CommandList", "surface rendering is not implemented");
+        throw Lattice::Exception<CommandList>("surface rendering is not implemented");
     }
 
 private:

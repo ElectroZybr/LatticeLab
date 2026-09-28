@@ -23,7 +23,7 @@ WGPUTextureFormat nativeFormat(GPU::TextureFormat format) {
     switch (format) {
         case GPU::TextureFormat::BGRA8Unorm: return WGPUTextureFormat_BGRA8Unorm;
         case GPU::TextureFormat::RGBA8Unorm: return WGPUTextureFormat_RGBA8Unorm;
-        default: throw Lattice::Exception("WGPU", "unsupported presentation format");
+        default: throw Lattice::Exception<Surface>("unsupported presentation format");
     }
 }
 
@@ -66,7 +66,7 @@ WGPUSurface createSurface(WGPUInstance instance, const NativeWindow& window) {
             return wgpuInstanceCreateSurface(instance, &desc);
         }
     #endif
-        default: throw Lattice::Exception("WGPU::Surface", "unsupported native window");
+        default: throw Lattice::Exception<Surface>("unsupported native window");
     }
 }
 
@@ -98,7 +98,7 @@ struct Surface::State {
 
 void Surface::attach(const NativeWindow& window) {
     if (window.kind == NativeWindow::Kind::None)
-        throw Lattice::Exception("WGPU::Surface", "native window is required");
+        throw Lattice::Exception<Surface>("native window is required");
 
     releaseFrame();
     releaseSurface();
@@ -109,13 +109,13 @@ void Surface::attach(const NativeWindow& window) {
     state_->surface = createSurface(state_->instance, window);
 
     if (!state_->surface)
-        throw Lattice::Exception("WGPU::Surface", "failed to create surface");
+        throw Lattice::Exception<Surface>("failed to create surface");
 
     WGPUSurfaceCapabilities caps{};
 
     if (wgpuSurfaceGetCapabilities(state_->surface, state_->adapter, &caps) != WGPUStatus_Success) {
         releaseSurface();
-        throw Lattice::Exception("WGPU::Surface", "device cannot present to this window");
+        throw Lattice::Exception<Surface>("device cannot present to this window");
     }
 
     for (size_t i = 0; i < caps.formatCount; ++i) {
@@ -135,7 +135,7 @@ void Surface::attach(const NativeWindow& window) {
 
     if (state_->format == GPU::TextureFormat::Undefined) {
         releaseSurface();
-        throw Lattice::Exception("WGPU::Surface", "no supported presentation format");
+        throw Lattice::Exception<Surface>("no supported presentation format");
     }
 }
 
@@ -225,12 +225,12 @@ bool Surface::acquire() {
         case WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
         case WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal:
             if (!current.texture)
-                throw Lattice::Exception("WGPU::Surface", "empty frame texture");
+                throw Lattice::Exception<Surface>("empty frame texture");
 
             state_->view = wgpuTextureCreateView(current.texture, nullptr);
             if (!state_->view) {
                 releaseFrame();
-                throw Lattice::Exception("WGPU::Surface", "failed to create frame view");
+                throw Lattice::Exception<Surface>("failed to create frame view");
             }
 
             return true;
@@ -245,18 +245,18 @@ bool Surface::acquire() {
             return false;
         default:
             releaseFrame();
-            throw Lattice::Exception("WGPU::Surface", "acquire failed ({})", static_cast<int>(current.status));
+            throw Lattice::Exception<Surface>("acquire failed ({})", static_cast<int>(current.status));
     }
 }
 
 void Surface::present() {
     if (!state_->view)
-        throw Lattice::Exception("WGPU::Surface", "no acquired frame");
+        throw Lattice::Exception<Surface>("no acquired frame");
 
     const auto status = wgpuSurfacePresent(state_->surface);
     releaseFrame();
     if (status != WGPUStatus_Success)
-        throw Lattice::Exception("WGPU::Surface", "present failed");
+        throw Lattice::Exception<Surface>("present failed");
 }
 
 Pipeline::Pipeline(NodeBuild node, const Desc& desc) {
@@ -264,7 +264,7 @@ Pipeline::Pipeline(NodeBuild node, const Desc& desc) {
     auto* shader = dynamic_cast<Shader*>(desc.shader);
 
     if (!shader || shader->device() != device->native())
-        throw Lattice::Exception("WGPU::Pipeline", "expected WGPU shader");
+        throw Lattice::Exception<Pipeline>("expected WGPU shader");
     device_ = device->native();
 
     WGPUColorTargetState color{};
@@ -287,7 +287,7 @@ Pipeline::Pipeline(NodeBuild node, const Desc& desc) {
     pipeline_ = wgpuDeviceCreateRenderPipeline(device_, &pipeline);
 
     if (!pipeline_)
-        throw Lattice::Exception("WGPU::Pipeline", "failed to create pipeline");
+        throw Lattice::Exception<Pipeline>("failed to create pipeline");
 }
 
 Pipeline::~Pipeline() {

@@ -11,7 +11,7 @@
 
 #include <Lattice/Kernel/Consts.hpp>
 #include <Lattice/Tools/Exception.hpp>
-#include <Lattice/Kernel/TypeName.hpp>
+#include <Lattice/Tools/TypeName.hpp>
 #include <Lattice/Kernel/NodeViews.hpp>
 
 
@@ -73,7 +73,7 @@ public:
 
     const void* element(size_t row) const {
         if (row >= size_)
-            throw Exception("Table", "Row {} is out of range [0, {})", row, size_);
+            throw Exception<ColumnView>("Row {} is out of range [0, {})", row, size_);
 
         return static_cast<const std::byte*>(data_) + row * stride_;
     }
@@ -82,15 +82,14 @@ public:
     std::span<const T> values() const {
         using Value = std::remove_cv_t<T>;
         if (!type_.is<Value>())
-            throw Exception(
-                "Table",
+            throw Exception<ColumnView>(
                 "Column '{}' contains '{}', requested '{}'",
                 name_,
                 type_.name,
                 typeKey<Value>()
             );
         if (stride_ != sizeof(Value))
-            throw Exception("Table", "Column '{}' is not contiguous", name_);
+            throw Exception<ColumnView>("Column '{}' is not contiguous", name_);
 
         return {static_cast<const Value*>(data_), size_};
     }
@@ -135,8 +134,7 @@ public:
         requires (sizeof...(Values) > 0)
     size_t addRow(Values&&... values) {
         if (sizeof...(Values) != columns())
-            throw Exception(
-                "Table",
+            throw Exception<Table>(
                 "Row contains {} values, table has {} columns",
                 sizeof...(Values),
                 columns()
@@ -158,7 +156,7 @@ public:
     size_t addRows(size_t count) {
         const size_t first = rows();
         if (count > std::numeric_limits<size_t>::max() - first)
-            throw Exception("Table", "Row count overflow");
+            throw Exception<Table>("Row count overflow");
         resize(first + count);
         return first;
     }
@@ -174,7 +172,7 @@ public:
     ColumnView column(std::string_view name) const {
         const auto index = findColumn(name);
         if (!index)
-            throw Exception("Table", "Column '{}' not found", name);
+            throw Exception<Table>("Column '{}' not found", name);
         return column(*index);
     }
 
@@ -190,8 +188,7 @@ private:
         using Value = std::remove_cvref_t<First>;
         const ColumnView target = column(Index);
         if (!target.type().template is<Value>())
-            throw Exception(
-                "Table",
+            throw Exception<Table>(
                 "Column '{}' contains '{}', row value is '{}'",
                 target.name(),
                 target.type().name,

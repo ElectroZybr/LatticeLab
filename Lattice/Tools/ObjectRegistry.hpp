@@ -66,7 +66,7 @@ public:
         const Object* object = get(id);
 
         if (!object)
-            throw Lattice::Exception("Registry", "Object with id {} not found", id);
+            throw Lattice::Exception<ObjectRegistry>("Object with id {} not found", id);
 
         return *object;
     }
@@ -75,7 +75,7 @@ public:
         Object* object = get(id);
 
         if (!object)
-            throw Lattice::Exception("Registry", "Object with id {} not found", id);
+            throw Lattice::Exception<ObjectRegistry>("Object with id {} not found", id);
 
         return *object;
     }

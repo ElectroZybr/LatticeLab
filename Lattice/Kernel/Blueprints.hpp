@@ -6,7 +6,7 @@
 #include <vector>
 
 #include <Lattice/Kernel/Consts.hpp>
-#include <Lattice/Kernel/TypeName.hpp>
+#include <Lattice/Tools/TypeName.hpp>
 #include <Lattice/Tools/ObjectRegistry.hpp>
 
 class NodeBuild;
@@ -75,7 +75,7 @@ public:
     BlueprintId id() const {
         const BlueprintId result = find<T>();
         if (result == InvalidId)
-            throw Exception("Blueprints", "Blueprint '{}' not found", typeKey<T>());
+            throw Exception<Blueprints>("Blueprint '{}' not found", typeKey<T>());
         return result;
     }
 

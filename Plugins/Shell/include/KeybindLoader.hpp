@@ -11,7 +11,6 @@
 #include "LoaderAPI.hpp"
 
 class KeybindsLoader final : public LoaderAPI {
-    static constexpr std::string_view tag = "KeybindsLoader";
     Focus<ActionRouter> actionMap_;
 
 public:
@@ -26,7 +25,7 @@ public:
             return;
 
         if (!actionMap_)
-            throw Lattice::Exception(tag, "loader is not configured");
+            throw Lattice::Exception<KeybindsLoader>("loader is not configured");
 
         loadTable(section.require<Lattice::Object>(), "");
     }
@@ -88,7 +87,7 @@ private:
             args.push_back(value);
 
         if (args.empty() || !args[0].is<std::string>())
-            throw Lattice::Exception(tag, "bind '{}' needs a trigger string", verb);
+            throw Lattice::Exception<KeybindsLoader>("bind '{}' needs a trigger string", verb);
 
         const auto trigger = args[0].get<std::string>();
         ActionMode mode = ActionMode::OnPress;

@@ -255,14 +255,12 @@ public:
     ) const {
 
         if (width == 0)
-            throw Exception(
-                "TextFormatter",
+            throw Exception<TextFormatter>(
                 "Wrap width cannot be zero"
             );
 
         if (continuationIndent >= width)
-            throw Exception(
-                "TextFormatter",
+            throw Exception<TextFormatter>(
                 "Continuation indent must be less than wrap width"
             );
 

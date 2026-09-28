@@ -38,7 +38,7 @@ class Benchmarks {
 public:
     class Bench;
 
-    enum class Phase {
+    enum class Phase : uint8_t {
         Warmup,
         Sampling
     };
@@ -343,7 +343,7 @@ public:
         const BenchId id = benches_.find(name);
 
         if (!benches_.valid(id))
-            throw Exception("Benchmarks", "Benchmark '{}' not found", name);
+            throw Exception<Benchmarks>("Benchmark '{}' not found", name);
 
         return execute(benches_.require(id));
     }

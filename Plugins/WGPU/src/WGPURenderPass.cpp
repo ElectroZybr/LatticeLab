@@ -15,7 +15,7 @@ BindingSet::BindingSet(
 ) {
     auto layout = wgpuRenderPipelineGetBindGroupLayout(pipeline.native(), group);
     if (!layout)
-        throw Lattice::Exception("WGPU::BindingSet", "failed to get bind group layout");
+        throw Lattice::Exception<BindingSet>("failed to get bind group layout");
 
     std::vector<WGPUBindGroupEntry> entries;
     entries.reserve(bindings.size());
@@ -24,8 +24,7 @@ BindingSet::BindingSet(
         auto* buffer = dynamic_cast<Buffer*>(binding.buffer);
         if (!buffer) {
             wgpuBindGroupLayoutRelease(layout);
-            throw Lattice::Exception(
-                "WGPU::BindingSet",
+            throw Lattice::Exception<BindingSet>(
                 "expected WGPU buffer at binding {}",
                 binding.binding
             );
@@ -48,7 +47,7 @@ BindingSet::BindingSet(
     wgpuBindGroupLayoutRelease(layout);
 
     if (!bindGroup_)
-        throw Lattice::Exception("WGPU::BindingSet", "failed to create bind group");
+        throw Lattice::Exception<BindingSet>("failed to create bind group");
 }
 
 BindingSet::~BindingSet() {
@@ -70,7 +69,7 @@ bool RenderPass::active() const noexcept {
 
 void RenderPass::begin(WGPUCommandEncoder encoder, Surface& surface, GPU::Color clear) {
     if (active())
-        throw Lattice::Exception("WGPU::RenderPass", "render pass already active");
+        throw Lattice::Exception<RenderPass>("render pass already active");
 
     WGPURenderPassColorAttachment color{};
     color.view = surface.view();
@@ -85,7 +84,7 @@ void RenderPass::begin(WGPUCommandEncoder encoder, Surface& surface, GPU::Color 
 
     pass_ = wgpuCommandEncoderBeginRenderPass(encoder, &desc);
     if (!pass_)
-        throw Lattice::Exception("WGPU::RenderPass", "failed to begin render pass");
+        throw Lattice::Exception<RenderPass>("failed to begin render pass");
 
     device_ = surface.device();
     pipeline_ = nullptr;
@@ -120,8 +119,7 @@ void RenderPass::setPipeline(GPU::Pipeline& pipeline) {
 
     auto* native = dynamic_cast<Pipeline*>(&pipeline);
     if (!native || native->device() != device_)
-        throw Lattice::Exception(
-            "WGPU::RenderPass",
+        throw Lattice::Exception<RenderPass>(
             "expected pipeline from the same WGPU device"
         );
 
@@ -134,7 +132,7 @@ void RenderPass::setBindings(uint32_t group, GPU::BindingSet& bindings) {
 
     auto* native = dynamic_cast<BindingSet*>(&bindings);
     if (!native)
-        throw Lattice::Exception("WGPU::RenderPass", "expected WGPU binding set");
+        throw Lattice::Exception<RenderPass>("expected WGPU binding set");
 
     wgpuRenderPassEncoderSetBindGroup(pass_, group, native->native(), 0, nullptr);
 }
@@ -142,7 +140,7 @@ void RenderPass::setBindings(uint32_t group, GPU::BindingSet& bindings) {
 void RenderPass::draw(uint32_t vertexCount, uint32_t firstVertex) {
     requireActive();
     if (!pipeline_)
-        throw Lattice::Exception("WGPU::RenderPass", "draw requires a pipeline");
+        throw Lattice::Exception<RenderPass>("draw requires a pipeline");
 
     wgpuRenderPassEncoderDraw(pass_, vertexCount, 1, firstVertex, 0);
 }
@@ -160,7 +158,7 @@ void RenderPass::end() {
 
 void RenderPass::requireActive() const {
     if (!pass_)
-        throw Lattice::Exception("WGPU::RenderPass", "no active render pass");
+        throw Lattice::Exception<RenderPass>("no active render pass");
 }
 
 }

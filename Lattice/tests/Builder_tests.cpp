@@ -123,7 +123,7 @@ TEST(Builder_RejectsExistingBranch, RuntimeFixture,
     bool thrown = false;
     try {
         nodes.builder.build(fixture.root, blueprint, "same");
-    } catch (const Exception&) {
+    } catch (const ExceptionBase&) {
         thrown = true;
     }
 

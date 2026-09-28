@@ -71,7 +71,7 @@ TEST(Node_RequireMissing, RuntimeFixture) {
 
     try {
         nodes.configure(fixture.root).require<BasicTestComponent>();
-    } catch (const Exception&) {
+    } catch (const ExceptionBase&) {
         thrown = true;
     }
 

@@ -8,7 +8,7 @@ struct BlueprintsFixture : TestFixture { Blueprints blueprints; };
 template<typename F>
 bool rejects(F&& operation) {
     try { operation(); }
-    catch (const Exception&) { return true; }
+    catch (const ExceptionBase&) { return true; }
     return false;
 }
 }

@@ -8,7 +8,6 @@
 namespace WGPU {
 
 class CommandList final : public GPU::CommandList {
-    static constexpr std::string_view tag = "WGPU::CommandList";
 public:
     CommandList(WGPUDevice, WGPUQueue);
     ~CommandList() override;

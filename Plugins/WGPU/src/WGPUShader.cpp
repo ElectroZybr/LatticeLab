@@ -11,7 +11,7 @@ Shader::Shader(NodeBuild node, const Desc& desc) {
     device_ = device->native();
 
     if (desc.language != GPU::ShaderLanguage::WGSL)
-        throw Lattice::Exception("WGPU::Shader", "unsupported shader language");
+        throw Lattice::Exception<Shader>("unsupported shader language");
 
     WGPUShaderSourceWGSL source{};
     source.chain.sType = WGPUSType_ShaderSourceWGSL;
@@ -25,7 +25,7 @@ Shader::Shader(NodeBuild node, const Desc& desc) {
 
     shader_ = wgpuDeviceCreateShaderModule(device_, &nativeDesc);
     if (!shader_)
-        throw Lattice::Exception("WGPU::Shader", "failed to create shader");
+        throw Lattice::Exception<Shader>("failed to create shader");
 }
 
 Shader::~Shader() {

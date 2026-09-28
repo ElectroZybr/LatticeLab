@@ -5,7 +5,7 @@
 #include <vector>
 #include <utility>
 #include <Lattice/Tools/Exception.hpp>
-#include <Lattice/Kernel/TypeName.hpp>
+#include <Lattice/Tools/TypeName.hpp>
 #include <Lattice/Kernel/Blueprints.hpp>
 #include <Lattice/Kernel/Consts.hpp>
 #include <Lattice/Kernel/NodeContext.hpp>
@@ -117,7 +117,7 @@ public:
         assert(valid() && "Focus is not initialized");
 
         if (scope_ == InvalidContextScopeId)
-            throw Exception("Focus", "Cannot modify global focus without a scope");
+            throw Exception<Focus>("Cannot modify global focus without a scope");
 
         context_->set(scope_, role_, target);
     }
@@ -126,7 +126,7 @@ public:
         assert(valid() && "Focus is not initialized");
 
         if (scope_ == InvalidContextScopeId)
-            throw Exception("Focus", "Cannot reset global focus without a scope");
+            throw Exception<Focus>("Cannot reset global focus without a scope");
 
         context_->reset(scope_, role_);
     }

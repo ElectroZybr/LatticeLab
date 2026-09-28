@@ -13,8 +13,6 @@
 namespace Vk {
 
 class Vulkan final : public GPU::GPUAPI {
-    static constexpr std::string_view tag = "Vulkan";
-
 public:
     explicit Vulkan(NodeBuild node, const Desc& = {}) {
         createInstance();
@@ -32,7 +30,7 @@ public:
 
     VkPhysicalDevice physicalDevice(uint32_t id) const {
         if (id >= physicalDevices_.size())
-            throw Lattice::Exception(tag, "invalid physical device id '{}'", id);
+            throw Lattice::Exception<Vulkan>("invalid physical device id '{}'", id);
 
         return physicalDevices_[id];
     }

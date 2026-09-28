@@ -12,15 +12,13 @@
 #include "ParserAPI.hpp"
 
 class TsvParser final : public ParserAPI {
-    static constexpr std::string_view tag = "TsvParser";
-
 public:
     std::string_view extension() const override { return ".tsv"; }
 
     Document parseFile(const std::filesystem::path& path) const override {
         std::ifstream file(path);
         if (!file.is_open())
-            throw Lattice::Exception(tag, "Failed to open '{}'", path.string());
+            throw Lattice::Exception<TsvParser>("Failed to open '{}'", path.string());
 
         Document document;
         Lattice::Object dataset;
@@ -29,7 +27,7 @@ public:
         std::string section = "Dataset";
 
         if (!std::getline(file, line))
-            throw Lattice::Exception(tag, "TSV is empty");
+            throw Lattice::Exception<TsvParser>("TSV is empty");
 
         ++lineNumber;
         trimCR(line);
@@ -38,7 +36,7 @@ public:
             section = parseSection(line, lineNumber);
 
             if (!std::getline(file, line))
-                throw Lattice::Exception(tag, "TSV section '{}' contains no data", section);
+                throw Lattice::Exception<TsvParser>("TSV section '{}' contains no data", section);
 
             ++lineNumber;
             trimCR(line);
@@ -48,12 +46,12 @@ public:
             const auto [key, value] = parseMetadata(line, lineNumber);
 
             if (dataset.contains(key))
-                throw Lattice::Exception(tag, "Duplicate metadata '{}' at line {}", key, lineNumber);
+                throw Lattice::Exception<TsvParser>("Duplicate metadata '{}' at line {}", key, lineNumber);
 
             dataset.emplace(key, parseValue(value, lineNumber));
 
             if (!std::getline(file, line))
-                throw Lattice::Exception(tag, "TSV contains no table");
+                throw Lattice::Exception<TsvParser>("TSV contains no table");
 
             ++lineNumber;
             trimCR(line);
@@ -61,7 +59,7 @@ public:
 
         if (line.empty()) {
             if (!std::getline(file, line))
-                throw Lattice::Exception(tag, "TSV contains no columns");
+                throw Lattice::Exception<TsvParser>("TSV contains no columns");
 
             ++lineNumber;
             trimCR(line);
@@ -82,7 +80,7 @@ public:
             const auto values = split(line);
 
             if (values.size() != headers.size())
-                throw Lattice::Exception(tag, "Invalid row at line {}: expected {} columns, got {}", lineNumber, headers.size(), values.size());
+                throw Lattice::Exception<TsvParser>("Invalid row at line {}: expected {} columns, got {}", lineNumber, headers.size(), values.size());
 
             Lattice::Array row;
             row.reserve(values.size());
@@ -94,7 +92,7 @@ public:
         }
 
         if (file.bad())
-            throw Lattice::Exception(tag, "Failed while reading '{}'", path.string());
+            throw Lattice::Exception<TsvParser>("Failed while reading '{}'", path.string());
 
         dataset.emplace("columns", toArray(headers));
         dataset.emplace("rows", std::move(rows));
@@ -112,7 +110,7 @@ private:
         const auto name = line.substr(1, line.size() - 2);
 
         if (name.empty())
-            throw Lattice::Exception(tag, "Empty section name at line {}", lineNumber);
+            throw Lattice::Exception<TsvParser>("Empty section name at line {}", lineNumber);
 
         return std::string(name);
     }
@@ -123,7 +121,7 @@ private:
         const size_t separator = line.find_first_of(" \t");
 
         if (separator == std::string_view::npos)
-            throw Lattice::Exception(tag, "Invalid metadata at line {}: '{}'", lineNumber, line);
+            throw Lattice::Exception<TsvParser>("Invalid metadata at line {}: '{}'", lineNumber, line);
 
         const auto key = line.substr(0, separator);
 
@@ -132,22 +130,22 @@ private:
             ++begin;
 
         if (key.empty() || begin == line.size())
-            throw Lattice::Exception(tag, "Invalid metadata at line {}: '{}'", lineNumber, line);
+            throw Lattice::Exception<TsvParser>("Invalid metadata at line {}: '{}'", lineNumber, line);
 
         return {std::string(key), std::string(line.substr(begin))};
     }
 
     static void validateHeaders(const std::vector<std::string>& headers, size_t lineNumber) {
         if (headers.empty())
-            throw Lattice::Exception(tag, "TSV contains no columns at line {}", lineNumber);
+            throw Lattice::Exception<TsvParser>("TSV contains no columns at line {}", lineNumber);
 
         for (size_t i = 0; i < headers.size(); ++i) {
             if (headers[i].empty())
-                throw Lattice::Exception(tag, "Empty column name at line {}, column {}", lineNumber, i + 1);
+                throw Lattice::Exception<TsvParser>("Empty column name at line {}, column {}", lineNumber, i + 1);
 
             for (size_t j = 0; j < i; ++j)
                 if (headers[i] == headers[j])
-                    throw Lattice::Exception(tag, "Duplicate column '{}' at line {}", headers[i], lineNumber);
+                    throw Lattice::Exception<TsvParser>("Duplicate column '{}' at line {}", headers[i], lineNumber);
         }
     }
 
@@ -190,7 +188,7 @@ private:
                 return int64_t(integer);
         } catch (const std::invalid_argument&) {
         } catch (const std::out_of_range&) {
-            throw Lattice::Exception(tag, "Integer value out of range at line {}: '{}'", lineNumber, value);
+            throw Lattice::Exception<TsvParser>("Integer value out of range at line {}: '{}'", lineNumber, value);
         }
 
         try {
@@ -198,12 +196,12 @@ private:
             const auto floating = std::stod(std::string(value), &pos);
             if (pos == value.size()) {
                 if (!std::isfinite(floating))
-                    throw Lattice::Exception(tag, "Invalid floating-point value at line {}: '{}'", lineNumber, value);
+                    throw Lattice::Exception<TsvParser>("Invalid floating-point value at line {}: '{}'", lineNumber, value);
                 return floating;
             }
         } catch (const std::invalid_argument&) {
         } catch (const std::out_of_range&) {
-            throw Lattice::Exception(tag, "Floating-point value out of range at line {}: '{}'", lineNumber, value);
+            throw Lattice::Exception<TsvParser>("Floating-point value out of range at line {}: '{}'", lineNumber, value);
         }
 
         return std::string(value);

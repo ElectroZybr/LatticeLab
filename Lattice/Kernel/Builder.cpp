@@ -24,7 +24,7 @@ NodeId Builder::Batch::add(
     const void* descriptor
 ) {
     if (!builder_ || finished_)
-        throw Exception("Builder", "Cannot add a branch to a finished batch");
+        throw Exception<Builder>("Cannot add a branch to a finished batch");
 
     NodeId branch = InvalidNodeId;
     try {
@@ -46,7 +46,7 @@ NodeId Builder::Batch::add(
 
 void Builder::Batch::commit() {
     if (!builder_ || finished_)
-        throw Exception("Builder", "Cannot commit a finished batch");
+        throw Exception<Builder>("Cannot commit a finished batch");
 
     try {
         for (NodeId branch : branches_)
@@ -103,8 +103,7 @@ NodeId Builder::create(
 
     const BlueprintId implementation = nodeSystem_.blueprints.resolveImplementation(blueprint);
     if (nodeSystem_.registry.find(instance, parent, implementation) != InvalidNodeId)
-        throw Exception(
-            "Builder",
+        throw Exception<Builder>(
             "Branch '{}:{}' already exists under node #{}",
             nodeSystem_.blueprints.require(implementation).shortName(),
             instance,

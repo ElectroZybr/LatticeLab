@@ -102,7 +102,7 @@ public:
                     Logger::setDefaultMode(LogMode::Verbose | LogMode::Gap);
                 } else if (arg == "--config" || arg == "-c") {
                     if (++i >= argc)
-                        throw Exception(tag, "missing path for {}", arg);
+                        throw Exception<Runtime>("missing path for {}", arg);
                     configPath = argv[i];
                 } else if (arg == "--tests" || arg == "-t") {
                     testMode = true;
@@ -171,7 +171,7 @@ public:
 
             if (host != InvalidNodeId) {
                 auto* service = run_ctx.nodes.configure(root).resolve<ServiceAPI>(host);
-                if (!service) throw Exception(tag, "Host does not implement ServiceAPI");
+                if (!service) throw Exception<Runtime>("Host does not implement ServiceAPI");
                 service->enter();
             } else {
                 while (running && !interrupted)
@@ -209,7 +209,7 @@ public:
     }
 
     void reportException(const std::exception& error) const {
-        auto* fatal = dynamic_cast<const Exception*>(&error);
+        auto* fatal = dynamic_cast<const ExceptionBase*>(&error);
         Logger::message("\n<err>~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~</>");
         if (fatal) {
             Logger::exception(fatal->tag(), "{}", error.what());
@@ -245,7 +245,7 @@ private:
 
             const BlueprintId blueprint = run_ctx.blueprints.resolve(entry.type);
             if (blueprint == InvalidBlueprintId)
-                throw Exception(tag, "Unknown startup blueprint '{}'", entry.type);
+                throw Exception<Runtime>("Unknown startup blueprint '{}'", entry.type);
 
             const NodeId node = batch.add(root, blueprint, entry.name);
             branches.push_back({node, entry.type, entry.name, entry.host});
@@ -254,7 +254,7 @@ private:
                 continue;
 
             if (startupHost != InvalidNodeId)
-                throw Exception(tag, "Runtime already has a host service");
+                throw Exception<Runtime>("Runtime already has a host service");
 
             startupHost = node;
             Logger::info(tag, "Host service '{}'", entry.type);

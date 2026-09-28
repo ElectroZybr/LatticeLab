@@ -22,7 +22,7 @@ void Device::createDevice() {
         }
     }
     if (queueFamily_ == UINT32_MAX)
-        throw Lattice::Exception("Vulkan::Device", "physical device has no usable queue");
+        throw Lattice::Exception<Device>("physical device has no usable queue");
 
     constexpr float priority = 1.0f;
     VkDeviceQueueCreateInfo queue{};
@@ -37,7 +37,7 @@ void Device::createDevice() {
     desc.pQueueCreateInfos = &queue;
 
     if (vkCreateDevice(physicalDevice_, &desc, nullptr, &device_) != VK_SUCCESS)
-        throw Lattice::Exception("Vulkan::Device", "failed to create logical device");
+        throw Lattice::Exception<Device>("failed to create logical device");
 
     vkGetDeviceQueue(device_, queueFamily_, 0, &queue_);
 }
@@ -48,7 +48,7 @@ void Device::createCommandPool() {
     desc.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     desc.queueFamilyIndex = queueFamily_;
     if (vkCreateCommandPool(device_, &desc, nullptr, &commandPool_) != VK_SUCCESS)
-        throw Lattice::Exception("Vulkan::Device", "failed to create command pool");
+        throw Lattice::Exception<Device>("failed to create command pool");
 }
 
 void Vulkan::createInstance() {
@@ -65,7 +65,7 @@ void Vulkan::createInstance() {
     desc.pApplicationInfo = &appInfo;
 
     if (vkCreateInstance(&desc, nullptr, &instance_) != VK_SUCCESS)
-        throw Lattice::Exception(tag, "failed to create Vulkan instance");
+        throw Lattice::Exception<Vulkan>("failed to create Vulkan instance");
 }
 
 
@@ -73,15 +73,15 @@ std::vector<VkPhysicalDevice> Vulkan::enumeratePhysicalDevices() {
     uint32_t count = 0;
 
     if (vkEnumeratePhysicalDevices(instance_, &count, nullptr) != VK_SUCCESS)
-        throw Lattice::Exception(tag, "failed to enumerate physical devices");
+        throw Lattice::Exception<Vulkan>("failed to enumerate physical devices");
 
     if (count == 0)
-        throw Lattice::Exception(tag, "no Vulkan physical devices found");
+        throw Lattice::Exception<Vulkan>("no Vulkan physical devices found");
 
     std::vector<VkPhysicalDevice> devices(count);
 
     if (vkEnumeratePhysicalDevices(instance_, &count, devices.data()) != VK_SUCCESS)
-        throw Lattice::Exception(tag, "failed to enumerate physical devices");
+        throw Lattice::Exception<Vulkan>("failed to enumerate physical devices");
 
     return devices;
 }
@@ -89,7 +89,7 @@ std::vector<VkPhysicalDevice> Vulkan::enumeratePhysicalDevices() {
 
 VkPhysicalDevice Vulkan::selectPhysicalDevice(std::span<VkPhysicalDevice> devices) {
     if (devices.empty())
-        throw Lattice::Exception(tag, "no physical devices available");
+        throw Lattice::Exception<Vulkan>("no physical devices available");
 
     for (VkPhysicalDevice device : devices) {
         VkPhysicalDeviceProperties props{};
@@ -115,7 +115,7 @@ GPU::DeviceDesc Vulkan::describeDevice(VkPhysicalDevice physical) const {
     }
 
     if (id == physicalDevices_.size())
-        throw Lattice::Exception(tag, "physical device is not registered");
+        throw Lattice::Exception<Vulkan>("physical device is not registered");
 
     GPU::DeviceDesc desc{};
     desc.id = id;
@@ -150,7 +150,7 @@ VkDevice Vulkan::createDevice(VkPhysicalDevice physical) {
     }
 
     if (queueFamily == UINT32_MAX)
-        throw Lattice::Exception(tag, "physical device has no compute queue");
+        throw Lattice::Exception<Vulkan>("physical device has no compute queue");
 
     constexpr float priority = 1.0f;
 
@@ -168,7 +168,7 @@ VkDevice Vulkan::createDevice(VkPhysicalDevice physical) {
     VkDevice device = VK_NULL_HANDLE;
 
     if (vkCreateDevice(physical, &desc, nullptr, &device) != VK_SUCCESS)
-        throw Lattice::Exception(tag, "failed to create logical device");
+        throw Lattice::Exception<Vulkan>("failed to create logical device");
 
     return device;
 }

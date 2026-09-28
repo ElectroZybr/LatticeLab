@@ -70,8 +70,10 @@ TEST(Registry_RequireUnknown, RuntimeFixture,
 
     try {
         registry.require(99);
-    } catch (const Exception&) {
+    } catch (const ExceptionBase& error) {
         thrown = true;
+        REQUIRE(error.tag() == "ObjectRegistry");
+        REQUIRE(error.source().line() != 0);
     }
 
     REQUIRE(thrown);
@@ -147,7 +149,7 @@ TEST(Registry_CreateDuplicate, RuntimeFixture,
 
     try {
         registry.create({"first"});
-    } catch (const Exception&) {
+    } catch (const ExceptionBase&) {
         thrown = true;
     }
 
@@ -170,7 +172,7 @@ TEST(Registry_AliasDuplicate, RuntimeFixture,
 
     try {
         registry.alias(b, "alias");
-    } catch (const Exception&) {
+    } catch (const ExceptionBase&) {
         thrown = true;
     }
 
@@ -224,7 +226,7 @@ TEST(Registry_DuplicatePreservesFreeId, RuntimeFixture) {
     registry.destroy(free);
     bool thrown = false;
     try { registry.create({"first"}); }
-    catch (const Exception&) { thrown = true; }
+    catch (const ExceptionBase&) { thrown = true; }
     REQUIRE(thrown);
     REQUIRE(registry.create({"third"}) == free);
 }

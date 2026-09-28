@@ -38,7 +38,7 @@ void WGPU::createInstance() {
 
     instance_ = wgpuCreateInstance(&desc);
     if (!instance_)
-        throw Lattice::Exception("WGPU", "failed to create instance");
+        throw Lattice::Exception<WGPU>("failed to create instance");
 }
 
 std::vector<WGPUAdapter> WGPU::enumerateAdapters() {
@@ -56,7 +56,7 @@ std::vector<WGPUAdapter> WGPU::enumerateAdapters() {
 
 WGPUAdapter WGPU::selectAdapter(std::span<WGPUAdapter> adapters) {
     if (adapters.empty())
-        throw Lattice::Exception("WGPU", "no GPU adapters found");
+        throw Lattice::Exception<WGPU>("no GPU adapters found");
 
     return adapters.front();
 }
@@ -111,7 +111,7 @@ WGPUDevice WGPU::createDevice(WGPUAdapter& selectedAdapter) {
         wgpuInstanceProcessEvents(instance_);
 
     if (!data.device)
-        throw Lattice::Exception("WGPU", "failed to create device: {}", data.error);
+        throw Lattice::Exception<WGPU>("failed to create device: {}", data.error);
 
     wgpuAdapterAddRef(adapter);
     selectedAdapter = adapter;

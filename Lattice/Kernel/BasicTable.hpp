@@ -102,8 +102,7 @@ public:
 
     ColumnView column(size_t index) const override {
         if (index >= columns_.size())
-            throw Exception(
-                "BasicTable",
+            throw Exception<BasicTable>(
                 "Column {} is out of range [0, {})",
                 index,
                 columns_.size()
@@ -134,9 +133,9 @@ public:
             "BasicTable columns must be assignable");
 
         if (name.empty())
-            throw Exception("BasicTable", "Column name cannot be empty");
+            throw Exception<BasicTable>("Column name cannot be empty");
         if (columnIndices_.contains(name))
-            throw Exception("BasicTable", "Column '{}' already exists", name);
+            throw Exception<BasicTable>("Column '{}' already exists", name);
 
         const size_t index = columns_.size();
         columns_.emplace_back(std::in_place_type<Value>, std::move(name), rows_);
@@ -164,9 +163,9 @@ public:
 protected:
     void* mutableElement(size_t column, size_t row) override {
         if (column >= columns_.size())
-            throw Exception("BasicTable", "Column {} is out of range", column);
+            throw Exception<BasicTable>("Column {} is out of range", column);
         if (row >= rows_)
-            throw Exception("BasicTable", "Row {} is out of range", row);
+            throw Exception<BasicTable>("Row {} is out of range", row);
 
         ColumnStorage& storage = columns_[column];
         return static_cast<std::byte*>(storage.data()) + row * storage.type().size;
@@ -176,15 +175,14 @@ private:
     ColumnStorage& requireColumn(std::string_view name) {
         const auto found = columnIndices_.find(name);
         if (found == columnIndices_.end())
-            throw Exception("BasicTable", "Column '{}' not found", name);
+            throw Exception<BasicTable>("Column '{}' not found", name);
         return columns_[found->second];
     }
 
     template<typename T>
     static void requireType(const ColumnStorage& storage) {
         if (!storage.type().template is<T>())
-            throw Exception(
-                "BasicTable",
+            throw Exception<BasicTable>(
                 "Column '{}' contains '{}', requested '{}'",
                 storage.name(),
                 storage.type().name,
