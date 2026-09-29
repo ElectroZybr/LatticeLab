@@ -19,10 +19,8 @@ public:
             universe.param("cell_size", cellSize);
         }
 
-    void configure(NodeBuild universe) {
+    void configure(NodeConfigure universe) {
         integrator.choice<Integrators::Verlet>();
-    //     universe.on("CreateVerlet", [this]() { integrator.use("Verlet"); });
-    //     universe.on("selectUniverse", [&universe] { universe.requireContext().activateFocus(universe.getFocusScopeId()); });
     }
 
     void run() override {
@@ -32,7 +30,7 @@ public:
             if (integrator)
                 integrator->step();
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
+        }
     }
 
     ~ClassicMD() {
