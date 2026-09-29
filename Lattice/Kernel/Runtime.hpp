@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <csignal>
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -34,12 +35,16 @@ class Runtime {
         struct Desc {
             std::function<void()> dumpBlueprints;
             std::function<void()> requestExit;
+            std::function<void(ActionContext&, std::string, std::optional<std::string>)> addChild;
+            std::function<void(ActionContext&, std::string, std::optional<std::string>)> delChild;
         };
 
         Root(::NodeBuild node, const Desc& desc) {
             node.globalAction("dumpBlueprints", desc.dumpBlueprints);
             const ExportId quit = node.globalAction("quit", desc.requestExit);
             node.globalAlias("exit", quit);
+            node.globalAction<std::string, std::optional<std::string>>("add", desc.addChild);
+            node.globalAction<std::string, std::optional<std::string>>("del", desc.delChild);
         }
     };
 
@@ -72,9 +77,15 @@ public:
 
         const Root::Desc rootDesc{
             .dumpBlueprints = [this] { run_ctx.blueprints.dumpTree(); },
-            .requestExit = [this] { requestExit(); }
+            .requestExit = [this] { requestExit(); },
+            .addChild = [this](ActionContext& context, std::string blueprint, std::optional<std::string> name) {
+                addChild(context.node(), blueprint, name.value_or(std::string{}));
+            },
+            .delChild = [this](ActionContext& context, std::string blueprint, std::optional<std::string> name) {
+                delChild(context.node(), blueprint, name);
+            }
         };
-        root = run_ctx.nodes.builder.build(InvalidNodeId, rootBlueprint, DefaultInstanceName, &rootDesc);
+        root = run_ctx.nodes.builder.add(InvalidNodeId, rootBlueprint, DefaultInstanceName, &rootDesc);
     }
 
     int run(int argc, char** argv) {
@@ -142,41 +153,16 @@ public:
                 scope.finish("<ok>Start finished</>");
             }
 
-            // BasicTable table;
-            // table.addColumn<int>("nums");
-            // table.addColumn<std::string>("str");
-
-            // table.addRows(50);
-            // table.addRow(1, std::string{"fdfsfddfasfdsafsadfsadf"});
-        
-            // TableFormatter::Desc desc;
-
-            // desc.style.borders = TableFormatter::Borders::Rounded;
-            // desc.style.rules = TableFormatter::Rules::Outer;
-            // desc.style.border = TextStyle::rgb(0x55ff55);
-            // desc.style.header = TextStyle::Bold | TextStyle::rgb(0xffffff);
-            // desc.style.cell = TextStyle::rgb(0xffffff);
-            // desc.style.alternateCell = TextStyle::Dim;
-
-            // desc.style.paddingLeft = 1;
-            // desc.style.paddingRight = 1;
-
-            // desc.maxRows = TableFormatter::Desc::Unlimited;
-            // desc.maxColumnWidth = 10;
-
-            // TableFormatter formatter;
-
-            // for (const TextFormatter line : formatter.view(table, desc))
-            //     Logger::message(line);
-
-
             if (host != InvalidNodeId) {
-                auto* service = run_ctx.nodes.configure(root).resolve<ServiceAPI>(host);
+                auto* service = resolveService(host);
                 if (!service) throw Exception<Runtime>("Host does not implement ServiceAPI");
-                service->enter();
+                service->enter(run_ctx.nodes.ops);
+                run_ctx.nodes.ops.maintain();
             } else {
-                while (running && !interrupted)
+                while (running && !interrupted) {
+                    run_ctx.nodes.ops.maintain();
                     std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                }
             }
             stopAll();
             return 0;
@@ -190,8 +176,11 @@ public:
     }
 
     void stop(std::string_view instanceName) {
-        const NodeId id = run_ctx.nodes.configure(root).findId(typeKey<ServiceAPI>(), instanceName);
-        auto service = run_ctx.nodes.configure(root).find<ServiceAPI>(instanceName);
+        const BlueprintId api = run_ctx.blueprints.id<ServiceAPI>();
+        const NodeId id = run_ctx.nodes.query.find(root, api, instanceName);
+        auto* service = id == InvalidNodeId
+            ? nullptr
+            : static_cast<ServiceAPI*>(run_ctx.nodes.query.resolve(id, api));
 
         if (!service)
             return;
@@ -233,6 +222,66 @@ public:
     }
 
 private:
+    ServiceAPI* resolveService(NodeId id) {
+        return static_cast<ServiceAPI*>(
+            run_ctx.nodes.query.resolve(id, run_ctx.blueprints.id<ServiceAPI>())
+        );
+    }
+
+    NodeId addChild(NodeId parent, std::string_view blueprint, std::string_view name) {
+        const BlueprintId id = run_ctx.blueprints.resolve(blueprint);
+        if (id == InvalidBlueprintId)
+            throw Exception<Runtime>("Unknown blueprint '{}'", blueprint);
+
+        return run_ctx.nodes.builder.add(parent, id, name);
+    }
+
+    void delChild(
+        NodeId parent,
+        std::string_view blueprint,
+        const std::optional<std::string>& name
+    ) {
+        const BlueprintId type = run_ctx.blueprints.resolve(blueprint);
+        if (type == InvalidBlueprintId)
+            throw Exception<Runtime>("Unknown blueprint '{}'", blueprint);
+
+        NodeId selected = InvalidNodeId;
+        for (NodeId child : run_ctx.nodes.registry.children(parent)) {
+            const auto& node = run_ctx.nodes.registry.require(child);
+            if (node.state == NodeState::Retiring ||
+                !run_ctx.blueprints.isA(node.bp, type) ||
+                (name && node.name != *name))
+                continue;
+
+            if (selected != InvalidNodeId)
+                throw Exception<Runtime>(
+                    "Child '{}' is ambiguous under node #{}; specify its name",
+                    blueprint,
+                    parent
+                );
+
+            selected = child;
+        }
+
+        if (selected == InvalidNodeId) {
+            if (name)
+                throw Exception<Runtime>(
+                    "Child '{}:{}' not found under node #{}",
+                    blueprint,
+                    *name,
+                    parent
+                );
+
+            throw Exception<Runtime>(
+                "Child '{}' not found under node #{}",
+                blueprint,
+                parent
+            );
+        }
+
+        run_ctx.nodes.builder.del(parent, selected);
+    }
+
     std::vector<StartupBranch> build(const StartupConfig& config) {
         LogScope scope(tag, "<b>System build</>");
 
@@ -271,7 +320,7 @@ private:
         if (branch.host)
             return;
 
-        auto* service = run_ctx.nodes.configure(root).resolve<ServiceAPI>(branch.node);
+        auto* service = resolveService(branch.node);
         if (!service)
             return;
 
@@ -285,7 +334,7 @@ private:
         if (host == InvalidNodeId)
             return;
 
-        if (auto* service = run_ctx.nodes.configure(root).resolve<ServiceAPI>(host))
+        if (auto* service = resolveService(host))
             service->stop();
     }
 
@@ -309,7 +358,7 @@ private:
         );
 
         for (auto it = services.rbegin(); it != services.rend(); ++it)
-            if (auto* service = run_ctx.nodes.configure(root).resolve<ServiceAPI>(*it))
+            if (auto* service = resolveService(*it))
                 service->stop();
     }
 };

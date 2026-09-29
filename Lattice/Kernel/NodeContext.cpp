@@ -137,7 +137,8 @@ void NodeContext::destroyScope(ContextScopeId scope) {
 }
 
 void NodeContext::addCandidate(ContextScopeId scopeId, RoleId roleId, NodeId target) {
-    registry_.require(target);
+    if (registry_.require(target).state == NodeState::Retiring)
+        throw Exception<NodeContext>("Cannot add retiring node #{} as a context candidate", target);
 
     auto& entry = requireEntry(scopeId, roleId);
 
@@ -165,7 +166,8 @@ void NodeContext::removeCandidate(ContextScopeId scopeId, RoleId roleId, NodeId 
 }
 
 void NodeContext::set(ContextScopeId scopeId, RoleId roleId, NodeId target) {
-    registry_.require(target);
+    if (registry_.require(target).state == NodeState::Retiring)
+        throw Exception<NodeContext>("Cannot focus retiring node #{}", target);
 
     const ContextResolution resolution = resolveInfo(scopeId, roleId);
 

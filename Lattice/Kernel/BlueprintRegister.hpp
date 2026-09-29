@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <string_view>
 #include <string>
 #include <type_traits>
@@ -52,14 +53,38 @@ BlueprintId add(Blueprints& blueprints, std::string_view name = typeKey<T>()) {
             }
         };
 
-        blueprint.meta.destroy = [](void* object) {
-            delete static_cast<T*>(object);
-        };
-
         if constexpr (requires(T& object, ::NodeConfigure node) { object.configure(node); })
             blueprint.meta.configure = [](void* object, ::NodeConfigure node) {
                 static_cast<T*>(object)->configure(node);
             };
+
+        constexpr bool hasRetire = requires(T& object) {
+            { object.retire() } -> std::same_as<void>;
+        };
+        constexpr bool hasReadyToDestroy = requires(const T& object) {
+            { object.readyToDestroy() } -> std::convertible_to<bool>;
+        };
+
+        static const BlueprintOps ops{
+            .destroy = [](void* object) {
+                delete static_cast<T*>(object);
+            },
+            .retire = [] {
+                if constexpr (hasRetire)
+                    return +[](void* object) {
+                        static_cast<T*>(object)->retire();
+                    };
+                return static_cast<void (*)(void*)>(nullptr);
+            }(),
+            .readyToDestroy = [] {
+                if constexpr (hasReadyToDestroy)
+                    return +[](const void* object) {
+                        return static_cast<bool>(static_cast<const T*>(object)->readyToDestroy());
+                    };
+                return static_cast<bool (*)(const void*)>(nullptr);
+            }()
+        };
+        blueprint.meta.ops = &ops;
     }
 
     return blueprints.create(std::move(blueprint), std::string(name));

@@ -2,6 +2,7 @@
 
 #include <Lattice/Kernel/NodeFactory.hpp>
 #include <Lattice/Kernel/Builder.hpp>
+#include <Lattice/Kernel/DependencyGraph.hpp>
 #include <Lattice/Kernel/NodeRegistry.hpp>
 #include <Lattice/Kernel/NodeQuery.hpp>
 #include <Lattice/Kernel/NodeContext.hpp>
@@ -16,6 +17,7 @@ class NodeSystem {
 public:
     Blueprints& blueprints;
     NodeRegistry registry;
+    DependencyGraph dependencies;
     NodeFactory factory;
     NodeContext context;
     NodeQuery query;

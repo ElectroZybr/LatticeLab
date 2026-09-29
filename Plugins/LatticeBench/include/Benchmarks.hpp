@@ -3,7 +3,10 @@
 #include <Lattice/Lattice.hpp>
 #include <Lattice/Tools/Benchmark.hpp>
 
+
 class Benchmarks final : public Lattice::SubsystemAPI {
+    Lattice::Children<Lattice::BasicTable> results_;
+    size_t nextResult_ = 1;
 public:
     explicit Benchmarks(NodeBuild branch) {
         branch.action<std::optional<std::string>>(
@@ -21,7 +24,11 @@ public:
 
         branch.action("list", [this](Lattice::ActionContext& context) {
             list(context);
-        });
+        }); 
+    }
+
+    void configure(NodeConfigure branch) {
+        results_ = branch.children<Lattice::BasicTable>();
     }
 
 private:

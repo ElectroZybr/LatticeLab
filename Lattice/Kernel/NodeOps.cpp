@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <exception>
+#include <ranges>
 #include <Lattice/Kernel/NodeOps.hpp>
 #include <Lattice/Kernel/NodeRegistry.hpp>
 #include <Lattice/Kernel/NodeViews.hpp>
@@ -68,10 +70,203 @@ std::vector<NodeId> NodeOps::collectTree(NodeId id) const {
     return result;
 }
 
+std::vector<NodeId> NodeOps::collectRemovalClosure(NodeId id) const {
+    nodeSystem_.registry.require(id);
+
+    std::vector<NodeId> result;
+    std::vector<bool> included(nodeSystem_.registry.size(), false);
+
+    auto addBranch = [&](auto&& self, NodeId root) -> void {
+        const auto* node = nodeSystem_.registry.get(root);
+        if (!node || included[root])
+            return;
+
+        included[root] = true;
+        result.push_back(root);
+
+        for (NodeId child : nodeSystem_.registry.children(root))
+            self(self, child);
+
+        if (node->kind == NodeKind::Mount && node->relation != InvalidNodeId)
+            self(self, node->relation);
+    };
+
+    addBranch(addBranch, id);
+
+    for (size_t index = 0; index < result.size(); ++index) {
+        const auto* node = nodeSystem_.registry.get(result[index]);
+        if (node && node->kind == NodeKind::SharedMount &&
+            node->relation != InvalidNodeId) {
+            const auto references = nodeSystem_.registry.references(node->relation);
+            if (std::ranges::all_of(references, [&included](NodeId reference) {
+                    return reference < included.size() && included[reference];
+                }))
+                addBranch(addBranch, node->relation);
+        }
+
+        for (NodeId dependent : nodeSystem_.dependencies.dependents(result[index]))
+            addBranch(addBranch, dependent);
+    }
+
+    return result;
+}
+
+void NodeOps::retireBranch(NodeId id) {
+    if (!nodeSystem_.registry.get(id))
+        return;
+
+    std::vector<NodeId> closure = collectRemovalClosure(id);
+    std::vector<NodeId> newlyRetiring;
+
+    for (NodeId nodeId : closure) {
+        const auto* node = nodeSystem_.registry.get(nodeId);
+        if (!node || node->parent == InvalidNodeId)
+            continue;
+
+        if (std::ranges::find(closure, node->parent) == closure.end())
+            invalidate(node->parent);
+    }
+
+    for (NodeId nodeId : closure) {
+        auto* node = nodeSystem_.registry.get(nodeId);
+        if (!node || node->state == NodeState::Retiring)
+            continue;
+
+        node->state = NodeState::Retiring;
+        nodeSystem_.context.removeTarget(nodeId);
+        nodeSystem_.exports.remove(nodeId);
+        newlyRetiring.push_back(nodeId);
+    }
+
+    size_t destination = retiring_.size();
+    for (size_t index = 0; index < retiring_.size();) {
+        const bool overlaps = std::ranges::any_of(retiring_[index], [&closure](NodeId queued) {
+            return std::ranges::find(closure, queued) != closure.end();
+        });
+
+        if (!overlaps) {
+            ++index;
+            continue;
+        }
+
+        if (destination == retiring_.size()) {
+            destination = index;
+            ++index;
+            continue;
+        }
+
+        auto& target = retiring_[destination];
+        for (NodeId queued : retiring_[index])
+            if (std::ranges::find(target, queued) == target.end())
+                target.push_back(queued);
+        retiring_.erase(retiring_.begin() + static_cast<std::ptrdiff_t>(index));
+    }
+
+    if (destination == retiring_.size()) {
+        retiring_.push_back(std::move(closure));
+    } else {
+        auto& target = retiring_[destination];
+        for (NodeId nodeId : closure)
+            if (std::ranges::find(target, nodeId) == target.end())
+                target.push_back(nodeId);
+    }
+
+    std::exception_ptr failure;
+    for (NodeId nodeId : newlyRetiring | std::views::reverse) {
+        const auto* node = nodeSystem_.registry.get(nodeId);
+        if (!node || !node->object.ptr)
+            continue;
+
+        const auto* ops = nodeSystem_.blueprints.require(node->object.bp).meta.ops;
+        if (!ops || !ops->retire)
+            continue;
+
+        try {
+            ops->retire(node->object.ptr);
+        } catch (...) {
+            if (!failure)
+                failure = std::current_exception();
+        }
+    }
+
+    if (failure)
+        std::rethrow_exception(failure);
+}
+
+size_t NodeOps::collectRetired() {
+    size_t collected = 0;
+
+    for (size_t index = 0; index < retiring_.size();) {
+        const auto ready = std::ranges::all_of(retiring_[index], [this](NodeId nodeId) {
+            const auto* node = nodeSystem_.registry.get(nodeId);
+            if (!node || !node->object.ptr)
+                return true;
+
+            const auto* ops = nodeSystem_.blueprints.require(node->object.bp).meta.ops;
+            return !ops || !ops->readyToDestroy ||
+                   ops->readyToDestroy(node->object.ptr);
+        });
+
+        if (!ready) {
+            ++index;
+            continue;
+        }
+
+        auto nodes = std::move(retiring_[index]);
+        retiring_.erase(retiring_.begin() + static_cast<std::ptrdiff_t>(index));
+        ++collected;
+
+        for (NodeId nodeId : nodes | std::views::reverse) {
+            if (!nodeSystem_.registry.get(nodeId))
+                continue;
+            destroyBranch(nodeId);
+        }
+    }
+
+    return collected;
+}
+
+void NodeOps::invalidate(NodeId id) {
+    if (id == InvalidNodeId)
+        return;
+
+    const auto* node = nodeSystem_.registry.get(id);
+    if (!node || node->state == NodeState::Retiring)
+        return;
+
+    if (std::ranges::find(invalidated_, id) == invalidated_.end())
+        invalidated_.push_back(id);
+}
+
+void NodeOps::maintain() {
+    collectRetired();
+
+    std::vector<NodeId> pending;
+    pending.swap(invalidated_);
+
+    for (size_t index = 0; index < pending.size(); ++index) {
+        const NodeId id = pending[index];
+        auto* node = nodeSystem_.registry.get(id);
+        if (!node || node->state == NodeState::Retiring || !node->object.ptr)
+            continue;
+
+        nodeSystem_.dependencies.clearDependencies(id);
+        node->object.configured = false;
+
+        try {
+            configure(id);
+        } catch (...) {
+            for (; index < pending.size(); ++index)
+                invalidate(pending[index]);
+            throw;
+        }
+    }
+}
+
 void NodeOps::configure(NodeId id) {
     auto& node = nodeSystem_.registry.require(id);
 
-    if (!node.object.ptr || node.kind == NodeKind::Mount ||
+    if (node.state == NodeState::Retiring || !node.object.ptr || node.kind == NodeKind::Mount ||
         node.kind == NodeKind::SharedMount || node.object.configured)
         return;
 
@@ -85,7 +280,7 @@ void NodeOps::configure(NodeId id) {
 
 void NodeOps::configureBranch(NodeId id) {
     const auto* node = nodeSystem_.registry.get(id);
-    if (!node)
+    if (!node || node->state == NodeState::Retiring)
         return;
 
     if (node->kind == NodeKind::Mount || node->kind == NodeKind::SharedMount) {
@@ -112,8 +307,11 @@ void NodeOps::destroyBranch(NodeId id) {
 
         clearContents(id);
         nodeSystem_.context.removeTarget(id);
+        nodeSystem_.exports.remove(id);
         if (const ContextScopeId scope = nodeSystem_.context.findScope(id); scope != InvalidContextScopeId)
             nodeSystem_.context.destroyScope(scope);
+        nodeSystem_.dependencies.removeNode(id);
+        std::erase(invalidated_, id);
         nodeSystem_.registry.destroy(id);
 
         if (!nodeSystem_.registry.get(target))
@@ -142,10 +340,13 @@ void NodeOps::destroyBranch(NodeId id) {
     clearContents(id);
 
     nodeSystem_.context.removeTarget(id);
+    nodeSystem_.exports.remove(id);
 
     if (const ContextScopeId scope = nodeSystem_.context.findScope(id); scope != InvalidContextScopeId)
         nodeSystem_.context.destroyScope(scope);
 
+    nodeSystem_.dependencies.removeNode(id);
+    std::erase(invalidated_, id);
     nodeSystem_.registry.destroy(id);
 }
 
@@ -161,8 +362,8 @@ void NodeOps::clearContents(NodeId id) {
     if (node.object.ptr && node.kind != NodeKind::Mount && node.kind != NodeKind::SharedMount) {
         const auto& bp = nodeSystem_.blueprints.require(node.object.bp);
 
-        if (bp.meta.destroy)
-            bp.meta.destroy(node.object.ptr);
+        if (bp.meta.ops && bp.meta.ops->destroy)
+            bp.meta.ops->destroy(node.object.ptr);
 
         node.object = {};
     }

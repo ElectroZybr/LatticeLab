@@ -7,6 +7,11 @@
 
 namespace Lattice {
 
+enum class NodeState : uint8_t {
+    Active,
+    Retiring
+};
+
 struct RuntimeObject {
     void* ptr = nullptr;
     BlueprintId bp = InvalidBlueprintId;
@@ -20,6 +25,7 @@ struct Node {
     BlueprintId bp = InvalidBlueprintId;
     NodeId relation = InvalidNodeId;
     NodeKind kind = NodeKind::Folder;
+    NodeState state = NodeState::Active;
     RuntimeObject object;
 };
 
