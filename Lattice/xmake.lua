@@ -2,8 +2,8 @@ target("Lattice")
     set_kind("shared")
     set_targetdir(".")
 
-    add_files("Kernel/*.cpp")
-    add_files("Tools/*.cpp")
+    add_files("Kernel/**.cpp")
+    add_files("Tools/**.cpp")
 
     add_includedirs("..", {public = true})
 
