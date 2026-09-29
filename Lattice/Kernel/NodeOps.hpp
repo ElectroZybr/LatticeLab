@@ -18,6 +18,10 @@ public:
         : nodeSystem_(nodeSystem) {}
 
     void configureBranch(NodeId id);
+    void invalidate(NodeId id);
+    void maintain();
+    void retireBranch(NodeId id);
+    size_t collectRetired();
     void destroyBranch(NodeId id);
     void clearContents(NodeId id);
     void configure(NodeId id);
@@ -32,6 +36,11 @@ public:
     bool isUnder(NodeId id, NodeId ancestor) const;
 
     std::vector<NodeId> collectTree(NodeId id) const;
+    std::vector<NodeId> collectRemovalClosure(NodeId id) const;
+
+private:
+    std::vector<std::vector<NodeId>> retiring_;
+    std::vector<NodeId> invalidated_;
 };
 
 }

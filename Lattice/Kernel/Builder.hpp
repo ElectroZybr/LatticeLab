@@ -49,12 +49,14 @@ public:
 
     Batch begin() { return Batch{*this}; }
 
-    NodeId build(
+    NodeId add(
         NodeId parent,
         BlueprintId blueprint,
         std::string_view instance = DefaultInstanceName,
         const void* descriptor = nullptr
     );
+
+    void del(NodeId parent, NodeId child);
 
 private:
     friend class Batch;

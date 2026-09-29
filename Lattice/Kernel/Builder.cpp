@@ -51,6 +51,12 @@ void Builder::Batch::commit() {
     try {
         for (NodeId branch : branches_)
             builder_->nodeSystem_.ops.configureBranch(branch);
+
+        for (NodeId branch : branches_) {
+            const auto* node = builder_->nodeSystem_.registry.get(branch);
+            if (node && node->parent != InvalidNodeId)
+                builder_->nodeSystem_.ops.invalidate(node->parent);
+        }
         finished_ = true;
     } catch (...) {
         rollback();
@@ -74,7 +80,7 @@ void Builder::Batch::rollback() noexcept {
     finished_ = true;
 }
 
-NodeId Builder::build(
+NodeId Builder::add(
     NodeId parent,
     BlueprintId blueprint,
     std::string_view instance,
@@ -84,6 +90,22 @@ NodeId Builder::build(
     const NodeId branch = batch.add(parent, blueprint, instance, descriptor);
     batch.commit();
     return branch;
+}
+
+void Builder::del(NodeId parent, NodeId child) {
+    const auto& owner = nodeSystem_.registry.require(parent);
+    const auto& target = nodeSystem_.registry.require(child);
+
+    if (owner.state == NodeState::Retiring)
+        throw Exception<Builder>("Cannot delete a child of retiring node #{}", parent);
+
+    if (target.parent != parent)
+        throw Exception<Builder>("Node #{} is not a direct child of node #{}", child, parent);
+
+    if (target.state == NodeState::Retiring)
+        throw Exception<Builder>("Node #{} is already retiring", child);
+
+    nodeSystem_.ops.retireBranch(child);
 }
 
 ::NodeBuild Builder::node(NodeId id) {

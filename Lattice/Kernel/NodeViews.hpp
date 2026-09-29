@@ -334,13 +334,14 @@ public:
             result.push_back(static_cast<API*>(nodeSystem_.factory.resolve(node, api)));
         }
 
-        return Children<API>{std::move(result)};
+        return Children<API>{nodeSystem_, id_, std::move(result)};
     }
 
     template<class T>
     MountBuild<T> mount() {
         const auto api = nodeSystem_.blueprints.id<T>();
         const auto target = nodeSystem_.query.shared(id_, api);
+        nodeSystem_.dependencies.add(id_, target);
         return MountBuild<T>{nodeSystem_, id_, target};
     }
 
@@ -391,8 +392,10 @@ public:
         Lattice::NodeId current = nodeSystem_.registry.require(id_).parent;
 
         while (current != Lattice::InvalidNodeId) {
-            if (auto* ptr = static_cast<T*>(nodeSystem_.query.resolve(current, api)))
+            if (auto* ptr = static_cast<T*>(nodeSystem_.query.resolve(current, api))) {
+                nodeSystem_.dependencies.add(id_, current);
                 return Ref<T>{ptr};
+            }
 
             current = nodeSystem_.registry.require(current).parent;
         }
@@ -443,8 +446,8 @@ public:
         std::vector<T*> result;
         const auto api = nodeSystem_.blueprints.id<T>();
 
-        for (Lattice::NodeId id : nodeSystem_.query.collect(id_, api))
-            if (auto* ptr = static_cast<T*>(nodeSystem_.query.resolve(id, api)))
+        for (Lattice::NodeId target : nodeSystem_.query.collect(id_, api))
+            if (auto* ptr = resolve<T>(target))
                 result.push_back(ptr);
 
         return result;
@@ -459,7 +462,7 @@ public:
             if (auto* ptr = static_cast<T*>(nodeSystem_.query.resolve(child, api)))
                 result.push_back(ptr);
 
-        return Children<T>{std::move(result)};
+        return Children<T>{nodeSystem_, id_, std::move(result)};
     }
 
     Lattice::NodeId findId(std::string_view api, std::string_view instance = Lattice::DefaultInstanceName) const;
@@ -494,7 +497,10 @@ public:
 
     template<class T>
     T* resolve(Lattice::NodeId id) const {
-        return static_cast<T*>(nodeSystem_.query.resolve(id, Lattice::typeKey<T>()));
+        auto* object = static_cast<T*>(nodeSystem_.query.resolve(id, Lattice::typeKey<T>()));
+        if (object)
+            nodeSystem_.dependencies.add(id_, id);
+        return object;
     }
 
     ExportsView exports() {
@@ -511,3 +517,36 @@ public:
     Lattice::BlueprintId blueprint() const { return nodeSystem_.registry.require(id_).bp; }
     Lattice::BlueprintId implementation() const { return nodeSystem_.registry.require(id_).object.bp; }
 };
+
+namespace Lattice {
+
+template<typename T>
+NodeId Children<T>::add(std::string_view name) {
+    if (!nodes_ || owner_ == InvalidNodeId)
+        throw Exception<Children<T>>("Children handler is not initialized");
+
+    const BlueprintId api = nodes_->blueprints.id<T>();
+    const NodeId child = nodes_->builder.add(owner_, api, name);
+    items.push_back(static_cast<T*>(nodes_->query.resolve(child, api)));
+    return child;
+}
+
+template<typename T>
+void Children<T>::del(NodeId child) {
+    if (!nodes_ || owner_ == InvalidNodeId)
+        throw Exception<Children<T>>("Children handler is not initialized");
+
+    const auto& node = nodes_->registry.require(child);
+    if (node.parent != owner_)
+        throw Exception<Children<T>>("Node #{} is not a direct child of node #{}", child, owner_);
+
+    const BlueprintId api = nodes_->blueprints.id<T>();
+    auto* object = static_cast<T*>(nodes_->query.resolve(child, api));
+    if (!object)
+        throw Exception<Children<T>>("Node #{} does not provide '{}'", child, typeKey<T>());
+
+    nodes_->builder.del(owner_, child);
+    std::erase(items, object);
+}
+
+}

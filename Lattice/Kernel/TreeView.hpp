@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <Lattice/Kernel/Consts.hpp>
+#include <Lattice/Kernel/Node.hpp>
 
 namespace Lattice {
 
@@ -23,6 +24,7 @@ struct TreeNodeInfo {
     BlueprintId blueprint = InvalidBlueprintId;
     BlueprintId implementationBlueprint = InvalidBlueprintId;
     NodeKind kind = NodeKind::Folder;
+    NodeState state = NodeState::Active;
     std::string name;
     std::string type;
     std::string implementation;

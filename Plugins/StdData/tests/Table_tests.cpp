@@ -38,7 +38,7 @@ TEST(SoA_ImplementsTableContract, Lattice::TestFixture,
 TEST(SoA_InheritsTableViewAction, Lattice::RuntimeFixture,
     "SoA должна получать базовые exports Table.") {
     Lattice::BlueprintRegister::add<SoA, Lattice::Table>(fixture.run_ctx.blueprints);
-    const Lattice::NodeId node = fixture.run_ctx.nodes.builder.build(
+    const Lattice::NodeId node = fixture.run_ctx.nodes.builder.add(
         fixture.root,
         fixture.run_ctx.blueprints.id<SoA>(),
         "data"

@@ -51,7 +51,7 @@ TEST(Table_BasicTableAcceptsCustomTypes, RuntimeFixture,
 TEST(Table_DefaultImplementationBuildsAsNode, RuntimeFixture,
     "Стандартная таблица должна строиться через обычный Table blueprint.") {
     const BlueprintId tableBlueprint = fixture.run_ctx.blueprints.id<Table>();
-    const NodeId node = fixture.run_ctx.nodes.builder.build(
+    const NodeId node = fixture.run_ctx.nodes.builder.add(
         fixture.root,
         tableBlueprint,
         "results"
@@ -64,7 +64,7 @@ TEST(Table_DefaultImplementationBuildsAsNode, RuntimeFixture,
 
 TEST(Table_BaseExportsViewAction, RuntimeFixture,
     "Базовый Table должен добавлять view каждой реализации.") {
-    const NodeId node = fixture.run_ctx.nodes.builder.build(
+    const NodeId node = fixture.run_ctx.nodes.builder.add(
         fixture.root,
         fixture.run_ctx.blueprints.id<Table>(),
         "results"
@@ -86,7 +86,7 @@ TEST(Table_BaseExportsViewAction, RuntimeFixture,
 
 TEST(Table_BaseAddsRows, RuntimeFixture,
     "Table должен добавлять строки через общий API и export.") {
-    const NodeId node = fixture.run_ctx.nodes.builder.build(
+    const NodeId node = fixture.run_ctx.nodes.builder.add(
         fixture.root,
         fixture.run_ctx.blueprints.id<Table>(),
         "results"

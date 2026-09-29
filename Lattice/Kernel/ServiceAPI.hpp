@@ -5,6 +5,10 @@
 #include <thread>
 #include <atomic>
 
+namespace Lattice {
+class NodeOps;
+}
+
 enum class ServiceLaunch {
     Worker,
     Host
@@ -26,13 +30,7 @@ struct ServiceAPI : public Lattice::Component {
         });
     }
 
-    void enter() {
-        if (running_.exchange(true))
-            return;
-        host_ = true;
-        run();
-        running_ = false;
-    }
+    void enter(Lattice::NodeOps& hostOps);
 
     void stop() {
         requestStop();
@@ -43,6 +41,14 @@ struct ServiceAPI : public Lattice::Component {
 
     bool running() const { return running_.load(); }
     bool host() const { return host_; }
+
+    void retire() {
+        requestStop();
+    }
+
+    bool readyToDestroy() const {
+        return !running();
+    }
 
     virtual ~ServiceAPI() {
         stop();
@@ -55,13 +61,12 @@ protected:
         stopRequested_ = true;
     }
 
-    bool stopRequested() const {
-        return stopRequested_.load();
-    }
+    bool stopRequested() const;
 
 private:
     std::thread thread_;
     std::atomic<bool> running_{false};
     std::atomic<bool> stopRequested_{false};
+    Lattice::NodeOps* hostOps_ = nullptr;
     bool host_ = false;
 };

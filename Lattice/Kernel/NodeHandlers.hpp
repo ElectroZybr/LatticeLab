@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <string_view>
 #include <vector>
 #include <utility>
 #include <Lattice/Tools/Exception.hpp>
@@ -13,6 +14,8 @@
 #include <Lattice/Kernel/NodeQuery.hpp>
 
 namespace Lattice {
+
+class NodeSystem;
 
 template<typename T>
 struct Ref {
@@ -145,35 +148,30 @@ struct Children {
     std::vector<T*> items;
 
     Children() = default;
-    explicit Children(std::vector<T*> items) : items(std::move(items)) {}
+    explicit Children(std::vector<T*> values) : items(std::move(values)) {}
+    Children(NodeSystem& nodes, NodeId owner, std::vector<T*> values)
+        : items(std::move(values)), nodes_(&nodes), owner_(owner) {}
 
-    std::size_t size() const noexcept {
-        return items.size();
-    }
+    NodeId add(std::string_view name = DefaultInstanceName);
+    void del(NodeId child);
 
-    bool empty() const noexcept {
-        return size() == 0;
-    }
+    std::size_t size() const noexcept { return items.size(); }
 
-    bool exists() const noexcept {
-        return !empty();
-    }
+    bool empty() const noexcept { return items.empty(); }
 
-    T* operator[](std::size_t i) const {
-        return items[i];
-    }
+    bool exists() const noexcept { return !items.empty(); }
 
-    auto begin() const {
-        return items.begin();
-    }
+    T* operator[](std::size_t i) const noexcept { return items[i]; }
 
-    auto end() const {
-        return items.end();
-    }
+    auto begin() const noexcept { return items.begin(); }
 
-    explicit operator bool() const noexcept {
-        return exists();
-    }
+    auto end() const noexcept { return items.end(); }
+
+    explicit operator bool() const noexcept { return exists(); }
+
+private:
+    NodeSystem* nodes_ = nullptr;
+    NodeId owner_ = InvalidNodeId;
 };
 
 }

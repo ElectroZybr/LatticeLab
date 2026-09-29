@@ -11,6 +11,9 @@ namespace Lattice {
 bool NodeQuery::provides(NodeId id, BlueprintId api) const {
     const auto& node = registry_.require(id);
 
+    if (node.state == NodeState::Retiring)
+        return false;
+
     if ((node.kind == NodeKind::Mount || node.kind == NodeKind::SharedMount) &&
         node.relation != InvalidNodeId)
         return provides(node.relation, api);
@@ -21,7 +24,8 @@ bool NodeQuery::provides(NodeId id, BlueprintId api) const {
 
 NodeId NodeQuery::find(NodeId from, BlueprintId api, std::string_view instance) const {
     blueprints_.require(api);
-    registry_.require(from);
+    if (registry_.require(from).state == NodeState::Retiring)
+        return InvalidNodeId;
 
     for (NodeId current = from; current != InvalidNodeId; current = registry_.require(current).parent) {
         NodeId result = InvalidNodeId;
@@ -79,6 +83,9 @@ std::vector<NodeId> NodeQuery::collect(NodeId from, BlueprintId api) const {
     std::vector<NodeId> result;
 
     auto walk = [&](auto&& self, NodeId current) -> void {
+        if (registry_.require(current).state == NodeState::Retiring)
+            return;
+
         if (provides(current, api))
             result.push_back(current);
 
@@ -102,6 +109,9 @@ std::vector<NodeId> NodeQuery::collect(NodeId from, std::string_view api) const 
 
 void* NodeQuery::resolve(NodeId id, BlueprintId api) const {
     const auto& node = registry_.require(id);
+
+    if (node.state == NodeState::Retiring)
+        return nullptr;
 
     if (node.kind == NodeKind::Mount || node.kind == NodeKind::SharedMount) {
         if (node.relation == InvalidNodeId)

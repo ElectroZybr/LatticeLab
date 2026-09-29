@@ -30,6 +30,18 @@ std::string formatTime(double nanoseconds) {
     return std::format("{:.2f} {}", time.value, time.unit);
 }
 
+std::string resultName(std::string_view title, size_t index) {
+    std::string name{title};
+    for (char& character : name)
+        if (character == '/' || character == ' ' || character == '\t')
+            character = '-';
+
+    if (name.empty())
+        name = "results";
+
+    return std::format("{}-{}", name, index);
+}
+
 }
 
 void Benchmarks::runAll(Lattice::ActionContext& context) {
@@ -103,31 +115,42 @@ void Benchmarks::writeResults(
         return;
     }
 
-    Lattice::BasicTable table;
-    table.addColumn<std::string>("benchmark");
-    table.addColumn<uint64_t>("N");
-    table.addColumn<std::string>("median");
-    table.addColumn<std::string>("min");
-    table.addColumn<std::string>("mean");
-    table.addColumn<uint64_t>("iterations");
+    const Lattice::NodeId tableNode = results_.add(resultName(title, nextResult_++));
+    auto* table = results_[results_.size() - 1];
 
-    for (const auto& result : results) {
-        table.addRow(
-            benchmarkName(result.group, result.name),
-            static_cast<uint64_t>(result.n),
-            formatTime(result.medianNs),
-            formatTime(result.minNs),
-            formatTime(result.meanNs),
-            static_cast<uint64_t>(result.iterations)
-        );
+    try {
+        table->addColumn<std::string>("benchmark");
+        table->addColumn<uint64_t>("N");
+        table->addColumn<double>("median");
+        table->addColumn<double>("min");
+        table->addColumn<double>("mean");
+        table->addColumn<uint64_t>("iterations");
+
+        for (const auto& result : results) {
+            table->addRow(
+                benchmarkName(result.group, result.name),
+                static_cast<uint64_t>(result.n),
+                result.medianNs,
+                result.minNs,
+                result.meanNs,
+                static_cast<uint64_t>(result.iterations)
+            );
+        }
+    } catch (...) {
+        results_.del(tableNode);
+        throw;
     }
 
     Lattice::TableFormatter formatter;
+    formatter.formats().add<double>(
+        [](double nanoseconds) { return formatTime(nanoseconds); },
+        Lattice::TableFormatter::Align::Right
+    );
     Lattice::TableFormatter::Desc description;
     description.maxRows = Lattice::TableFormatter::Desc::Unlimited;
 
     Lattice::TextFormatter output = Lattice::TextFormatter::format("<a2>{}</>", title);
-    for (const auto line : formatter.view(table, description)) {
+    for (const auto line : formatter.view(*table, description)) {
         output.append("\n");
         output.append(line);
     }

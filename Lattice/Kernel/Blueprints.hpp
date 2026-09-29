@@ -14,11 +14,17 @@ class NodeConfigure;
 
 namespace Lattice {
 
+struct BlueprintOps {
+    void (*destroy)(void*) = nullptr;
+    void (*retire)(void*) = nullptr;
+    bool (*readyToDestroy)(const void*) = nullptr;
+};
+
 struct BlueprintMeta {
     std::string_view descriptor;
     void* (*create)(::NodeBuild, const void*) = nullptr;
     void (*configure)(void*, ::NodeConfigure) = nullptr;
-    void (*destroy)(void*) = nullptr;
+    const BlueprintOps* ops = nullptr;
 };
 
 struct Blueprint {

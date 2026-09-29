@@ -26,6 +26,10 @@ NodeId NodeFactory::createNode(
 ) {
     NodeId previous = InvalidNodeId;
 
+    if (parent != InvalidNodeId &&
+        nodeSystem_.registry.require(parent).state == NodeState::Retiring)
+        throw Exception<NodeFactory>("Cannot create a node under retiring parent #{}", parent);
+
     if (kind == NodeKind::Component && discriminator == NormalIdentity &&
         parent != InvalidNodeId && bp != InvalidBlueprintId) {
         for (NodeId child : nodeSystem_.registry.children(parent)) {
@@ -70,7 +74,10 @@ NodeId NodeFactory::folder(NodeId parent, std::string_view name) {
 }
 
 void* NodeFactory::resolve(NodeId id, BlueprintId api) const {
-    const auto& object = nodeSystem_.registry.require(id).object;
+    const auto& node = nodeSystem_.registry.require(id);
+    if (node.state == NodeState::Retiring)
+        return nullptr;
+    const auto& object = node.object;
     return nodeSystem_.blueprints.cast(object.bp, api, object.ptr);
 }
 
@@ -81,6 +88,9 @@ NodeId NodeFactory::component(NodeId parent, BlueprintId api, std::string_view i
 
     if (const NodeId existing = nodeSystem_.registry.find(instance, parent, impl); existing != InvalidNodeId) {
         const auto& node = nodeSystem_.registry.require(existing);
+
+        if (node.state == NodeState::Retiring)
+            throw Exception<NodeFactory>("Node #{} is retiring", existing);
 
         if (node.kind == NodeKind::Component && node.bp == impl)
             return existing;
@@ -129,6 +139,8 @@ NodeId NodeFactory::slot(NodeId parent, BlueprintId api, std::string_view instan
 
     if (const NodeId existing = nodeSystem_.registry.find(instance, parent, api); existing != InvalidNodeId) {
         const auto& node = nodeSystem_.registry.require(existing);
+        if (node.state == NodeState::Retiring)
+            throw Exception<NodeFactory>("Node #{} is retiring", existing);
         if (node.kind == NodeKind::Slot && node.bp == api)
             return existing;
     }
@@ -146,6 +158,9 @@ NodeId NodeFactory::slot(NodeId parent, BlueprintId api, std::string_view instan
 void NodeFactory::choice(NodeId id, BlueprintId impl) {
     const BlueprintId api = nodeSystem_.registry.require(id).bp;
     const BlueprintId current = nodeSystem_.registry.require(id).object.bp;
+
+    if (nodeSystem_.registry.require(id).state == NodeState::Retiring)
+        throw Exception<NodeFactory>("Node #{} is retiring", id);
 
     if (nodeSystem_.registry.require(id).kind != NodeKind::Slot)
         throw Exception<NodeFactory>("Node #{} is not a slot", id);
@@ -179,6 +194,9 @@ void NodeFactory::share(NodeId id, BlueprintId api) {
     const auto& node = nodeSystem_.registry.require(id);
     nodeSystem_.blueprints.require(api);
 
+    if (node.state == NodeState::Retiring)
+        throw Exception<NodeFactory>("Node #{} is retiring", id);
+
     if (!nodeSystem_.blueprints.isA(node.bp, api))
         throw Exception<NodeFactory>("'{}' does not implement '{}'",
             nodeSystem_.blueprints.require(node.bp).name,
@@ -197,6 +215,9 @@ void NodeFactory::share(NodeId id, BlueprintId api) {
 NodeId NodeFactory::binding(NodeId parent, std::string_view name) {
     if (const NodeId existing = nodeSystem_.registry.find(name, parent); existing != InvalidNodeId) {
         const auto& node = nodeSystem_.registry.require(existing);
+
+        if (node.state == NodeState::Retiring)
+            throw Exception<NodeFactory>("Node #{} is retiring", existing);
 
         if (node.kind == NodeKind::Binding)
             return existing;
@@ -220,6 +241,8 @@ NodeId NodeFactory::resource(
     if (const NodeId existing = nodeSystem_.registry.find(instance, target, api, discriminator);
         existing != InvalidNodeId) {
         const auto& node = nodeSystem_.registry.require(existing);
+        if (node.state == NodeState::Retiring)
+            throw Exception<NodeFactory>("Node #{} is retiring", existing);
         if (node.kind == NodeKind::Component && node.bp == api && node.object.ptr)
             return existing;
         throw Exception<NodeFactory>("Mounted resource '{}' has an invalid node", instance);
@@ -252,8 +275,12 @@ NodeId NodeFactory::reference(
     std::string_view instance,
     NodeKind kind
 ) {
-    nodeSystem_.registry.require(caller);
+    if (nodeSystem_.registry.require(caller).state == NodeState::Retiring)
+        throw Exception<NodeFactory>("Cannot create a reference for retiring node #{}", caller);
     const auto& physical = nodeSystem_.registry.require(target);
+
+    if (physical.state == NodeState::Retiring)
+        throw Exception<NodeFactory>("Cannot reference retiring node #{}", target);
 
     if (kind != NodeKind::Mount && kind != NodeKind::SharedMount)
         throw Exception<NodeFactory>("Invalid mount reference kind");
@@ -272,6 +299,7 @@ NodeId NodeFactory::reference(
 
     const NodeId id = createNode(caller, instance, api, kind, discriminator);
     nodeSystem_.registry.link(id, target);
+    nodeSystem_.dependencies.add(caller, target);
     return id;
 }
 
