@@ -14,6 +14,7 @@ class NodeRegistry : public ObjectRegistry<Node, NodeId, NodeKey, NodeKeyHash> {
     using Base = ObjectRegistry<Node, NodeId, NodeKey, NodeKeyHash>;
     std::vector<std::vector<NodeId>> children_;
     std::unordered_map<NodeId, std::vector<NodeId>> references_;
+    
 public:
     void clear() {
         children_.clear();

@@ -3,7 +3,7 @@
 
 namespace Lattice {
 namespace {
-struct BlueprintsFixture : TestFixture { Blueprints blueprints; };
+struct BlueprintsFixture : Fixture { Blueprints blueprints; };
 
 template<typename F>
 bool rejects(F&& operation) {

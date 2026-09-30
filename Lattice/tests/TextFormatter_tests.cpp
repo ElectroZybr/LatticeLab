@@ -8,7 +8,7 @@
 
 namespace Lattice {
 
-TEST(TextFormatter_RgbMarkupAndTrueColorOutput, TestFixture,
+TEST(TextFormatter_RgbMarkupAndTrueColorOutput, Fixture,
     "Hex tags should produce true-color ANSI output and survive markup conversion.") {
     const TextFormatter text("<#7aa2f7>title</>");
 
@@ -26,7 +26,7 @@ TEST(TextFormatter_StyleParameterCodec, RuntimeFixture,
     REQUIRE(style == (TextStyle::Dim | TextStyle::rgb(0xf7768e)));
 }
 
-TEST(TextFormatter_SemanticThemeTags, TestFixture,
+TEST(TextFormatter_SemanticThemeTags, Fixture,
     "Semantic tags should resolve through the supplied theme.") {
     TextTheme theme = TextTheme::defaults();
     TextFormatter text("<h>Header</>", theme);
@@ -38,7 +38,7 @@ TEST(TextFormatter_SemanticThemeTags, TestFixture,
     REQUIRE(text.markup() == "<#00ff00>Header</>");
 }
 
-TEST(TextFormatter_UsesSystemThemeByDefault, TestFixture,
+TEST(TextFormatter_UsesSystemThemeByDefault, Fixture,
     "Semantic tags should have immutable defaults when no CLI theme is supplied.") {
     REQUIRE(TextFormatter("<h>Header</>").markup() == "<b><#7aa2f7>Header<//>");
     REQUIRE(TextFormatter("<a>Accent</>").markup() == "<#bb9af7>Accent</>");
@@ -49,7 +49,7 @@ TEST(TextFormatter_UsesSystemThemeByDefault, TestFixture,
     REQUIRE(TextFormatter("<mut2>Metadata</>").markup() == "<#555555>Metadata</>");
 }
 
-TEST(TextPattern_ResolvesNamesOnceAndReadsCurrentStyle, TestFixture,
+TEST(TextPattern_ResolvesNamesOnceAndReadsCurrentStyle, Fixture,
     "TextPattern should retain semantic ids while observing changed theme values.") {
     TextTheme theme = TextTheme::defaults();
     TextPattern pattern("<b><h>Header<//>", theme);
@@ -61,7 +61,7 @@ TEST(TextPattern_ResolvesNamesOnceAndReadsCurrentStyle, TestFixture,
     REQUIRE(pattern.format().markup() == "<b><#00ff00>Header<//>");
 }
 
-TEST(TextFormatter_UnclosedTagDoesNotAbortFormatting, TestFixture,
+TEST(TextFormatter_UnclosedTagDoesNotAbortFormatting, Fixture,
     "Malformed markup should be rendered and diagnosed instead of throwing.") {
     const TextFormatter text("first line\n<h>unclosed");
 
@@ -73,7 +73,7 @@ TEST(TextFormatter_UnclosedTagDoesNotAbortFormatting, TestFixture,
     REQUIRE(text.diagnostics().front().line == "<h>unclosed");
 }
 
-TEST(TextFormatter_LoggerReportsDiagnostics, TestFixture,
+TEST(TextFormatter_LoggerReportsDiagnostics, Fixture,
     "Logger should turn formatter diagnostics into ordinary warning events.") {
     const TextFormatter text("<h>unclosed");
     std::vector<LogEvent> events;

@@ -2,19 +2,32 @@
 
 #include <chrono>
 #include <cstddef>
+#include <functional>
 #include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include <Lattice/Tools/BmRunner/BenchTypes.hpp>
 #include <Lattice/Tools/BmRunner/Stages.hpp>
-#include <Lattice/Tools/BmRunner/StdMetrics.hpp>
+#include <Lattice/Tools/BmRunner/Metrics.hpp>
 #include <Lattice/Tools/Exception.hpp>
 
-namespace Lattice {
+namespace Lattice::Benchmarks {
+
+/**
+ @file Bench.hpp
+ @brief Выполнение и измерение отдельного бенчмарка.
+
+ Bench управляет параметрами запуска, подготовкой входных данных,
+ калибровкой числа итераций и выполнением стадий измерения.
+
+ Промежуточные и итоговые результаты передаются через callback-и
+ после семплов, отдельных значений N и полного завершения бенчмарка.
+*/
 
 class Bench {
     using Clock = std::chrono::steady_clock;
@@ -29,8 +42,10 @@ public:
 private:
     std::string group_;
     std::string name_;
-    const ProgressCallback& progress_;
-    std::vector<Result> results_;
+
+    const SampleCallback& sample_;
+    const ResultCallback& result_;
+    const CompleteCallback& complete_;
 
 public:
     Config config{};
@@ -39,15 +54,18 @@ public:
     Bench(
         std::string group,
         std::string name,
-        const ProgressCallback& progress
+        const SampleCallback& sample,
+        const ResultCallback& result,
+        const CompleteCallback& complete
     )
         : group_(std::move(group)),
           name_(std::move(name)),
-          progress_(progress) {
+          sample_(sample),
+          result_(result),
+          complete_(complete) {
 
-        stages
-            .add<Warmup>()
-            .add<Time>();
+        stages.add<Warmup>().samples(16).time(std::chrono::milliseconds(10));
+        stages.add<Time>().samples(10);
     }
 
     std::string_view group() const noexcept {
@@ -63,15 +81,29 @@ public:
         if (config.samples == 0)
             throw Exception<Bench>("Samples count cannot be zero");
 
-        results_.clear();
-        results_.reserve(config.sizes.size());
+        std::vector<PointResult> points;
+        points.reserve(config.sizes.size());
 
-        for (size_t n : config.sizes)
-            results_.push_back(run(n, prepare, function));
-    }
+        for (size_t n : config.sizes) {
+            PointResult point = run(
+                n,
+                prepare,
+                function
+            );
 
-    std::vector<Result> takeResults() {
-        return std::move(results_);
+            if (result_)
+                result_(point);
+
+            points.push_back(std::move(point));
+        }
+
+        if (complete_) {
+            complete_({
+                .name = name_,
+                .group = group_,
+                .points = points
+            });
+        }
     }
 
 private:
@@ -84,175 +116,157 @@ private:
     #endif
     }
 
+    static void normalize(Metrics& metrics, size_t iterations) {
+        for (size_t i = 0; i < metrics.values.size(); ++i) {
+            if (hasFlag(metrics.schema[i].flags, MetricFlags::PerIteration))
+                metrics.values[i] /= static_cast<double>(iterations);
+        }
+    }
+
     template<typename Prepare, typename Function>
-    Result run(size_t n, Prepare& prepare, Function& function) {
-        using Input = decltype(prepare(n));
+    PointResult run(
+        size_t n,
+        Prepare& prepare,
+        Function& function
+    ) {
+        using Input = std::remove_cvref_t<std::invoke_result_t<Prepare&, size_t>>;
 
         std::optional<Input> input;
-        Result result;
+        input.emplace(std::invoke(prepare, n));
 
-        result.add("N", static_cast<double>(n), Unit::Count);
-
-        StageContext context{
-            .n = n,
-            .samples = config.samples,
-            .iterations = 1,
-            .result = result
-        };
-
-        context.prepare = [&] {
-            input.emplace(prepare(n));
-        };
-
-        context.invoke = [&](size_t iterations) {
+        auto invoke = [&](size_t iterations) {
             for (size_t i = 0; i < iterations; ++i) {
-                auto value = function(*input);
-                doNotOptimize(value);
+                if constexpr (
+                    std::is_void_v<std::invoke_result_t<Function&, Input&>>
+                ) {
+                    std::invoke(function, *input);
+                } else {
+                    auto value = std::invoke(function, *input);
+                    doNotOptimize(value);
+                }
             }
         };
 
-        context.progress = [&](
-            std::string_view stage,
-            size_t current,
-            size_t total,
-            std::span<const Metric> metrics
-        ) {
-            progress({
+        PointResult point{
+            .name = name_,
+            .group = group_,
+            .n = n
+        };
+
+        for (Stages::Stage& stage : stages.data())
+            runStage(n, stage, invoke, point);
+
+        return point;
+    }
+
+    template<typename Invoke>
+    void runStage(
+        size_t n,
+        Stages::Stage& stage,
+        Invoke& invoke,
+        PointResult& point
+    ) {
+        if (!stage.sampleLimit && stage.timeLimit == Clock::duration::zero())
+            throw Exception<Bench>("Stage '{}' has no execution limit", stageName(stage));
+
+        const size_t iterations = calibrate(invoke);
+        const std::string name = stageName(stage);
+
+        const auto started = Clock::now();
+        size_t sample = 0;
+
+        while (true) {
+            for (auto& capability : stage.capabilities)
+                capability->begin();
+
+            invoke(iterations);
+            ++sample;
+
+            SampleResult sampleResult{
                 .name = name_,
                 .group = group_,
-                .stage = stage,
-                .current = current,
-                .total = total,
-                .metrics = {
-                    metrics.begin(),
-                    metrics.end()
+                .stage = name,
+                .n = n,
+                .sample = sample,
+                .samples = stage.sampleLimit,
+                .iterations = iterations
+            };
+
+            sampleResult.capabilities.reserve(stage.capabilities.size());
+
+            for (auto it = stage.capabilities.rbegin(); it != stage.capabilities.rend(); ++it) {
+                Metrics metrics = (*it)->end();
+                normalize(metrics, iterations);
+
+                if (!metrics.values.empty()) {
+                    sampleResult.capabilities.push_back({
+                        .capability = (*it)->name(),
+                        .metrics = std::move(metrics)
+                    });
                 }
-            });
-        };
+            }
 
-        for (auto& stage : stages.data())
-            runStage(stage, context);
+            if (sample_)
+                sample_(sampleResult);
 
-        return result;
-    }
+            const bool samplesReached =
+                stage.sampleLimit && sample >= stage.sampleLimit;
 
-    void runStage(
-        Stages::Stage& stage,
-        StageContext& context
-    ) {
-        std::vector<StageCapability*> capabilities;
-        capabilities.reserve(stage.capabilities.size());
+            const bool timeReached =
+                stage.timeLimit != Clock::duration::zero() &&
+                Clock::now() - started >= stage.timeLimit;
 
-        StageDriver* driver = nullptr;
+            if (samplesReached || timeReached)
+                break;
+        }
 
         for (auto& capability : stage.capabilities) {
-            StageCapability* ptr = capability.get();
+            Metrics metrics = capability->finish();
+            normalize(metrics, iterations);
 
-            capabilities.push_back(ptr);
-
-            if (auto* candidate = dynamic_cast<StageDriver*>(ptr)) {
-                if (driver)
-                    throw Exception<Bench>(
-                        "Stage contains multiple drivers"
-                    );
-
-                driver = candidate;
+            if (!metrics.values.empty()) {
+                point.capabilities.push_back({
+                    .capability = capability->name(),
+                    .metrics = std::move(metrics)
+                });
             }
         }
-
-        if (driver) {
-            driver->run(context, capabilities);
-            return;
-        }
-
-        runSamples(context, capabilities);
     }
 
-    void runSamples(
-        StageContext& context,
-        std::span<StageCapability*> capabilities
-    ) {
-        context.prepare();
-        context.iterations = calibrate(context);
-
-        for (size_t sample = 0; sample < context.samples; ++sample) {
-            for (StageCapability* capability : capabilities)
-                capability->begin(context);
-
-            context.invoke(context.iterations);
-
-            for (auto it = capabilities.rbegin(); it != capabilities.rend(); ++it)
-                (*it)->end(context);
-
-            context.progress(
-                stageName(capabilities),
-                sample + 1,
-                context.samples,
-                {}
-            );
-        }
-
-        for (StageCapability* capability : capabilities)
-            capability->finish(context);
-    }
-
-    size_t calibrate(StageContext& context) {
+    template<typename Invoke>
+    size_t calibrate(Invoke& invoke) {
         size_t iterations = 1;
 
         while (true) {
             const auto start = Clock::now();
 
-            context.invoke(iterations);
+            invoke(iterations);
 
             if (Clock::now() - start >= config.target)
                 return iterations;
 
-            if (iterations > std::numeric_limits<size_t>::max() / 2)
-                throw Exception<Bench>(
-                    "Iteration calibration overflow"
-                );
+            if (
+                iterations >
+                std::numeric_limits<size_t>::max() / 2
+            ) {
+                throw Exception<Bench>("Iteration calibration overflow");
+            }
 
             iterations *= 2;
         }
     }
 
-    static std::string stageName(
-        std::span<StageCapability*> capabilities
-    ) {
-        // Пока можно вернуть просто "Measure".
-        // Следом лучше добавить name() в capability через typeName<T>().
-        return "Measure";
-    }
+    static std::string stageName(const Stages::Stage& stage) {
+        std::string result;
 
-    void progress(const Progress& value) const {
-        if (progress_)
-            progress_(value);
-    }
+        for (const auto& capability : stage.capabilities) {
+            if (!result.empty())
+                result += '|';
 
-    static std::string formatTime(double ns) {
-        if (ns >= 1'000'000'000.0)
-            return std::format("{:.2f} s", ns / 1'000'000'000.0);
+            result += capability->name();
+        }
 
-        if (ns >= 1'000'000.0)
-            return std::format("{:.2f} ms", ns / 1'000'000.0);
-
-        if (ns >= 1'000.0)
-            return std::format("{:.2f} us", ns / 1'000.0);
-
-        return std::format("{:.2f} ns", ns);
-    }
-
-    static std::string formatBytes(double bytes) {
-        if (bytes >= 1024.0 * 1024.0 * 1024.0)
-            return std::format("{:.2f} GiB", bytes / (1024.0 * 1024.0 * 1024.0));
-
-        if (bytes >= 1024.0 * 1024.0)
-            return std::format("{:.2f} MiB", bytes / (1024.0 * 1024.0));
-
-        if (bytes >= 1024.0)
-            return std::format("{:.2f} KiB", bytes / 1024.0);
-
-        return std::format("{:.0f} B", bytes);
+        return result;
     }
 };
 

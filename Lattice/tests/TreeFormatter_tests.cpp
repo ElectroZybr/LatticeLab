@@ -3,7 +3,7 @@
 
 namespace Lattice {
 
-TEST(TreeFormatter_CustomAsciiStyle, TestFixture,
+TEST(TreeFormatter_CustomAsciiStyle, Fixture,
     "TreeFormatter должен форматировать дерево без привязки к Logger.") {
     TreeFormatStyle style;
     style.glyphs = TreeStyles::Ascii;
@@ -21,7 +21,7 @@ TEST(TreeFormatter_CustomAsciiStyle, TestFixture,
     );
 }
 
-TEST(TreeFormatter_ComposesStylesLinearly, TestFixture,
+TEST(TreeFormatter_ComposesStylesLinearly, Fixture,
     "Стиль строки действует как внешняя обёртка для вложенного форматирования.") {
     TreeFormatter tree("Context");
     tree.node("<wrn>λ</> action");

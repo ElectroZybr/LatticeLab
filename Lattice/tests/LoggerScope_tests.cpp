@@ -2,7 +2,7 @@
 #include <Lattice/Tools/LogMode.hpp>
 
 
-struct LogInvariantFixture : Lattice::TestFixture {};
+struct LogInvariantFixture : Lattice::Fixture {};
 
 
 namespace {
