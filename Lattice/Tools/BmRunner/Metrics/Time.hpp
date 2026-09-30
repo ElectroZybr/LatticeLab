@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <Lattice/Tools/BmRunner/Stages.hpp>
+#include <Lattice/Tools/BmRunner/Analysis.hpp>
 
 namespace Lattice::Benchmarks {
 
@@ -27,6 +28,13 @@ class Time : public Capability {
     std::vector<double> samples_;
 
 public:
+    enum Metric : uint8_t {
+        min,
+        median,
+        mean,
+        _count
+    };
+
     std::string_view name() const noexcept override {
         return "Time";
     }
@@ -77,5 +85,13 @@ public:
         return metrics;
     }
 };
+
+constexpr ValueRef valueRef(Time::Metric metric) {
+    return {
+        .source = ValueSource::Metric,
+        .capability = "Time",
+        .index = static_cast<size_t>(metric)
+    };
+}
 
 }

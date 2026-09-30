@@ -6,10 +6,29 @@
 #include <string_view>
 
 #include <Lattice/Tools/BmRunner/Stages.hpp>
+#include <Lattice/Tools/BmRunner/Analysis.hpp>
 
 namespace Lattice::Benchmarks {
 
 class Perf : public Capability {
+public:
+    enum Metric : uint8_t {
+        cycles,
+        instructions,
+        cacheReferences,
+        cacheMisses,
+        branches,
+        branchMisses,
+        IPC,
+        CPI,
+        cacheMissRate,
+        branchMissRate,
+        IPB,
+        MPKI,
+        _count
+    };
+
+private:
     static constexpr size_t CounterCount = 6;
 
     struct Result {
@@ -118,5 +137,13 @@ private:
     int openCounter(uint64_t config, int group);
     void close();
 };
+
+constexpr ValueRef valueRef(Perf::Metric metric) {
+    return {
+        .source = ValueSource::Metric,
+        .capability = "Perf",
+        .index = static_cast<size_t>(metric)
+    };
+}
 
 }
