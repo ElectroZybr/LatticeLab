@@ -6,6 +6,7 @@
 #include <string>
 
 #include <Lattice/Tools/BmRunner/BenchTypes.hpp>
+#include "Lattice/Tools/BmRunner/Analysis.hpp"
 
 namespace Lattice::Benchmarks::Output {
 
@@ -130,22 +131,17 @@ inline void sample(const SampleResult& sample) {
         sample.stage.data()
     );
 
-    constexpr double OverheadThresholdNs = 100.0;
-
-    if (sample.overhead >= OverheadThresholdNs) {
-        const std::string overhead =
-            formatValue(sample.overhead, Unit::Nanoseconds);
-
-        std::fprintf(
-            stdout,
-            " ovhd=%-10s",
-            overhead.c_str()
-        );
-    }
+    const std::string overhead = formatValue(sample.overhead, Unit::Nanoseconds);
 
     std::fprintf(
         stdout,
-        " %3zu",
+        " ovhd=%-10s",
+        overhead.c_str()
+    );
+    
+    std::fprintf(
+        stdout,
+        " stage=%2zu",
         sample.sample
     );
 
@@ -177,6 +173,28 @@ inline void result(const PointResult&) {
     state.active = false;
 }
 
-inline void complete(const BenchResult&) {}
+inline void complete(const BenchResult& result) {
+    if (result.analysis.empty())
+        return;
+
+    for (const AnalysisResult& analysis : result.analysis) {
+        switch (analysis.type) {
+            case AnalysisType::Growth:
+                std::fprintf(
+                    stdout,
+                    "Analysis  growth=%s  coefficient=%.6g  error=%.3f%%\n",
+                    complexityName(analysis.bigO.complexity).data(),
+                    analysis.bigO.coefficient,
+                    analysis.bigO.error * 100.0
+                );
+                break;
+            case AnalysisType::Correlation:
+                break;
+            }
+    }
+
+    std::fprintf(stdout, "\n");
+    std::fflush(stdout);
+}
 
 }

@@ -7,6 +7,7 @@
 #include <string_view>
 #include <string>
 #include <vector>
+// #include "Lattice/Tools/BmRunner/Analysis.hpp"
 
 namespace Lattice::Benchmarks {
 
@@ -86,11 +87,7 @@ struct PointResult {
 };
 
 // результат полностью завершенного бенчмарка
-struct BenchResult {
-    std::string_view name;
-    std::string_view group;
-    std::span<const PointResult> points;
-};
+struct BenchResult;
 
 using SampleCallback = std::function<void(const SampleResult&)>;
 using ResultCallback = std::function<void(const PointResult&)>;

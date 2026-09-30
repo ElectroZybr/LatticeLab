@@ -13,41 +13,13 @@ struct Model {
     double (*function)(double);
 };
 
-double constant(double) {
-    return 1.0;
-}
-
-double logN(double x) {
-    return x > 1.0
-        ? std::log2(x)
-        : 0.0;
-}
-
-double linear(double x) {
-    return x;
-}
-
-double nLogN(double x) {
-    return x > 1.0
-        ? x * std::log2(x)
-        : 0.0;
-}
-
-double quadratic(double x) {
-    return x * x;
-}
-
-double cubic(double x) {
-    return x * x * x;
-}
-
 constexpr std::array<Model, 6> models{{
-    {Complexity::Constant, constant},
-    {Complexity::LogN, logN},
-    {Complexity::Linear, linear},
-    {Complexity::NLogN, nLogN},
-    {Complexity::Quadratic, quadratic},
-    {Complexity::Cubic, cubic}
+            {Complexity::Constant,  [](double) { return 1.0; }},
+            {Complexity::LogN,      [](double n) { return std::log(n); }},
+            {Complexity::Linear,    [](double n) { return n; }},
+            {Complexity::NLogN,     [](double n) { return n * std::log(n); }},
+            {Complexity::Quadratic, [](double n) { return n * n; }},
+            {Complexity::Cubic,     [](double n) { return n * n * n; }}
 }};
 
 BigOResult fit(

@@ -11,10 +11,12 @@
 #include <algorithm>
 
 #include <Lattice/Tools/BmRunner/BenchTypes.hpp>
+#include <Lattice/Tools/BmRunner/Analysis.hpp>
 #include <Lattice/Tools/BmRunner/Stages.hpp>
 #include <Lattice/Tools/BmRunner/Metrics.hpp>
 #include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Tools/Fixture.hpp>
+
 
 namespace Lattice::Benchmarks {
 
@@ -51,6 +53,7 @@ private:
 public:
     Config config{};
     Stages stages;
+    Analysis analysis{};
 
     Bench(
         std::string_view group,
@@ -69,6 +72,7 @@ public:
 
         stages.add<Warmup>().samples(16).time(std::chrono::milliseconds(10));
         stages.add<Time>().samples(10);
+        analysis.growth(N, Time::median);
     }
 
     std::string_view group() const noexcept {
@@ -111,7 +115,8 @@ public:
             complete_({
                 .name = name_,
                 .group = group_,
-                .points = points
+                .points = points,
+                .analysis = analysis.run(points)
             });
         }
     }
