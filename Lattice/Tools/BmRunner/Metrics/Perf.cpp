@@ -68,38 +68,7 @@ int Perf::openCounter(uint64_t config, int group) {
     return perfEventOpen(attr, group);
 }
 
-void Perf::start() {
-    if (!available())
-        return;
-
-    if (
-        ::ioctl(
-            leader_,
-            PERF_EVENT_IOC_RESET,
-            PERF_IOC_FLAG_GROUP
-        ) == -1
-    ) {
-        throw Exception<Perf>(
-            "Failed to reset counters: {}",
-            std::strerror(errno)
-        );
-    }
-
-    if (
-        ::ioctl(
-            leader_,
-            PERF_EVENT_IOC_ENABLE,
-            PERF_IOC_FLAG_GROUP
-        ) == -1
-    ) {
-        throw Exception<Perf>(
-            "Failed to enable counters: {}",
-            std::strerror(errno)
-        );
-    }
-}
-
-Perf::Result Perf::stop() {
+Perf::Result Perf::readCounters() {
     if (!available())
         return {};
 
@@ -174,19 +143,55 @@ void Perf::begin() {
     start();
 }
 
+void Perf::start() {
+    if (!available())
+        return;
+
+    if (
+        ::ioctl(
+            leader_,
+            PERF_EVENT_IOC_RESET,
+            PERF_IOC_FLAG_GROUP
+        ) == -1
+    ) {
+        throw Exception<Perf>(
+            "Failed to reset counters: {}",
+            std::strerror(errno)
+        );
+    }
+
+    if (
+        ::ioctl(
+            leader_,
+            PERF_EVENT_IOC_ENABLE,
+            PERF_IOC_FLAG_GROUP
+        ) == -1
+    ) {
+        throw Exception<Perf>(
+            "Failed to enable counters: {}",
+            std::strerror(errno)
+        );
+    }
+}
+
+void Perf::stop() {
+    if (!available())
+        return;
+
+    sample_ += readCounters();
+}
+
 Metrics Perf::end() {
     if (!available())
         return {};
 
-    const Result value = stop();
-
-    totals_ += value;
+    totals_ += sample_;
     ++samples_;
 
-    return makeMetrics(value);
+    return makeMetrics(sample_);
 }
 
-Metrics Perf::finish() {
+Metrics Perf::result() {
     if (samples_ == 0)
         return {};
 
@@ -217,9 +222,7 @@ Metrics Perf::finish() {
     return metrics;
 }
 
-Metrics Perf::makeMetrics(
-    const Result& value
-) {
+Metrics Perf::makeMetrics(const Result& value) {
     return {
         .schema = schema_,
         .values = {

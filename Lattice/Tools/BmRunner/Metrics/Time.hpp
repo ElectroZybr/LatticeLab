@@ -23,6 +23,7 @@ class Time : public Capability {
     };
 
     Clock::time_point start_;
+    Clock::duration elapsed_{};
     std::vector<double> samples_;
 
 public:
@@ -31,16 +32,19 @@ public:
     }
 
     void begin() override {
+        elapsed_ = {};
+    }
+
+    void start() override {
         start_ = Clock::now();
     }
 
-    Metrics end() override {
-        const auto stop = Clock::now();
+    void stop() override {
+        elapsed_ += Clock::now() - start_;
+    }
 
-        const double ns =
-            std::chrono::duration<double, std::nano>(
-                stop - start_
-            ).count();
+    Metrics end() override {
+        const double ns = std::chrono::duration<double, std::nano>(elapsed_).count();
 
         samples_.push_back(ns);
 
@@ -50,7 +54,7 @@ public:
         };
     }
 
-    Metrics finish() override {
+    Metrics result() override {
         if (samples_.empty())
             return {};
 
@@ -60,7 +64,7 @@ public:
         for (double value : samples_)
             sum += value;
 
-        Metrics result{
+        Metrics metrics{
             .schema = resultSchema_,
             .values = {
                 samples_.front(),
@@ -70,7 +74,7 @@ public:
         };
 
         samples_.clear();
-        return result;
+        return metrics;
     }
 };
 

@@ -49,84 +49,132 @@ inline std::string fullName(std::string_view group, std::string_view name) {
 
 inline void printMetrics(
     FILE* out,
+    const Metrics& metrics,
+    bool liveOnly = false
+) {
+    const size_t count =
+        std::min(metrics.schema.size(), metrics.values.size());
+
+    for (size_t i = 0; i < count; ++i) {
+        const MetricDesc& desc = metrics.schema[i];
+
+        if (liveOnly && !hasFlag(desc.flags, MetricFlags::Live))
+            continue;
+
+        const std::string value =
+            formatValue(metrics.values[i], desc.unit);
+
+        std::fprintf(
+            out,
+            "  %.*s=%s",
+            static_cast<int>(desc.name.size()),
+            desc.name.data(),
+            value.c_str()
+        );
+    }
+}
+
+inline void printMetrics(
+    FILE* out,
     const std::vector<CapabilityMetrics>& capabilities,
     bool liveOnly = false
 ) {
+    for (const CapabilityMetrics& capability : capabilities)
+        printMetrics(out, capability.metrics, liveOnly);
+}
+
+struct LiveState {
+    bool active = false;
+};
+
+inline LiveState& liveState() {
+    static LiveState state;
+    return state;
+}
+
+inline bool hasLiveMetrics(const std::vector<CapabilityMetrics>& capabilities) {
     for (const CapabilityMetrics& capability : capabilities) {
         const Metrics& metrics = capability.metrics;
         const size_t count = std::min(metrics.schema.size(), metrics.values.size());
 
-        for (size_t i = 0; i < count; ++i) {
-            const MetricDesc& desc = metrics.schema[i];
-
-            if (liveOnly && !hasFlag(desc.flags, MetricFlags::Live))
-                continue;
-
-            const std::string value = formatValue(metrics.values[i], desc.unit);
-
-            std::fprintf(
-                out,
-                "  %.*s=%s",
-                static_cast<int>(desc.name.size()),
-                desc.name.data(),
-                value.c_str()
-            );
-        }
+        for (size_t i = 0; i < count; ++i)
+            if (hasFlag(metrics.schema[i].flags, MetricFlags::Live))
+                return true;
     }
+
+    return false;
 }
 
 inline void sample(const SampleResult& sample) {
-    const std::string name = fullName(sample.group, sample.name);
+    if (!hasLiveMetrics(sample.capabilities))
+        return;
+
+    LiveState& state = liveState();
+
+    if (sample.sample == 1) {
+        if (state.active)
+            std::fprintf(stdout, "\n");
+
+        state.active = true;
+    }
+
+    const std::string name =
+        fullName(sample.group, sample.name);
 
     std::fprintf(
         stdout,
-        "\r\033[2K%-16s N=%-7zu %-12.*s ",
+        "\r\033[2K%-16s N=%-7zu %-12.*s",
         name.c_str(),
         sample.n,
         static_cast<int>(sample.stage.size()),
         sample.stage.data()
     );
 
-    if (sample.samples)
-        std::fprintf(stdout, "%2zu/%-2zu", sample.sample, sample.samples);
-    else
-        std::fprintf(stdout, "%2zu", sample.sample);
+    constexpr double OverheadThresholdNs = 100.0;
 
-    printMetrics(stdout, sample.capabilities, true);
+    if (sample.overhead >= OverheadThresholdNs) {
+        const std::string overhead =
+            formatValue(sample.overhead, Unit::Nanoseconds);
+
+        std::fprintf(
+            stdout,
+            " ovhd=%-10s",
+            overhead.c_str()
+        );
+    }
+
+    std::fprintf(
+        stdout,
+        " %3zu",
+        sample.sample
+    );
+
+    if (sample.samples)
+        std::fprintf(
+            stdout,
+            "/%-3zu",
+            sample.samples
+        );
+
+    printMetrics(
+        stdout,
+        sample.capabilities,
+        true
+    );
+
     std::fflush(stdout);
 }
 
-inline void result(const PointResult& result) {
-    const std::string name = fullName(result.group, result.name);
+inline void result(const PointResult&) {
+    LiveState& state = liveState();
 
-    std::fprintf(stdout, "\r\033[2K%s  N=%zu\n", name.c_str(), result.n);
+    if (!state.active)
+        return;
 
-    for (const CapabilityMetrics& capability : result.capabilities) {
-        std::fprintf(
-            stdout,
-            "  %-8.*s",
-            static_cast<int>(capability.capability.size()),
-            capability.capability.data()
-        );
+    std::fprintf(stdout, "\n");
+    std::fflush(stdout);
 
-        const Metrics& metrics = capability.metrics;
-        const size_t count = std::min(metrics.schema.size(), metrics.values.size());
-
-        for (size_t i = 0; i < count; ++i) {
-            const MetricDesc& desc = metrics.schema[i];
-            const std::string value = formatValue(metrics.values[i], desc.unit);
-
-            std::fprintf(
-                stdout,
-                "  %.*s=%s",
-                static_cast<int>(desc.name.size()),
-                desc.name.data(),
-                value.c_str()
-            );
-        }
-
-        std::fprintf(stdout, "\n");
-    }
+    state.active = false;
 }
 
 inline void complete(const BenchResult&) {}

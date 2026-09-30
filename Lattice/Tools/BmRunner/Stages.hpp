@@ -24,9 +24,12 @@ class Capability {
 public:
     virtual ~Capability() = default;
     virtual std::string_view name() const noexcept = 0;
-    virtual void begin() {}
-    virtual Metrics end() { return {}; }
-    virtual Metrics finish() { return {}; }
+
+    virtual void begin() {} // Подготовить capability к sample: открыть/сбросить/инициализировать счётчики
+    virtual void start() {} // Начать измеряемый участок, максимально дешёвая операция
+    virtual void stop() {}  // Закончить измеряемый участок, максимально дешёвая операция
+    virtual Metrics end() { return {}; }    // завершить sample: остановить/закрыть временное состояние, сформировать Metrics одного sample
+    virtual Metrics result() { return {}; } // сформировать Metrics всего stage
 };
 
 

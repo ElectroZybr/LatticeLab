@@ -3,18 +3,18 @@
 #include <chrono>
 #include <cstddef>
 #include <functional>
-#include <limits>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 #include <Lattice/Tools/BmRunner/BenchTypes.hpp>
 #include <Lattice/Tools/BmRunner/Stages.hpp>
 #include <Lattice/Tools/BmRunner/Metrics.hpp>
 #include <Lattice/Tools/Exception.hpp>
+#include <Lattice/Tools/Fixture.hpp>
 
 namespace Lattice::Benchmarks {
 
@@ -43,6 +43,7 @@ private:
     std::string group_;
     std::string name_;
 
+    Fixture::Factory createFixture_;
     const SampleCallback& sample_;
     const ResultCallback& result_;
     const CompleteCallback& complete_;
@@ -52,17 +53,19 @@ public:
     Stages stages;
 
     Bench(
-        std::string group,
-        std::string name,
+        std::string_view group,
+        std::string_view name,
+        Fixture::Factory createFixture,
         const SampleCallback& sample,
         const ResultCallback& result,
         const CompleteCallback& complete
     )
-        : group_(std::move(group)),
-          name_(std::move(name)),
-          sample_(sample),
-          result_(result),
-          complete_(complete) {
+        : group_(group)
+        , name_(name)
+        , createFixture_(createFixture)
+        , sample_(sample)
+        , result_(result)
+        , complete_(complete) {
 
         stages.add<Warmup>().samples(16).time(std::chrono::milliseconds(10));
         stages.add<Time>().samples(10);
@@ -76,20 +79,27 @@ public:
         return name_;
     }
 
-    template<typename Prepare, typename Function>
-    void measure(Prepare&& prepare, Function&& function) {
+    template<typename FixtureType, typename Function>
+    void measure(Function&& function) {
         if (config.samples == 0)
             throw Exception<Bench>("Samples count cannot be zero");
 
         std::vector<PointResult> points;
         points.reserve(config.sizes.size());
 
+        auto invoke = [&](Fixture& fixture) {
+            auto& typed = static_cast<FixtureType&>(fixture);
+
+            if constexpr (std::is_void_v<std::invoke_result_t<Function&, FixtureType&>>) {
+                std::invoke(function, typed);
+            } else {
+                auto value = std::invoke(function, typed);
+                doNotOptimize(value);
+            }
+        };
+
         for (size_t n : config.sizes) {
-            PointResult point = run(
-                n,
-                prepare,
-                function
-            );
+            PointResult point = run(n, invoke);
 
             if (result_)
                 result_(point);
@@ -123,30 +133,8 @@ private:
         }
     }
 
-    template<typename Prepare, typename Function>
-    PointResult run(
-        size_t n,
-        Prepare& prepare,
-        Function& function
-    ) {
-        using Input = std::remove_cvref_t<std::invoke_result_t<Prepare&, size_t>>;
-
-        std::optional<Input> input;
-        input.emplace(std::invoke(prepare, n));
-
-        auto invoke = [&](size_t iterations) {
-            for (size_t i = 0; i < iterations; ++i) {
-                if constexpr (
-                    std::is_void_v<std::invoke_result_t<Function&, Input&>>
-                ) {
-                    std::invoke(function, *input);
-                } else {
-                    auto value = std::invoke(function, *input);
-                    doNotOptimize(value);
-                }
-            }
-        };
-
+    template<typename Invoke>
+    PointResult run(size_t n, Invoke& invoke) {
         PointResult point{
             .name = name_,
             .group = group_,
@@ -159,6 +147,31 @@ private:
         return point;
     }
 
+    Clock::duration measureOverhead(Stages::Stage& stage) {
+        constexpr size_t rounds = 16;
+        constexpr size_t iterations = 1000;
+
+        Clock::duration best = Clock::duration::max();
+
+        for (size_t round = 0; round < rounds; ++round) {
+            const auto started = Clock::now();
+
+            for (size_t i = 0; i < iterations; ++i) {
+                for (auto& capability : stage.capabilities)
+                    capability->start();
+
+                for (auto it = stage.capabilities.rbegin(); it != stage.capabilities.rend(); ++it)
+                    (*it)->stop();
+            }
+
+            const auto elapsed = Clock::now() - started;
+            const auto average = elapsed / static_cast<Clock::rep>(iterations);
+            best = std::min(best, average);
+        }
+
+        return best;
+    }
+
     template<typename Invoke>
     void runStage(
         size_t n,
@@ -169,17 +182,35 @@ private:
         if (!stage.sampleLimit && stage.timeLimit == Clock::duration::zero())
             throw Exception<Bench>("Stage '{}' has no execution limit", stageName(stage));
 
-        const size_t iterations = calibrate(invoke);
         const std::string name = stageName(stage);
+        const auto overhead = measureOverhead(stage);
+        const size_t iterations = calibrate(n, invoke);
+
+        StageResult stageResult{
+            .name = name,
+        };
 
         const auto started = Clock::now();
         size_t sample = 0;
 
         while (true) {
+            auto fixture = createFixture_(n);
+
             for (auto& capability : stage.capabilities)
                 capability->begin();
 
-            invoke(iterations);
+            for (size_t i = 0; i < iterations; ++i) {
+                fixture->prepare();
+
+                for (auto& capability : stage.capabilities)
+                    capability->start();
+
+                invoke(*fixture);
+
+                for (auto it = stage.capabilities.rbegin(); it != stage.capabilities.rend(); ++it)
+                    (*it)->stop();
+            }
+
             ++sample;
 
             SampleResult sampleResult{
@@ -189,7 +220,8 @@ private:
                 .n = n,
                 .sample = sample,
                 .samples = stage.sampleLimit,
-                .iterations = iterations
+                .iterations = iterations,
+                .overhead = std::chrono::duration<double, std::nano>(overhead).count()
             };
 
             sampleResult.capabilities.reserve(stage.capabilities.size());
@@ -220,39 +252,53 @@ private:
                 break;
         }
 
+        stageResult.capabilities.reserve(stage.capabilities.size());
+
         for (auto& capability : stage.capabilities) {
-            Metrics metrics = capability->finish();
+            Metrics metrics = capability->result();
             normalize(metrics, iterations);
 
             if (!metrics.values.empty()) {
-                point.capabilities.push_back({
+                stageResult.capabilities.push_back({
                     .capability = capability->name(),
                     .metrics = std::move(metrics)
                 });
             }
         }
+
+        point.stages.push_back(std::move(stageResult));
     }
 
     template<typename Invoke>
-    size_t calibrate(Invoke& invoke) {
+    size_t calibrate(size_t n, Invoke& invoke) {
+        auto fixture = createFixture_(n);
+
         size_t iterations = 1;
 
         while (true) {
-            const auto start = Clock::now();
+            Clock::duration elapsed{};
 
-            invoke(iterations);
+            for (size_t i = 0; i < iterations; ++i) {
+                fixture->prepare();
 
-            if (Clock::now() - start >= config.target)
-                return iterations;
-
-            if (
-                iterations >
-                std::numeric_limits<size_t>::max() / 2
-            ) {
-                throw Exception<Bench>("Iteration calibration overflow");
+                const auto start = Clock::now();
+                invoke(*fixture);
+                elapsed += Clock::now() - start;
             }
 
-            iterations *= 2;
+            if (elapsed >= config.target)
+                return iterations;
+
+            const double scale =
+                static_cast<double>(config.target.count()) /
+                static_cast<double>(
+                    std::chrono::duration_cast<decltype(config.target)>(elapsed).count()
+                );
+
+            iterations = std::max(
+                iterations + 1,
+                static_cast<size_t>(iterations * scale)
+            );
         }
     }
 

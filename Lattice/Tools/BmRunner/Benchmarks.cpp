@@ -4,8 +4,8 @@
 #include <utility>
 
 #include <Lattice/Tools/BmRunner/Output.hpp>
-#include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Tools/ObjectRegistry.hpp>
+#include <Lattice/Tools/Exception.hpp>
 
 namespace Lattice::Benchmarks {
 
@@ -20,6 +20,7 @@ struct Case {
     std::string name;
     std::string description;
     void (*function)(Bench&);
+    Fixture::Factory createFixture;
 };
 
 struct GroupConfig {
@@ -62,7 +63,15 @@ const GroupConfig* findGroupConfig(std::string_view group) {
 
 void execute(const Case& benchCase) {
     State& s = state();
-    Bench bench(benchCase.group, benchCase.name, s.sample, s.result, s.complete);
+
+    Bench bench(
+        benchCase.group,
+        benchCase.name,
+        benchCase.createFixture,
+        s.sample,
+        s.result,
+        s.complete
+    );
 
     if (const GroupConfig* config = findGroupConfig(benchCase.group))
         config->function(bench);
@@ -76,13 +85,15 @@ Registrar::Registrar(
     std::string_view group,
     std::string_view name,
     std::string_view description,
-    void (*function)(Bench&)
+    void (*function)(Bench&),
+    Fixture::Factory createFixture
 ) {
     add({
-        .group = std::string(group),
-        .name = std::string(name),
-        .description = std::string(description),
-        .function = function
+        std::string(group),
+        std::string(name),
+        std::string(description),
+        function,
+        createFixture
     });
 }
 
