@@ -5,6 +5,7 @@
 #include <functional>
 #include <span>
 #include <string_view>
+#include <string>
 #include <vector>
 
 namespace Lattice::Benchmarks {
@@ -65,7 +66,13 @@ struct SampleResult {
     size_t sample = 0;
     size_t samples = 0;
     size_t iterations = 0;
+    double overhead = 0;
 
+    std::vector<CapabilityMetrics> capabilities;
+};
+
+struct StageResult {
+    std::string name;
     std::vector<CapabilityMetrics> capabilities;
 };
 
@@ -75,7 +82,7 @@ struct PointResult {
     std::string_view group;
 
     size_t n = 0;
-    std::vector<CapabilityMetrics> capabilities;
+    std::vector<StageResult> stages;
 };
 
 // результат полностью завершенного бенчмарка

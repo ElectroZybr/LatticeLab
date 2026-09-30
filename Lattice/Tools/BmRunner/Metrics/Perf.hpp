@@ -86,6 +86,7 @@ class Perf : public Capability {
     int leader_ = -1;
     std::array<int, CounterCount> fds_{-1, -1, -1, -1, -1, -1};
 
+    Result sample_{};
     Result totals_{};
     size_t samples_ = 0;
 
@@ -105,15 +106,15 @@ public:
     }
 
     void begin() override;
+    void start() override;
+    void stop() override;
     Metrics end() override;
-    Metrics finish() override;
+    Metrics result() override;
 
 private:
     static Metrics makeMetrics(const Result& value);
 
-    void start();
-    Result stop();
-
+    Result readCounters();
     int openCounter(uint64_t config, int group);
     void close();
 };
