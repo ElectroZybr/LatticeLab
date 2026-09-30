@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <Lattice/Tools/LogMode.hpp>
+#include "Lattice/Tools/Fixture.hpp"
 
 
 #define TEST2(name, Fixture) \
@@ -14,10 +15,10 @@
 
 #define TEST3(name, Fixture, description) \
     static void name(Fixture& fixture); \
-    static std::unique_ptr<::Lattice::TestFixture> _fixture_##name() { \
+    static std::unique_ptr<::Lattice::Fixture> _fixture_##name() { \
         return std::make_unique<Fixture>(); \
     } \
-    static void _run_##name(::Lattice::TestFixture& fixture) { \
+    static void _run_##name(::Lattice::Fixture& fixture) { \
         name(static_cast<Fixture&>(fixture)); \
     } \
     static ::Lattice::TestRegistrar _test_##name(#name, description, _run_##name, _fixture_##name); \
@@ -35,16 +36,11 @@
 
 namespace Lattice {
 
-class TestFixture {
-public:
-    virtual ~TestFixture() = default;
-};
-
 struct TestCase {
     std::string name;
     std::string description;
-    void (*function)(TestFixture&);
-    std::unique_ptr<TestFixture> (*createFixture)();
+    void (*function)(Fixture&);
+    std::unique_ptr<Fixture> (*createFixture)();
 };
 
 class Test {
@@ -70,8 +66,8 @@ public:
     TestRegistrar(
         std::string_view name,
         std::string_view description,
-        void (*function)(TestFixture&),
-        std::unique_ptr<TestFixture> (*createFixture)()
+        void (*function)(Fixture&),
+        std::unique_ptr<Fixture> (*createFixture)()
     ) {
         Test::instance().add({
             std::string(name),

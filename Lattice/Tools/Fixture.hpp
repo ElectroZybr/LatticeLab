@@ -6,12 +6,14 @@
 #include "Lattice/Kernel/Context.hpp"
 #include "Lattice/Kernel/DLLoader.hpp"
 #include "Lattice/Kernel/PluginManager.hpp"
-#include "Lattice/Tools/Tests.hpp"
 
 namespace Lattice {
 
+struct Fixture {
+    virtual ~Fixture() = default;
+};
 
-struct RuntimeFixture : public TestFixture {
+struct RuntimeFixture : public Fixture {
     Context run_ctx;
     NodeId root = InvalidNodeId;
     DLLoader dlLoader;
@@ -34,4 +36,5 @@ struct RuntimeFixture : public TestFixture {
         return ::NodeBuild{id, run_ctx.nodes};
     }
 };
+
 }

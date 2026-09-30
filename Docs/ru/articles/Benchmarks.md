@@ -97,12 +97,54 @@ cmake --build --preset bench
 - сравнивать прогоны
 - получать более удобный вывод, чем сырой stdout Google Benchmark
 
-BmRunner`отвечает за:
+`BmRunner` отвечает за:
 
 - конфигурацию запуска
 - оформление вывода
 - сохранение json-результатов
 - поддержку baseline/last run сценариев
+
+### Композиция метрик
+
+Измерение состоит из упорядоченных stages. Метрики в одном `add`
+снимаются за один проход, а разные `add` создают отдельные проходы:
+
+```cpp
+bench.config.sizes = {10, 100, 1000, 10000};
+
+bench.stages.clear();
+bench.stages.add<Warmup>();
+bench.stages.add<Time, Perf>();
+bench.stages.add<Memory>();
+bench.stages.add<Allocations>();
+```
+
+`Memory` считает объём, а `Allocations` — количество вызовов C++ `new` на одну операцию.
+Прямые вызовы `malloc` в эти метрики не входят. `Perf` использует Linux
+`perf_event`; если counters запрещены настройками системы, benchmark продолжает работу
+без perf-метрик.
+
+Общую конфигурацию группы можно задать один раз. Она применяется перед телом
+каждого benchmark, поэтому конкретный тест может её переопределить:
+
+```cpp
+BENCH_GROUP(TwoSum) {
+    bench.config.sizes = {10, 100, 1000, 10000};
+    bench.stages.clear();
+    bench.stages.add<Warmup>();
+    bench.stages.add<Time, Perf>();
+}
+
+BENCH(TwoSum, Hash) {
+    // Использует stages группы.
+}
+
+BENCH(TwoSum, AllocationsOnly) {
+    bench.stages.clear();
+    bench.stages.add<Allocations>();
+    // Локальная замена stages.
+}
+```
 
 ## Benchmark'и Движка
 

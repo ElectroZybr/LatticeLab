@@ -1,25 +1,84 @@
 #include "Benchmarks.hpp"
 
 #include <algorithm>
-#include <format>
 #include <utility>
 
-#include <Lattice/Tools/BmRunner/Bench.hpp>
+#include <Lattice/Tools/BmRunner/Output.hpp>
 #include <Lattice/Tools/Exception.hpp>
+#include <Lattice/Tools/ObjectRegistry.hpp>
 
-namespace Lattice {
+namespace Lattice::Benchmarks {
 
-Benchmarks::Benchmarks()
-    : defaultProgress_(defaultProgress),
-      progress_(defaultProgress_) {}
+namespace {
 
-Benchmarks::Registrar::Registrar(
+using BenchId = uint32_t;
+
+struct Registry {};
+
+struct Case {
+    std::string group;
+    std::string name;
+    std::string description;
+    void (*function)(Bench&);
+};
+
+struct GroupConfig {
+    std::string name;
+    void (*function)(Bench&);
+};
+
+struct State {
+    ObjectRegistry<Case, BenchId, std::string> benches;
+    std::vector<GroupConfig> groups;
+
+    SampleCallback sample = Output::sample;
+    ResultCallback result = Output::result;
+    CompleteCallback complete = Output::complete;
+};
+
+State& state() {
+    static State value;
+    return value;
+}
+
+void add(Case bench) {
+    state().benches.create(std::move(bench));
+}
+
+void addGroupConfig(GroupConfig config) {
+    auto& groups = state().groups;
+
+    if (std::ranges::find(groups, config.name, &GroupConfig::name) != groups.end())
+        throw Exception<Registry>("Benchmark group '{}' is already configured", config.name);
+
+    groups.push_back(std::move(config));
+}
+
+const GroupConfig* findGroupConfig(std::string_view group) {
+    auto& groups = state().groups;
+    const auto it = std::ranges::find(groups, group, &GroupConfig::name);
+    return it != groups.end() ? &*it : nullptr;
+}
+
+void execute(const Case& benchCase) {
+    State& s = state();
+    Bench bench(benchCase.group, benchCase.name, s.sample, s.result, s.complete);
+
+    if (const GroupConfig* config = findGroupConfig(benchCase.group))
+        config->function(bench);
+
+    benchCase.function(bench);
+}
+
+}
+
+Registrar::Registrar(
     std::string_view group,
     std::string_view name,
     std::string_view description,
     void (*function)(Bench&)
 ) {
-    Benchmarks::instance().add({
+    add({
         .group = std::string(group),
         .name = std::string(name),
         .description = std::string(description),
@@ -27,187 +86,107 @@ Benchmarks::Registrar::Registrar(
     });
 }
 
-Benchmarks& Benchmarks::instance() {
-    static Benchmarks benchmarks;
-    return benchmarks;
+GroupRegistrar::GroupRegistrar(std::string_view group, void (*function)(Bench&)) {
+    addGroupConfig({
+        .name = std::string(group),
+        .function = function
+    });
 }
 
-Benchmarks::Run Benchmarks::run(std::string_view name) const {
-    const BenchId id = benches_.find(name);
+void run(std::string_view name) {
+    State& s = state();
+    const BenchId id = s.benches.find(name);
 
-    if (!benches_.valid(id))
-        throw Exception<Benchmarks>("Benchmark '{}' not found", name);
+    if (!s.benches.valid(id))
+        throw Exception<Registry>("Benchmark '{}' not found", name);
 
-    return execute(benches_.require(id));
+    execute(s.benches.require(id));
 }
 
-std::vector<Benchmarks::Run> Benchmarks::runGroup(std::string_view group) const {
-    std::vector<Run> result;
+void runGroup(std::string_view group) {
+    State& s = state();
 
-    for (BenchId id = 0; id < benches_.size(); ++id) {
-        const Case* benchCase = benches_.get(id);
+    for (BenchId id = 0; id < s.benches.size(); ++id) {
+        const Case* bench = s.benches.get(id);
 
-        if (!benchCase || benchCase->group != group)
-            continue;
-
-        result.push_back(execute(*benchCase));
+        if (bench && bench->group == group)
+            execute(*bench);
     }
-
-    return result;
 }
 
-std::vector<Benchmarks::Run> Benchmarks::runAll() const {
-    std::vector<Run> result;
+void runAll() {
+    State& s = state();
 
-    for (BenchId id = 0; id < benches_.size(); ++id) {
-        const Case* benchCase = benches_.get(id);
-
-        if (benchCase)
-            result.push_back(execute(*benchCase));
-    }
-
-    return result;
+    for (BenchId id = 0; id < s.benches.size(); ++id)
+        if (const Case* bench = s.benches.get(id))
+            execute(*bench);
 }
 
-std::vector<Benchmarks::Info> Benchmarks::list() const {
+std::vector<Info> list() {
+    State& s = state();
     std::vector<Info> result;
 
-    for (BenchId id = 0; id < benches_.size(); ++id) {
-        const Case* benchCase = benches_.get(id);
-
-        if (!benchCase)
+    for (BenchId id = 0; id < s.benches.size(); ++id) {
+        const Case* bench = s.benches.get(id);
+        if (!bench)
             continue;
 
         result.push_back({
-            .group = benchCase->group,
-            .name = benchCase->name,
-            .description = benchCase->description
+            .group = bench->group,
+            .name = bench->name,
+            .description = bench->description
         });
     }
 
     return result;
 }
 
-std::vector<std::string_view> Benchmarks::groups() const {
+std::vector<std::string_view> groups() {
+    State& s = state();
     std::vector<std::string_view> result;
 
-    for (BenchId id = 0; id < benches_.size(); ++id) {
-        const Case* benchCase = benches_.get(id);
+    for (BenchId id = 0; id < s.benches.size(); ++id) {
+        const Case* bench = s.benches.get(id);
 
-        if (!benchCase || benchCase->group.empty())
+        if (!bench || bench->group.empty())
             continue;
 
-        if (std::find(result.begin(), result.end(), benchCase->group) == result.end())
-            result.push_back(benchCase->group);
+        if (std::ranges::find(result, bench->group) == result.end())
+            result.push_back(bench->group);
     }
 
     return result;
 }
 
-void Benchmarks::setProgressCallback(ProgressCallback callback) {
-    progress_ = std::move(callback);
+void setSampleCallback(SampleCallback callback) {
+    state().sample = std::move(callback);
 }
 
-void Benchmarks::resetProgressCallback() {
-    progress_ = defaultProgress_;
+void setResultCallback(ResultCallback callback) {
+    state().result = std::move(callback);
 }
 
-void Benchmarks::disableProgress() {
-    progress_ = {};
+void setCompleteCallback(CompleteCallback callback) {
+    state().complete = std::move(callback);
 }
 
-void Benchmarks::print(const Run& run, FILE* out) {
-    std::fprintf(out, "%s\n", fullName(run.group, run.name).c_str());
-
-    for (const Result& result : run.results) {
-        std::fprintf(out, "  ");
-
-        for (size_t i = 0; i < result.metrics.size(); ++i) {
-            const Metric& metric = result.metrics[i];
-            const std::string value = Bench::formatMetric(metric);
-
-            if (i != 0)
-                std::fprintf(out, "  ");
-
-            std::fprintf(
-                out,
-                "%s=%s",
-                metric.name.c_str(),
-                value.c_str()
-            );
-        }
-
-        std::fprintf(out, "\n");
-    }
+void disableSampleCallback() {
+    state().sample = {};
 }
 
-void Benchmarks::print(std::span<const Run> runs, FILE* out) {
-    for (size_t i = 0; i < runs.size(); ++i) {
-        print(runs[i], out);
-
-        if (i + 1 < runs.size())
-            std::fprintf(out, "\n");
-    }
+void disableResultCallback() {
+    state().result = {};
 }
 
-void Benchmarks::add(Case bench) {
-    benches_.create(std::move(bench));
+void disableCompleteCallback() {
+    state().complete = {};
 }
 
-Benchmarks::Run Benchmarks::execute(const Case& benchCase) const {
-    Bench bench(
-        benchCase.group,
-        benchCase.name,
-        progress_
-    );
-
-    benchCase.function(bench);
-
-    return {
-        .name = benchCase.name,
-        .group = benchCase.group,
-        .results = bench.takeResults()
-    };
-}
-
-void Benchmarks::defaultProgress(const Progress& progress) {
-    const std::string name = fullName(progress.group, progress.name);
-
-    std::fprintf(
-        stdout,
-        "\r%-20s %-10.*s %4zu/%-4zu",
-        name.c_str(),
-        static_cast<int>(progress.stage.size()),
-        progress.stage.data(),
-        progress.current,
-        progress.total
-    );
-
-    for (const Metric& metric : progress.metrics) {
-        const std::string value = Bench::formatMetric(metric);
-
-        std::fprintf(
-            stdout,
-            "  %s=%s",
-            metric.name.c_str(),
-            value.c_str()
-        );
-    }
-
-    std::fflush(stdout);
-
-    if (progress.current == progress.total)
-        std::fprintf(stdout, "\n");
-}
-
-std::string Benchmarks::fullName(
-    std::string_view group,
-    std::string_view name
-) {
-    if (group.empty())
-        return std::string(name);
-
-    return std::format("{}/{}", group, name);
+void disableCallbacks() {
+    State& s = state();
+    s.sample = {};
+    s.result = {};
+    s.complete = {};
 }
 
 }

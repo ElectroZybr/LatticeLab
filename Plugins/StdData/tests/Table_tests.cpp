@@ -12,7 +12,7 @@ struct Charge { using type = int; };
 
 }
 
-TEST(SoA_ImplementsTableContract, Lattice::TestFixture,
+TEST(SoA_ImplementsTableContract, Lattice::Fixture,
     "SoA должна отдавать типизированные колонки через общий Table API.") {
     SoA soa;
     soa.addCol<Mass>();
@@ -52,7 +52,7 @@ TEST(SoA_InheritsTableViewAction, Lattice::RuntimeFixture,
     REQUIRE(std::get<Lattice::ActionView>(context.output().front()).is<Lattice::Table>());
 }
 
-TEST(SoA_AddsTypedRowsThroughTable, Lattice::TestFixture,
+TEST(SoA_AddsTypedRowsThroughTable, Lattice::Fixture,
     "SoA должна поддерживать общий типизированный addRow.") {
     SoA soa;
     soa.addCol<Mass>();
