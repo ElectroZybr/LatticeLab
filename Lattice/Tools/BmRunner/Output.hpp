@@ -32,6 +32,12 @@ inline std::string formatValue(double value, Unit unit) {
             if (value >= 1024.0) return std::format("{:.2f} KiB", value / 1024.0);
             return std::format("{:.0f} B", value);
 
+        case Unit::BytesPerSecond:
+            if (value >= 1024.0 * 1024.0 * 1024.0) return std::format("{:.2f} GiB/s", value / (1024.0 * 1024.0 * 1024.0));
+            if (value >= 1024.0 * 1024.0) return std::format("{:.2f} MiB/s", value / (1024.0 * 1024.0));
+            if (value >= 1024.0) return std::format("{:.2f} KiB/s", value / 1024.0);
+            return std::format("{:.0f} B/s", value);
+
         case Unit::Percent: return std::format("{:.3f}%", value);
         case Unit::Ratio: return std::format("{:.3f}", value);
         case Unit::Count:
@@ -46,6 +52,67 @@ inline std::string fullName(std::string_view group, std::string_view name) {
     return group.empty()
         ? std::string(name)
         : std::format("{}/{}", group, name);
+}
+
+struct AnalysisValueInfo {
+    std::string name;
+    Unit unit = Unit::None;
+};
+
+inline AnalysisValueInfo analysisValueInfo(
+    const BenchResult& result,
+    ValueRef ref
+) {
+    if (ref.source == ValueSource::Parameter) {
+        switch (ref.index) {
+            case Metric::N:
+                return {"N", Unit::None};
+            default:
+                return {std::format("parameter[{}]", ref.index), Unit::None};
+        }
+    }
+
+    for (const PointResult& point : result.points) {
+        for (const StageResult& stage : point.stages) {
+            for (const CapabilityMetrics& capability : stage.capabilities) {
+                if (
+                    capability.capability == ref.capability &&
+                    ref.index < capability.metrics.schema.size()
+                ) {
+                    const MetricDesc& metric = capability.metrics.schema[ref.index];
+
+                    return {
+                        std::format("{}.{}", ref.capability, metric.name),
+                        metric.unit
+                    };
+                }
+            }
+        }
+    }
+
+    return {
+        std::format("{}[{}]", ref.capability, ref.index),
+        Unit::None
+    };
+}
+
+inline std::string formatCoefficient(double value, Unit unit) {
+    std::string_view suffix;
+
+    switch (unit) {
+        case Unit::Nanoseconds:    suffix = "ns"; break;
+        case Unit::Bytes:          suffix = "B"; break;
+        case Unit::BytesPerSecond: suffix = "B/s"; break;
+        case Unit::Percent:        suffix = "%"; break;
+        case Unit::Cycles:         suffix = "cycles"; break;
+        case Unit::None:
+        case Unit::Count:
+        case Unit::Ratio:          break;
+    }
+
+    return suffix.empty()
+        ? std::format("{:.3f}", value)
+        : std::format("{:.3f} {}", value, suffix);
 }
 
 inline void printMetrics(
@@ -113,9 +180,6 @@ inline void sample(const SampleResult& sample) {
     LiveState& state = liveState();
 
     if (sample.sample == 1) {
-        if (state.active)
-            std::fprintf(stdout, "\n");
-
         state.active = true;
     }
 
@@ -141,7 +205,7 @@ inline void sample(const SampleResult& sample) {
     
     std::fprintf(
         stdout,
-        " stage=%2zu",
+        " sample=%2zu",
         sample.sample
     );
 
@@ -161,16 +225,62 @@ inline void sample(const SampleResult& sample) {
     std::fflush(stdout);
 }
 
-inline void result(const PointResult&) {
+inline void result(const PointResult& point) {
     LiveState& state = liveState();
 
-    if (!state.active)
-        return;
-
-    std::fprintf(stdout, "\n");
-    std::fflush(stdout);
+    if (state.active)
+        std::fprintf(stdout, "\r\033[2K");
 
     state.active = false;
+
+    const std::string name =
+        fullName(point.group, point.name);
+
+    for (const StageResult& stage : point.stages) {
+        if (hasLiveMetrics(stage.capabilities)) {
+            const std::string overhead =
+                formatValue(stage.overhead, Unit::Nanoseconds);
+
+            std::fprintf(
+                stdout,
+                "%-16s N=%-7zu %-12s ovhd=%-10s sample=%2zu",
+                name.c_str(),
+                point.n,
+                stage.name.c_str(),
+                overhead.c_str(),
+                stage.sample
+            );
+
+            if (stage.samples) {
+                std::fprintf(
+                    stdout,
+                    "/%-3zu",
+                    stage.samples
+                );
+            }
+
+            printMetrics(
+                stdout,
+                stage.capabilities,
+                true
+            );
+
+            std::fprintf(stdout, "\n");
+        }
+
+        for (const UnavailableCapability& unavailable : stage.unavailable) {
+            std::fprintf(
+                stdout,
+                "%-16s N=%-7zu %-12s unavailable: %s\n",
+                name.c_str(),
+                point.n,
+                unavailable.capability.c_str(),
+                unavailable.reason.c_str()
+            );
+        }
+    }
+
+    std::fflush(stdout);
 }
 
 inline void complete(const BenchResult& result) {
@@ -179,15 +289,36 @@ inline void complete(const BenchResult& result) {
 
     for (const AnalysisResult& analysis : result.analysis) {
         switch (analysis.type) {
-            case AnalysisType::Growth:
+            case AnalysisType::Growth: {
+                const AnalysisValueInfo x =
+                    analysisValueInfo(result, analysis.x);
+                const AnalysisValueInfo y =
+                    analysisValueInfo(result, analysis.y);
+                const std::string expression =
+                    std::format("{}({})", y.name, x.name);
+
+                if (analysis.bigO.complexity == Complexity::Unknown) {
+                    std::fprintf(
+                        stdout,
+                        "Analysis  %-25s Unavailable\n",
+                        expression.c_str()
+                    );
+                    break;
+                }
+
+                const std::string coefficient =
+                    formatCoefficient(analysis.bigO.coefficient, y.unit);
+
                 std::fprintf(
                     stdout,
-                    "Analysis  growth=%s  coefficient=%.6g  error=%.3f%%\n",
+                    "Analysis  %-25s %-7s k=%s error=%.2f%%\n",
+                    expression.c_str(),
                     complexityName(analysis.bigO.complexity).data(),
-                    analysis.bigO.coefficient,
+                    coefficient.c_str(),
                     analysis.bigO.error * 100.0
                 );
                 break;
+            }
             case AnalysisType::Correlation:
                 break;
             }

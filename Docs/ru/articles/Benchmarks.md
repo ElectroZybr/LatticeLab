@@ -115,14 +115,26 @@ bench.config.sizes = {10, 100, 1000, 10000};
 bench.stages.clear();
 bench.stages.add<Warmup>();
 bench.stages.add<Time, Perf>();
-bench.stages.add<Memory>();
+bench.stages.add<MemoryTraffic>();
 bench.stages.add<Allocations>();
 ```
 
-`Memory` считает объём, а `Allocations` — количество вызовов C++ `new` на одну операцию.
+`MemoryTraffic` считает DRAM-трафик и пропускную способность, а `Allocations` — количество вызовов C++ `new` на одну операцию.
 Прямые вызовы `malloc` в эти метрики не входят. `Perf` использует Linux
 `perf_event`; если counters запрещены настройками системы, benchmark продолжает работу
 без perf-метрик.
+
+На AMD метрика `MemoryTraffic` использует Data Fabric PMU. Для неё должен быть
+загружен модуль ядра `amd_uncore`, а в sysfs должен существовать каталог
+`/sys/bus/event_source/devices/amd_df`. Проверить окружение можно так:
+
+```sh
+sudo modprobe amd_uncore
+test -d /sys/bus/event_source/devices/amd_df
+```
+
+Если PMU недоступен, runner помечает `MemoryTraffic` как `unavailable` и продолжает
+остальные стадии benchmark.
 
 Общую конфигурацию группы можно задать один раз. Она применяется перед телом
 каждого benchmark, поэтому конкретный тест может её переопределить:

@@ -7,7 +7,7 @@
 #include <string_view>
 #include <string>
 #include <vector>
-// #include "Lattice/Tools/BmRunner/Analysis.hpp"
+
 
 namespace Lattice::Benchmarks {
 
@@ -16,6 +16,7 @@ enum class Unit : uint8_t {
     Count,
     Nanoseconds,
     Bytes,
+    BytesPerSecond,
     Ratio,
     Percent,
     Cycles
@@ -57,6 +58,11 @@ struct CapabilityMetrics {
     Metrics metrics;
 };
 
+struct UnavailableCapability {
+    std::string capability;
+    std::string reason;
+};
+
 // Хранит результат прогона одного семпла
 struct SampleResult {
     std::string_view name;
@@ -74,7 +80,11 @@ struct SampleResult {
 
 struct StageResult {
     std::string name;
+    size_t sample = 0;
+    size_t samples = 0;
+    double overhead = 0;
     std::vector<CapabilityMetrics> capabilities;
+    std::vector<UnavailableCapability> unavailable;
 };
 
 // Хранит результат прогона одного поинта по N

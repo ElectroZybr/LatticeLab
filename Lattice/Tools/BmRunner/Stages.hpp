@@ -24,6 +24,8 @@ class Capability {
 public:
     virtual ~Capability() = default;
     virtual std::string_view name() const noexcept = 0;
+    virtual bool available() const noexcept { return true; }
+    virtual std::string_view unavailableReason() const noexcept { return {}; }
 
     virtual void begin() {} // Подготовить capability к sample: открыть/сбросить/инициализировать счётчики
     virtual void start() {} // Начать измеряемый участок, максимально дешёвая операция
