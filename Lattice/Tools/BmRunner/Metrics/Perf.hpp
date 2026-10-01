@@ -7,6 +7,7 @@
 
 #include <Lattice/Tools/BmRunner/Stages.hpp>
 #include <Lattice/Tools/BmRunner/Analysis.hpp>
+#include <Lattice/Tools/BmRunner/Metrics/PerfEvent.hpp>
 
 namespace Lattice::Benchmarks {
 
@@ -102,8 +103,8 @@ private:
         {"MPKI", Unit::Ratio, MetricFlags::Live}
     };
 
-    int leader_ = -1;
-    std::array<int, CounterCount> fds_{-1, -1, -1, -1, -1, -1};
+    std::array<PerfEvent, CounterCount> events_;
+    std::array<PerfEvent::Snapshot, CounterCount> starts_;
 
     Result sample_{};
     Result totals_{};
@@ -111,7 +112,7 @@ private:
 
 public:
     Perf();
-    ~Perf();
+    ~Perf() override = default;
 
     Perf(const Perf&) = delete;
     Perf& operator=(const Perf&) = delete;
@@ -120,8 +121,14 @@ public:
         return "Perf";
     }
 
-    bool available() const noexcept {
-        return leader_ >= 0;
+    bool available() const noexcept override {
+        return events_[0].available();
+    }
+
+    std::string_view unavailableReason() const noexcept override {
+        return
+            "perf events are unavailable; try "
+            "'sudo sysctl -w kernel.perf_event_paranoid=-1'";
     }
 
     void begin() override;
@@ -133,8 +140,8 @@ public:
 private:
     static Metrics makeMetrics(const Result& value);
 
-    Result readCounters();
-    int openCounter(uint64_t config, int group);
+    Result readCounters() const;
+    static PerfEvent openCounter(uint64_t config, int group);
     void close();
 };
 

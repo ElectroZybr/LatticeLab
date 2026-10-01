@@ -1,70 +1,80 @@
+#include <algorithm>
 #include <unordered_map>
 #include <vector>
 
-#include <Lattice/Tools/Benchmark.hpp>
+#include <Lattice/Tools/BmRunner/Benchmarks.hpp>
+#include <Lattice/Tools/BmRunner/Metrics.hpp>
 
 using namespace Lattice;
+using namespace Lattice::Benchmarks;
 using namespace std;
 
 class Solution {
 public:
     vector<int> twoSumHash(vector<int>& nums, int target) {
         unordered_map<int, int> seen;
-        for (int i = 0; i < nums.size(); i++) {
-            int need = target - nums[i];
+
+        for (int i = 0; i < nums.size(); ++i) {
+            const int need = target - nums[i];
+
             if (seen.contains(need))
                 return {seen[need], i};
+
             seen[nums[i]] = i;
         }
+
         return {};
     }
 
     vector<int> twoSumBrut(vector<int>& nums, int target) {
-        for (int i = 0; i < nums.size(); i++)
-            for (int j = i + 1; j < nums.size(); j++)
-                if (nums[i] + nums[j] == target && i != j)
+        for (int i = 0; i < nums.size(); ++i)
+            for (int j = i + 1; j < nums.size(); ++j)
+                if (nums[i] + nums[j] == target)
                     return {i, j};
+
         return {};
     }
 };
 
-BENCH(TwoSum, Hash, "unordered_map implementation") {
-    bench.config.sizes = {10, 100, 1000, 10000};
-    bench.config.warmup = 32;
-    bench.config.samples = 20;
-    bench.config.target = 50ms;
+struct TwoSumFixture : Fixture {
+    vector<int> nums;
 
-    bench.measure(
-        [](size_t n) {
-            vector<int> nums(n, 1);
-            nums[n - 2] = 123;
-            nums[n - 1] = 456;
-            return nums;
-        },
-        [](vector<int>& nums) {
-            Solution solution;
-            return solution.twoSumHash(nums, 579);
-        }
-    );
+    explicit TwoSumFixture(size_t n)
+        : nums(n) {}
+
+    void prepare() override {
+        std::fill(nums.begin(), nums.end(), 1);
+        nums[nums.size() - 2] = 123;
+        nums[nums.size() - 1] = 456;
+    }
+};
+
+BENCH_GROUP(TwoSum) {
+    bench.config.sizes = {10, 50, 100, 500, 1000, 5000, 10000};
+
+    bench.stages.clear();
+    bench.stages.add<Warmup>()
+        .samples(16)
+        .time(std::chrono::milliseconds(10));
+
+    bench.stages.add<Time, Perf>()
+        .samples(10);
+    bench.stages.add<MemoryTraffic>()
+        .samples(10);
+
+    bench.analysis.growth(N, MemoryTraffic::bytes);
 }
 
-BENCH(TwoSum, Brut, "unordered_map implementation") {
-    bench.config.sizes = {10, 100, 1000, 10000};
-    bench.config.warmup = 32;
-    bench.config.samples = 20;
-    bench.config.target = 50ms;
-
-    bench.measure(
-        [](size_t n) {
-            vector<int> nums(n, 1);
-            nums[n - 2] = 123;
-            nums[n - 1] = 456;
-            return nums;
-        },
-        [](vector<int>& nums) {
-            Solution solution;
-            return solution.twoSumBrut(nums, 579);
-        }
-    );
+BENCH_GROUPED(TwoSum, Hash, TwoSumFixture, "unordered_map implementation") {
+    bench.measure<TwoSumFixture>([](TwoSumFixture& fixture) {
+        Solution solution;
+        return solution.twoSumHash(fixture.nums, 579);
+    });
 }
 
+BENCH_GROUPED(TwoSum, Brut, TwoSumFixture, "bruteforce implementation") {
+    bench.measure<TwoSumFixture>([](TwoSumFixture& fixture) {
+        Solution solution;
+        return solution.twoSumBrut(fixture.nums, 579);
+    });
+}

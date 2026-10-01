@@ -188,12 +188,29 @@ private:
             throw Exception<Bench>("Stage '{}' has no execution limit", stageName(stage));
 
         const std::string name = stageName(stage);
+        StageResult stageResult{
+            .name = name,
+            .samples = stage.sampleLimit,
+        };
+
+        for (const auto& capability : stage.capabilities) {
+            if (!capability->available()) {
+                stageResult.unavailable.push_back({
+                    .capability = std::string(capability->name()),
+                    .reason = std::string(capability->unavailableReason())
+                });
+            }
+        }
+
+        if (stageResult.unavailable.size() == stage.capabilities.size()) {
+            point.stages.push_back(std::move(stageResult));
+            return;
+        }
+
         const auto overhead = measureOverhead(stage);
         const size_t iterations = calibrate(n, invoke);
 
-        StageResult stageResult{
-            .name = name,
-        };
+        stageResult.overhead = std::chrono::duration<double, std::nano>(overhead).count();
 
         const auto started = Clock::now();
         size_t sample = 0;
@@ -256,6 +273,8 @@ private:
             if (samplesReached || timeReached)
                 break;
         }
+
+        stageResult.sample = sample;
 
         stageResult.capabilities.reserve(stage.capabilities.size());
 

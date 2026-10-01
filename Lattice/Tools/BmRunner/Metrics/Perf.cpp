@@ -1,132 +1,58 @@
 #include "Perf.hpp"
 
-#include <cerrno>
-#include <cstring>
 #include <linux/perf_event.h>
-#include <sys/ioctl.h>
-#include <sys/syscall.h>
-#include <unistd.h>
-
-#include <Lattice/Tools/Exception.hpp>
 
 namespace Lattice::Benchmarks {
 
-namespace {
-
-int perfEventOpen(perf_event_attr& attr, int group) {
-    return static_cast<int>(::syscall(
-        SYS_perf_event_open,
-        &attr,
-        0,
-        -1,
-        group,
-        0
-    ));
-}
-
-}
-
 Perf::Perf() {
-    leader_ = openCounter(PERF_COUNT_HW_CPU_CYCLES, -1);
+    events_[0] = openCounter(
+        PERF_COUNT_HW_CPU_CYCLES,
+        -1
+    );
 
-    if (leader_ < 0)
+    if (!events_[0].available())
         return;
 
-    fds_[0] = leader_;
-    fds_[1] = openCounter(PERF_COUNT_HW_INSTRUCTIONS, leader_);
-    fds_[2] = openCounter(PERF_COUNT_HW_CACHE_REFERENCES, leader_);
-    fds_[3] = openCounter(PERF_COUNT_HW_CACHE_MISSES, leader_);
-    fds_[4] = openCounter(PERF_COUNT_HW_BRANCH_INSTRUCTIONS, leader_);
-    fds_[5] = openCounter(PERF_COUNT_HW_BRANCH_MISSES, leader_);
+    const int leader = events_[0].fd();
 
-    for (int fd : fds_) {
-        if (fd < 0) {
+    events_[1] = openCounter(PERF_COUNT_HW_INSTRUCTIONS, leader);
+    events_[2] = openCounter(PERF_COUNT_HW_CACHE_REFERENCES, leader);
+    events_[3] = openCounter(PERF_COUNT_HW_CACHE_MISSES, leader);
+    events_[4] = openCounter(PERF_COUNT_HW_BRANCH_INSTRUCTIONS, leader);
+    events_[5] = openCounter(PERF_COUNT_HW_BRANCH_MISSES, leader);
+
+    for (const PerfEvent& event : events_) {
+        if (!event.available()) {
             close();
             return;
         }
     }
 }
 
-Perf::~Perf() {
-    close();
-}
-
-int Perf::openCounter(uint64_t config, int group) {
+PerfEvent Perf::openCounter(uint64_t config, int group) {
     perf_event_attr attr{};
 
     attr.type = PERF_TYPE_HARDWARE;
-    attr.size = sizeof(attr);
     attr.config = config;
     attr.disabled = group < 0 ? 1 : 0;
     attr.exclude_kernel = 1;
     attr.exclude_hv = 1;
     attr.read_format =
-        PERF_FORMAT_GROUP |
         PERF_FORMAT_TOTAL_TIME_ENABLED |
         PERF_FORMAT_TOTAL_TIME_RUNNING;
 
-    return perfEventOpen(attr, group);
+    return PerfEvent(attr, 0, -1, group);
 }
 
-Perf::Result Perf::readCounters() {
+Perf::Result Perf::readCounters() const {
     if (!available())
         return {};
 
-    if (
-        ::ioctl(
-            leader_,
-            PERF_EVENT_IOC_DISABLE,
-            PERF_IOC_FLAG_GROUP
-        ) == -1
-    ) {
-        throw Exception<Perf>(
-            "Failed to disable counters: {}",
-            std::strerror(errno)
+    auto value = [&](size_t index) {
+        return PerfEvent::delta(
+            starts_[index],
+            events_[index].snapshot()
         );
-    }
-
-    struct ReadData {
-        uint64_t count;
-        uint64_t timeEnabled;
-        uint64_t timeRunning;
-        uint64_t values[CounterCount];
-    } data{};
-
-    const ssize_t bytes =
-        ::read(
-            leader_,
-            &data,
-            sizeof(data)
-        );
-
-    if (bytes != static_cast<ssize_t>(sizeof(data))) {
-        throw Exception<Perf>(
-            "Failed to read counters: {}",
-            std::strerror(errno)
-        );
-    }
-
-    if (data.count != CounterCount) {
-        throw Exception<Perf>(
-            "Expected {} counters, got {}",
-            CounterCount,
-            data.count
-        );
-    }
-
-    auto value = [&](size_t index) -> uint64_t {
-        if (data.timeRunning == 0)
-            return 0;
-
-        if (data.timeRunning == data.timeEnabled)
-            return data.values[index];
-
-        const long double scaled =
-            static_cast<long double>(data.values[index]) *
-            static_cast<long double>(data.timeEnabled) /
-            static_cast<long double>(data.timeRunning);
-
-        return static_cast<uint64_t>(scaled);
     };
 
     return {
@@ -140,38 +66,21 @@ Perf::Result Perf::readCounters() {
 }
 
 void Perf::begin() {
-    start();
+    sample_ = {};
+
+    if (!available())
+        return;
+
+    events_[0].reset(PERF_IOC_FLAG_GROUP);
+    events_[0].enable(PERF_IOC_FLAG_GROUP);
 }
 
 void Perf::start() {
     if (!available())
         return;
 
-    if (
-        ::ioctl(
-            leader_,
-            PERF_EVENT_IOC_RESET,
-            PERF_IOC_FLAG_GROUP
-        ) == -1
-    ) {
-        throw Exception<Perf>(
-            "Failed to reset counters: {}",
-            std::strerror(errno)
-        );
-    }
-
-    if (
-        ::ioctl(
-            leader_,
-            PERF_EVENT_IOC_ENABLE,
-            PERF_IOC_FLAG_GROUP
-        ) == -1
-    ) {
-        throw Exception<Perf>(
-            "Failed to enable counters: {}",
-            std::strerror(errno)
-        );
-    }
+    for (size_t i = 0; i < CounterCount; ++i)
+        starts_[i] = events_[i].snapshot();
 }
 
 void Perf::stop() {
@@ -184,6 +93,8 @@ void Perf::stop() {
 Metrics Perf::end() {
     if (!available())
         return {};
+
+    events_[0].disable(PERF_IOC_FLAG_GROUP);
 
     totals_ += sample_;
     ++samples_;
@@ -243,14 +154,8 @@ Metrics Perf::makeMetrics(const Result& value) {
 }
 
 void Perf::close() {
-    for (int& fd : fds_) {
-        if (fd >= 0) {
-            ::close(fd);
-            fd = -1;
-        }
-    }
-
-    leader_ = -1;
+    for (PerfEvent& event : events_)
+        event = {};
 }
 
 }
