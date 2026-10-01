@@ -4,6 +4,7 @@
 #include <utility>
 
 #include <Lattice/Tools/BmRunner/Output.hpp>
+#include <Lattice/Tools/SysInfo/Output.hpp>
 #include <Lattice/Tools/ObjectRegistry.hpp>
 #include <Lattice/Tools/Exception.hpp>
 
@@ -105,9 +106,7 @@ GroupRegistrar::GroupRegistrar(std::string_view group, void (*function)(Bench&))
 }
 
 void beginSession() {
-    const auto machine = SystemInfo::collectMachineInfo();
-    std::fputs(Output::formatMachineInfo(machine).c_str(), stdout);
-    std::fputc('\n', stdout);
+    SystemInfo::Output::print();
 }
 
 void run(std::string_view name) {
@@ -207,6 +206,13 @@ void disableCallbacks() {
     s.sample = {};
     s.result = {};
     s.complete = {};
+}
+
+void resetCallbacks() {
+    State& s = state();
+    s.sample = Output::sample;
+    s.result = Output::result;
+    s.complete = Output::complete;
 }
 
 }

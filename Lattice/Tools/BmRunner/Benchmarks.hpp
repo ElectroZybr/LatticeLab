@@ -112,5 +112,6 @@ void disableSampleCallback();
 void disableResultCallback();
 void disableCompleteCallback();
 void disableCallbacks();
+void resetCallbacks();
 
 }

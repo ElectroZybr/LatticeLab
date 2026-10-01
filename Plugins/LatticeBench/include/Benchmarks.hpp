@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Lattice/Lattice.hpp>
-#include <Lattice/Tools/Benchmark.hpp>
+#include <Lattice/Tools/BmRunner/Benchmarks.hpp>
 
 
 class Benchmarks final : public Lattice::SubsystemAPI {
@@ -32,11 +32,11 @@ public:
     }
 
 private:
-    void onProgress(const Lattice::Benchmarks::Progress& progress);
+    void onProgress(const Lattice::Benchmarks::SampleResult& progress);
     void writeResults(
         Lattice::ActionContext& context,
         std::string_view title,
-        std::span<const Lattice::Benchmarks::Result> results
+        std::span<const Lattice::Benchmarks::BenchResult> results
     );
     void runAll(Lattice::ActionContext& context);
     void run(Lattice::ActionContext& context, std::string_view name);

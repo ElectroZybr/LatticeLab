@@ -1,4 +1,4 @@
-#include <Lattice/Tools/Fixture.hpp>
+#include <Lattice/tests/RuntimeFixture.hpp>
 #include <Lattice/Tools/Tests.hpp>
 #include <Lattice/Tools/TextFormatter.hpp>
 #include <Lattice/Tools/TextPattern.hpp>
@@ -45,8 +45,8 @@ TEST(TextFormatter_UsesSystemThemeByDefault, Fixture,
     REQUIRE(TextFormatter("<ok>Success</>").markup() == "<#28d08a>Success</>");
     REQUIRE(TextFormatter("<wrn>Warning</>").markup() == "<#ffff55>Warning</>");
     REQUIRE(TextFormatter("<err>Error</>").markup() == "<#da6a6a>Error</>");
-    REQUIRE(TextFormatter("<mut>Secondary</>").markup() == "<#aaaaaa>Secondary</>");
-    REQUIRE(TextFormatter("<mut2>Metadata</>").markup() == "<#555555>Metadata</>");
+    REQUIRE(TextFormatter("<mut>Secondary</>").markup() == "<#999999>Secondary</>");
+    REQUIRE(TextFormatter("<mut2>Metadata</>").markup() == "<d><#bbbbbb>Metadata<//>");
 }
 
 TEST(TextPattern_ResolvesNamesOnceAndReadsCurrentStyle, Fixture,

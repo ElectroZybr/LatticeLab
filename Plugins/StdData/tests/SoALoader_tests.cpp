@@ -1,7 +1,7 @@
 #include <array>
 #include <cstring>
 
-#include <Lattice/Tools/Fixture.hpp>
+#include <Lattice/tests/RuntimeFixture.hpp>
 #include <Lattice/Tools/Tests.hpp>
 #include <Lattice/Lattice.hpp>
 

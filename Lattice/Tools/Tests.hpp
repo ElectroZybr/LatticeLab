@@ -10,19 +10,19 @@
 #include "Lattice/Tools/Fixture.hpp"
 
 
-#define TEST2(name, Fixture) \
-    TEST3(name, Fixture, "")
+#define TEST2(name, FixtureType) \
+    TEST3(name, FixtureType, "")
 
-#define TEST3(name, Fixture, description) \
-    static void name(Fixture& fixture); \
+#define TEST3(name, FixtureType, description) \
+    static void name(FixtureType& fixture); \
     static std::unique_ptr<::Lattice::Fixture> _fixture_##name() { \
-        return std::make_unique<Fixture>(); \
+        return std::make_unique<FixtureType>(); \
     } \
     static void _run_##name(::Lattice::Fixture& fixture) { \
-        name(static_cast<Fixture&>(fixture)); \
+        name(static_cast<FixtureType&>(fixture)); \
     } \
     static ::Lattice::TestRegistrar _test_##name(#name, description, _run_##name, _fixture_##name); \
-    static void name(Fixture& fixture)
+    static void name(FixtureType& fixture)
 
 #define TEST_SELECT(_1, _2, _3, NAME, ...) NAME
 #define TEST(...) TEST_SELECT(__VA_ARGS__, TEST3, TEST2)(__VA_ARGS__)
