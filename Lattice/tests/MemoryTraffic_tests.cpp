@@ -56,19 +56,37 @@ TEST(MemoryTraffic_ReportsBytesAndBandwidth, Fixture) {
 
     REQUIRE(observed->begins == 1);
     REQUIRE(observed->ends == 1);
-    REQUIRE(sample.values.size() == Benchmarks::MemoryTraffic::_count);
-    REQUIRE(sample.values[Benchmarks::MemoryTraffic::bytes] == 128.0);
-    REQUIRE(sample.values[Benchmarks::MemoryTraffic::bandwidth] > 0.0);
+    REQUIRE(sample.values.size() == Benchmarks::MemoryTraffic::schema().size());
     REQUIRE(
-        sample.schema[Benchmarks::MemoryTraffic::bandwidth].unit ==
+        sample.values[
+            Benchmarks::valueRef(Benchmarks::MemoryTraffic::memory).index
+        ] == 128.0
+    );
+    REQUIRE(
+        sample.values[
+            Benchmarks::valueRef(Benchmarks::MemoryTraffic::bandwidth).index
+        ] > 0.0
+    );
+    REQUIRE(
+        sample.schema[
+            Benchmarks::valueRef(Benchmarks::MemoryTraffic::bandwidth).index
+        ].unit ==
         Benchmarks::Unit::BytesPerSecond
     );
 
     const Benchmarks::Metrics result = traffic.result();
 
-    REQUIRE(result.values.size() == Benchmarks::MemoryTraffic::_count);
-    REQUIRE(result.values[Benchmarks::MemoryTraffic::bytes] == 128.0);
-    REQUIRE(result.values[Benchmarks::MemoryTraffic::bandwidth] > 0.0);
+    REQUIRE(result.values.size() == Benchmarks::MemoryTraffic::schema().size());
+    REQUIRE(
+        result.values[
+            Benchmarks::valueRef(Benchmarks::MemoryTraffic::memory).index
+        ] == 128.0
+    );
+    REQUIRE(
+        result.values[
+            Benchmarks::valueRef(Benchmarks::MemoryTraffic::bandwidth).index
+        ] > 0.0
+    );
     REQUIRE(traffic.result().values.empty());
 }
 

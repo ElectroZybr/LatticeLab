@@ -104,6 +104,12 @@ GroupRegistrar::GroupRegistrar(std::string_view group, void (*function)(Bench&))
     });
 }
 
+void beginSession() {
+    const auto machine = SystemInfo::collectMachineInfo();
+    std::fputs(Output::formatMachineInfo(machine).c_str(), stdout);
+    std::fputc('\n', stdout);
+}
+
 void run(std::string_view name) {
     State& s = state();
     const BenchId id = s.benches.find(name);
@@ -111,12 +117,14 @@ void run(std::string_view name) {
     if (!s.benches.valid(id))
         throw Exception<Registry>("Benchmark '{}' not found", name);
 
+    beginSession();
     execute(s.benches.require(id));
 }
 
 void runGroup(std::string_view group) {
     State& s = state();
 
+    beginSession();
     for (BenchId id = 0; id < s.benches.size(); ++id) {
         const Case* bench = s.benches.get(id);
 
@@ -128,6 +136,7 @@ void runGroup(std::string_view group) {
 void runAll() {
     State& s = state();
 
+    beginSession();
     for (BenchId id = 0; id < s.benches.size(); ++id)
         if (const Case* bench = s.benches.get(id))
             execute(*bench);

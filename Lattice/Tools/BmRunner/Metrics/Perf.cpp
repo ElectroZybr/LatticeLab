@@ -106,26 +106,13 @@ Metrics Perf::result() {
     if (samples_ == 0)
         return {};
 
-    const double samples =
-        static_cast<double>(samples_);
+    const double samples = static_cast<double>(samples_);
 
-    Metrics metrics{
-        .schema = schema_,
-        .values = {
-            static_cast<double>(totals_.cycles) / samples,
-            static_cast<double>(totals_.instructions) / samples,
-            static_cast<double>(totals_.cacheReferences) / samples,
-            static_cast<double>(totals_.cacheMisses) / samples,
-            static_cast<double>(totals_.branches) / samples,
-            static_cast<double>(totals_.branchMisses) / samples,
-            totals_.ipc(),
-            totals_.cpi(),
-            totals_.cacheMissRate() * 100.0,
-            totals_.branchMissRate() * 100.0,
-            totals_.instructionsPerBranch(),
-            totals_.mpki()
-        }
-    };
+    Metrics metrics = makeMetrics(totals_);
+
+    for (size_t i = 0; i < metrics.values.size(); ++i)
+        if (hasFlag(metrics.schema[i].flags, MetricFlags::PerIteration))
+            metrics.values[i] /= samples;
 
     totals_ = {};
     samples_ = 0;
@@ -135,7 +122,7 @@ Metrics Perf::result() {
 
 Metrics Perf::makeMetrics(const Result& value) {
     return {
-        .schema = schema_,
+        .schema = schema(),
         .values = {
             static_cast<double>(value.cycles),
             static_cast<double>(value.instructions),

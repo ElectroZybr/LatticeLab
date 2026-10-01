@@ -2,37 +2,34 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 #include <Lattice/Tools/BmRunner/BenchTypes.hpp>
-#include <Lattice/Tools/BmRunner/BigO.hpp>
 
 
 namespace Lattice::Benchmarks {
 
-enum class ValueSource : uint8_t {
-    Parameter,
-    Metric
+enum class Parameter : uint8_t {
+    N
 };
 
-struct ValueRef {
-    ValueSource source;
-    std::string_view capability;
-    size_t index;
-};
+inline constexpr Parameter N = Parameter::N;
 
-enum Metric : uint8_t {
-    N,
-    _count
-};
-
-constexpr ValueRef valueRef(Metric metric) {
+constexpr ValueRef valueRef(Parameter parameter) {
     return {
         .source = ValueSource::Parameter,
         .capability = {},
-        .index = static_cast<size_t>(metric)
+        .name = "N",
+        .unit = Unit::None,
+        .index = static_cast<size_t>(parameter)
     };
+}
+
+constexpr ValueRef valueRef(ValueRef ref) noexcept {
+    return ref;
 }
 
 enum class AnalysisType : uint8_t {
@@ -46,11 +43,27 @@ struct AnalysisRequest {
     ValueRef y;
 };
 
+using AnalysisValueData = std::variant<double, uint64_t, std::string>;
+
+struct AnalysisValue {
+    std::string name;
+    AnalysisValueData value;
+    Unit unit = Unit::None;
+};
+
 struct AnalysisResult {
     AnalysisType type;
     ValueRef x;
     ValueRef y;
-    BigOResult bigO;
+    std::vector<AnalysisValue> values;
+
+    const AnalysisValue* find(std::string_view name) const noexcept {
+        for (const AnalysisValue& value : values)
+            if (value.name == name)
+                return &value;
+
+        return nullptr;
+    }
 };
 
 struct BenchResult {
@@ -75,12 +88,34 @@ public:
         return *this;
     }
 
+    template<typename X, typename Y>
+    Analysis& correlation(X x, Y y) {
+        requests_.push_back({
+            .type = AnalysisType::Correlation,
+            .x = valueRef(x),
+            .y = valueRef(y)
+        });
+
+        return *this;
+    }
+
     std::vector<AnalysisResult> run(std::span<const PointResult> points) const;
     void clear() { requests_.clear(); }
 
 private:
     static double resolve(const PointResult& point, ValueRef ref);
-    static BigOResult analyzeGrowth(std::span<const PointResult> points, const AnalysisRequest& request);
+    static Unit resolveUnit(
+        std::span<const PointResult> points,
+        ValueRef ref
+    );
+    static std::vector<AnalysisValue> analyzeGrowth(
+        std::span<const PointResult> points,
+        const AnalysisRequest& request
+    );
+    static std::vector<AnalysisValue> analyzeCorrelation(
+        std::span<const PointResult> points,
+        const AnalysisRequest& request
+    );
 };
 
 }

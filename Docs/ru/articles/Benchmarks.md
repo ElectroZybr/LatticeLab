@@ -115,14 +115,39 @@ bench.config.sizes = {10, 100, 1000, 10000};
 bench.stages.clear();
 bench.stages.add<Warmup>();
 bench.stages.add<Time, Perf>();
+bench.stages.add<Cache>();
 bench.stages.add<MemoryTraffic>();
 bench.stages.add<Allocations>();
+
+bench.analysis.growth(N, Time::median);
+bench.analysis.correlation(
+    Time::median,
+    Perf::instructions
+);
 ```
+
+`growth` подбирает асимптотику метрики относительно параметра, а `correlation`
+считает коэффициент корреляции Пирсона между двумя метриками по всем значениям
+`N`. Корреляция симметрична: `corr(X, Y) == corr(Y, X)`.
 
 `MemoryTraffic` считает DRAM-трафик и пропускную способность, а `Allocations` — количество вызовов C++ `new` на одну операцию.
 Прямые вызовы `malloc` в эти метрики не входят. `Perf` использует Linux
 `perf_event`; если counters запрещены настройками системы, benchmark продолжает работу
 без perf-метрик.
+
+`Cache` детализирует промахи кэша и DTLB. Помимо количества обращений и
+процента промахов он выводит нормализованные значения:
+
+```text
+l1dMPKI  = L1D misses  / instructions * 1000
+llcMPKI  = LLC misses  / instructions * 1000
+dtlbMPKI = DTLB misses / instructions * 1000
+```
+
+Счётчики открываются независимо, поэтому kernel может multiplex-ить их;
+поправка `time_enabled/time_running` применяется автоматически. На AMD Zen,
+где generic Linux-события `LLC-loads` часто не поддерживаются, используются
+core PMU events для обращений и промахов последнего уровня.
 
 На AMD метрика `MemoryTraffic` использует Data Fabric PMU. Для неё должен быть
 загружен модуль ядра `amd_uncore`, а в sysfs должен существовать каталог

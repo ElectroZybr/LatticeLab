@@ -4,10 +4,9 @@
 #include <cstdint>
 #include <functional>
 #include <span>
-#include <string_view>
 #include <string>
+#include <string_view>
 #include <vector>
-
 
 namespace Lattice::Benchmarks {
 
@@ -20,6 +19,19 @@ enum class Unit : uint8_t {
     Ratio,
     Percent,
     Cycles
+};
+
+enum class ValueSource : uint8_t {
+    Parameter,
+    Metric
+};
+
+struct ValueRef {
+    ValueSource source;
+    std::string_view capability;
+    std::string_view name;
+    Unit unit = Unit::None;
+    size_t index = 0;
 };
 
 enum class MetricFlags : uint8_t {
