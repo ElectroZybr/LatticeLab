@@ -59,10 +59,13 @@ BENCH_GROUP(TwoSum) {
 
     bench.stages.add<Time, Perf>()
         .samples(10);
+    bench.stages.add<Cache>()
+        .samples(10);
     bench.stages.add<MemoryTraffic>()
         .samples(10);
 
-    bench.analysis.growth(N, MemoryTraffic::bytes);
+    bench.analysis.growth(N, MemoryTraffic::memory);
+    bench.analysis.correlation(Time::median, Perf::instructions);
 }
 
 BENCH_GROUPED(TwoSum, Hash, TwoSumFixture, "unordered_map implementation") {

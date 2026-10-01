@@ -7,7 +7,6 @@
 #include <string_view>
 #include <utility>
 
-#include <Lattice/Tools/BmRunner/Analysis.hpp>
 #include <Lattice/Tools/BmRunner/Stages.hpp>
 
 namespace Lattice::Benchmarks {
@@ -25,13 +24,8 @@ public:
     virtual uint64_t end() = 0;
 };
 
-class MemoryTraffic : public Capability {
+class MemoryTraffic : public MetricCapability<"MemoryTraffic", MemoryTraffic> {
     using Clock = std::chrono::steady_clock;
-
-    static constexpr MetricDesc schema_[] = {
-        {"memory", Unit::Bytes, MetricFlags::PerIteration | MetricFlags::Live},
-        {"bandwidth", Unit::BytesPerSecond, MetricFlags::Live}
-    };
 
     std::unique_ptr<MemoryTrafficBackend> backend_;
     Clock::time_point started_;
@@ -41,11 +35,16 @@ class MemoryTraffic : public Capability {
     bool measuring_ = false;
 
 public:
-    enum Metric : uint8_t {
-        bytes,
-        bandwidth,
-        _count
-    };
+    inline static constexpr auto memory = defineMetric(
+        "memory",
+        Unit::Bytes,
+        MetricFlags::PerIteration | MetricFlags::Live
+    );
+    inline static constexpr auto bandwidth = defineMetric(
+        "bandwidth", Unit::BytesPerSecond, MetricFlags::Live
+    );
+
+    inline static constexpr auto Schema = defineSchema(memory, bandwidth);
 
     MemoryTraffic();
 
@@ -53,10 +52,6 @@ public:
         std::unique_ptr<MemoryTrafficBackend> backend
     )
         : backend_(std::move(backend)) {}
-
-    std::string_view name() const noexcept override {
-        return "MemoryTraffic";
-    }
 
     void begin() override {
         measuring_ = false;
@@ -85,7 +80,7 @@ public:
         ++samples_;
 
         return {
-            .schema = schema_,
+            .schema = schema(),
             .values = {bytes, bandwidth}
         };
     }
@@ -107,7 +102,7 @@ public:
         samples_ = 0;
 
         return {
-            .schema = schema_,
+            .schema = schema(),
             .values = {meanBytes, bandwidth}
         };
     }
@@ -128,13 +123,5 @@ private:
         return seconds > 0.0 ? bytes / seconds : 0.0;
     }
 };
-
-constexpr ValueRef valueRef(MemoryTraffic::Metric metric) {
-    return {
-        .source = ValueSource::Metric,
-        .capability = "MemoryTraffic",
-        .index = static_cast<size_t>(metric)
-    };
-}
 
 }

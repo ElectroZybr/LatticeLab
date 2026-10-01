@@ -1,12 +1,15 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <format>
 #include <string>
+#include <type_traits>
 
 #include <Lattice/Tools/BmRunner/BenchTypes.hpp>
 #include "Lattice/Tools/BmRunner/Analysis.hpp"
+#include <Lattice/Tools/SysInfo/SystemInfo.hpp>
 
 namespace Lattice::Benchmarks::Output {
 
@@ -17,6 +20,74 @@ namespace Lattice::Benchmarks::Output {
  Форматирует промежуточные и итоговые результаты измерений
  для вывода в стандартный поток.
 */
+
+inline std::string formatRatio(double value);
+
+inline std::string formatCompactCount(double value) {
+    struct Scale {
+        double threshold;
+        std::string_view suffix;
+    };
+
+    constexpr Scale scales[] = {
+        {1'000'000'000'000.0, "T"},
+        {1'000'000'000.0, "B"},
+        {1'000'000.0, "M"},
+        {1'000.0, "K"}
+    };
+
+    const double absolute = std::abs(value);
+
+    for (const Scale& scale : scales) {
+        if (absolute < scale.threshold)
+            continue;
+
+        const double scaled = value / scale.threshold;
+        const double scaledAbsolute = std::abs(scaled);
+        const int precision =
+            scaledAbsolute >= 100.0 ? 0 :
+            scaledAbsolute >= 10.0 ? 1 : 2;
+
+        return std::format(
+            "{:.{}f}{}",
+            scaled,
+            precision,
+            scale.suffix
+        );
+    }
+
+    if (value == std::trunc(value))
+        return std::format("{:.0f}", value);
+
+    if (absolute >= 10.0)
+        return std::format("{:.1f}", value);
+
+    if (absolute >= 1.0)
+        return std::format("{:.2f}", value);
+
+    return formatRatio(value);
+}
+
+inline std::string formatRatio(double value) {
+    const double absolute = std::abs(value);
+
+    if (absolute == 0.0)
+        return "0";
+
+    if (absolute >= 0.001)
+        return std::format("{:.3f}", value);
+
+    if (absolute < 1e-9)
+        return std::format("{:.3e}", value);
+
+    const int precision = std::clamp(
+        static_cast<int>(std::ceil(-std::log10(absolute))) + 2,
+        4,
+        9
+    );
+
+    return std::format("{:.{}f}", value, precision);
+}
 
 inline std::string formatValue(double value, Unit unit) {
     switch (unit) {
@@ -38,10 +109,10 @@ inline std::string formatValue(double value, Unit unit) {
             if (value >= 1024.0) return std::format("{:.2f} KiB/s", value / 1024.0);
             return std::format("{:.0f} B/s", value);
 
-        case Unit::Percent: return std::format("{:.3f}%", value);
-        case Unit::Ratio: return std::format("{:.3f}", value);
+        case Unit::Percent: return std::format("{}%", formatRatio(value));
+        case Unit::Ratio: return formatRatio(value);
         case Unit::Count:
-        case Unit::Cycles: return std::format("{:.0f}", value);
+        case Unit::Cycles: return formatCompactCount(value);
         case Unit::None: return std::format("{}", value);
     }
 
@@ -64,12 +135,19 @@ inline AnalysisValueInfo analysisValueInfo(
     ValueRef ref
 ) {
     if (ref.source == ValueSource::Parameter) {
-        switch (ref.index) {
-            case Metric::N:
-                return {"N", Unit::None};
-            default:
-                return {std::format("parameter[{}]", ref.index), Unit::None};
-        }
+        return {
+            ref.name.empty()
+                ? std::format("parameter[{}]", ref.index)
+                : std::string(ref.name),
+            ref.unit
+        };
+    }
+
+    if (!ref.name.empty()) {
+        return {
+            std::format("{}.{}", ref.capability, ref.name),
+            ref.unit
+        };
     }
 
     for (const PointResult& point : result.points) {
@@ -110,9 +188,31 @@ inline std::string formatCoefficient(double value, Unit unit) {
         case Unit::Ratio:          break;
     }
 
+    const std::string formatted = formatRatio(value);
+
     return suffix.empty()
-        ? std::format("{:.3f}", value)
-        : std::format("{:.3f} {}", value, suffix);
+        ? formatted
+        : std::format("{} {}", formatted, suffix);
+}
+
+inline std::string formatAnalysisValue(const AnalysisValue& value) {
+    return std::visit(
+        [&](const auto& data) -> std::string {
+            using T = std::decay_t<decltype(data)>;
+
+            if constexpr (std::is_same_v<T, std::string>) {
+                return data;
+            } else if constexpr (std::is_same_v<T, uint64_t>) {
+                return std::format("{}", data);
+            } else {
+                if (value.unit == Unit::Percent)
+                    return std::format("{:.2f}%", data);
+
+                return formatCoefficient(data, value.unit);
+            }
+        },
+        value.value
+    );
 }
 
 inline void printMetrics(
@@ -288,44 +388,124 @@ inline void complete(const BenchResult& result) {
         return;
 
     for (const AnalysisResult& analysis : result.analysis) {
+        const AnalysisValueInfo x =
+            analysisValueInfo(result, analysis.x);
+        const AnalysisValueInfo y =
+            analysisValueInfo(result, analysis.y);
+        std::string expression;
+
         switch (analysis.type) {
-            case AnalysisType::Growth: {
-                const AnalysisValueInfo x =
-                    analysisValueInfo(result, analysis.x);
-                const AnalysisValueInfo y =
-                    analysisValueInfo(result, analysis.y);
-                const std::string expression =
-                    std::format("{}({})", y.name, x.name);
+            case AnalysisType::Growth:
+                expression = std::format("{}({})", y.name, x.name);
+                break;
+            case AnalysisType::Correlation:
+                expression = std::format("corr({}, {})", x.name, y.name);
+                break;
+        }
 
-                if (analysis.bigO.complexity == Complexity::Unknown) {
-                    std::fprintf(
-                        stdout,
-                        "Analysis  %-25s Unavailable\n",
-                        expression.c_str()
-                    );
-                    break;
-                }
+        std::fprintf(stdout, "Analysis  %-25s", expression.c_str());
 
-                const std::string coefficient =
-                    formatCoefficient(analysis.bigO.coefficient, y.unit);
+        if (analysis.values.empty()) {
+            std::fprintf(stdout, " Unavailable\n");
+            continue;
+        }
 
+        for (const AnalysisValue& value : analysis.values) {
+            const std::string formatted = formatAnalysisValue(value);
+
+            if (value.name.empty()) {
                 std::fprintf(
                     stdout,
-                    "Analysis  %-25s %-7s k=%s error=%.2f%%\n",
-                    expression.c_str(),
-                    complexityName(analysis.bigO.complexity).data(),
-                    coefficient.c_str(),
-                    analysis.bigO.error * 100.0
+                    " %-7s",
+                    formatted.c_str()
                 );
-                break;
+            } else {
+                std::fprintf(
+                    stdout,
+                    " %s=%s",
+                    value.name.c_str(),
+                    formatted.c_str()
+                );
             }
-            case AnalysisType::Correlation:
-                break;
-            }
+        }
+
+        std::fprintf(stdout, "\n");
     }
 
     std::fprintf(stdout, "\n");
     std::fflush(stdout);
+}
+
+inline std::string formatFrequency(uint64_t hz) {
+    if (hz >= 1'000'000'000ull) return std::format("{:.2f} GHz", hz / 1e9);
+    if (hz >= 1'000'000ull) return std::format("{:.2f} MHz", hz / 1e6);
+    return std::format("{} Hz", hz);
+}
+
+inline std::string formatCpuList(const std::vector<uint32_t>& cpus) {
+    std::string result;
+
+    for (size_t i = 0; i < cpus.size(); ++i) {
+        if (i) result += ",";
+        result += std::format("{}", cpus[i]);
+    }
+
+    return result;
+}
+
+inline std::string formatMachineInfo(const SystemInfo::MachineInfo& info) {
+    std::string out;
+
+    out += std::format("System    {}\n", info.os);
+    out += std::format("Memory    {} total, {} available\n",
+        formatValue(static_cast<double>(info.memory.totalBytes), Unit::Bytes),
+        formatValue(static_cast<double>(info.memory.availableBytes), Unit::Bytes));
+
+    for (const auto& node : info.memory.nodes)
+        out += std::format("  NUMA {}  {}  CPUs={}\n",
+            node.id,
+            formatValue(static_cast<double>(node.totalBytes), Unit::Bytes),
+            formatCpuList(node.logicalCpus));
+
+    for (const auto& cpu : info.processors) {
+        size_t threads = 0;
+        for (const auto& core : cpu.cores)
+            threads += core.logicalCpus.size();
+
+        out += std::format("CPU {}     {}  {} cores / {} threads  {}-{}\n",
+            cpu.id, cpu.name, cpu.cores.size(), threads,
+            formatFrequency(cpu.minFrequencyHz),
+            formatFrequency(cpu.maxFrequencyHz));
+
+        for (const auto& cache : cpu.caches) {
+            std::string_view type =
+                cache.type == SystemInfo::CacheType::Data ? "D" :
+                cache.type == SystemInfo::CacheType::Instruction ? "I" : "";
+
+            out += std::format("  L{}{}     {}  {}-way  line={} B  CPUs={}\n",
+                cache.level,
+                type,
+                formatValue(static_cast<double>(cache.sizeBytes), Unit::Bytes),
+                cache.ways,
+                cache.lineSizeBytes,
+                formatCpuList(cache.sharedLogicalCpus));
+        }
+    }
+
+    for (size_t i = 0; i < info.gpus.size(); ++i) {
+        const auto& gpu = info.gpus[i];
+
+        out += std::format("GPU {}     {}  driver={}  pci={}",
+            i, gpu.name, gpu.driver, gpu.pciAddress);
+
+        if (gpu.vramBytes)
+            out += std::format("  VRAM={}",
+                formatValue(static_cast<double>(gpu.vramBytes), Unit::Bytes));
+
+        out += '\n';
+    }
+
+    return out;
 }
 
 }

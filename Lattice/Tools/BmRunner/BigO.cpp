@@ -14,12 +14,12 @@ struct Model {
 };
 
 constexpr std::array<Model, 6> models{{
-            {Complexity::Constant,  [](double) { return 1.0; }},
-            {Complexity::LogN,      [](double n) { return std::log(n); }},
-            {Complexity::Linear,    [](double n) { return n; }},
-            {Complexity::NLogN,     [](double n) { return n * std::log(n); }},
-            {Complexity::Quadratic, [](double n) { return n * n; }},
-            {Complexity::Cubic,     [](double n) { return n * n * n; }}
+    {Complexity::Constant,  [](double) { return 1.0; }},
+    {Complexity::LogN,      [](double n) { return std::log(n); }},
+    {Complexity::Linear,    [](double n) { return n; }},
+    {Complexity::NLogN,     [](double n) { return n * std::log(n); }},
+    {Complexity::Quadratic, [](double n) { return n * n; }},
+    {Complexity::Cubic,     [](double n) { return n * n * n; }}
 }};
 
 BigOResult fit(

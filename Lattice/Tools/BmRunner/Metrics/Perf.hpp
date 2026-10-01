@@ -6,14 +6,46 @@
 #include <string_view>
 
 #include <Lattice/Tools/BmRunner/Stages.hpp>
-#include <Lattice/Tools/BmRunner/Analysis.hpp>
 #include <Lattice/Tools/BmRunner/Metrics/PerfEvent.hpp>
 
 namespace Lattice::Benchmarks {
 
-class Perf : public Capability {
+class Perf : public MetricCapability<"Perf", Perf> {
 public:
-    enum Metric : uint8_t {
+    inline static constexpr auto cycles = defineMetric(
+        "cycles", Unit::Cycles, MetricFlags::PerIteration
+    );
+    inline static constexpr auto instructions = defineMetric(
+        "instructions", Unit::Count, MetricFlags::PerIteration
+    );
+    inline static constexpr auto cacheReferences = defineMetric(
+        "cacheReferences", Unit::Count, MetricFlags::PerIteration
+    );
+    inline static constexpr auto cacheMisses = defineMetric(
+        "cacheMisses", Unit::Count, MetricFlags::PerIteration
+    );
+    inline static constexpr auto branches = defineMetric(
+        "branches", Unit::Count, MetricFlags::PerIteration
+    );
+    inline static constexpr auto branchMisses = defineMetric(
+        "branchMisses", Unit::Count, MetricFlags::PerIteration
+    );
+    inline static constexpr auto IPC = defineMetric(
+        "IPC", Unit::Ratio, MetricFlags::Live
+    );
+    inline static constexpr auto CPI = defineMetric("CPI", Unit::Ratio);
+    inline static constexpr auto cacheMissRate = defineMetric(
+        "cacheMissRate", Unit::Percent, MetricFlags::Live
+    );
+    inline static constexpr auto branchMissRate = defineMetric(
+        "branchMissRate", Unit::Percent, MetricFlags::Live
+    );
+    inline static constexpr auto IPB = defineMetric("IPB", Unit::Ratio);
+    inline static constexpr auto MPKI = defineMetric(
+        "MPKI", Unit::Ratio, MetricFlags::Live
+    );
+
+    inline static constexpr auto Schema = defineSchema(
         cycles,
         instructions,
         cacheReferences,
@@ -25,9 +57,8 @@ public:
         cacheMissRate,
         branchMissRate,
         IPB,
-        MPKI,
-        _count
-    };
+        MPKI
+    );
 
 private:
     static constexpr size_t CounterCount = 6;
@@ -88,21 +119,6 @@ private:
         }
     };
 
-    static constexpr MetricDesc schema_[] = {
-        {"cycles", Unit::Cycles, MetricFlags::PerIteration},
-        {"instructions", Unit::Count, MetricFlags::PerIteration},
-        {"cacheReferences", Unit::Count, MetricFlags::PerIteration},
-        {"cacheMisses", Unit::Count, MetricFlags::PerIteration},
-        {"branches", Unit::Count, MetricFlags::PerIteration},
-        {"branchMisses", Unit::Count, MetricFlags::PerIteration},
-        {"IPC", Unit::Ratio, MetricFlags::Live},
-        {"CPI", Unit::Ratio},
-        {"cacheMissRate", Unit::Percent, MetricFlags::Live},
-        {"branchMissRate", Unit::Percent, MetricFlags::Live},
-        {"IPB", Unit::Ratio},
-        {"MPKI", Unit::Ratio, MetricFlags::Live}
-    };
-
     std::array<PerfEvent, CounterCount> events_;
     std::array<PerfEvent::Snapshot, CounterCount> starts_;
 
@@ -116,10 +132,6 @@ public:
 
     Perf(const Perf&) = delete;
     Perf& operator=(const Perf&) = delete;
-
-    std::string_view name() const noexcept override {
-        return "Perf";
-    }
 
     bool available() const noexcept override {
         return events_[0].available();
@@ -144,13 +156,5 @@ private:
     static PerfEvent openCounter(uint64_t config, int group);
     void close();
 };
-
-constexpr ValueRef valueRef(Perf::Metric metric) {
-    return {
-        .source = ValueSource::Metric,
-        .capability = "Perf",
-        .index = static_cast<size_t>(metric)
-    };
-}
 
 }

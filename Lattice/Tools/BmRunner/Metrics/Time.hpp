@@ -6,21 +6,14 @@
 #include <vector>
 
 #include <Lattice/Tools/BmRunner/Stages.hpp>
-#include <Lattice/Tools/BmRunner/Analysis.hpp>
 
 namespace Lattice::Benchmarks {
 
-class Time : public Capability {
+class Time : public MetricCapability<"Time", Time> {
     using Clock = std::chrono::steady_clock;
 
     static constexpr MetricDesc sampleSchema_[] = {
         {"time", Unit::Nanoseconds, MetricFlags::PerIteration | MetricFlags::Live}
-    };
-
-    static constexpr MetricDesc resultSchema_[] = {
-        {"min", Unit::Nanoseconds, MetricFlags::PerIteration},
-        {"median", Unit::Nanoseconds, MetricFlags::PerIteration | MetricFlags::Live},
-        {"mean", Unit::Nanoseconds, MetricFlags::PerIteration}
     };
 
     Clock::time_point start_;
@@ -28,16 +21,19 @@ class Time : public Capability {
     std::vector<double> samples_;
 
 public:
-    enum Metric : uint8_t {
-        min,
-        median,
-        mean,
-        _count
-    };
+    inline static constexpr auto min = defineMetric(
+        "min", Unit::Nanoseconds, MetricFlags::PerIteration
+    );
+    inline static constexpr auto median = defineMetric(
+        "median",
+        Unit::Nanoseconds,
+        MetricFlags::PerIteration | MetricFlags::Live
+    );
+    inline static constexpr auto mean = defineMetric(
+        "mean", Unit::Nanoseconds, MetricFlags::PerIteration
+    );
 
-    std::string_view name() const noexcept override {
-        return "Time";
-    }
+    inline static constexpr auto Schema = defineSchema(min, median, mean);
 
     void begin() override {
         elapsed_ = {};
@@ -73,7 +69,7 @@ public:
             sum += value;
 
         Metrics metrics{
-            .schema = resultSchema_,
+            .schema = schema(),
             .values = {
                 samples_.front(),
                 samples_[samples_.size() / 2],
@@ -85,13 +81,5 @@ public:
         return metrics;
     }
 };
-
-constexpr ValueRef valueRef(Time::Metric metric) {
-    return {
-        .source = ValueSource::Metric,
-        .capability = "Time",
-        .index = static_cast<size_t>(metric)
-    };
-}
 
 }

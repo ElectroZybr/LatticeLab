@@ -1,8 +1,11 @@
 #pragma once
 
+#include <array>
 #include <chrono>
+#include <cstddef>
 #include <concepts>
 #include <memory>
+#include <span>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -34,6 +37,94 @@ public:
     virtual Metrics result() { return {}; } // сформировать Metrics всего stage
 };
 
+template<size_t Size>
+struct StaticString {
+    char value[Size];
+
+    constexpr StaticString(const char (&text)[Size]) {
+        for (size_t i = 0; i < Size; ++i)
+            value[i] = text[i];
+    }
+
+    constexpr operator std::string_view() const noexcept {
+        return {value, Size - 1};
+    }
+};
+
+template<StaticString Name>
+class NamedCapability : public Capability {
+public:
+    static constexpr std::string_view capabilityName() noexcept {
+        return Name;
+    }
+
+    std::string_view name() const noexcept final {
+        return capabilityName();
+    }
+};
+
+template<typename Owner>
+struct MetricDefinition {
+    std::string_view name;
+    Unit unit = Unit::None;
+    MetricFlags flags = MetricFlags::None;
+
+    constexpr operator MetricDesc() const noexcept {
+        return {name, unit, flags};
+    }
+};
+
+template<StaticString Name, typename Derived>
+class MetricCapability : public NamedCapability<Name> {
+protected:
+    static consteval MetricDefinition<Derived> defineMetric(
+        std::string_view name,
+        Unit unit,
+        MetricFlags flags = MetricFlags::None
+    ) {
+        return {name, unit, flags};
+    }
+
+    template<typename... Definitions>
+    static consteval auto defineSchema(Definitions... metrics) {
+        static_assert(
+            (
+                std::same_as<
+                    Definitions,
+                    MetricDefinition<Derived>
+                > && ...
+            )
+        );
+
+        return std::array<MetricDesc, sizeof...(Definitions)>{
+            static_cast<MetricDesc>(metrics)...
+        };
+    }
+
+public:
+    static constexpr std::span<const MetricDesc> schema() noexcept {
+        return Derived::Schema;
+    }
+};
+
+template<typename Owner>
+constexpr ValueRef valueRef(MetricDefinition<Owner> definition) {
+    const auto schema = Owner::schema();
+
+    for (size_t i = 0; i < schema.size(); ++i) {
+        if (schema[i].name == definition.name) {
+            return {
+                .source = ValueSource::Metric,
+                .capability = Owner::capabilityName(),
+                .name = definition.name,
+                .unit = definition.unit,
+                .index = i
+            };
+        }
+    }
+
+    throw "Metric is not part of its capability schema";
+}
 
 class Stages {
 public:
