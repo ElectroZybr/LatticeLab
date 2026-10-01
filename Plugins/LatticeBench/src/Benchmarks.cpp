@@ -1,33 +1,37 @@
 #include "Benchmarks.hpp"
 
+#include <algorithm>
 #include <format>
 #include <utility>
+
+#include <Lattice/Tools/BmRunner/Output.hpp>
 
 namespace {
 
 template<typename Function>
-auto runWithProgress(
-    Lattice::Benchmarks& benchmarks,
-    Lattice::Benchmarks::ProgressCallback progress,
+std::vector<Lattice::Benchmarks::BenchResult> runWithProgress(
+    Lattice::Benchmarks::SampleCallback progress,
     Function&& function
 ) {
-    benchmarks.setProgressCallback(std::move(progress));
+    std::vector<Lattice::Benchmarks::BenchResult> results;
+    Lattice::Benchmarks::setSampleCallback(std::move(progress));
+    Lattice::Benchmarks::disableResultCallback();
+    Lattice::Benchmarks::setCompleteCallback(
+        [&results](const Lattice::Benchmarks::BenchResult& result) {
+            results.push_back(result);
+        }
+    );
 
-    struct ResetProgress {
-        Lattice::Benchmarks& benchmarks;
-        ~ResetProgress() { benchmarks.resetProgressCallback(); }
-    } reset{benchmarks};
+    struct ResetCallbacks {
+        ~ResetCallbacks() { Lattice::Benchmarks::resetCallbacks(); }
+    } reset;
 
-    return std::forward<Function>(function)();
+    std::forward<Function>(function)();
+    return results;
 }
 
 std::string benchmarkName(std::string_view group, std::string_view name) {
     return group.empty() ? std::string(name) : std::format("{}/{}", group, name);
-}
-
-std::string formatTime(double nanoseconds) {
-    const auto time = Lattice::Benchmarks::formatTime(nanoseconds);
-    return std::format("{:.2f} {}", time.value, time.unit);
 }
 
 std::string resultName(std::string_view title, size_t index) {
@@ -45,29 +49,24 @@ std::string resultName(std::string_view title, size_t index) {
 }
 
 void Benchmarks::runAll(Lattice::ActionContext& context) {
-    auto& benchmarks = Lattice::Benchmarks::instance();
     auto results = runWithProgress(
-        benchmarks,
         [this](const auto& progress) { onProgress(progress); },
-        [&benchmarks] { return benchmarks.runAll(); }
+        [] { Lattice::Benchmarks::runAll(); }
     );
     writeResults(context, "All benchmarks", results);
 }
 
 void Benchmarks::run(Lattice::ActionContext& context, std::string_view name) {
-    auto& benchmarks = Lattice::Benchmarks::instance();
     auto results = runWithProgress(
-        benchmarks,
         [this](const auto& progress) { onProgress(progress); },
-        [&benchmarks, name] { return benchmarks.run(name); }
+        [name] { Lattice::Benchmarks::run(name); }
     );
     writeResults(context, name, results);
 }
 
 void Benchmarks::list(Lattice::ActionContext& context) {
-    auto& benchmarks = Lattice::Benchmarks::instance();
-    const auto groups = benchmarks.groups();
-    const auto entries = benchmarks.list();
+    const auto groups = Lattice::Benchmarks::groups();
+    const auto entries = Lattice::Benchmarks::list();
     Lattice::TreeFormatter tree("Benchmarks");
 
     for (const auto group : groups) {
@@ -108,7 +107,7 @@ void Benchmarks::list(Lattice::ActionContext& context) {
 void Benchmarks::writeResults(
     Lattice::ActionContext& context,
     std::string_view title,
-    std::span<const Lattice::Benchmarks::Result> results
+    std::span<const Lattice::Benchmarks::BenchResult> results
 ) {
     if (results.empty()) {
         context.emit(Lattice::Value{std::format("{}: no results", title)});
@@ -121,20 +120,47 @@ void Benchmarks::writeResults(
     try {
         table->addColumn<std::string>("benchmark");
         table->addColumn<uint64_t>("N");
-        table->addColumn<double>("median");
-        table->addColumn<double>("min");
-        table->addColumn<double>("mean");
-        table->addColumn<uint64_t>("iterations");
+        table->addColumn<std::string>("stage");
+        table->addColumn<std::string>("metric");
+        table->addColumn<std::string>("value");
 
         for (const auto& result : results) {
-            table->addRow(
-                benchmarkName(result.group, result.name),
-                static_cast<uint64_t>(result.n),
-                result.medianNs,
-                result.minNs,
-                result.meanNs,
-                static_cast<uint64_t>(result.iterations)
-            );
+            const std::string benchmark = benchmarkName(result.group, result.name);
+
+            for (const auto& point : result.points) {
+                for (const auto& stage : point.stages) {
+                    for (const auto& capability : stage.capabilities) {
+                        const auto count = std::min(
+                            capability.metrics.schema.size(),
+                            capability.metrics.values.size()
+                        );
+
+                        for (size_t index = 0; index < count; ++index) {
+                            const auto& metric = capability.metrics.schema[index];
+                            table->addRow(
+                                benchmark,
+                                static_cast<uint64_t>(point.n),
+                                stage.name,
+                                std::format("{}.{}", capability.capability, metric.name),
+                                Lattice::Benchmarks::Output::formatValue(
+                                    capability.metrics.values[index],
+                                    metric.unit
+                                )
+                            );
+                        }
+                    }
+
+                    for (const auto& unavailable : stage.unavailable) {
+                        table->addRow(
+                            benchmark,
+                            static_cast<uint64_t>(point.n),
+                            stage.name,
+                            unavailable.capability,
+                            std::format("unavailable: {}", unavailable.reason)
+                        );
+                    }
+                }
+            }
         }
     } catch (...) {
         results_.del(tableNode);
@@ -142,10 +168,6 @@ void Benchmarks::writeResults(
     }
 
     Lattice::TableFormatter formatter;
-    formatter.formats().add<double>(
-        [](double nanoseconds) { return formatTime(nanoseconds); },
-        Lattice::TableFormatter::Align::Right
-    );
     Lattice::TableFormatter::Desc description;
     description.maxRows = Lattice::TableFormatter::Desc::Unlimited;
 
@@ -158,25 +180,18 @@ void Benchmarks::writeResults(
     context.emit(Lattice::Value{output.render()});
 }
 
-void Benchmarks::onProgress(const Lattice::Benchmarks::Progress& progress) {
-    const auto time = Lattice::Benchmarks::formatTime(progress.lastNs);
-    const bool finished =
-        progress.phase == Lattice::Benchmarks::Phase::Sampling &&
-        progress.sample == progress.samples;
-
+void Benchmarks::onProgress(const Lattice::Benchmarks::SampleResult& progress) {
     auto line = Lattice::TextFormatter::format(
         "\r<mut><light><b>{:<15}<//> <a2>N</>: {:<8} "
-        "<a>{:<6}</>: {:>4}/{:<4} <a2>last</>:{:>7.2f} {}",
+        "<a>{:<12}</>: {:>4}",
         benchmarkName(progress.group, progress.name),
         progress.n,
-        Lattice::Benchmarks::phaseName(progress.phase),
-        progress.sample,
-        progress.samples,
-        time.value,
-        time.unit
+        progress.stage,
+        progress.sample
     ).render();
 
-    if (finished)
-        line += '\n';
+    if (progress.samples)
+        line += std::format("/{:<4}", progress.samples);
+
     LogSystem::writeConsole(line);
 }

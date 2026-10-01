@@ -75,6 +75,8 @@ constexpr bool hasFeature(CpuFeature features, CpuFeature feature) noexcept {
 }
 
 struct BuildInfo {
+    std::string executable;
+
     uint32_t versionMajor = 0;
     uint32_t versionMinor = 0;
     uint32_t versionPatch = 0;
@@ -86,6 +88,12 @@ struct BuildInfo {
     uint32_t compilerPatch = 0;
 
     BuildType build = BuildType::Unknown;
+};
+
+struct OsInfo {
+    std::string name;
+    std::string kernel;
+    std::string architecture;
 };
 
 struct CacheInfo {
@@ -143,7 +151,8 @@ struct GpuInfo {
 };
 
 struct MachineInfo {
-    std::string os;
+    OsInfo os;
+    BuildInfo build;
 
     MemoryInfo memory;
     std::vector<ProcessorInfo> processors;
@@ -153,10 +162,14 @@ struct MachineInfo {
 std::vector<ProcessorInfo> collectCPU();
 std::vector<GpuInfo> collectGpus();
 MemoryInfo collectMemory();
+OsInfo collectOS();
+BuildInfo collectBuild();
 
 inline MachineInfo collectMachineInfo() {
     MachineInfo info;
 
+    info.os = collectOS();
+    info.build = collectBuild();
     info.processors = collectCPU();
     info.memory = collectMemory();
     info.gpus = collectGpus();

@@ -37,6 +37,43 @@ TEST(BmOutput_DescribesUnavailableMetricFromValueRef, Fixture) {
     REQUIRE(info.unit == Benchmarks::Unit::Nanoseconds);
 }
 
+TEST(BmOutput_FormatsBenchmarkLineAsStyledText, Fixture) {
+    constexpr Benchmarks::MetricDesc schema[] = {
+        {
+            "median",
+            Benchmarks::Unit::Nanoseconds,
+            Benchmarks::MetricFlags::Live
+        }
+    };
+    const Benchmarks::SampleResult sample{
+        .name = "Case",
+        .group = "Group",
+        .stage = "Time",
+        .n = 64,
+        .sample = 2,
+        .samples = 10,
+        .overhead = 12.0,
+        .capabilities = {
+            {
+                .capability = "Time",
+                .metrics = {
+                    .schema = schema,
+                    .values = {1'500.0}
+                }
+            }
+        }
+    };
+
+    const TextFormatter line = Benchmarks::Output::sampleLine(sample);
+
+    REQUIRE(line.diagnostics().empty());
+    REQUIRE(line.plain().find("Group/Case") != std::string::npos);
+    REQUIRE(line.plain().find("N=64") != std::string::npos);
+    REQUIRE(line.plain().find("sample= 2/10") != std::string::npos);
+    REQUIRE(line.plain().find("median=1.50 us") != std::string::npos);
+    REQUIRE(line.markup().find("<b>") != std::string::npos);
+}
+
 static_assert(Benchmarks::valueRef(Benchmarks::Time::median).index == 1);
 static_assert(Benchmarks::Time::median.name == "median");
 static_assert(

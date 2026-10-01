@@ -2,14 +2,13 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
 #include <format>
 #include <string>
 #include <type_traits>
 
 #include <Lattice/Tools/BmRunner/BenchTypes.hpp>
-#include "Lattice/Tools/BmRunner/Analysis.hpp"
-#include <Lattice/Tools/SysInfo/SystemInfo.hpp>
+#include <Lattice/Tools/BmRunner/Analysis.hpp>
+#include <Lattice/Tools/Logger.hpp>
 
 namespace Lattice::Benchmarks::Output {
 
@@ -215,11 +214,11 @@ inline std::string formatAnalysisValue(const AnalysisValue& value) {
     );
 }
 
-inline void printMetrics(
-    FILE* out,
+inline TextFormatter formatMetrics(
     const Metrics& metrics,
     bool liveOnly = false
 ) {
+    TextFormatter output;
     const size_t count =
         std::min(metrics.schema.size(), metrics.values.size());
 
@@ -232,23 +231,26 @@ inline void printMetrics(
         const std::string value =
             formatValue(metrics.values[i], desc.unit);
 
-        std::fprintf(
-            out,
-            "  %.*s=%s",
-            static_cast<int>(desc.name.size()),
-            desc.name.data(),
-            value.c_str()
+        output += TextFormatter::format(
+            "  <light>{}</><mut>={}</>",
+            desc.name,
+            value
         );
     }
+
+    return output;
 }
 
-inline void printMetrics(
-    FILE* out,
+inline TextFormatter formatMetrics(
     const std::vector<CapabilityMetrics>& capabilities,
     bool liveOnly = false
 ) {
+    TextFormatter output;
+
     for (const CapabilityMetrics& capability : capabilities)
-        printMetrics(out, capability.metrics, liveOnly);
+        output += formatMetrics(capability.metrics, liveOnly);
+
+    return output;
 }
 
 struct LiveState {
@@ -273,6 +275,67 @@ inline bool hasLiveMetrics(const std::vector<CapabilityMetrics>& capabilities) {
     return false;
 }
 
+inline TextFormatter sampleLine(const SampleResult& sample) {
+    const std::string name = fullName(sample.group, sample.name);
+    const std::string overhead =
+        formatValue(sample.overhead, Unit::Nanoseconds);
+
+    TextFormatter output = TextFormatter::format(
+        "<mut><light><b>{:<20}<//> <a2>N</>={:<7} <a>{:<12}</> "
+        "ovhd={:<10} sample={:>2}</>",
+        name,
+        sample.n,
+        sample.stage,
+        overhead,
+        sample.sample
+    );
+
+    if (sample.samples)
+        output += TextFormatter::format("<mut>/{:<3}</>", sample.samples);
+
+    output += formatMetrics(sample.capabilities, true);
+    return output;
+}
+
+inline TextFormatter stageLine(
+    const PointResult& point,
+    const StageResult& stage
+) {
+    const std::string name = fullName(point.group, point.name);
+    const std::string overhead =
+        formatValue(stage.overhead, Unit::Nanoseconds);
+
+    TextFormatter output = TextFormatter::format(
+        "<mut><light><b>{:<20}<//> <a2>N</>={:<7} <a>{:<12}</> "
+        "ovhd={:<10} <a>sample</>={:>2}</>",
+        name,
+        point.n,
+        stage.name,
+        overhead,
+        stage.sample
+    );
+
+    if (stage.samples)
+        output += TextFormatter::format("<mut>/{:<3}</>", stage.samples);
+
+    output += formatMetrics(stage.capabilities, true);
+    return output;
+}
+
+inline TextFormatter unavailableLine(
+    const PointResult& point,
+    const UnavailableCapability& unavailable
+) {
+    return TextFormatter::format(
+        "<light><b>{:<16}<//> <a2>N</>={:<7} "
+        "<wrn>{:<12} unavailable</>: {}",
+        fullName(point.group, point.name),
+        point.n,
+        unavailable.capability,
+        unavailable.reason
+    );
+}
+
 inline void sample(const SampleResult& sample) {
     if (!hasLiveMetrics(sample.capabilities))
         return;
@@ -283,229 +346,81 @@ inline void sample(const SampleResult& sample) {
         state.active = true;
     }
 
-    const std::string name =
-        fullName(sample.group, sample.name);
-
-    std::fprintf(
-        stdout,
-        "\r\033[2K%-16s N=%-7zu %-12.*s",
-        name.c_str(),
-        sample.n,
-        static_cast<int>(sample.stage.size()),
-        sample.stage.data()
+    LogSystem::writeConsole(
+        "\r\033[2K" + sampleLine(sample).render()
     );
-
-    const std::string overhead = formatValue(sample.overhead, Unit::Nanoseconds);
-
-    std::fprintf(
-        stdout,
-        " ovhd=%-10s",
-        overhead.c_str()
-    );
-    
-    std::fprintf(
-        stdout,
-        " sample=%2zu",
-        sample.sample
-    );
-
-    if (sample.samples)
-        std::fprintf(
-            stdout,
-            "/%-3zu",
-            sample.samples
-        );
-
-    printMetrics(
-        stdout,
-        sample.capabilities,
-        true
-    );
-
-    std::fflush(stdout);
 }
 
 inline void result(const PointResult& point) {
     LiveState& state = liveState();
 
     if (state.active)
-        std::fprintf(stdout, "\r\033[2K");
+        LogSystem::writeConsole("\r\033[2K");
 
     state.active = false;
 
-    const std::string name =
-        fullName(point.group, point.name);
-
     for (const StageResult& stage : point.stages) {
-        if (hasLiveMetrics(stage.capabilities)) {
-            const std::string overhead =
-                formatValue(stage.overhead, Unit::Nanoseconds);
+        if (hasLiveMetrics(stage.capabilities))
+            Logger::message(stageLine(point, stage));
 
-            std::fprintf(
-                stdout,
-                "%-16s N=%-7zu %-12s ovhd=%-10s sample=%2zu",
-                name.c_str(),
-                point.n,
-                stage.name.c_str(),
-                overhead.c_str(),
-                stage.sample
-            );
+        for (const UnavailableCapability& unavailable : stage.unavailable)
+            Logger::message(unavailableLine(point, unavailable));
+    }
+}
 
-            if (stage.samples) {
-                std::fprintf(
-                    stdout,
-                    "/%-3zu",
-                    stage.samples
-                );
-            }
+inline TextFormatter analysisLine(
+    const BenchResult& result,
+    const AnalysisResult& analysis
+) {
+    const AnalysisValueInfo x = analysisValueInfo(result, analysis.x);
+    const AnalysisValueInfo y = analysisValueInfo(result, analysis.y);
+    std::string expression;
 
-            printMetrics(
-                stdout,
-                stage.capabilities,
-                true
-            );
+    switch (analysis.type) {
+        case AnalysisType::Growth:
+            expression = std::format("{}({})", y.name, x.name);
+            break;
+        case AnalysisType::Correlation:
+            expression = std::format("corr({}, {})", x.name, y.name);
+            break;
+    }
 
-            std::fprintf(stdout, "\n");
-        }
+    TextFormatter output = TextFormatter::format(
+        "<a2><b>{:<10}<//> <light>{:<25}</>",
+        "Analysis",
+        expression
+    );
 
-        for (const UnavailableCapability& unavailable : stage.unavailable) {
-            std::fprintf(
-                stdout,
-                "%-16s N=%-7zu %-12s unavailable: %s\n",
-                name.c_str(),
-                point.n,
-                unavailable.capability.c_str(),
-                unavailable.reason.c_str()
+    if (analysis.values.empty()) {
+        output += TextFormatter(" <wrn>Unavailable</>");
+        return output;
+    }
+
+    for (const AnalysisValue& value : analysis.values) {
+        const std::string formatted = formatAnalysisValue(value);
+
+        if (value.name.empty()) {
+            output += TextFormatter::format(" <light>{:<7}</>", formatted);
+        } else {
+            output += TextFormatter::format(
+                " <mut>{}</>=<light>{}</>",
+                value.name,
+                formatted
             );
         }
     }
 
-    std::fflush(stdout);
+    return output;
 }
 
 inline void complete(const BenchResult& result) {
     if (result.analysis.empty())
         return;
 
-    for (const AnalysisResult& analysis : result.analysis) {
-        const AnalysisValueInfo x =
-            analysisValueInfo(result, analysis.x);
-        const AnalysisValueInfo y =
-            analysisValueInfo(result, analysis.y);
-        std::string expression;
+    for (const AnalysisResult& analysis : result.analysis)
+        Logger::message(analysisLine(result, analysis));
 
-        switch (analysis.type) {
-            case AnalysisType::Growth:
-                expression = std::format("{}({})", y.name, x.name);
-                break;
-            case AnalysisType::Correlation:
-                expression = std::format("corr({}, {})", x.name, y.name);
-                break;
-        }
-
-        std::fprintf(stdout, "Analysis  %-25s", expression.c_str());
-
-        if (analysis.values.empty()) {
-            std::fprintf(stdout, " Unavailable\n");
-            continue;
-        }
-
-        for (const AnalysisValue& value : analysis.values) {
-            const std::string formatted = formatAnalysisValue(value);
-
-            if (value.name.empty()) {
-                std::fprintf(
-                    stdout,
-                    " %-7s",
-                    formatted.c_str()
-                );
-            } else {
-                std::fprintf(
-                    stdout,
-                    " %s=%s",
-                    value.name.c_str(),
-                    formatted.c_str()
-                );
-            }
-        }
-
-        std::fprintf(stdout, "\n");
-    }
-
-    std::fprintf(stdout, "\n");
-    std::fflush(stdout);
-}
-
-inline std::string formatFrequency(uint64_t hz) {
-    if (hz >= 1'000'000'000ull) return std::format("{:.2f} GHz", hz / 1e9);
-    if (hz >= 1'000'000ull) return std::format("{:.2f} MHz", hz / 1e6);
-    return std::format("{} Hz", hz);
-}
-
-inline std::string formatCpuList(const std::vector<uint32_t>& cpus) {
-    std::string result;
-
-    for (size_t i = 0; i < cpus.size(); ++i) {
-        if (i) result += ",";
-        result += std::format("{}", cpus[i]);
-    }
-
-    return result;
-}
-
-inline std::string formatMachineInfo(const SystemInfo::MachineInfo& info) {
-    std::string out;
-
-    out += std::format("System    {}\n", info.os);
-    out += std::format("Memory    {} total, {} available\n",
-        formatValue(static_cast<double>(info.memory.totalBytes), Unit::Bytes),
-        formatValue(static_cast<double>(info.memory.availableBytes), Unit::Bytes));
-
-    for (const auto& node : info.memory.nodes)
-        out += std::format("  NUMA {}  {}  CPUs={}\n",
-            node.id,
-            formatValue(static_cast<double>(node.totalBytes), Unit::Bytes),
-            formatCpuList(node.logicalCpus));
-
-    for (const auto& cpu : info.processors) {
-        size_t threads = 0;
-        for (const auto& core : cpu.cores)
-            threads += core.logicalCpus.size();
-
-        out += std::format("CPU {}     {}  {} cores / {} threads  {}-{}\n",
-            cpu.id, cpu.name, cpu.cores.size(), threads,
-            formatFrequency(cpu.minFrequencyHz),
-            formatFrequency(cpu.maxFrequencyHz));
-
-        for (const auto& cache : cpu.caches) {
-            std::string_view type =
-                cache.type == SystemInfo::CacheType::Data ? "D" :
-                cache.type == SystemInfo::CacheType::Instruction ? "I" : "";
-
-            out += std::format("  L{}{}     {}  {}-way  line={} B  CPUs={}\n",
-                cache.level,
-                type,
-                formatValue(static_cast<double>(cache.sizeBytes), Unit::Bytes),
-                cache.ways,
-                cache.lineSizeBytes,
-                formatCpuList(cache.sharedLogicalCpus));
-        }
-    }
-
-    for (size_t i = 0; i < info.gpus.size(); ++i) {
-        const auto& gpu = info.gpus[i];
-
-        out += std::format("GPU {}     {}  driver={}  pci={}",
-            i, gpu.name, gpu.driver, gpu.pciAddress);
-
-        if (gpu.vramBytes)
-            out += std::format("  VRAM={}",
-                formatValue(static_cast<double>(gpu.vramBytes), Unit::Bytes));
-
-        out += '\n';
-    }
-
-    return out;
+    Logger::blank();
 }
 
 }

@@ -1,7 +1,7 @@
 #include <algorithm>
 
 #include <Lattice/Lattice.hpp>
-#include <Lattice/Tools/Fixture.hpp>
+#include <Lattice/tests/RuntimeFixture.hpp>
 #include <Lattice/Tools/Tests.hpp>
 
 namespace Lattice {

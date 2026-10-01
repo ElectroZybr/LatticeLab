@@ -1,5 +1,5 @@
 #include <Lattice/Tools/ObjectRegistry.hpp>
-#include <Lattice/Tools/Fixture.hpp>
+#include <Lattice/tests/RuntimeFixture.hpp>
 #include <Lattice/Tools/Tests.hpp>
 
 #include <limits>

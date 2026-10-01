@@ -1,75 +1,123 @@
 #include <chrono>
-#include <vector>
 
 #include <Lattice/Tools/BmRunner/Benchmarks.hpp>
-#include <Lattice/Tools/Fixture.hpp>
 #include <Lattice/Tools/Tests.hpp>
 
 namespace Lattice {
 
+namespace {
+
+class GroupProbe : public Benchmarks::MetricCapability<"GroupProbe", GroupProbe> {
+public:
+    inline static constexpr auto value = defineMetric(
+        "groupValue",
+        Benchmarks::Unit::Count,
+        Benchmarks::MetricFlags::Live
+    );
+    inline static constexpr auto Schema = defineSchema(value);
+
+    Benchmarks::Metrics end() override {
+        return {.schema = schema(), .values = {1.0}};
+    }
+
+    Benchmarks::Metrics result() override {
+        return {.schema = schema(), .values = {1.0}};
+    }
+};
+
+class LocalProbe : public Benchmarks::MetricCapability<"LocalProbe", LocalProbe> {
+public:
+    inline static constexpr auto value = defineMetric(
+        "localValue",
+        Benchmarks::Unit::Count,
+        Benchmarks::MetricFlags::Live
+    );
+    inline static constexpr auto Schema = defineSchema(value);
+
+    Benchmarks::Metrics end() override {
+        return {.schema = schema(), .values = {1.0}};
+    }
+
+    Benchmarks::Metrics result() override {
+        return {.schema = schema(), .values = {1.0}};
+    }
+};
+
+struct BmRunnerFixture : Fixture {
+    size_t value;
+
+    explicit BmRunnerFixture(size_t n)
+        : value(n) {}
+};
+
+bool hasMetric(
+    const Benchmarks::BenchResult& result,
+    std::string_view capabilityName,
+    std::string_view metricName
+) {
+    for (const Benchmarks::PointResult& point : result.points) {
+        for (const Benchmarks::StageResult& stage : point.stages) {
+            for (const Benchmarks::CapabilityMetrics& capability : stage.capabilities) {
+                if (capability.capability != capabilityName)
+                    continue;
+
+                for (const Benchmarks::MetricDesc& metric : capability.metrics.schema)
+                    if (metric.name == metricName)
+                        return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+}
+
 BENCH_GROUP(BmRunnerComposition) {
     bench.config.sizes = {4};
-    bench.config.samples = 2;
     bench.config.target = std::chrono::microseconds{0};
+    bench.analysis.clear();
 
     bench.stages.clear();
-    bench.stages.add<Memory>();
-    bench.stages.add<Allocations>();
+    bench.stages.add<GroupProbe>().samples(1);
 }
 
-BENCH(BmRunnerComposition, BmRunnerInheritedStages) {
-    bench.measure(
-        [](size_t n) { return n; },
-        [](size_t& n) { return std::vector<int>(n); }
+BENCH_GROUPED(BmRunnerComposition, BmRunnerInheritedStages, BmRunnerFixture) {
+    bench.measure<BmRunnerFixture>(
+        [](BmRunnerFixture& fixture) { return fixture.value; }
     );
 }
 
-BENCH(BmRunnerComposition, BmRunnerOverriddenStages) {
+BENCH_GROUPED(BmRunnerComposition, BmRunnerOverriddenStages, BmRunnerFixture) {
     bench.stages.clear();
-    bench.stages.add<Time>();
+    bench.stages.add<LocalProbe>().samples(1);
 
-    bench.measure(
-        [](size_t n) { return n; },
-        [](size_t& n) { return n + 1; }
+    bench.measure<BmRunnerFixture>(
+        [](BmRunnerFixture& fixture) { return fixture.value + 1; }
     );
 }
 
-TEST(BmRunner_InheritsAndOverridesGroupStages, RuntimeFixture,
+TEST(BmRunner_InheritsAndOverridesGroupStages, Fixture,
     "BmRunner должен наследовать stages группы и разрешать локальную замену.") {
-    auto& benchmarks = Benchmarks::instance();
-    bool sawMemoryProgress = false;
-    bool sawAllocationsProgress = false;
-    bool sawTimeProgress = false;
+    Benchmarks::BenchResult completed;
 
-    benchmarks.setProgressCallback([&](const Progress& progress) {
-        sawMemoryProgress |= progress.stage == "Memory" &&
-            !progress.metrics.empty() &&
-            progress.metrics.front().name == "memory";
-        sawAllocationsProgress |= progress.stage == "Allocations" &&
-            !progress.metrics.empty() &&
-            progress.metrics.front().name == "allocations";
-        sawTimeProgress |= progress.stage == "Time" &&
-            !progress.metrics.empty() &&
-            progress.metrics.front().name == "time";
-    });
+    Benchmarks::disableSampleCallback();
+    Benchmarks::disableResultCallback();
+    Benchmarks::setCompleteCallback(
+        [&](const Benchmarks::BenchResult& result) {
+            completed = result;
+        }
+    );
 
-    const auto inherited = benchmarks.run("BmRunnerInheritedStages");
-    REQUIRE(inherited.results.size() == 1);
-    REQUIRE(inherited.results.front().find("N") != nullptr);
-    REQUIRE(inherited.results.front().find("memory") != nullptr);
-    REQUIRE(inherited.results.front().find("allocations") != nullptr);
-    REQUIRE(inherited.results.front().find("time.mean") == nullptr);
-    REQUIRE(sawMemoryProgress);
-    REQUIRE(sawAllocationsProgress);
+    Benchmarks::run("BmRunnerInheritedStages");
+    REQUIRE(hasMetric(completed, "GroupProbe", "groupValue"));
+    REQUIRE(!hasMetric(completed, "LocalProbe", "localValue"));
 
-    const auto overridden = benchmarks.run("BmRunnerOverriddenStages");
-    REQUIRE(overridden.results.size() == 1);
-    REQUIRE(overridden.results.front().find("time.mean") != nullptr);
-    REQUIRE(overridden.results.front().find("memory") == nullptr);
-    REQUIRE(overridden.results.front().find("allocations") == nullptr);
-    REQUIRE(sawTimeProgress);
+    Benchmarks::run("BmRunnerOverriddenStages");
+    REQUIRE(!hasMetric(completed, "GroupProbe", "groupValue"));
+    REQUIRE(hasMetric(completed, "LocalProbe", "localValue"));
 
-    benchmarks.resetProgressCallback();
+    Benchmarks::disableCallbacks();
 }
 
 }

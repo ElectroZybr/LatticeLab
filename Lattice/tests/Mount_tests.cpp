@@ -1,6 +1,6 @@
 #include <stdexcept>
 
-#include <Lattice/Tools/Fixture.hpp>
+#include <Lattice/tests/RuntimeFixture.hpp>
 #include <Lattice/Tools/Tests.hpp>
 
 namespace Lattice::MountTests {

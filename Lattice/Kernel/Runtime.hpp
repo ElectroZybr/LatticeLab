@@ -20,7 +20,7 @@
 #include <Lattice/Kernel/BlueprintRegister.hpp>
 #include <Lattice/Kernel/BasicTable.hpp>
 #include <Lattice/Kernel/Model.hpp>
-#include <Lattice/Tools/SystemInfo.hpp>
+#include <Lattice/Tools/SysInfo/Output.hpp>
 #include "Lattice/Tools/LogScope.hpp"
 #include "Lattice/Tools/LogMode.hpp"
 #include "Lattice/Tools/Logger.hpp"
@@ -103,7 +103,7 @@ public:
         } restoreSignals{previousInt, previousTerm};
         try {
             Logger::setDefaultMode(LogMode::Clean | LogMode::OnlyWarn);
-            CliSystemInfo::printSystemInfo();
+            SystemInfo::Output::print();
             std::filesystem::path configPath = "lattice.toml";
             bool testMode = false, benchMode = false;
 
