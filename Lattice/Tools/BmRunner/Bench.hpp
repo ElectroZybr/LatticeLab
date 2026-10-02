@@ -88,6 +88,9 @@ public:
         if (config.samples == 0)
             throw Exception<Bench>("Samples count cannot be zero");
 
+        constexpr size_t operations = operationsPerIteration<FixtureType>();
+        static_assert(operations > 0, "FixtureType::Steps must be greater than zero");
+
         std::vector<PointResult> points;
         points.reserve(config.sizes.size());
 
@@ -103,7 +106,7 @@ public:
         };
 
         for (size_t n : config.sizes) {
-            PointResult point = run(n, invoke);
+            PointResult point = run(n, operations, invoke);
 
             if (result_)
                 result_(point);
@@ -131,15 +134,29 @@ private:
     #endif
     }
 
-    static void normalize(Metrics& metrics, size_t iterations) {
+    template<typename FixtureType>
+    static consteval size_t operationsPerIteration() {
+        if constexpr (requires { FixtureType::Steps; })
+            return static_cast<size_t>(FixtureType::Steps);
+        else
+            return 1;
+    }
+
+    static void normalize(
+        Metrics& metrics,
+        size_t iterations,
+        size_t operations
+    ) {
         for (size_t i = 0; i < metrics.values.size(); ++i) {
             if (hasFlag(metrics.schema[i].flags, MetricFlags::PerIteration))
                 metrics.values[i] /= static_cast<double>(iterations);
+            if (hasFlag(metrics.schema[i].flags, MetricFlags::PerOperation))
+                metrics.values[i] /= static_cast<double>(operations);
         }
     }
 
     template<typename Invoke>
-    PointResult run(size_t n, Invoke& invoke) {
+    PointResult run(size_t n, size_t operations, Invoke& invoke) {
         PointResult point{
             .name = name_,
             .group = group_,
@@ -147,7 +164,7 @@ private:
         };
 
         for (Stages::Stage& stage : stages.data())
-            runStage(n, stage, invoke, point);
+            runStage(n, operations, stage, invoke, point);
 
         return point;
     }
@@ -180,6 +197,7 @@ private:
     template<typename Invoke>
     void runStage(
         size_t n,
+        size_t operations,
         Stages::Stage& stage,
         Invoke& invoke,
         PointResult& point
@@ -250,7 +268,7 @@ private:
 
             for (auto it = stage.capabilities.rbegin(); it != stage.capabilities.rend(); ++it) {
                 Metrics metrics = (*it)->end();
-                normalize(metrics, iterations);
+                normalize(metrics, iterations, operations);
 
                 if (!metrics.values.empty()) {
                     sampleResult.capabilities.push_back({
@@ -280,7 +298,7 @@ private:
 
         for (auto& capability : stage.capabilities) {
             Metrics metrics = capability->result();
-            normalize(metrics, iterations);
+            normalize(metrics, iterations, operations);
 
             if (!metrics.values.empty()) {
                 stageResult.capabilities.push_back({

@@ -32,8 +32,20 @@ public:
     inline static constexpr auto mean = defineMetric(
         "mean", Unit::Nanoseconds, MetricFlags::PerIteration
     );
+    inline static constexpr auto perOperation = defineMetric(
+        "perOperation",
+        Unit::Nanoseconds,
+        MetricFlags::PerIteration |
+            MetricFlags::PerOperation |
+            MetricFlags::Live
+    );
 
-    inline static constexpr auto Schema = defineSchema(min, median, mean);
+    inline static constexpr auto Schema = defineSchema(
+        min,
+        median,
+        mean,
+        perOperation
+    );
 
     void begin() override {
         elapsed_ = {};
@@ -68,12 +80,14 @@ public:
         for (double value : samples_)
             sum += value;
 
+        const double medianValue = samples_[samples_.size() / 2];
         Metrics metrics{
             .schema = schema(),
             .values = {
                 samples_.front(),
-                samples_[samples_.size() / 2],
-                sum / static_cast<double>(samples_.size())
+                medianValue,
+                sum / static_cast<double>(samples_.size()),
+                medianValue
             }
         };
 

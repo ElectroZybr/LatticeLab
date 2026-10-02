@@ -73,6 +73,18 @@ TEST(TextFormatter_UnclosedTagDoesNotAbortFormatting, Fixture,
     REQUIRE(text.diagnostics().front().line == "<h>unclosed");
 }
 
+TEST(TextFormatter_MarkupRoundTripsLiteralTags, Fixture,
+    "Serialized formatter text should not become markup when parsed again.") {
+    TextFormatter original;
+    original.append("literal <h>tag and \\ slash");
+
+    const TextFormatter restored(original.markup());
+
+    REQUIRE(restored.plain() == original.plain());
+    REQUIRE(restored.markup() == original.markup());
+    REQUIRE(restored.diagnostics().empty());
+}
+
 TEST(TextFormatter_LoggerReportsDiagnostics, Fixture,
     "Logger should turn formatter diagnostics into ordinary warning events.") {
     const TextFormatter text("<h>unclosed");

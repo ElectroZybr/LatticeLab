@@ -37,7 +37,8 @@ struct ValueRef {
 enum class MetricFlags : uint8_t {
     None = 0,
     PerIteration = 1 << 0,
-    Live = 1 << 1
+    Live = 1 << 1,
+    PerOperation = 1 << 2
 };
 
 constexpr MetricFlags operator|(MetricFlags a, MetricFlags b) {

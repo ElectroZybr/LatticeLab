@@ -20,6 +20,19 @@ struct TextDiagnostic {
 
 namespace TextMarkup {
 
+inline std::string escape(std::string_view text) {
+    std::string result;
+    result.reserve(text.size());
+
+    for (const char character : text) {
+        if (character == '\\' || character == '<')
+            result += '\\';
+        result += character;
+    }
+
+    return result;
+}
+
 struct StyleOperation {
     TextStyle value;
     TextTheme::StyleId semantic = TextTheme::InvalidTextStyleId;
@@ -111,6 +124,18 @@ void parse(
     size_t textStart = 0;
 
     while (position < source.size()) {
+        if (
+            source[position] == '\\' &&
+            position + 1 < source.size() &&
+            (source[position + 1] == '\\' || source[position + 1] == '<')
+        ) {
+            append(source.substr(textStart, position - textStart), stack);
+            append(source.substr(position + 1, 1), stack);
+            position += 2;
+            textStart = position;
+            continue;
+        }
+
         if (source[position] != '<') {
             ++position;
             continue;

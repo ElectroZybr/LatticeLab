@@ -50,6 +50,15 @@ struct BmRunnerFixture : Fixture {
         : value(n) {}
 };
 
+struct BmRunnerStepsFixture : Fixture {
+    static constexpr size_t Steps = 4;
+
+    size_t value;
+
+    explicit BmRunnerStepsFixture(size_t n)
+        : value(n) {}
+};
+
 bool hasMetric(
     const Benchmarks::BenchResult& result,
     std::string_view capabilityName,
@@ -69,6 +78,28 @@ bool hasMetric(
     }
 
     return false;
+}
+
+double metricValue(
+    const Benchmarks::BenchResult& result,
+    std::string_view capabilityName,
+    std::string_view metricName
+) {
+    for (const Benchmarks::PointResult& point : result.points) {
+        for (const Benchmarks::StageResult& stage : point.stages) {
+            for (const Benchmarks::CapabilityMetrics& capability : stage.capabilities) {
+                if (capability.capability != capabilityName)
+                    continue;
+
+                for (size_t index = 0; index < capability.metrics.schema.size(); ++index) {
+                    if (capability.metrics.schema[index].name == metricName)
+                        return capability.metrics.values.at(index);
+                }
+            }
+        }
+    }
+
+    return -1.0;
 }
 
 }
@@ -97,6 +128,20 @@ BENCH_GROUPED(BmRunnerComposition, BmRunnerOverriddenStages, BmRunnerFixture) {
     );
 }
 
+BENCH_GROUPED(BmRunnerComposition, BmRunnerPerOperation, BmRunnerStepsFixture) {
+    bench.stages.clear();
+    bench.stages.add<Benchmarks::Time>().samples(1);
+
+    bench.measure<BmRunnerStepsFixture>(
+        [](BmRunnerStepsFixture& fixture) {
+            size_t value = fixture.value;
+            for (size_t step = 0; step < BmRunnerStepsFixture::Steps; ++step)
+                value = value * 2 + step;
+            return value;
+        }
+    );
+}
+
 TEST(BmRunner_InheritsAndOverridesGroupStages, Fixture,
     "BmRunner должен наследовать stages группы и разрешать локальную замену.") {
     Benchmarks::BenchResult completed;
@@ -116,6 +161,12 @@ TEST(BmRunner_InheritsAndOverridesGroupStages, Fixture,
     Benchmarks::run("BmRunnerOverriddenStages");
     REQUIRE(!hasMetric(completed, "GroupProbe", "groupValue"));
     REQUIRE(hasMetric(completed, "LocalProbe", "localValue"));
+
+    Benchmarks::run("BmRunnerPerOperation");
+    const double median = metricValue(completed, "Time", "median");
+    const double perOperation = metricValue(completed, "Time", "perOperation");
+    REQUIRE(median >= 0.0);
+    REQUIRE(perOperation == median / BmRunnerStepsFixture::Steps);
 
     Benchmarks::disableCallbacks();
 }

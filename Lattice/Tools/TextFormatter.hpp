@@ -192,7 +192,7 @@ public:
             if (span.style.color.kind == TextColor::Kind::Rgb)
                 appendTag(std::format("#{:06x}", span.style.color.value));
 
-            result += span.text;
+            result += TextMarkup::escape(span.text);
 
             if (count != 0) {
                 result += '<';

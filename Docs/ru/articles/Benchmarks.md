@@ -130,6 +130,20 @@ bench.analysis.correlation(
 считает коэффициент корреляции Пирсона между двумя метриками по всем значениям
 `N`. Корреляция симметрична: `corr(X, Y) == corr(Y, X)`.
 
+Для тестов, выполняющих несколько одинаковых операций внутри одного вызова,
+fixture может объявить число шагов:
+
+```cpp
+struct MemoryLatencyFixture : Fixture {
+    static constexpr size_t Steps = 1 << 18;
+};
+```
+
+Тогда `Time::median` остаётся временем одного вызова benchmark-функции, а
+`Time::perOperation` автоматически вычисляет latency одной операции как
+`elapsed / iterations / Steps`. Если `Steps` не объявлен, runner считает один
+вызов одной операцией.
+
 `MemoryTraffic` считает DRAM-трафик и пропускную способность, а `Allocations` — количество вызовов C++ `new` на одну операцию.
 Прямые вызовы `malloc` в эти метрики не входят. `Perf` использует Linux
 `perf_event`; если counters запрещены настройками системы, benchmark продолжает работу

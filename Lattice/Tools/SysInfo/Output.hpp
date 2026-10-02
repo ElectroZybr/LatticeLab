@@ -234,8 +234,8 @@ inline TextFormatter format(const MachineInfo& info) {
             threads += core.logicalCpus.size();
 
         appendLine(TextFormatter::format(
-            "<a2><b>CPU {:<5}<//> <light>{}</>  {} <mut>cores /</> "
-            "{} <mut>threads</>  <light>{}-{}</>",
+            "<a2><b>CPU {:<5}<//> <light>{}</>  <mut>{} cores / "
+            "{} threads</>  <light>{}-{}</>",
             cpu.id,
             cpu.name,
             cpu.cores.size(),
@@ -267,8 +267,7 @@ inline TextFormatter format(const MachineInfo& info) {
     for (size_t i = 0; i < info.gpus.size(); ++i) {
         const GpuInfo& gpu = info.gpus[i];
         TextFormatter line = TextFormatter::format(
-            "<a2><b>GPU {:<5}<//> <light>{}</>  <mut>driver</>={}  "
-            "<mut>pci</>={}",
+            "<a2><b>GPU {:<5}<//> <light>{}</>  <mut>driver={} pci={}</>",
             i,
             gpu.name,
             gpu.driver,
