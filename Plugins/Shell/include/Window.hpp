@@ -18,7 +18,7 @@ public:
     }
 
     void configure(NodeConfigure branch) {
-        windows_ = branch.children<WindowAPI>();
+        windows_ = Children<WindowAPI>{branch.collect<WindowAPI>()};
         renders_ = branch.children<Render>();
         for (InputAPI* input : branch.collect<InputAPI>())
             router_->registerInput(*input);

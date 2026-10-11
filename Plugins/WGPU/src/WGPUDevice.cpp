@@ -15,6 +15,7 @@ Device::Device(NodeBuild node, const Desc&) {
     instance_ = backend->native();
     wgpuInstanceAddRef(instance_);
     queue_ = wgpuDeviceGetQueue(device_);
+    node.share<GPU::Device>();
 }
 
 Device::~Device() {

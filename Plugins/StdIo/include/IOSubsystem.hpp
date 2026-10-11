@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <optional>
 #include <string>
 
 // Kernel dependences
@@ -22,6 +23,17 @@ public:
     explicit IOSubsystem(NodeBuild ioBranch) {
         loaders = ioBranch.addImpls<LoaderAPI>();
         parsers = ioBranch.addImpls<ParserAPI>();
+
+        ioBranch.action<std::optional<std::string>>(
+            "load",
+            [this](std::optional<std::string> path) {
+                const std::filesystem::path target = path.value_or("Config");
+                if (std::filesystem::is_directory(target))
+                    loadDir(target);
+                else
+                    load(target);
+            }
+        );
     }
 
     void loadDir(const std::filesystem::path& dir) {

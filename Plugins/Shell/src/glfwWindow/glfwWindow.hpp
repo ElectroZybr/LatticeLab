@@ -12,7 +12,6 @@ class glfwMouse;
 class glfwWindow final : public WindowAPI {
 public:
     explicit glfwWindow(NodeBuild);
-    void configure(NodeConfigure);
 
     ~glfwWindow() override;
 
@@ -38,6 +37,7 @@ public:
     void setTitle(std::string_view title) override;
 
 private:
+    void createWindow();
     void setupCallbacks();
     void syncFromWindow();
     GLFWmonitor* currentMonitor() const;

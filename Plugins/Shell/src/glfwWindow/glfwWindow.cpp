@@ -172,9 +172,10 @@ bool monitorWorkArea(GLFWmonitor* monitor, int& x, int& y, int& w, int& h) {
 glfwWindow::glfwWindow(NodeBuild node) {
     keyboard_ = node.add<glfwKeyboard>();
     mouse_ = node.add<glfwMouse>();
+    createWindow();
 }
 
-void glfwWindow::configure(NodeConfigure node) {
+void glfwWindow::createWindow() {
     if (window_) return;
 
     if (!glfwInit()) {

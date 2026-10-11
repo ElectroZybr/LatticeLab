@@ -15,7 +15,7 @@ class KeybindsLoader final : public LoaderAPI {
 
 public:
     void configure(NodeConfigure node) {
-        node.focus<ActionRouter>();
+        actionMap_ = node.focus<ActionRouter>();
     }
 
     std::string_view section() const override { return "keybinds"; }

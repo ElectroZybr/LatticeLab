@@ -362,8 +362,12 @@ void NodeOps::clearContents(NodeId id) {
     if (node.object.ptr && node.kind != NodeKind::Mount && node.kind != NodeKind::SharedMount) {
         const auto& bp = nodeSystem_.blueprints.require(node.object.bp);
 
-        if (bp.meta.ops && bp.meta.ops->destroy)
-            bp.meta.ops->destroy(node.object.ptr);
+        if (bp.meta.ops) {
+            if (node.object.constructed && bp.meta.ops->destroy)
+                bp.meta.ops->destroy(node.object.ptr);
+            else if (!node.object.constructed && bp.meta.ops->deallocate)
+                bp.meta.ops->deallocate(node.object.ptr);
+        }
 
         node.object = {};
     }

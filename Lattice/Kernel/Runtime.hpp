@@ -142,7 +142,7 @@ public:
 
             { // стартовые данные после configure всех веток
                 LogScope scope(tag, "<b>System boot</>");
-                loadStartup();
+                loadStartup(startupBranches);
                 scope.finish("<ok>Boot finished</>");
             }
 
@@ -338,15 +338,20 @@ private:
             service->stop();
     }
 
-    void loadStartup() {
-        // const ObjectId id = run_ctx.resolveFocus(InvalidFocusScopeId, run_ctx.roles.find("load"));
-        // if (id == InvalidObjectId) {
-        //     Logger::info(tag, "no load action, skip startup config");
-        //     return;
-        // }
+    void loadStartup(const std::vector<StartupBranch>& branches) {
+        for (const auto& branch : branches) {
+            const ExportId load = run_ctx.nodes.exports.find(branch.node, "load");
+            if (load == InvalidExportId)
+                continue;
 
-        // Logger::info(tag, "loading startup config");
-        // run_ctx.bindings.invoke(id);
+            const ResolvedExport action = run_ctx.nodes.exports.resolve(load);
+            if (!action.invoke || action.requiredArguments != 0)
+                continue;
+
+            Logger::info(tag, "Loading startup data through '{}.{}'", branch.type, branch.name);
+            ActionContext context{branch.node};
+            action.invoke(action.object, context, {});
+        }
     }
 
     void stopAll() {
@@ -362,4 +367,5 @@ private:
                 service->stop();
     }
 };
+
 }

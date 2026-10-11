@@ -71,6 +71,8 @@ private:
     };
 
 public:
+    explicit ActionRouter(NodeBuild node);
+
     void configure(NodeConfigure branch);
     void tick();
     void registerInput(InputAPI& input);

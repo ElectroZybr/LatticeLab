@@ -76,6 +76,39 @@ NodeId NodeQuery::require(NodeId from, std::string_view api, std::string_view in
     return require(from, id, instance);
 }
 
+NodeId NodeQuery::ancestor(NodeId from, BlueprintId api) const {
+    blueprints_.require(api);
+
+    for (NodeId current = registry_.require(from).parent;
+         current != InvalidNodeId;
+         current = registry_.require(current).parent) {
+        const auto& node = registry_.require(current);
+        if (node.state != NodeState::Retiring && node.object.ptr &&
+            blueprints_.isA(node.object.bp, api))
+            return current;
+    }
+
+    return InvalidNodeId;
+}
+
+void* NodeQuery::resolveAncestor(NodeId from, NodeId ancestorId, BlueprintId api) const {
+    blueprints_.require(api);
+
+    for (NodeId current = registry_.require(from).parent;
+         current != InvalidNodeId;
+         current = registry_.require(current).parent) {
+        if (current != ancestorId)
+            continue;
+
+        const auto& ancestor = registry_.require(current);
+        if (ancestor.state == NodeState::Retiring || !ancestor.object.ptr)
+            return nullptr;
+        return blueprints_.cast(ancestor.object.bp, api, ancestor.object.ptr);
+    }
+
+    return nullptr;
+}
+
 std::vector<NodeId> NodeQuery::collect(NodeId from, BlueprintId api) const {
     registry_.require(from);
     blueprints_.require(api);
@@ -110,7 +143,7 @@ std::vector<NodeId> NodeQuery::collect(NodeId from, std::string_view api) const 
 void* NodeQuery::resolve(NodeId id, BlueprintId api) const {
     const auto& node = registry_.require(id);
 
-    if (node.state == NodeState::Retiring)
+    if (node.state == NodeState::Retiring || node.object.building)
         return nullptr;
 
     if (node.kind == NodeKind::Mount || node.kind == NodeKind::SharedMount) {

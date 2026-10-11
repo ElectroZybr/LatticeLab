@@ -388,19 +388,21 @@ public:
     template<class T>
     Ref<T> ancestor() const {
         const auto api = nodeSystem_.blueprints.id<T>();
+        const auto found = nodeSystem_.query.ancestor(id_, api);
 
-        Lattice::NodeId current = nodeSystem_.registry.require(id_).parent;
-
-        while (current != Lattice::InvalidNodeId) {
-            if (auto* ptr = static_cast<T*>(nodeSystem_.query.resolve(current, api))) {
-                nodeSystem_.dependencies.add(id_, current);
-                return Ref<T>{ptr};
+        if (found != Lattice::InvalidNodeId) {
+            auto* object = static_cast<T*>(nodeSystem_.query.resolveAncestor(id_, found, api));
+            if (object) {
+                nodeSystem_.dependencies.add(id_, found);
+                return Ref<T>{object};
             }
-
-            current = nodeSystem_.registry.require(current).parent;
         }
 
-        throw Lattice::Exception<NodeBuild>("Ancestor '{}' not found for node #{}", Lattice::typeKey<T>(), id_);
+        throw Lattice::Exception<NodeBuild>(
+            "Ancestor '{}' not found for node #{}",
+            Lattice::typeKey<T>(),
+            id_
+        );
     }
 
     // helpers

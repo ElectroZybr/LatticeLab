@@ -1,28 +1,30 @@
 #include "Render.hpp"
+#include "TestViewport.hpp"
 #include <Lattice/Tools/Exception.hpp>
 #include "Shell/src/glfwWindow/glfwWindow.hpp"
 
 
 Render::Render(NodeBuild node) {
     window_ = node.addSlot<WindowAPI>();
+    window_.choice<glfwWindow>();
+
+    if (!window_)
+        throw Lattice::Exception<Render>("window is required");
 
     auto mounted = node.mount<GPU::Device>();
     device_ = mounted.ref();
     surface_ = mounted.addLocal<GPU::Surface>("surface");
-}
-
-void Render::configure(NodeConfigure node) {
-    window_.choice<glfwWindow>();
-    viewports_ = node.children<Viewport>();
-
-    if (!window_)
-        throw Lattice::Exception<Render>("window is required");
 
     const NativeWindow native = window_->native();
     if (native.kind == NativeWindow::Kind::None)
         throw Lattice::Exception<Render>("window has no native handle");
 
     surface_->attach(native);
+    node.add<TestViewport>();
+}
+
+void Render::configure(NodeConfigure node) {
+    viewports_ = node.children<Viewport>();
 }
 
 void Render::frame(float) {

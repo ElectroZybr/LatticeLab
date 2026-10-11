@@ -7,6 +7,10 @@
 #include <Lattice/Tools/Logger.hpp>
 
 
+ActionRouter::ActionRouter(NodeBuild node) {
+    node.share<ActionRouter>();
+}
+
 void ActionRouter::configure(NodeConfigure branch) {
     exports = branch.exports();
     context_ = branch.id();

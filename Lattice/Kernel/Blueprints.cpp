@@ -52,7 +52,7 @@ BlueprintId Blueprints::resolveImplementation(
         const Blueprint* blueprint = get(id);
 
         return blueprint &&
-               blueprint->meta.create &&
+               blueprint->meta.construct &&
                isA(id, api) &&
                (descriptor.empty() || blueprint->meta.descriptor == descriptor);
     };
@@ -221,7 +221,7 @@ std::vector<BlueprintId> Blueprints::getImpls(BlueprintId api, bool constructibl
         if (!blueprint || id == api || !isA(id, api))
             continue;
 
-        if (constructibleOnly && !blueprint->meta.create)
+        if (constructibleOnly && !blueprint->meta.construct)
             continue;
 
         result.push_back(id);

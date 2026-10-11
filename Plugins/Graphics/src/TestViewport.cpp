@@ -39,7 +39,7 @@ TestViewport::TestViewport(NodeBuild node, const Desc& desc) {
     GPU::BufferDesc bufferDesc{};
     bufferDesc.size = sizeof(glm::mat4);
     bufferDesc.usage = GPU::BufferUsage::Uniform | GPU::BufferUsage::CopyDestination;
-    uniform_ = mounted.addLocal<GPU::Buffer>("camera", bufferDesc);
+    uniform_ = mounted.addLocal<GPU::Buffer>("uniform", bufferDesc);
 
     GPU::ShaderDesc shaderDesc{};
     shaderDesc.source = loadTestShader();

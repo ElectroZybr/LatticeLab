@@ -16,13 +16,15 @@ namespace Lattice {
 
 struct BlueprintOps {
     void (*destroy)(void*) = nullptr;
+    void (*deallocate)(void*) = nullptr;
     void (*retire)(void*) = nullptr;
     bool (*readyToDestroy)(const void*) = nullptr;
 };
 
 struct BlueprintMeta {
     std::string_view descriptor;
-    void* (*create)(::NodeBuild, const void*) = nullptr;
+    void* (*allocate)() = nullptr;
+    void (*construct)(void*, ::NodeBuild, const void*) = nullptr;
     void (*configure)(void*, ::NodeConfigure) = nullptr;
     const BlueprintOps* ops = nullptr;
 };

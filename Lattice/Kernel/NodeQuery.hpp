@@ -51,6 +51,9 @@ public:
         BlueprintId api
     ) const;
 
+    NodeId ancestor(NodeId from, BlueprintId api) const;
+    void* resolveAncestor(NodeId from, NodeId ancestor, BlueprintId api) const;
+
     std::vector<NodeId> collect(NodeId from, BlueprintId api) const;
     std::vector<NodeId> collect(NodeId from, std::string_view api) const;
     void* resolve(NodeId id, BlueprintId api) const;

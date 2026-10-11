@@ -15,6 +15,29 @@ public:
     }
 };
 
+class ConstructionAncestorParent;
+
+class ConstructionAncestorChild {
+public:
+    explicit ConstructionAncestorChild(NodeBuild node);
+
+    bool sawReadyParent = false;
+};
+
+class ConstructionAncestorParent {
+public:
+    explicit ConstructionAncestorParent(NodeBuild node)
+        : ready(true), child(node.add<ConstructionAncestorChild>()) {}
+
+    bool ready = false;
+    Ref<ConstructionAncestorChild> child;
+};
+
+ConstructionAncestorChild::ConstructionAncestorChild(NodeBuild node) {
+    const auto parent = node.ancestor<ConstructionAncestorParent>();
+    sawReadyParent = parent->ready;
+}
+
 TEST(Node_Add, RuntimeFixture) {
     auto& nodes = fixture.run_ctx.nodes;
     BlueprintRegister::add<BasicTestComponent>(fixture.run_ctx.blueprints);
@@ -26,6 +49,16 @@ TEST(Node_Add, RuntimeFixture) {
     REQUIRE(nodes.configure(fixture.root).find<BasicTestComponent>().exists());
     REQUIRE(nodes.registry.require(nodes.query.require(fixture.root, typeKey<BasicTestComponent>())).name.empty());
     REQUIRE(nodes.configure(fixture.root).require<BasicTestComponent>().exists());
+}
+
+TEST(Node_BuildAncestor, RuntimeFixture) {
+    BlueprintRegister::add<ConstructionAncestorChild>(fixture.run_ctx.blueprints);
+    BlueprintRegister::add<ConstructionAncestorParent>(fixture.run_ctx.blueprints);
+
+    const auto parent = fixture.build(fixture.root).add<ConstructionAncestorParent>();
+
+    REQUIRE(parent->child.exists());
+    REQUIRE(parent->child->sawReadyParent);
 }
 
 TEST(Node_AddDuplicate, RuntimeFixture) {

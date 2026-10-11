@@ -17,6 +17,8 @@ class NodeFactory {
         uint64_t discriminator = std::numeric_limits<uint64_t>::max()
     );
 
+    void constructObject(NodeId id, BlueprintId implementation, const void* desc);
+
     NodeId resource(
         NodeId target,
         BlueprintId api,

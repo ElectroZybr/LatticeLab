@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <memory>
 #include <string_view>
 #include <string>
 #include <type_traits>
@@ -37,19 +38,29 @@ BlueprintId add(Blueprints& blueprints, std::string_view name = typeKey<T>()) {
     }();
 
     if constexpr (constructible) {
-        blueprint.meta.create = [](::NodeBuild node, const void* desc) -> void* {
-            if constexpr (requires { typename T::Desc; }) {
-                if (desc)
-                    return new T(std::move(node), *static_cast<const typename T::Desc*>(desc));
+        blueprint.meta.allocate = []() -> void* {
+            return std::allocator<T>{}.allocate(1);
+        };
 
-                if constexpr (std::is_default_constructible_v<typename T::Desc>)
-                    return new T(std::move(node), typename T::Desc{});
+        blueprint.meta.construct = [](void* storage, ::NodeBuild node, const void* desc) -> void {
+            auto* object = static_cast<T*>(storage);
+
+            if constexpr (requires { typename T::Desc; }) {
+                if (desc) {
+                    std::construct_at(object, std::move(node), *static_cast<const typename T::Desc*>(desc));
+                    return;
+                }
+
+                if constexpr (std::is_default_constructible_v<typename T::Desc>) {
+                    std::construct_at(object, std::move(node), typename T::Desc{});
+                    return;
+                }
 
                 throw Exception<T>("'{}' requires a descriptor", typeKey<T>());
             } else if constexpr (std::is_constructible_v<T, ::NodeBuild>) {
-                return new T(std::move(node));
+                std::construct_at(object, std::move(node));
             } else {
-                return new T();
+                std::construct_at(object);
             }
         };
 
@@ -67,7 +78,12 @@ BlueprintId add(Blueprints& blueprints, std::string_view name = typeKey<T>()) {
 
         static const BlueprintOps ops{
             .destroy = [](void* object) {
-                delete static_cast<T*>(object);
+                auto* typed = static_cast<T*>(object);
+                std::destroy_at(typed);
+                std::allocator<T>{}.deallocate(typed, 1);
+            },
+            .deallocate = [](void* storage) {
+                std::allocator<T>{}.deallocate(static_cast<T*>(storage), 1);
             },
             .retire = [] {
                 if constexpr (hasRetire)

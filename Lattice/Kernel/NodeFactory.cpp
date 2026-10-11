@@ -73,6 +73,28 @@ NodeId NodeFactory::folder(NodeId parent, std::string_view name) {
     return createNode(parent, name, InvalidBlueprintId, NodeKind::Folder);
 }
 
+void NodeFactory::constructObject(NodeId id, BlueprintId implementation, const void* desc) {
+    const auto& blueprint = nodeSystem_.blueprints.require(implementation);
+
+    if (!blueprint.meta.allocate || !blueprint.meta.construct)
+        throw Exception<NodeFactory>("Blueprint '{}' is not constructible", blueprint.name);
+
+    void* storage = blueprint.meta.allocate();
+    nodeSystem_.registry.require(id).object = {
+        .ptr = storage,
+        .bp = implementation,
+        .configured = false,
+        .building = true,
+        .constructed = false
+    };
+
+    blueprint.meta.construct(storage, nodeSystem_.builder.node(id), desc);
+
+    auto& object = nodeSystem_.registry.require(id).object;
+    object.constructed = true;
+    object.building = false;
+}
+
 void* NodeFactory::resolve(NodeId id, BlueprintId api) const {
     const auto& node = nodeSystem_.registry.require(id);
     if (node.state == NodeState::Retiring)
@@ -99,18 +121,8 @@ NodeId NodeFactory::component(NodeId parent, BlueprintId api, std::string_view i
     }
 
     const NodeId id = createNode(parent, instance, impl, NodeKind::Component);
-    const auto blueprint = nodeSystem_.blueprints.require(impl);
-
     try {
-        if (!blueprint.meta.create)
-            throw Exception<NodeFactory>("Blueprint '{}' has no create callback", blueprint.name);
-
-        void* object = blueprint.meta.create(nodeSystem_.builder.node(id), desc);
-        nodeSystem_.registry.require(id).object = {object, impl, false};
-
-        if (!object)
-            throw Exception<NodeFactory>("Blueprint '{}' returned null", blueprint.name);
-
+        constructObject(id, impl, desc);
     } catch (...) {
         nodeSystem_.ops.destroyBranch(id);
 
@@ -173,17 +185,13 @@ void NodeFactory::choice(NodeId id, BlueprintId impl) {
     if (current == impl)
         return;
 
-    const auto create = nodeSystem_.blueprints.require(impl).meta.create;
-    if (!create)
+    const auto& blueprint = nodeSystem_.blueprints.require(impl);
+    if (!blueprint.meta.construct)
         throw Exception<NodeFactory>("Blueprint '{}' is not constructible", nodeSystem_.blueprints.require(impl).name);
 
     nodeSystem_.ops.clearContents(id);
     try {
-        void* object = create(nodeSystem_.builder.node(id), nullptr);
-        if (!object)
-            throw Exception<NodeFactory>("Failed to create '{}'", nodeSystem_.blueprints.require(impl).name);
-
-        nodeSystem_.registry.require(id).object = {object, impl, false};
+        constructObject(id, impl, nullptr);
     } catch (...) {
         nodeSystem_.ops.clearContents(id);
         throw;
@@ -250,16 +258,8 @@ NodeId NodeFactory::resource(
 
     const BlueprintId impl = nodeSystem_.blueprints.resolveImplementation(api);
     const NodeId id = createNode(target, instance, api, NodeKind::Component, discriminator);
-    const auto blueprint = nodeSystem_.blueprints.require(impl);
-
     try {
-        if (!blueprint.meta.create)
-            throw Exception<NodeFactory>("Blueprint '{}' has no create callback", blueprint.name);
-
-        void* object = blueprint.meta.create(nodeSystem_.builder.node(id), desc);
-        nodeSystem_.registry.require(id).object = {object, impl, false};
-        if (!object)
-            throw Exception<NodeFactory>("Blueprint '{}' returned null", blueprint.name);
+        constructObject(id, impl, desc);
     } catch (...) {
         nodeSystem_.ops.destroyBranch(id);
         throw;

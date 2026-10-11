@@ -17,6 +17,7 @@ struct RuntimeObject {
     BlueprintId bp = InvalidBlueprintId;
     bool configured = false;
     bool building = false;
+    bool constructed = false;
 };
 
 struct Node {

@@ -80,7 +80,7 @@ public:
     void configure(NodeConfigure node) {
         auto camera = node.focus<Camera>("Camera");
         camera_ = Ref<Camera>{camera.get()};
-        viewport_ = node.require<Viewport>("Main");
+        viewport_ = node.require<Viewport>();
     }
 
     void update() override {

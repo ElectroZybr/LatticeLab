@@ -43,14 +43,14 @@ std::string formatTreeNode(const Lattice::TreeNodeInfo& node) {
 
         case Lattice::NodeKind::Mount:
             line = node.name.empty()
-                ? std::format("<a>[&{}]</> <h2>&</>", node.type)
-                : std::format("<a>[&{}]</> <h2>&</>", node.name);
+                ? std::format("<a>{}</> <h2>&</>", node.type)
+                : std::format("<a>{}</> <h2>&</>", node.name);
             break;
 
         case Lattice::NodeKind::SharedMount:
             line = node.name.empty()
-                ? std::format("<a>[&&{}]</> <h2>&&</>", node.type)
-                : std::format("<a>[&&{}]</> <h2>&&</>", node.name);
+                ? std::format("<a>{}</> <h2>&&</>", node.type)
+                : std::format("<a>{}</> <h2>&&</>", node.name);
             break;
     }
 
