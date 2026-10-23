@@ -1,3 +1,6 @@
+-- The serializer module has no branch of its own; StdIo composes it.
+includes("../Serialization")
+
 -- Ordinary implementation can be linked and used without loading a plugin.
 target("StdIo.core")
     set_kind("static")
@@ -15,7 +18,7 @@ target("StdIo")
     set_kind("shared")
     set_targetdir(".")
     add_files("compose.cpp")
-    add_deps("Lattice", "StdIo.core")
+    add_deps("Lattice", "StdIo.core", "Serialization.core")
 
 target("StdIo.tests")
     set_kind("binary")

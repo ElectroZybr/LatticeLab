@@ -2,7 +2,7 @@
 
 #include <format>
 
-#include <Lattice/Tools/Logger.hpp>
+#include <Logger/Logger.hpp>
 
 
 ActionRouter::ActionRouter(ExportsView exports, Lattice::NodeId context, std::vector<InputAPI*> inputs)
@@ -71,6 +71,7 @@ void ActionRouter::resolve(Binding& binding) {
 
         case Target::Toggle:
         case Target::Add:
+        case Target::Axis:
             if (!binding.resolved.get || !binding.resolved.set)
                 binding.resolved = {};
             break;
@@ -141,6 +142,7 @@ void ActionRouter::bindAxis(std::string_view verb, std::string_view expression) 
     const auto key = bindKey(role, *chain);
 
     if (auto* existing = bindings_.get(bindings_.find(key))) {
+        existing->target = Target::Axis;
         existing->flags = 0;
         resolve(*existing);
         return;
@@ -148,7 +150,8 @@ void ActionRouter::bindAxis(std::string_view verb, std::string_view expression) 
 
     const BindId id = bindings_.create({
         .role = role,
-        .trigger = *chain
+        .trigger = *chain,
+        .target = Target::Axis
     }, key);
 
     resolve(bindings_.require(id));
@@ -163,13 +166,16 @@ void ActionRouter::bindAxis2(std::string_view verb, std::string_view expression)
     const auto key = bindKey(role, *chain);
 
     if (auto* existing = bindings_.get(bindings_.find(key))) {
+        existing->target = Target::Axis;
         existing->flags = 0;
+        resolve(*existing);
         return;
     }
 
     const BindId id = bindings_.create({
         .role = role,
-        .trigger = *chain
+        .trigger = *chain,
+        .target = Target::Axis
     }, key);
 
     resolve(bindings_.require(id));
@@ -281,6 +287,8 @@ void ActionRouter::tick() {
             auto& target = binding->resolved;
 
             switch (binding->target) {
+                case Target::Axis:
+                    break;
                 case Target::Action:
                     {
                         Lattice::ActionContext context{context_};

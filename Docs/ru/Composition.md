@@ -24,7 +24,7 @@ extern "C" void compose(NodeBuild root) {
   в том же файле; blueprint называется по его `id`; стартовая запись —
   `<id>.<instance> = "on"` в `lattice.toml`.
 * `emplace` регистрирует тип и явно указанные API на месте; отдельных списков
-  регистрации и codegen нет.
+  регистрации нет.
 * Handles в аргументах `emplace` становятся зависимостями и превращаются в обычные
   `T&`, `T*`, `std::vector<T*>`. Ручной `dependsOn` не нужен.
 * Экспорты принадлежат объекту: `obj.param`, `obj.action`, `obj.globalAction`.

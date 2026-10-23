@@ -23,7 +23,7 @@ extern "C" void compose(NodeBuild root) {
     auto local = root.emplace<CLIPlugin::LocalTerminal, CLIPlugin::Terminal>("local");
     exportStyle(local);
 
-    auto cli = root.emplace<CLIPlugin::CLI>("cli",
+    auto cli = root.construct<CLIPlugin::CLI>(
         root.exports(), root.tree(), root.id(), root.children<CLIPlugin::Terminal>());
     for (auto& entry : cli->theme().entries())
         cli.param(std::format("theme.{}", entry.name), entry.style);

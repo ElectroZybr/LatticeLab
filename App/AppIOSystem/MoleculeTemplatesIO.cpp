@@ -1,7 +1,7 @@
 #include "MoleculeTemplatesIO.h"
 
 #include "Lattice/Engine/Simulation.h"
-#include <Lattice/Tools/Logger.hpp>
+#include <Logger/Logger.hpp>
 
 namespace MoleculeTemplatesIO {
 void loadFromDirectory(Lattice::Simulation& simulation, const std::filesystem::path& directory) {

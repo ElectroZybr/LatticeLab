@@ -9,8 +9,6 @@
 #include <Actions/ActionRouter.hpp>
 
 using namespace Lattice;
-static_assert(!std::is_base_of_v<Component, InputAPI>);
-static_assert(!std::is_base_of_v<Component, ActionRouter>);
 
 namespace {
 void check(bool condition, const char* message) {

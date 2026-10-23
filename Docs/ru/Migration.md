@@ -56,20 +56,41 @@
 
 - [x] **GPU** — удалён; типы (`BufferDesc`, `TextureFormat`, `Rect`, `NativeWindow`…) переехали в `WGPU`
 - [x] **Vulkan** — удалён (неполный, не собирался); при необходимости вернётся вариантом пакета
-- [x] **WGPU** — классы в `Libs/WGPU` (`Instance`, `Device`, `Buffer`, `Shader`, `Pipeline`, `BindingSet`, `Surface`, `CommandList`, `ResourceRegistry`) — обычные RAII-объекты; пакет `Packages/WGPU` — только `compose.cpp` с общим `Device`
+- [x] **WGPU** — реализация и тесты перенесены в `Packages/WGPU`; классы (`Instance`, `Device`, `Buffer`, `Shader`, `Pipeline`, `BindingSet`, `Surface`, `CommandList`, `ResourceRegistry`) — обычные RAII-объекты в `WGPU.core`; `WGPU` — композиция с общим `Device`, `WGPU.tests` — тесты реализации
 - [x] **Graphics** — пакет: `compose.cpp` собирает ветку рендера (слот окна с вводом, surface, viewport с камерой и слотом контроллера, `Render`); классы обычные, в `Graphics.core`
 - [x] **Shell** — `compose.cpp`: кейбинды, вложенная ветка `Graphics`, `WindowSystem` как host-сервис (`Shell = ["on", "host"]`); `FrameAPI` разрывает цикл Shell ↔ Graphics
 - [x] Проверка: полный `lattice.toml` — окно, рендер, 13 кейбиндов, `resources` показывает живые ресурсы, выход через `quit` с кодом 0
 
 ## Этап 4. Уборка
 
-- [ ] Удалить из ядра `../Lattice`: `Component`, `SubsystemAPI`, `Model`, `NodeConfigure`, пакетный `plugin_register`/`BlueprintRegister`
-- [ ] Удалить `MountBuild::addLocal`/`addShare`, `NodeFactory::addLocal`/`addShare`, `NodeKind::Mount`/`SharedMount` и их обработку в `NodeOps`/`NodeQuery` (пользователей больше нет), тесты в `Mount_tests.cpp`/`Slot_tests.cpp`
-- [ ] Тесты Serialization: заменить `nodes.configure(root).focus<IOSubsystem>()` на `NodeBuild::focus`
-- [ ] Удалить codegen (`Tools/Generators/plugin_codegen.lua` и его подключение в корневом `xmake.lua`; пакетов с codegen больше нет)
-- [ ] Переименовать `composition.cpp` → `compose.cpp` в примерах ядра (`examples/composition`, `examples/slot`) и `Docs/ru/Kernel/Composition.md`
-- [ ] Удалить пустые `Packages/Compute`, `Packages/ReactiveMD` или наполнить
-- [ ] Убрать раздел «Статус миграции» из AGENTS.md, обновить `Docs/ru`
+- [x] Из ядра удалены `Component`, `SubsystemAPI`, `Model`, `NodeConfigure` и механизм `configure`/`invalidate` в `maintain`; `BlueprintRegister`, дескрипторы (`Desc`), `NodeBuild::add/share/addImpls/ancestor`, `Children<T>`, `Slot::choice<Impl>()`; lifecycle только через `onRetire`/`readyToDestroy` композиции (методы `retire()`/`readyToDestroy()` больше не подхватываются неявно)
+- [x] Удалены `MountBuild::addLocal`/`addShare`, `NodeFactory::addLocal`/`addShare`/`resource`/`reference`, `NodeKind::Mount`/`SharedMount` и ссылки реестра; `mount<T>()` остаётся
+- [x] Загрузчик принимает только `compose`; `plugin_register` удалён. `NodeKind::Component` переименован в `NodeKind::Object`
+- [x] Корень Runtime — обычная папка с глобальными действиями (`quit`, `add`, `del`, ...), без класса с конструктором от `NodeBuild`
+- [x] Тесты ядра переписаны на `emplace`/композиции; тесты удалённых механизмов удалены (198 тестов)
+- [x] Тесты Serialization: `NodeBuild::focus` вместо `nodes.configure(root)`
+- [x] Codegen удалён (`Tools/Generators` в ядре, подключение в корневом `xmake.lua`)
+- [x] `composition.cpp` → `compose.cpp` в примерах ядра
+- [x] Удалены пустые `Packages/Compute`, `Packages/ReactiveMD`
+- [x] Раздел «Статус миграции» убран из AGENTS.md, `Docs/ru` и README пакетов обновлены
+
+Не сделано: `ForceFields` по-прежнему закомментирован (см. этап 1).
+
+## Структура дерева
+
+- [x] `Serializer` размещает StdIo в своей ветке (`StdIo/Serializer:config`); пакет `Serialization` удалён, код — модуль `Serialization.core`
+- [x] `ActionRouter` создаёт Shell в своей ветке; пакет `Actions` удалён, код — модуль `Actions.core`
+- [x] Устройство WGPU называется по адаптеру (`Device::NVIDIA GeForce …`)
+- [x] Вьюпорт — узел своего объекта (`TestViewport:viewport`) с камерой и слотом контроллера; вьюпортов может быть несколько
+- [x] Ядро: `construct` на ветке из `branch()`, запрос `owner<T>()`
+
+## Структура дерева
+
+- [x] `Serializer` размещает StdIo в своей ветке; пакет `Serialization` удалён, код — модуль `Serialization.core`
+- [x] `ActionRouter` создаёт Shell в своей ветке; пакет `Actions` удалён, код — модуль `Actions.core`
+- [x] Устройство WGPU называется по адаптеру
+- [x] Вьюпорт — узел своего объекта с камерой и слотом контроллера; вьюпортов может быть несколько
+- [x] Ядро: `construct` на ветке из `branch()`, запрос `owner<T>()`
 
 ## Изменения ядра (`../Lattice`)
 
@@ -87,3 +108,23 @@
 2. [x] Vulkan — удалён
 3. [x] Приложение запускается после каждого этапа
 4. [x] Этапы 1–2 — последовательно в одной сессии
+
+## Переиспользуемые инструменты
+
+- [x] Logger, SysInfo и BmRunner вынесены в `../Lattice/Libs` с отдельными xmake-пакетами (`lattice-logger`, `lattice-sysinfo`, `lattice-bmrunner`); общие header-only утилиты — `lattice-tools`. WGPU.core использует отдельный Logger, Bench.core — отдельный BmRunner.
+
+- [x] Shared-пакеты Logger, SysInfo и BmRunner экспортируют `rpathdirs`: прямой запуск LatticeLab и загрузка Bench не зависят от `LD_LIBRARY_PATH`, который добавляет `xmake run`.
+
+## Пользовательский слой конфигурации
+
+- [x] Serialization сохраняет все явные переопределения по дереву; ядро уведомляет о set/reset/снятии параметров без хранения исходных значений. CLI использует явный set и поддерживает reset; временный ввод Actions остаётся через raw-setter.
+
+- [x] Компактный пользовательский слой: вложенные ключи дерева и параметры без `children`/`params`/`blueprint`/`name`; типы в `Тип:имя` для композиций и неоднозначных детей. Обычные YAML-ключи сохраняются без кавычек, текущий пользовательский файл переведён с сохранением значений.
+
+- [x] Восстановлены WASD/QE и оси мыши для FreeCamera: глобальные экспорты управления, axis/axis2 в загрузчике привязок; CLI показывает статус конфига и использует пользовательскую тему для сообщений об ошибках.
+
+- [x] Пользовательский слой по умолчанию находится в `User/runtime.yaml`; отсутствие файла при первом запуске допустимо, `save` создаёт каталог. Личные настройки перенесены из `Config/`.
+
+- [x] Сервис — роль существующего объекта: состояние выполнения хранится в его lifecycle, дочерние узлы ServiceRunner удалены. В дереве сервис отмечен `[service]`; WindowSystem больше не имеет имени `loop`.
+
+- [x] `NodeBuild::construct<T>` размещает обычный объект прямо в корне композиции. CLI, Shell и ClassicMD объявляют сервис на корне, без промежуточных узлов cli/WindowSystem/loop. Параметры темы CLI находятся непосредственно в ветке CLI.

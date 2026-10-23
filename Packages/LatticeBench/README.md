@@ -1,6 +1,6 @@
 # Bench: запуск бенчмарков
 
-Инфраструктурный пакет (`id = "Bench"`) над `Lattice/Tools/BmRunner`.
+Инфраструктурный пакет (`id = "Bench"`) над переиспользуемой библиотекой `lattice-bmrunner` (`../Lattice/Libs/BmRunner`).
 
 ```text
 Bench

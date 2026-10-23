@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <charconv>
 #include <chrono>
+#include <cctype>
 #include <cmath>
 #include <fstream>
 #include <limits>
@@ -108,7 +109,18 @@ void emit(YAML::Emitter& out, const Value& value) {
             for (const auto& [key, unused] : *item) keys.push_back(key);
             std::ranges::sort(keys);
             for (const auto& key : keys) {
-                out << YAML::Key << YAML::DoubleQuoted << key << YAML::Value;
+                // Keep ordinary tree/parameter keys readable; quote YAML
+                // reserved scalars and keys whose syntax needs escaping.
+                static const std::regex plainKey{R"([A-Za-z_][A-Za-z0-9_.:-]*)"};
+                std::string lower = key;
+                std::ranges::transform(lower, lower.begin(), [](unsigned char c) { return char(std::tolower(c)); });
+                const bool plain = std::regex_match(key, plainKey) && key.back() != ':' &&
+                    lower != "null" && lower != "true" && lower != "false" &&
+                    lower != "yes" && lower != "no" && lower != "on" && lower != "off";
+                out << YAML::Key;
+                if (plain) out << YAML::Auto;
+                else out << YAML::DoubleQuoted;
+                out << key << YAML::Value;
                 emit(out, item->at(key));
             }
             out << YAML::EndMap;

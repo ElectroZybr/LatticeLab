@@ -11,6 +11,8 @@
 #include <StdIo/TomlParser.hpp>
 
 #include <Shell/KeybindLoader.hpp>
+#include <Shell/glfwKeyboard.hpp>
+#include <Shell/glfwMouse.hpp>
 
 using namespace Lattice;
 
@@ -65,6 +67,38 @@ int main() {
         check(fired == 1, "press binding fires once");
         check(speed == 2.0, "hold binding adds every frame");
         router.unregisterInput(input);
+
+        glfwKeyboard keyboard;
+        glfwMouse mouse;
+        router.registerInput(keyboard);
+        router.registerInput(mouse);
+        glm::vec2 look{}, cursor{};
+        double zoom = 0;
+        int forward = 0;
+        root.globalAction("forward", [&] { ++forward; });
+        root.globalParam("look", look);
+        root.globalParam("zoom", zoom);
+        root.globalParam("cursor", cursor);
+        keybinds.load(Value{Object{
+            {"forward", Array{"W", "hold"}},
+            {"look", Array{"MouseDelta+MouseRight", "axis2"}},
+            {"zoom", Array{"MouseWheel", "axis"}},
+            {"cursor", Array{"MousePos", "axis2"}}
+        }});
+        keyboard.onKey(GLFW_KEY_W, GLFW_PRESS);
+        mouse.onMove(100, 100);
+        mouse.onMove(104, 106);
+        mouse.onButton(GLFW_MOUSE_BUTTON_RIGHT, GLFW_PRESS);
+        mouse.onScroll(0, 2);
+        router.tick();
+        check(forward == 1 && look == glm::vec2(4, 6) && zoom == 2, "keyboard/mouse bindings reach runtime exports");
+        mouse.beginFrame();
+        mouse.onButton(GLFW_MOUSE_BUTTON_RIGHT, GLFW_RELEASE);
+        router.tick();
+        check(forward == 2 && look == glm::vec2{} && zoom == 0, "hold repeats while mouse deltas clear");
+        check(cursor == glm::vec2(104, 106), "absolute cursor survives an idle frame");
+        router.unregisterInput(mouse);
+        router.unregisterInput(keyboard);
     }
     runtime.nodes.ops.destroyBranch(rootId);
     std::filesystem::remove(file);

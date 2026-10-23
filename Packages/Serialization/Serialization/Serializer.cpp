@@ -1,4 +1,5 @@
 #include "Serializer.hpp"
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <unordered_set>
@@ -35,11 +36,12 @@ Object& object(Value& value, const std::string& path) {
     return *std::get<ObjectPtr>(value);
 }
 
-std::string text(const Object& config, std::string_view field, const std::string& path) {
-    const auto found = config.find(std::string(field));
-    if (found == config.end() || !found->second.is<std::string>())
-        throw Error("'{}.{}' must be a string", path, field);
-    return found->second.require<std::string>();
+// A single ':' separates type and instance; '::' remains part of a C++ type.
+size_t separator(std::string_view key) {
+    for (size_t i = 0; i < key.size(); ++i)
+        if (key[i] == ':' && (i == 0 || key[i - 1] != ':') &&
+            (i + 1 == key.size() || key[i + 1] != ':')) return i;
+    return std::string_view::npos;
 }
 
 double number(const Value& value, const std::string& path) {
@@ -81,7 +83,72 @@ Value parameter(const Value& supplied, const Value& current, const std::string& 
 }
 
 Serializer::Serializer(NodeSystem& nodes, NodeId root, IOSubsystem& io)
-    : nodes_(nodes), root_(root), generation_(nodes.registry.generation(root)), io_(io) {}
+    : nodes_(nodes), root_(root), generation_(nodes.registry.generation(root)), io_(io),
+      observer_(nodes.exports.observeParameters([this](ExportId id, ParamChange change) {
+          changed(id, change);
+      })) {}
+
+Serializer::~Serializer() { nodes_.exports.unobserveParameters(observer_); }
+
+void Serializer::changed(ExportId id, ParamChange change) {
+    if (change != ParamChange::Set) {
+        overrides_.erase(id);
+        return;
+    }
+    const auto* root = nodes_.registry.get(root_);
+    if (!root || root->state != NodeState::Active || nodes_.registry.generation(root_) != generation_)
+        return;
+    const auto* entry = nodes_.exports.get(id);
+    if (!entry || entry->owner == InvalidNodeId) return;
+    auto owner = entry->owner;
+    while (owner != InvalidNodeId && owner != root_)
+        owner = nodes_.registry.require(owner).parent;
+    if (owner == root_) overrides_.insert_or_assign(id, copy(nodes_.exports.value(id)));
+}
+
+bool Serializer::declared(NodeId owner) const {
+    const auto found = declarations_.find(owner);
+    return found != declarations_.end() && found->second == nodes_.registry.generation(owner);
+}
+
+std::string Serializer::key(NodeId owner) const {
+    const auto& node = nodes_.registry.require(owner);
+    const auto* blueprint = nodes_.blueprints.get(node.bp);
+    const std::string type = blueprint ? blueprint->name : "";
+    // A composition boundary carries its type so a missing branch can be rebuilt.
+    if (blueprint && blueprint->meta.compose)
+        return node.name.empty() ? type : type + ":" + node.name;
+    if (!node.name.empty() && separator(node.name) == std::string_view::npos &&
+        nodes_.exports.find(node.parent, node.name) == InvalidExportId) {
+        size_t matches = 0;
+        for (auto id : nodes_.registry.children(node.parent)) {
+            const auto& sibling = nodes_.registry.require(id);
+            const auto* siblingType = nodes_.blueprints.get(sibling.bp);
+            if (sibling.name == node.name || (sibling.name.empty() && siblingType &&
+                (siblingType->name == node.name || siblingType->shortName() == node.name))) ++matches;
+        }
+        if (matches == 1) return node.name;
+    }
+    return type + ":" + node.name;
+}
+
+Object Serializer::layer(NodeId owner) {
+    if (nodes_.registry.require(owner).state != NodeState::Active) return {};
+    Object result;
+    for (const auto& [id, value] : overrides_) {
+        const auto* entry = nodes_.exports.get(id);
+        if (entry && entry->owner == owner) result.emplace(entry->name, copy(value));
+    }
+    for (auto id : nodes_.registry.children(owner)) {
+        if (nodes_.registry.require(id).state != NodeState::Active) continue;
+        auto config = layer(id);
+        if (config.empty() && !declared(id)) continue;
+        const auto name = key(id);
+        if (!result.emplace(name, std::move(config)).second)
+            throw Error("Configuration key '{}' collides with another child or parameter", name);
+    }
+    return result;
+}
 
 void Serializer::checkRoot() const {
     const auto* node = nodes_.registry.get(root_);
@@ -92,87 +159,114 @@ void Serializer::checkRoot() const {
 void Serializer::load(std::optional<std::string> path) {
     checkRoot();
     const std::filesystem::path input = path ? std::filesystem::path(*path) :
-        (document_ ? path_ : std::filesystem::path("Config/runtime.yaml"));
+        (document_ ? path_ : std::filesystem::path("User/runtime.yaml"));
+    // A first launch has no saved user layer yet. Explicitly requested or
+    // previously selected missing files still report normal IO errors.
+    if (!path && !document_ && !std::filesystem::exists(input)) {
+        path_ = input;
+        document_.emplace();
+        return;
+    }
     auto document = io_.read(input);
     auto* section = document.get("Lattice");
     if (!section) throw Error("'{}' has no [Lattice] section", input.string());
-    visit(root_, object(*section, "Lattice"), true, "Lattice");
+    visit(root_, object(*section, "Lattice"), "Lattice");
     path_ = input;
+    document.root().erase("Lattice"); // Retain only unrelated sections; the layer owns explicit values.
     document_ = std::move(document);
+}
+
+std::string Serializer::status() const {
+    checkRoot();
+    if (!document_) return "Configuration has not been loaded";
+    return std::format("Config: {} ({} overrides)", path_.string(), overrides_.size());
 }
 
 void Serializer::save(std::optional<std::string> path) {
     checkRoot();
-    if (!document_) throw Error("Load a configuration before saving");
-    const std::filesystem::path output = path ? std::filesystem::path(*path) : path_;
-    auto value = copy(Value{document_->root()});
+    const std::filesystem::path output = path ? std::filesystem::path(*path) :
+        (document_ ? path_ : std::filesystem::path("User/runtime.yaml"));
+    auto value = document_ ? copy(Value{document_->root()}) : Value{Object{}};
     Document document{value.get<Object>()};
-    visit(root_, object(*document.get("Lattice"), "Lattice"), false, "Lattice");
+    document.root().insert_or_assign("Lattice", layer(root_));
+    if (!output.parent_path().empty()) std::filesystem::create_directories(output.parent_path());
     io_.write(output, document);
     path_ = output;
+    document.root().erase("Lattice"); // Retain only unrelated sections; the layer owns explicit values.
     document_ = std::move(document);
 }
 
-NodeId Serializer::child(NodeId parent, const Object& config, bool create, const std::string& path) {
-    const auto name = text(config, "name", path);
-    const auto typeIt = config.find("blueprint");
+NodeId Serializer::child(NodeId parent, std::string_view key, const std::string& path) {
+    const auto split = separator(key);
+    const bool typed = split != std::string_view::npos;
+    const auto typeName = typed ? key.substr(0, split) : key;
+    const auto name = typed ? key.substr(split + 1) : key;
     BlueprintId type = InvalidBlueprintId;
-    if (typeIt != config.end()) {
-        const auto typeName = text(config, "blueprint", path);
-        type = nodes_.blueprints.resolve(typeName);
-        if (type == InvalidBlueprintId) throw Error("Unknown blueprint '{}' at '{}'", typeName, path);
+    if (!typeName.empty()) {
+        type = nodes_.blueprints.find(typeName);
+        // Plain instance names do not need any type lookup. Resolve short type
+        // names only if no matching named child was found below.
+        if (typed && type == InvalidBlueprintId) type = nodes_.blueprints.resolve(typeName);
+        if (typed && type == InvalidBlueprintId) throw Error("Unknown blueprint '{}' at '{}'", typeName, path);
     }
-    std::vector<NodeId> named;
     std::vector<NodeId> matching;
+    bool named = false;
     for (auto id : nodes_.registry.children(parent)) {
         const auto& node = nodes_.registry.require(id);
-        if (node.name != name) continue;
-        named.push_back(id);
-        if (type == InvalidBlueprintId || node.bp == type) matching.push_back(id);
+        if (node.name == name) named = true;
+        if (typed ? node.name == name && node.bp == type :
+            node.name == key || (node.name.empty() && type != InvalidBlueprintId && node.bp == type))
+            matching.push_back(id);
     }
-    if (matching.size() > 1) throw Error("Branch '{}' is ambiguous; specify its blueprint", path);
+    if (!typed && matching.empty() && type == InvalidBlueprintId) {
+        type = nodes_.blueprints.resolve(typeName);
+        for (auto id : nodes_.registry.children(parent)) {
+            const auto& node = nodes_.registry.require(id);
+            if (node.name.empty() && type != InvalidBlueprintId && node.bp == type) matching.push_back(id);
+        }
+    }
+    if (matching.size() > 1) throw Error("Branch '{}' is ambiguous; use Type:name", path);
+    NodeId id;
     if (matching.size() == 1) {
-        const auto id = matching.front();
+        id = matching.front();
         if (nodes_.registry.require(id).state != NodeState::Active)
             throw Error("Branch '{}' is retiring; retry after maintain()", path);
-        return id;
+    } else {
+        if (typed && named && !name.empty()) throw Error("Blueprint does not match existing branch '{}'", path);
+        const auto* blueprint = nodes_.blueprints.get(type);
+        if (!blueprint || !blueprint->meta.compose)
+            throw Error("Missing branch '{}' needs a composable Type:name key", path);
+        id = nodes_.builder.add(parent, type, typed ? name : std::string_view{});
     }
-    if (!named.empty()) throw Error("Blueprint does not match existing branch '{}'", path);
-    if (!create) throw Error("Branch '{}' no longer exists", path);
-    if (type == InvalidBlueprintId) throw Error("Missing branch '{}' needs a blueprint", path);
-    return nodes_.builder.add(parent, type, name);
+    const auto* blueprint = nodes_.blueprints.get(nodes_.registry.require(id).bp);
+    if (blueprint && blueprint->meta.compose)
+        declarations_.insert_or_assign(id, nodes_.registry.generation(id));
+    return id;
 }
 
-void Serializer::visit(NodeId owner, Object& config, bool loading, const std::string& path) {
-    for (const auto& [key, value] : config)
-        if (key != "name" && key != "blueprint" && key != "params" && key != "children")
-            throw Error("Unknown configuration field '{}.{}'", path, key);
-
-    if (auto found = config.find("params"); found != config.end()) {
-        auto& params = object(found->second, path + ".params");
-        for (auto& [name, value] : params) {
-            const auto id = nodes_.exports.find(owner, name);
-            const auto* entry = nodes_.exports.get(id);
-            if (!entry || entry->kind != ExportKind::Param)
-                throw Error("Parameter '{}.{}' is not exported", path, name);
-            if (loading) {
-                auto converted = parameter(value, nodes_.exports.value(id), path + "." + name);
-                nodes_.exports.set(id, converted);
-            } else value = copy(nodes_.exports.value(id));
+void Serializer::visit(NodeId owner, Object& config, const std::string& path) {
+    std::vector<std::string> children;
+    // Resolve exported names before considering objects as child branches: an
+    // Object-valued parameter is still one parameter, with no reserved wrappers.
+    for (const auto& [name, value] : config) {
+        const auto id = nodes_.exports.find(owner, name);
+        if (id == InvalidExportId) {
+            children.push_back(name);
+            continue;
         }
+        if (nodes_.exports.get(id)->kind != ExportKind::Param)
+            throw Error("'{}.{}' is an action, not a parameter", path, name);
+        auto converted = parameter(value, nodes_.exports.value(id), path + "." + name);
+        nodes_.exports.set(id, converted);
     }
-    if (auto found = config.find("children"); found != config.end()) {
-        if (!found->second.is<Array>()) throw Error("'{}.children' must be an array", path);
-        std::unordered_set<std::string> names;
-        // Ordered array: providers may be declared before branches which need them.
-        for (auto& item : *std::get<ArrayPtr>(found->second)) {
-            auto& configChild = object(item, path + ".children");
-            const auto name = text(configChild, "name", path);
-            if (!names.insert(name).second) throw Error("Duplicate child '{}' at '{}'", name, path);
-            const auto childPath = path + "/" + name;
-            const auto id = child(owner, configChild, loading, childPath);
-            visit(id, configChild, loading, childPath);
-        }
+    std::ranges::sort(children);
+    std::unordered_set<NodeId> visited;
+    for (const auto& name : children) {
+        const auto childPath = path + "/" + name;
+        auto& branch = object(config.at(name), childPath);
+        const auto id = child(owner, name, childPath);
+        if (!visited.insert(id).second) throw Error("Duplicate child at '{}'", childPath);
+        visit(id, branch, childPath);
     }
 }
 }

@@ -1,14 +1,12 @@
 [keybinds]
-quit = ["Ctrl+Q", 12]
-dt.add = ["]", 0.001, "hold"]
-dt.sub = ["[", -0.001, "hold"]
-dumpTree = "T"
-dumpContext = "C"
-dumpBlueprints = "B"
-load = "Ctrl+O"
-print = "MouseLeft"
-CreateVerlet = "Ctrl+W"
+quit = "Ctrl+Q"
 forward = ["W", "hold"]
 backward = ["S", "hold"]
 left = ["A", "hold"]
 right = ["D", "hold"]
+up = ["E", "hold"]
+down = ["Q", "hold"]
+look = ["MouseDelta+MouseRight", "axis2"]
+pan = ["MouseDelta+MouseMiddle", "axis2"]
+zoom = ["MouseWheel", "axis"]
+cursor = ["MousePos", "axis2"]

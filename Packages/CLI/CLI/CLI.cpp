@@ -4,7 +4,7 @@
 #include <thread>
 
 #include <Lattice/Tools/TreeFormatter.hpp>
-#include <Lattice/Tools/Logger.hpp>
+#include <Logger/Logger.hpp>
 
 #include "ValueParser.hpp"
 
@@ -21,7 +21,7 @@ std::string formatTreeNode(const Lattice::TreeNodeInfo& node) {
             line = std::format("{} <a>F</>", node.name);
             break;
 
-        case Lattice::NodeKind::Component:
+        case Lattice::NodeKind::Object:
             line = node.name.empty()
                 ? std::format("{} <param>C</>", node.type)
                 : std::format("{}<mut2>::{}</> <param>C</>", node.type, node.name);
@@ -40,20 +40,9 @@ std::string formatTreeNode(const Lattice::TreeNodeInfo& node) {
         case Lattice::NodeKind::Binding:
             line = std::format("{} <action>λ</>", node.name);
             break;
-
-        case Lattice::NodeKind::Mount:
-            line = node.name.empty()
-                ? std::format("<a>{}</> <h2>&</>", node.type)
-                : std::format("<a>{}</> <h2>&</>", node.name);
-            break;
-
-        case Lattice::NodeKind::SharedMount:
-            line = node.name.empty()
-                ? std::format("<a>{}</> <h2>&&</>", node.type)
-                : std::format("<a>{}</> <h2>&&</>", node.name);
-            break;
     }
 
+    if (node.service) line += " <a2>[service]</>";
     return line + std::format(" <mut2>#{}</>", node.id);
 }
 
@@ -123,6 +112,7 @@ CLI::CLI(ExportsView exports, Lattice::TreeView tree, Lattice::NodeId context,
 
     commands_.setExports(exports_);
     commands_.setTree(tree_);
+    commands_.setTheme(theme_);
 
     const Lattice::NodeId root = tree_.root(context);
     for (CLIPlugin::Terminal* terminal : terminals_)
@@ -233,6 +223,14 @@ void CLI::run(const std::function<void()>& idle) {
         if (resolved && resolved.invoke) {
             Lattice::ActionContext context{terminal->current()};
             resolved.invoke(resolved.object, context, {});
+        }
+        const auto config = exports_.resolve(exports_.role("config"), terminal->current());
+        if (config && config.invoke) {
+            Lattice::ActionContext context{terminal->current()};
+            config.invoke(config.object, context, {});
+            for (const auto& output : context.output())
+                if (const auto* value = std::get_if<Lattice::Value>(&output))
+                    terminal->write(value->toString() + "\n");
         }
     }
 

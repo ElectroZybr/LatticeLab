@@ -7,20 +7,10 @@
 
 #include "Command.hpp"
 #include "ValueParser.hpp"
-#include <Lattice/Tools/Logger.hpp>
+#include <Logger/Logger.hpp>
 
 namespace CLIPlugin {
 namespace {
-
-void reply(Terminal& terminal, Level level, std::string_view text) {
-    TextFormatter message;
-    message.append(text);
-    terminal.write(Logger::line(level, "CLI", message).render() + '\n');
-}
-
-void reply(Terminal& terminal, std::string_view text) {
-    reply(terminal, Level::Info, text);
-}
 
 std::optional<Lattice::ExportId> parseExportId(std::string_view command) {
     if (command.size() < 2 || command.front() != '#')
@@ -37,6 +27,17 @@ std::optional<Lattice::ExportId> parseExportId(std::string_view command) {
 
 }
 
+void CommandDispatcher::reply(Terminal& terminal, Level level, std::string_view text) const {
+    TextFormatter message;
+    message.append(text);
+    terminal.write(TextFormatter::format(*theme_, "{} <mut><b>[<light>CLI</>]<//> {}</>",
+        LogStyle::get(level).style, message.markup()).render() + '\n');
+}
+
+void CommandDispatcher::reply(Terminal& terminal, std::string_view text) const {
+    reply(terminal, Level::Info, text);
+}
+
 void CommandDispatcher::execute(
     Terminal& terminal,
     std::string_view command
@@ -46,10 +47,16 @@ void CommandDispatcher::execute(
         return;
 
     const size_t separator = command.find_first_of(" \t");
-    const std::string_view selector = command.substr(0, separator);
-    const std::string_view argument = separator == std::string_view::npos
+    std::string_view selector = command.substr(0, separator);
+    std::string_view argument = separator == std::string_view::npos
         ? std::string_view{}
         : trim(command.substr(separator + 1));
+
+    const bool reset = selector == "reset";
+    if (reset) {
+        selector = argument;
+        argument = {};
+    }
 
     try {
         Lattice::ResolvedExport resolved;
@@ -69,6 +76,16 @@ void CommandDispatcher::execute(
 
         if (!resolved) {
             reply(terminal, Level::Warning, std::format("Unknown command '{}'", selector));
+            return;
+        }
+
+        if (reset) {
+            if (!resolved.set) {
+                reply(terminal, Level::Warning, "reset expects a parameter");
+                return;
+            }
+            exports_.reset(resolved);
+            reply(terminal, std::format("Override '{}' removed; current value is unchanged", name));
             return;
         }
 
@@ -165,7 +182,7 @@ void CommandDispatcher::execute(
             return;
         }
 
-        resolved.set(resolved.object, *value);
+        exports_.set(resolved, *value);
         reply(terminal, std::format("{} = {}", name, resolved.get(resolved.object).toString()));
     } catch (const std::exception& error) {
         reply(terminal, Level::Error, std::format("Command failed: {}", error.what()));

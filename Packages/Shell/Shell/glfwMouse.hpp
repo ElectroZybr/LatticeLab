@@ -34,7 +34,10 @@ public:
     double axis(TriggerId id) const override { return state_.axis(id); }
     glm::vec2 axis2(TriggerId id) const override { return state_.axis2(id); }
 
-    void beginFrame() { state_.beginFrame(); }
+    void beginFrame() {
+        state_.beginFrame();
+        state_.setAxis2(position_, positionValue_);
+    }
 
     void onMove(double x, double y) {
         const glm::vec2 position{float(x), float(y)};

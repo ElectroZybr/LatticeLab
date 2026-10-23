@@ -1,5 +1,5 @@
--- Input routing over runtime exports. ActionRouter is ordinary infrastructure code;
--- compose.cpp publishes one shared router for the application.
+-- Input routing over runtime exports. ActionRouter is ordinary infrastructure code
+-- without a branch of its own; the Shell package places one router in its branch.
 target("Actions.core")
     set_kind("static")
     set_targetdir("$(builddir)/lib")
@@ -9,12 +9,6 @@ target("Actions.core")
     add_files("Actions/*.cpp")
     add_includedirs(".", {public = true})
     add_deps("Lattice", {public = true})
-
-target("Actions")
-    set_kind("shared")
-    set_targetdir(".")
-    add_files("compose.cpp")
-    add_deps("Actions.core")
 
 target("Actions.tests")
     set_kind("binary")

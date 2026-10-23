@@ -1,6 +1,5 @@
 -- target("ForceFields")
 --     set_kind("shared")
---     add_rules("lattice.plugin_codegen")
 --     set_targetdir(".")
 
 --     add_files("ForceFields/*.cpp")

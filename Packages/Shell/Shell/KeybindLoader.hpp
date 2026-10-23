@@ -101,7 +101,7 @@ private:
             if (arg.is<std::string>()) {
                 const auto token = arg.get<std::string>();
 
-                if (isOp(token))
+                if (isOp(token) || token == "axis" || token == "axis2")
                     op = token;
                 else if (token == "hold")
                     mode = ActionMode::OnHold;
@@ -114,7 +114,11 @@ private:
             }
         }
 
-        if (op == "toggle")
+        if (op == "axis")
+            actionMap_.bindAxis(verb, trigger);
+        else if (op == "axis2")
+            actionMap_.bindAxis2(verb, trigger);
+        else if (op == "toggle")
             actionMap_.bindToggle(verb, trigger, mode);
         else if (op == "add" || op == "sub")
             actionMap_.bindAdd(verb, trigger, op == "sub" ? -delta : delta, mode);

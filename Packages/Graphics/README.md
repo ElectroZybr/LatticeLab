@@ -10,12 +10,15 @@ Graphics:render
 │   ├── glfwMouse:mouse
 │   └── glfwWindow:glfw
 ├── Surface:surface                 → device (mount), window
-├── viewport
+├── TestViewport:viewport           узел вьюпорта: → device, camera; param cursor
 │   ├── Camera:camera
-│   ├── TestViewport:view           → device, camera; param cursor
-│   └── Slot<TransformController>:controller   choice Graphics::FreeCamera (look, move, zoom, pan)
+│   └── Slot<TransformController>:controller   choice Graphics::FreeCamera → camera, owner<Viewport>
 └── Render:render                   FrameAPI → device, window, surface, viewports, controllers
 ```
+
+Каждый вьюпорт — отдельный узел: `branch(name)` с камерой, затем `construct<TestViewport,
+Viewport>` на нём же и слот контроллера, который находит свой вьюпорт через `owner<Viewport>()`.
+`Render` рисует все вьюпорты ветки (`collect<Viewport>`), их может быть сколько угодно.
 
 | Класс | Назначение |
 |---|---|
@@ -30,3 +33,6 @@ GPU-ресурсы — RAII-поля компонентов и строки в �
 ```sh
 xmake build Graphics.tests && xmake run Graphics.tests
 ```
+
+Управление камерой (`Config/keybinds.toml`): WASD — движение, Q/E — вниз/вверх,
+правая кнопка + движение мыши — поворот, средняя — панорамирование, колесо — приближение.

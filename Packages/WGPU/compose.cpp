@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include <Lattice/Composition.hpp>
 #include <WGPU/Device.hpp>
 
@@ -10,7 +12,11 @@ extern "C" constinit const Lattice::Package lattice_package{
 // as ordinary RAII objects; the device keeps a registry of what is alive.
 extern "C" void compose(NodeBuild root) {
     auto instance = root.emplace<WGPU::Instance>("instance");
-    auto device = root.emplaceShared<WGPU::Device>("device", instance);
+    // The device node is named after its adapter; '/' and ':' are tree path separators.
+    auto name = instance->adapterName();
+    std::ranges::replace(name, '/', '-');
+    std::ranges::replace(name, ':', '-');
+    auto device = root.emplaceShared<WGPU::Device>(name, instance);
     device.action("resources", [](WGPU::Device& self, Lattice::ActionContext& context) {
         context.emit(Lattice::Value{self.resources().report()});
     });

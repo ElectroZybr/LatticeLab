@@ -1,3 +1,6 @@
+-- The router module has no branch of its own; Shell composes it.
+includes("../Actions")
+
 add_requires("stb")
 add_requires("glfw")
 
@@ -18,7 +21,7 @@ target("Shell.core")
         add_syslinks("dl")
     end
     add_includedirs(".", {public = true})
-    add_deps("StdIo.core", "Actions.core", "WGPU", {public = true})
+    add_deps("StdIo.core", "Actions.core", "WGPU.core", {public = true})
 
 target("Shell")
     set_kind("shared")

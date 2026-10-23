@@ -10,7 +10,7 @@ target("Graphics.core")
     add_files("Graphics/*.cpp")
     add_includedirs(".", {public = true})
     add_packages("glm", {public = true})
-    add_deps("WGPU", "Shell.core", {public = true})
+    add_deps("WGPU.core", "Shell.core", {public = true})
 
 -- Composition: the render branch of one window.
 target("Graphics")

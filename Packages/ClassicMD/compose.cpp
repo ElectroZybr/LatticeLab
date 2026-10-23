@@ -26,6 +26,6 @@ extern "C" void compose(NodeBuild root) {
     simulation.param("cell_size", &ClassicMD::ClassicMD::cellSize);
     simulation.action("step", &ClassicMD::ClassicMD::step);
 
-    auto loop = root.emplace<ClassicMD::SimulationLoop>("loop", simulation);
+    auto loop = root.construct<ClassicMD::SimulationLoop>(simulation);
     loop.service(&ClassicMD::SimulationLoop::run, &ClassicMD::SimulationLoop::requestStop);
 }

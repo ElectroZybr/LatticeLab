@@ -18,7 +18,7 @@
 #include "App/AppIOSystem/AppSaveState.h"
 #include "Lattice/Engine/Simulation.h"
 #include "Lattice/Engine/io/SimulationStateIO.h"
-#include <Lattice/Tools/Logger.hpp>
+#include <Logger/Logger.hpp>
 #include "Lattice/Scripting/LuaState.h"
 #include "GUI/interface/UiState.h"
 #include "Rendering/BaseRenderer.h"

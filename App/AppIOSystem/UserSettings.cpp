@@ -4,7 +4,7 @@
 #include "App/capture/CaptureController.h"
 #include "App/viewport/SceneViewport.h"
 #include "Lattice/Engine/Simulation.h"
-#include <Lattice/Tools/Logger.hpp>
+#include <Logger/Logger.hpp>
 
 #include <algorithm>
 #include <fstream>

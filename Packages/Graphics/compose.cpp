@@ -26,12 +26,21 @@ auto composeGlfwWindow(NodeBuild& slot) {
 }
 
 auto composeFreeCamera(NodeBuild& slot) {
+    // The controller belongs to the viewport that owns its slot.
     auto controller = slot.emplace<FreeCameraController>("free",
-        slot.require<Camera>("camera"), slot.require<Viewport>("view"));
-    controller.param("look", &FreeCameraController::look);
-    controller.param("zoom", &FreeCameraController::zoom);
-    controller.param("pan", &FreeCameraController::pan);
-    controller.param("move", &FreeCameraController::move);
+        slot.require<Camera>("camera"), slot.owner<Viewport>());
+    auto ref = controller.ref();
+    NodeBuild controls{ref.id(), *ref.runtime()};
+    controls.globalParam("look", controller->look);
+    controls.globalParam("zoom", controller->zoom);
+    controls.globalParam("pan", controller->pan);
+    controls.globalParam("move", controller->move);
+    controls.globalAction("forward", [ref] { ref->move.z += 1; });
+    controls.globalAction("backward", [ref] { ref->move.z -= 1; });
+    controls.globalAction("left", [ref] { ref->move.x -= 1; });
+    controls.globalAction("right", [ref] { ref->move.x += 1; });
+    controls.globalAction("up", [ref] { ref->move.y += 1; });
+    controls.globalAction("down", [ref] { ref->move.y -= 1; });
     return controller;
 }
 
@@ -47,14 +56,19 @@ extern "C" void compose(NodeBuild root) {
 
     auto surface = root.emplace<WGPU::Surface>("surface", device.ref(), window.get()->native());
 
-    auto viewport = root.branch("viewport");
-    auto camera = viewport.emplace<Camera>("camera");
-    camera->setPosition({0.0f, 0.0f, 2.0f});
-    auto view = viewport.emplace<TestViewport, Viewport>("view",
-        device.ref(), surface->format(), camera, std::string{"Packages/Graphics/shaders/circle.wgsl"});
-    view.param("cursor", view->cursorValue());
-    auto controller = viewport.addSlot<TransformController>("controller");
-    controller.choice("Graphics::FreeCamera", composeFreeCamera);
+    // Each viewport is its own node: the viewport object with its camera and controller.
+    // Render draws every viewport of the branch, so more can be added the same way.
+    const auto addViewport = [&](std::string_view name, std::string shader) {
+        auto viewport = root.branch(name);
+        auto camera = viewport.emplace<Camera>("camera");
+        camera->setPosition({0.0f, 0.0f, 2.0f});
+        auto view = viewport.construct<TestViewport, Viewport>(
+            device.ref(), surface->format(), camera, std::move(shader));
+        viewport.globalParam("cursor", view->cursorValue());
+        auto controller = viewport.addSlot<TransformController>("controller");
+        controller.choice("Graphics::FreeCamera", composeFreeCamera);
+    };
+    addViewport("viewport", "Packages/Graphics/shaders/circle.wgsl");
 
     root.emplace<Render, FrameAPI>("render", device.ref(), window.ref(), surface,
         root.collect<Viewport>(), root.collect<TransformController>());

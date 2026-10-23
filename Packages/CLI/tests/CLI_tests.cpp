@@ -13,7 +13,6 @@
 
 using namespace Lattice;
 static_assert(!std::is_base_of_v<ServiceAPI, CLIPlugin::CLI>);
-static_assert(!std::is_base_of_v<Component, CLIPlugin::Terminal>);
 
 namespace {
 void check(bool condition, const char* message) {
@@ -73,27 +72,54 @@ void servesScriptedTerminal() {
         ::NodeBuild root{rootId, runtime.nodes};
         root.branch("folder");
         auto terminal = root.emplace<ScriptTerminal, CLIPlugin::Terminal>("script");
-        terminal->lines = {"cd folder", "ls", "nope"};
+        terminal->lines = {"cd folder", "ls", "nope", "cd missing"};
         auto cli = root.emplace<CLIPlugin::CLI>("cli",
             root.exports(), root.tree(), root.id(), root.children<CLIPlugin::Terminal>());
         cli.globalAction("ls", &CLIPlugin::CLI::showList);
         cli.globalAction("cd", &CLIPlugin::CLI::changeDirectory);
         check(!terminal->path.empty(), "initial path is set");
 
+        cli->theme().style(cli->theme().find("err")) = TextStyle::rgb(0x336688);
         int idles = 0;
         cli->run([&] { ++idles; });
         check(idles > 0, "idle is called while serving");
         check(terminal->current() != rootId && terminal->path.find("folder") != std::string::npos, "cd moved terminal");
         check(terminal->output.find("Unknown command 'nope'") != std::string::npos, "unknown command reported");
+        check(terminal->output.find("38;2;51;102;136m") != std::string::npos,
+              "CLI errors must use configured theme.err");
         check(!terminal->attached(), "closed terminal detached");
     }
     runtime.nodes.ops.destroyBranch(rootId);
 }
+void explicitAssignmentsAndReset() {
+    Context runtime;
+    const auto rootId = runtime.nodes.factory.folder(InvalidNodeId, "Root");
+    int gain = 1, sets = 0, resets = 0;
+    {
+        NodeBuild root{rootId, runtime.nodes};
+        const auto id = root.param("gain", gain);
+        const auto observer = runtime.nodes.exports.observeParameters([&](ExportId target, ParamChange change) {
+            check(target == id, "assignment identity");
+            if (change == ParamChange::Set) ++sets;
+            if (change == ParamChange::Reset) ++resets;
+        });
+        auto terminal = root.emplace<ScriptTerminal, CLIPlugin::Terminal>("script");
+        terminal->lines = {"gain 4", "reset gain"};
+        auto cli = root.emplace<CLIPlugin::CLI>("cli", root.exports(), root.tree(), root.id(),
+                                               root.children<CLIPlugin::Terminal>());
+        cli->run([] {});
+        check(gain == 4 && sets == 1 && resets == 1, "CLI records edits and reset without rewriting state");
+        runtime.nodes.exports.unobserveParameters(observer);
+    }
+    runtime.nodes.ops.destroyBranch(rootId);
+}
+
 }
 
 int main() {
     parsesArguments();
     resolvesTreePaths();
     servesScriptedTerminal();
+    explicitAssignmentsAndReset();
     std::cout << "CLI: arguments, tree paths and scripted terminal passed\n";
 }

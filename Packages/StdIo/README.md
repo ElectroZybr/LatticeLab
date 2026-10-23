@@ -1,15 +1,16 @@
 # StdIo: реализация и композиция
 
 StdIo — пакет с одной точкой входа `extern "C" void compose(NodeBuild root)`.
-Только `compose.cpp` создаёт дерево, объявляет предоставляемые API и публикует
-общий IO. Парсеры и файловый сервис — обычные C++ классы.
+Только `compose.cpp` создаёт дерево, объявляет предоставляемые API, публикует
+общий IO и размещает сериализатор конфигурации. Парсеры и файловый сервис — обычные C++ классы.
 
 ```text
 StdIo
 ├── YamlParser:yaml        предоставляет ParserAPI
 ├── TomlParser:toml        предоставляет ParserAPI
 ├── TsvParser:tsv          предоставляет ParserAPI
-└── IOSubsystem:io         использует три парсера; общий кандидат Context
+├── IOSubsystem:io         использует три парсера; общий кандидат Context
+└── Serializer:config      конфигурация runtime поверх IO (модуль Serialization); load/save на корне ветки
 ```
 
 ```cpp
@@ -22,8 +23,7 @@ extern "C" void compose(NodeBuild root) {
 ```
 
 `children` передаётся как `std::vector<ParserAPI*>` и записывает зависимости IO
-от конкретных парсеров. Наследование от `Component`/`SubsystemAPI`, конструкторы
-с `NodeBuild`, `configure`, автопоиск implementations и codegen здесь не используются.
+от конкретных парсеров.
 Удаление необходимого парсера завершает IO и его зависимых потребителей.
 
 ## Использование вне runtime

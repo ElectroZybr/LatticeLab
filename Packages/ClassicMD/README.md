@@ -3,13 +3,11 @@
 Пакет Lattice: `compose.cpp` собирает ветку классической MD. Остальное — обычные классы.
 
 ```text
-ClassicMD:<name>
+ClassicMD:<name> [service]     SimulationLoop
 ├── AtomData:data              NamedSoA, Table (view/addRow)
 ├── AtomStorage:atoms          ParticleStorage, Table (view/addRow)
 ├── Verlet:integrator          IntegratorAPI → atoms; param dt
-├── ClassicMD:simulation       → atoms, integrator; param cell_size, action step
-└── SimulationLoop:loop        → simulation; сервис ветки
-    └── ServiceRunner:service
+└── ClassicMD:simulation       → atoms, integrator; param cell_size, action step
 ```
 
 `SimulationLoop` шагает симуляцию с периодом (по умолчанию 1 с) до `requestStop`;

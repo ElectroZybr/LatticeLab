@@ -4,15 +4,13 @@
 #include <Lattice/Composition.hpp>
 #include <Lattice/Kernel/Context.hpp>
 #include <Lattice/Kernel/PluginManager.hpp>
+#include <Serialization/Serializer.hpp>
 #include <StdIo/IOSubsystem.hpp>
 #include <StdIo/YamlParser.hpp>
 #include <StdIo/LoaderAPI.hpp>
 #include <type_traits>
 
 using namespace Lattice;
-static_assert(!std::is_base_of_v<Component, ParserAPI>);
-static_assert(!std::is_base_of_v<Component, LoaderAPI>);
-static_assert(!std::is_base_of_v<Component, IOSubsystem>);
 namespace {
 int constructions = 0;
 struct Settings {
@@ -48,25 +46,19 @@ template<class F> void rejects(F&& action) {
     check(failed, "Expected an error");
 }
 Object branch(Object params, bool blueprint = true) {
-    Object settings{{"name", "settings"}, {"params", std::move(params)}};
-    Object run{{"name", "run"}, {"children", Array{settings}}};
-    if (blueprint) run.emplace("blueprint", "TestRun");
-    return Object{{"children", Array{run}}};
+    return Object{{blueprint ? "TestRun:run" : "run", Object{{"settings", std::move(params)}}}};
 }
 Document configuration(Object params, bool blueprint = true) {
     return Document{Object{{"Lattice", branch(std::move(params), blueprint)},
         {"Unrelated", Object{{"keep", "preserved"}}}}};
 }
-Document tree(Array children) {
-    Object root;
-    root.emplace("children", std::move(children));
-    return Document{Object{{"Lattice", std::move(root)}}};
+Document tree(Object children) {
+    return Document{Object{{"Lattice", std::move(children)}}};
 }
 Object& params(Document& document) {
     auto& root = *std::get<ObjectPtr>(*document.get("Lattice"));
-    auto& run = *std::get<ObjectPtr>(std::get<ArrayPtr>(root.at("children"))->front());
-    auto& settings = *std::get<ObjectPtr>(std::get<ArrayPtr>(run.at("children"))->front());
-    return *std::get<ObjectPtr>(settings.at("params"));
+    auto& run = *std::get<ObjectPtr>(root.at("TestRun:run"));
+    return *std::get<ObjectPtr>(run.at("settings"));
 }
 
 struct Fixture {
@@ -80,15 +72,14 @@ struct Fixture {
     std::filesystem::path directory;
     explicit Fixture(const std::filesystem::path& project) {
         plugins.scanDirectory(project / "Packages/StdIo");
-        plugins.scanDirectory(project / "Packages/Serialization");
         plugins.checkCandidates();
-        check(plugins.loadCandidates() == 2, "Failed to load real IO/Serialization plugins");
+        check(plugins.loadCandidates() == 1, "Failed to load the real StdIo package");
         runtime.blueprints.addComposition("TestRun", composeRun);
         root = runtime.nodes.factory.folder(InvalidNodeId, "root");
         ioBranch = runtime.nodes.builder.add(root, runtime.blueprints.resolve("StdIo"), "io-package");
-        io = runtime.nodes.configure(root).focus<IOSubsystem>().get();
+        io = NodeBuild{root, runtime.nodes}.focus<IOSubsystem>().get();
         check(io != nullptr, "StdIo did not publish its service");
-        serializer = runtime.nodes.builder.add(root, runtime.blueprints.resolve("Serialization"), "serialization");
+        serializer = findSerializer(ioBranch);
         directory = std::filesystem::temp_directory_path() /
             ("latticelab-serialization-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
         std::filesystem::create_directory(directory);
@@ -98,11 +89,17 @@ struct Fixture {
         std::error_code ignored;
         std::filesystem::remove_all(directory, ignored);
     }
+    NodeId findSerializer(NodeId branch) {
+        const auto id = runtime.nodes.registry.find("config", branch, runtime.blueprints.id<Serialization::Serializer>());
+        check(id != InvalidNodeId, "StdIo did not compose its serializer");
+        return id;
+    }
+    // Startup and users call load/save on the StdIo branch root.
     void action(std::string_view name, std::optional<std::string> file = {}) {
         auto& nodes = runtime.nodes;
-        const auto id = nodes.exports.find(serializer, name);
-        check(id != InvalidExportId, "Plugin action is missing");
-        ActionContext context{serializer};
+        const auto id = nodes.exports.find(ioBranch, name);
+        check(id != InvalidExportId, "Package action is missing");
+        ActionContext context{ioBranch};
         if (file) {
             const Value value{*file};
             nodes.exports.invoke(id, context, std::span<const Value>{&value, 1});
@@ -130,14 +127,14 @@ void roundTrip(const std::filesystem::path& project) {
     f.load(document);
     auto settings = f.settings();
     check(constructions == before + 1 && settings->dt == 0.125 && settings->iterations == 7,
-          "Missing branch was not built/configured");
+          "Missing branch was not built");
     check(settings->color == glm::vec3(1, .5, 0), "Vector parameter was not restored");
     check(settings->untouched == 99, "Unlisted parameter was changed");
     f.action("load");
     check(constructions == before + 1, "Reload duplicated an existing branch");
-    settings->dt = 0.5;
+    f.runtime.nodes.exports.set(f.runtime.nodes.exports.find(settings.id(), "dt"), Value{0.5});
     settings->untouched = 123;
-    settings->label = "saved";
+    f.runtime.nodes.exports.set(f.runtime.nodes.exports.find(settings.id(), "label"), Value{"saved"});
     f.action("save");
     auto saved = f.io->read(f.directory / "config.yaml");
     check(params(saved).at("dt").get<double>() == 0.5, "Current parameter was not saved");
@@ -147,6 +144,104 @@ void roundTrip(const std::filesystem::path& project) {
     Fixture second(project);
     second.action("load", (f.directory / "config.yaml").string());
     check(second.settings()->dt == 0.5 && second.settings()->label == "saved", "Saved file did not restore");
+}
+
+void explicitLayer(const std::filesystem::path& project) {
+    Fixture f(project);
+    f.load(tree({}));
+    auto& nodes = f.runtime.nodes;
+    nodes.builder.add(f.root, nodes.blueprints.resolve("TestRun"), "run");
+    auto settings = f.settings();
+    const auto dt = nodes.exports.find(settings.id(), "dt");
+    const auto untouched = nodes.exports.find(settings.id(), "untouched");
+    const auto metadata = nodes.exports.find(settings.id(), "metadata");
+    nodes.exports.set(dt, Value{.25});
+    nodes.exports.set(untouched, Value{int64_t(42)});
+    nodes.exports.set(metadata, Value{Object{{"nested", Array{"user"}}}});
+    settings->untouched = 456;
+    auto& nested = *std::get<ArrayPtr>(settings->metadata.at("nested"));
+    *std::get<StringPtr>(nested.front()) = "internal";
+    rejects([&] { nodes.exports.set(dt, Value{"wrong type"}); });
+    f.action("save");
+    auto saved = f.io->read(f.directory / "config.yaml");
+    auto& values = params(saved);
+    check(values.size() == 3 && values.at("dt").get<double>() == .25, "Explicit defaults or newly assigned params missing");
+    check(values.at("untouched").get<int64_t>() == 42, "Direct field mutation leaked into the layer");
+    check(values.at("metadata").require<Object>().at("nested").require<Array>().front().get<std::string>() == "user",
+          "Nested layer values alias mutable object state");
+    rejects([&] { f.action("save", (f.directory / "unsupported.tsv").string()); });
+    Fixture second(project);
+    second.action("load", (f.directory / "config.yaml").string());
+    check(second.settings()->untouched == 42, "Newly discovered branch did not round-trip");
+    nodes.exports.reset(untouched);
+    nodes.exports.reset(metadata);
+    f.action("save");
+    saved = f.io->read(f.directory / "config.yaml");
+    check(params(saved).size() == 1 && settings->untouched == 456, "Reset must remove only the override");
+    nodes.exports.reset(dt);
+    f.action("save");
+    check(f.io->read(f.directory / "config.yaml").get("Lattice")->require<Object>().empty(), "Empty runtime layer was not pruned");
+    nodes.ops.retireBranch(nodes.registry.require(settings.id()).parent);
+    nodes.ops.maintain();
+    nodes.builder.add(f.root, nodes.blueprints.resolve("TestRun"), "run");
+    f.action("save");
+    check(f.io->read(f.directory / "config.yaml").get("Lattice")->require<Object>().empty(), "Reused node inherited old overrides");
+}
+
+void unnamedBranches(const std::filesystem::path& project) {
+    Fixture f(project);
+    auto& nodes = f.runtime.nodes;
+    nodes.blueprints.addComposition("OtherRun", composeRun);
+    for (const auto* type : {"TestRun", "OtherRun"}) {
+        const auto branch = nodes.builder.add(f.root, nodes.blueprints.resolve(type), "");
+        const auto settings = NodeBuild{branch, nodes}.require<Settings>("settings");
+        nodes.exports.set(nodes.exports.find(settings.id(), "iterations"), Value{int64_t(17)});
+    }
+    const auto file = f.directory / "unnamed.toml";
+    f.action("save", file.string());
+    auto saved = f.io->read(file);
+    check(saved.get("Lattice")->require<Object>().size() == 2, "Unnamed branches were merged");
+    Fixture second(project);
+    second.runtime.blueprints.addComposition("OtherRun", composeRun);
+    second.runtime.blueprints.addComposition("Namespace::TestRun", composeRun);
+    second.action("load", file.string());
+    for (const auto* type : {"TestRun", "OtherRun"}) {
+        const auto branch = second.runtime.nodes.registry.find("", second.root, second.runtime.blueprints.find(type));
+        const auto settings = NodeBuild{branch, second.runtime.nodes}.require<Settings>("settings");
+        check(settings->iterations == 17, "Typed unnamed branch failed to restore");
+    }
+}
+
+void compactNamesAndAmbiguity(const std::filesystem::path& project) {
+    Fixture f(project);
+    f.load(configuration({}));
+    auto& nodes = f.runtime.nodes;
+    const auto first = f.settings();
+    const auto run = nodes.registry.require(first.id()).parent;
+    struct OtherSettings { double dt = .1; };
+    auto other = NodeBuild{run, nodes}.emplace<OtherSettings>("settings");
+    other.param("dt", &OtherSettings::dt);
+    rejects([&] { f.load(tree(Object{{"TestRun:run", Object{{"settings", Object{{"dt", .5}}}}}})); });
+    const auto firstKey = nodes.blueprints.require(nodes.registry.require(first.id()).bp).name + ":settings";
+    const auto otherKey = nodes.blueprints.require(nodes.registry.require(other.id()).bp).name + ":settings";
+    f.load(tree(Object{{"TestRun:run", Object{{firstKey, Object{{"dt", .5}}}, {otherKey, Object{{"dt", .75}}}}}}));
+    check(first->dt == .5 && other->dt == .75, "Typed keys did not resolve ambiguous siblings");
+    f.action("save");
+    auto saved = f.io->read(f.directory / "config.yaml");
+    const auto& runConfig = saved.get("Lattice")->require<Object>().at("TestRun:run").require<Object>();
+    check(runConfig.contains(firstKey) && runConfig.contains(otherKey) && !runConfig.contains("settings"),
+          "Ambiguous siblings lost type qualification on save");
+
+    // A parameter and a child may have the same name. Parameter identity wins
+    // for plain keys; the child remains accessible through Type:name.
+    auto build = NodeBuild{run, nodes};
+    build.param("settings", first->untouched);
+    f.load(tree(Object{{"TestRun:run", Object{{"settings", int64_t(123)}, {firstKey, Object{{"dt", .625}}}}}}));
+    check(first->untouched == 123 && first->dt == .625, "Child/parameter collision was not resolved by typed key");
+    f.action("save");
+    saved = f.io->read(f.directory / "config.yaml");
+    check(saved.get("Lattice")->require<Object>().at("TestRun:run").require<Object>().at("settings").get<int64_t>() == 123,
+          "Parent parameter lost to a same-named child");
 }
 
 void existingAndTypes(const std::filesystem::path& project) {
@@ -165,13 +260,13 @@ void existingAndTypes(const std::filesystem::path& project) {
 void treeErrors(const std::filesystem::path& project) {
     Fixture f(project);
     rejects([&] { f.load(configuration({}, false)); });
-    auto doc = tree(Array{Object{{"name", "x"}, {"blueprint", "Missing"}}});
+    auto doc = tree(Object{{"Missing:x", Object{}}});
     rejects([&] { f.load(doc); });
     f.load(configuration({}));
-    doc = tree(Array{Object{{"name", "run"}, {"blueprint", "Serialization"}}});
+    doc = tree(Object{{"Serialization:run", Object{}}});
     rejects([&] { f.load(doc); });
     rejects([&] { f.load(Document{Object{{"Lattice", Object{{"typo", true}}}}}); });
-    doc = tree(Array{Object{{"name", "run"}}, Object{{"name", "run"}}});
+    doc = tree(Object{{"run", Object{}}, {"TestRun:run", Object{}}});
     rejects([&] { f.load(doc); });
     const auto run = f.runtime.nodes.registry.find("run", f.root, f.runtime.blueprints.resolve("TestRun"));
     f.runtime.nodes.ops.retireBranch(run);
@@ -183,9 +278,10 @@ void treeErrors(const std::filesystem::path& project) {
 
 void saveErrorsAndSaveAs(const std::filesystem::path& project) {
     Fixture f(project);
-    rejects([&] { f.action("save"); });
+    f.action("save", (f.directory / "empty.yaml").string());
+    check(f.io->read(f.directory / "empty.yaml").get("Lattice")->require<Object>().empty(), "Empty layer before load");
     f.load(configuration(Object{{"dt", .125}}));
-    f.settings()->dt = .5;
+    f.runtime.nodes.exports.set(f.runtime.nodes.exports.find(f.settings().id(), "dt"), Value{.5});
     const auto output = f.directory / "copy.yaml";
     f.action("save", output.string());
     auto original = f.io->read(f.directory / "config.yaml");
@@ -193,9 +289,30 @@ void saveErrorsAndSaveAs(const std::filesystem::path& project) {
     const auto run = f.runtime.nodes.registry.find("run", f.root, f.runtime.blueprints.resolve("TestRun"));
     f.runtime.nodes.ops.retireBranch(run);
     f.runtime.nodes.ops.maintain();
-    rejects([&] { f.action("save"); });
+    f.action("save");
     auto retained = f.io->read(output);
-    check(params(retained).at("dt").get<double>() == .5, "Failed save corrupted its file");
+    check(retained.get("Lattice")->require<Object>().empty(), "Retired branch leaked into user layer");
+}
+
+void userDirectory(const std::filesystem::path& project) {
+    Fixture f(project);
+    std::filesystem::create_directory(f.directory / "Config");
+    const auto staticFile = f.directory / "Config/runtime.yaml";
+    std::ofstream(staticFile) << "Static: keep\n";
+    std::filesystem::current_path(f.directory);
+    try {
+        f.action("load"); // User/ does not exist on a first launch.
+        check(!std::filesystem::exists("User"), "Load unexpectedly wrote user data");
+        f.action("save");
+        check(std::filesystem::exists("User/runtime.yaml"), "Default save must create User/runtime.yaml");
+        f.action("load");
+        check(f.io->read("User/runtime.yaml").get("Lattice")->require<Object>().empty(), "First-run layer round-trip");
+        check(f.io->read(staticFile).get("Static")->get<std::string>() == "keep", "Static Config was modified");
+    } catch (...) {
+        std::filesystem::current_path(project);
+        throw;
+    }
+    std::filesystem::current_path(project);
 }
 
 void ioErrors(const std::filesystem::path& project) {
@@ -213,20 +330,22 @@ void ioErrors(const std::filesystem::path& project) {
 }
 void yamlIO(const std::filesystem::path& project) {
     Fixture f(project);
-    f.action("load"); // The default Config/runtime.yaml uses the registered YAML parser.
+    // Test the default relative path without reading or changing user settings.
+    std::filesystem::create_directory(f.directory / "User");
+    f.io->write(f.directory / "User/runtime.yaml", tree({}));
+    std::filesystem::current_path(f.directory);
+    try { f.action("load"); }
+    catch (...) { std::filesystem::current_path(project); throw; }
+    std::filesystem::current_path(project);
     const auto input = f.directory / "manual.yml";
     {
         std::ofstream file(input);
         file << R"yaml(# Human-written YAML, not generated by the writer.
 Lattice:
-  children:
-    - name: run
-      blueprint: TestRun
-      children:
-        - name: settings
-          params:
-            dt: 0.2
-            label: "true"
+  TestRun:run:
+    settings:
+      dt: 0.2
+      label: "true"
 Extra:
   "null": "string key"
   quoted: ["true", "123", "1.0", "null", ""]
@@ -255,6 +374,13 @@ Extra:
     check(forced[0].is<std::string>() && forced[1].is<double>(), "Explicit YAML tags were ignored");
     f.action("save");
     auto saved = f.io->read(input);
+    {
+        std::ifstream file(input);
+        const std::string output{std::istreambuf_iterator<char>(file), {}};
+        check(output.find("Lattice:") != std::string::npos && output.find("\"Lattice\":") == std::string::npos,
+              "Ordinary YAML keys should not be quoted");
+        check(output.find("\"null\":") != std::string::npos, "Reserved YAML keys must stay quoted");
+    }
     const auto& savedExtra = saved.get("Extra")->require<Object>();
     check(savedExtra.at("null").get<std::string>() == "string key", "YAML writer changed a reserved-word key");
     check(savedExtra.at("native").require<Array>()[2].is<double>(), "Integral double lost its type on save");
@@ -280,37 +406,35 @@ void compositionLifetime(const std::filesystem::path& project) {
     Fixture f(project);
     f.load(configuration(Object{{"dt", .125}}));
     auto& nodes = f.runtime.nodes;
-    const auto service = nodes.configure(f.root).focus<IOSubsystem>().ref();
+    const auto service = NodeBuild{f.root, nodes}.focus<IOSubsystem>().ref();
     const auto yaml = nodes.registry.find("yaml", f.ioBranch, f.runtime.blueprints.id<YamlParser>());
     check(nodes.dependencies.retained(service.id(), yaml), "IO did not retain its parser dependency");
-    check(nodes.dependencies.retained(f.serializer, service.id()), "Serialization branch did not retain shared IO");
+    check(nodes.dependencies.retained(f.serializer, service.id()), "Serializer did not retain IO");
     nodes.ops.retireBranch(yaml);
     check(nodes.registry.require(service.id()).state == NodeState::Retiring, "IO survived removal of a required parser");
-    check(nodes.registry.require(f.serializer).state == NodeState::Retiring, "Serialization survived removal of IO");
-    check(nodes.exports.find(f.serializer, "load") == InvalidExportId, "Retiring composition still exports load");
+    check(nodes.registry.require(f.serializer).state == NodeState::Retiring, "Serializer survived removal of IO");
+    check(nodes.exports.find(f.serializer, "load") == InvalidExportId, "Retiring serializer still exports load");
+    rejects([&] { f.action("load"); });
     nodes.ops.maintain();
-    check(!nodes.registry.get(f.serializer), "Serialization branch was not retired");
+    check(!nodes.registry.get(f.serializer), "Serializer was not retired");
     check(f.settings()->dt == .125, "Unrelated simulation branch was removed");
     nodes.ops.retireBranch(f.ioBranch);
     nodes.ops.maintain();
     f.ioBranch = nodes.builder.add(f.root, f.runtime.blueprints.resolve("StdIo"), "io-package");
-    f.io = nodes.configure(f.root).focus<IOSubsystem>().get();
-    f.serializer = nodes.builder.add(f.root, f.runtime.blueprints.resolve("Serialization"), "serialization");
+    f.io = NodeBuild{f.root, nodes}.focus<IOSubsystem>().get();
+    f.serializer = f.findSerializer(f.ioBranch);
     f.load(configuration(Object{{"dt", .75}}));
     check(f.settings()->dt == .75, "Rebuilt IO/Serialization did not work");
 }
 
-void sharedIOChoice(const std::filesystem::path& project) {
+void separateIOBranches(const std::filesystem::path& project) {
     Fixture f(project);
     auto& nodes = f.runtime.nodes;
-    const auto first = nodes.configure(f.root).focus<IOSubsystem>().ref();
+    const auto first = NodeBuild{f.ioBranch, nodes}.require<IOSubsystem>("io");
     const auto other = nodes.builder.add(f.root, f.runtime.blueprints.resolve("StdIo"), "other-io");
     const auto second = NodeBuild{other, nodes}.require<IOSubsystem>("io");
-    rejects([&] { nodes.builder.add(f.root, f.runtime.blueprints.resolve("Serialization"), "other-config"); });
-    NodeBuild{f.root, nodes}.focus<IOSubsystem>(second);
-    const auto selected = nodes.builder.add(f.root, f.runtime.blueprints.resolve("Serialization"), "other-config");
-    check(nodes.dependencies.retained(selected, second.id()), "Context selection did not reach Serialization");
-    check(nodes.dependencies.retained(f.serializer, first.id()), "Existing dependency snapshot was rebound");
+    check(nodes.dependencies.retained(f.findSerializer(other), second.id()), "Serializer did not use its branch IO");
+    check(nodes.dependencies.retained(f.serializer, first.id()), "Existing serializer was rebound");
 }
 
 }
@@ -322,14 +446,18 @@ int main(int argc, char** argv) {
         const auto project = std::filesystem::absolute(argv[1]);
         std::filesystem::current_path(project); // Match the application's Config/ working directory.
         roundTrip(project);
+        explicitLayer(project);
+        unnamedBranches(project);
+        compactNamesAndAmbiguity(project);
         existingAndTypes(project);
         treeErrors(project);
         saveErrorsAndSaveAs(project);
+        userDirectory(project);
         ioErrors(project);
         yamlIO(project);
         compositionLifetime(project);
-        sharedIOChoice(project);
-        std::cout << "Serialization: 8 integration scenarios passed\n";
+        separateIOBranches(project);
+        std::cout << "Serialization: 12 integration scenarios passed\n";
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

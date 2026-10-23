@@ -1,5 +1,5 @@
-﻿#include <Lattice/Kernel/Runtime.hpp>
-#include <Lattice/Tools/Logger.hpp>
+#include <Lattice/Kernel/Runtime.hpp>
+#include <Logger/Logger.hpp>
 
 int runApplication(int argc, char** argv) {
     Lattice::Runtime runtime;

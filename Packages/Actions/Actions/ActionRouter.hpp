@@ -14,7 +14,7 @@
 namespace Lattice { class Node; }
 
 enum class ActionMode { OnPress, OnHold, OnRelease };
-enum class Target { Action, Toggle, Add };
+enum class Target { Action, Toggle, Add, Axis };
 
 /// Routes input triggers to runtime exports (actions and params).
 /// Infrastructure object: receives the runtime exports view through its constructor.

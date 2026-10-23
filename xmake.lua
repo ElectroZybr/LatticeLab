@@ -29,8 +29,8 @@ option_end()
 local lattice_source = path.absolute(get_config("lattice_source") or "../Lattice")
 add_repositories("lattice-local " .. lattice_source)
 add_requires("lattice", {configs = {shared = true}})
+add_requires("lattice-logger", "lattice-bmrunner")
 add_requires("glm 1.0.1", "toml++ 3.4.0", "yaml-cpp >=0.8.0")
-includes(path.join(lattice_source, "Tools/Generators/plugin_codegen.lua"))
 
 -- Existing plugin targets inherit the installed external package through this target.
 target("Lattice")

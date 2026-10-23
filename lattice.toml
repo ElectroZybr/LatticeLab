@@ -1,9 +1,7 @@
 [Startup]
 StdIo = "on"
-Actions = "on"
-ClassicMD.Universe1 = "aff"
+ClassicMD.Universe1 = "on"
 WGPU = "on"
 Shell = ["on", "host"]
-Serialization = "on"
 CLI = ["on"]
 Bench = "on"

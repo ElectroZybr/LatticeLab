@@ -28,7 +28,7 @@
 #include "App/StbImage.h"
 #endif
 
-#include <Lattice/Tools/Logger.hpp>
+#include <Logger/Logger.hpp>
 #include "generated/AppVersion.h"
 
 namespace {

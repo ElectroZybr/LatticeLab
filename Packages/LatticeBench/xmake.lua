@@ -8,6 +8,7 @@ target("Bench.core")
     add_files("LatticeBench/*.cpp")
     add_includedirs(".", {public = true})
     add_deps("Lattice", {public = true})
+    add_packages("lattice-bmrunner", {public = true})
 
 target("Bench")
     set_kind("shared")

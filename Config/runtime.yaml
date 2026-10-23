@@ -1,3 +1,0 @@
-# Partial runtime configuration; only listed params are saved.
-# See Plugins/Serialization/README.md.
-Lattice: {}

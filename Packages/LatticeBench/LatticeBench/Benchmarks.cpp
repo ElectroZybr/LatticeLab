@@ -4,7 +4,7 @@
 #include <format>
 #include <utility>
 
-#include <Lattice/Tools/BmRunner/Output.hpp>
+#include <BmRunner/Output.hpp>
 
 namespace {
 

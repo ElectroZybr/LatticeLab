@@ -8,7 +8,7 @@
 #include <utility>
 
 #include <Lattice/Lattice.hpp>
-#include <Lattice/Tools/BmRunner/Benchmarks.hpp>
+#include <BmRunner/Benchmarks.hpp>
 
 /// Runs registered Lattice benchmarks and keeps their result tables.
 /// Infrastructure object: actions are exported by composition.

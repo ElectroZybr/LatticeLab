@@ -1,7 +1,7 @@
 #include "glfwWindow.hpp"
 // Lattice headers go before native X11 headers: X11 defines macros such as None.
 #include <Lattice/Tools/Exception.hpp>
-#include <Lattice/Tools/Logger.hpp>
+#include <Logger/Logger.hpp>
 
 #include <algorithm>
 #include <dlfcn.h>

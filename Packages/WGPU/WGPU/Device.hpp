@@ -22,6 +22,8 @@ public:
 
     /// Request a device from the first available adapter; returns it with `adapter` set.
     WGPUDevice createDevice(WGPUAdapter& adapter);
+    /// Name of the adapter createDevice selects, e.g. "NVIDIA GeForce RTX 3060".
+    std::string adapterName();
     WGPUInstance native() const noexcept { return instance_; }
 
 private:

@@ -8,7 +8,7 @@
 #include <webgpu/wgpu.h>
 
 #include <Lattice/Tools/Exception.hpp>
-#include <Lattice/Tools/Logger.hpp>
+#include <Logger/Logger.hpp>
 
 namespace WGPU {
 
@@ -41,6 +41,21 @@ std::vector<WGPUAdapter> Instance::enumerateAdapters() {
     wgpuInstanceEnumerateAdapters(instance_, &options, adapters.data());
     adapters.resize(count);
     return adapters;
+}
+
+std::string Instance::adapterName() {
+    auto adapters = enumerateAdapters();
+    if (adapters.empty())
+        throw Lattice::Exception<Instance>("no GPU adapters found");
+    WGPUAdapterInfo info{};
+    std::string name;
+    if (wgpuAdapterGetInfo(adapters.front(), &info) == WGPUStatus_Success) {
+        name.assign(info.device.data, info.device.length);
+        wgpuAdapterInfoFreeMembers(info);
+    }
+    for (auto adapter : adapters)
+        wgpuAdapterRelease(adapter);
+    return name.empty() ? std::string{"device"} : name;
 }
 
 WGPUDevice Instance::createDevice(WGPUAdapter& selectedAdapter) {
