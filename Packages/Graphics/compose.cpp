@@ -62,14 +62,16 @@ extern "C" void compose(NodeBuild root) {
         auto viewport = root.branch(name);
         auto camera = viewport.emplace<Camera>("camera");
         camera->setPosition({0.0f, 0.0f, 2.0f});
-        auto view = viewport.construct<TestViewport, Viewport>(
+        viewport.construct<TestViewport, Viewport>(
             device.ref(), surface->format(), camera, std::move(shader));
-        viewport.globalParam("cursor", view->cursorValue());
         auto controller = viewport.addSlot<TransformController>("controller");
         controller.choice("Graphics::FreeCamera", composeFreeCamera);
     };
     addViewport("viewport", "Packages/Graphics/shaders/circle.wgsl");
 
-    root.emplace<Render, FrameAPI>("render", device.ref(), window.ref(), surface,
+    // Render is the object of the branch that owns the surface: it owns the window cursor
+    // and routes it to the viewport under it.
+    auto render = root.construct<Render, FrameAPI>(device.ref(), window.ref(), surface,
         root.collect<Viewport>(), root.collect<TransformController>());
+    root.globalParam("cursor", render->cursor());
 }

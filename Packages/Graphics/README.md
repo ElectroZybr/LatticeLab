@@ -4,21 +4,24 @@
 Ветку вкладывает Shell: `root.compose("Graphics", "render")`.
 
 ```text
-Graphics:render
+Graphics:render                     объект Render: FrameAPI, владеет surface и курсором окна (param cursor)
 ├── Slot<WindowAPI>:window          choice Shell::Glfw
 │   ├── GlfwKeyboard:keyboard
 │   ├── GlfwMouse:mouse
 │   └── GlfwWindow:glfw
 ├── Surface:surface                 → device (mount), window
-├── TestViewport:viewport           узел вьюпорта: → device, camera; param cursor
+├── TestViewport:viewport           узел вьюпорта: → device, camera
 │   ├── Camera:camera
 │   └── Slot<TransformController>:controller   choice Graphics::FreeCamera → camera, owner<Viewport>
-└── Render:render                   FrameAPI → device, window, surface, viewports, controllers
 ```
 
 Каждый вьюпорт — отдельный узел: `branch(name)` с камерой, затем `construct<TestViewport,
 Viewport>` на нём же и слот контроллера, который находит свой вьюпорт через `owner<Viewport>()`.
 `Render` рисует все вьюпорты ветки (`collect<Viewport>`), их может быть сколько угодно.
+
+Курсор один — параметр `cursor` объекта `Render` (пиксели surface). Каждый кадр `Render`
+находит верхний по `layer()` вьюпорт под курсором и передаёт ему локальную координату
+(`hover`); остальные получают `hovered() == false`. GUI-панель — вьюпорт с большим слоем.
 
 | Класс | Назначение |
 |---|---|

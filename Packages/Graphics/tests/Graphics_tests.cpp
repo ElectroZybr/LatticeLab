@@ -36,6 +36,18 @@ void freeControllerConsumesInput() {
     check(controller.move == glm::vec3{}, "input is consumed per frame");
 }
 
+void viewportHitTestAndLocalCursor() {
+    NullViewport panel;
+    panel.setPosition({100, 50});
+    panel.setSize({200, 100});
+    check(panel.contains({150, 60}, {1280, 720}), "inside the panel");
+    check(!panel.contains({50, 60}, {1280, 720}) && !panel.contains({150, 200}, {1280, 720}), "outside the panel");
+    panel.hover(glm::vec2{50, 10});
+    check(panel.hovered() && panel.cursor() == glm::vec2{50, 10}, "local cursor while hovered");
+    panel.hover(std::nullopt);
+    check(!panel.hovered(), "cursor left the panel");
+}
+
 void orbitControllerKeepsDistance() {
     Camera camera;
     camera.setPosition({0, 0, 5});
@@ -67,6 +79,7 @@ bool testViewportOnDevice() {
 int main() {
     cameraProjectsCenterRayForward();
     freeControllerConsumesInput();
+    viewportHitTestAndLocalCursor();
     orbitControllerKeepsDistance();
     const bool gpu = testViewportOnDevice();
     std::cout << "Graphics: camera, controllers" << (gpu ? " and TestViewport resources" : "") << " passed\n";
