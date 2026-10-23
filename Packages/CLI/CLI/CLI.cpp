@@ -9,7 +9,7 @@
 #include "ValueParser.hpp"
 
 
-namespace CLIPlugin {
+namespace Console {
 
 namespace {
 
@@ -115,7 +115,7 @@ CLI::CLI(ExportsView exports, Lattice::TreeView tree, Lattice::NodeId context,
     commands_.setTheme(theme_);
 
     const Lattice::NodeId root = tree_.root(context);
-    for (CLIPlugin::Terminal* terminal : terminals_)
+    for (Console::Terminal* terminal : terminals_)
         terminal->setCurrent(root, tree_.path(root));
 }
 
@@ -200,7 +200,7 @@ void CLI::showTree(Lattice::ActionContext& context) const {
 }
 
 void CLI::changeDirectory(Lattice::ActionContext& context, std::string path) const {
-    const Lattice::NodeId target = CLIPlugin::resolveTreePath(tree_, context.node(), path);
+    const Lattice::NodeId target = Console::resolveTreePath(tree_, context.node(), path);
     if (target == Lattice::InvalidNodeId)
         throw Lattice::Exception<CLI>("Path '{}' not found", path);
 
@@ -212,7 +212,7 @@ void CLI::run(const std::function<void()>& idle) {
         [this](std::string_view text) { broadcast(text); }
     );
 
-    for (CLIPlugin::Terminal* terminal : terminals_) {
+    for (Console::Terminal* terminal : terminals_) {
         terminal->attach();
 
         const auto resolved = commands_.getExports().resolve(
@@ -241,21 +241,21 @@ void CLI::run(const std::function<void()>& idle) {
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
-    for (CLIPlugin::Terminal* terminal : terminals_)
+    for (Console::Terminal* terminal : terminals_)
         terminal->detach();
 
     LogSystem::resetConsoleWriter(writer);
 }
 
 void CLI::broadcast(std::string_view text) {
-    for (CLIPlugin::Terminal* terminal : terminals_)
+    for (Console::Terminal* terminal : terminals_)
         terminal->write(text);
 }
 
 bool CLI::pollTerminals() {
     bool anyAttached = false;
 
-    for (CLIPlugin::Terminal* terminal : terminals_) {
+    for (Console::Terminal* terminal : terminals_) {
         if (!terminal->attached())
             continue;
 

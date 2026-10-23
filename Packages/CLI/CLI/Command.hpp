@@ -7,7 +7,7 @@
 
 #include "Terminal.hpp"
 
-namespace CLIPlugin {
+namespace Console {
 
 class CommandDispatcher {
     ExportsView exports_;

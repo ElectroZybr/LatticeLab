@@ -1,4 +1,4 @@
--- Ordinary MD classes; usable without loading the plugin.
+-- Ordinary MD classes; usable without loading the package.
 target("ClassicMD.core")
     set_kind("headeronly")
     add_headerfiles("(ClassicMD/*.hpp)")

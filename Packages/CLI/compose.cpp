@@ -9,7 +9,7 @@ extern "C" constinit const Lattice::Package lattice_package{
 };
 
 namespace {
-void exportStyle(Lattice::ObjectBuild<CLIPlugin::LocalTerminal>& terminal) {
+void exportStyle(Lattice::ObjectBuild<Console::LocalTerminal>& terminal) {
     auto& style = terminal->style();
     terminal.param("prompt", style.prompt);
     terminal.param("prompt_color", style.promptColor);
@@ -20,18 +20,18 @@ void exportStyle(Lattice::ObjectBuild<CLIPlugin::LocalTerminal>& terminal) {
 // Interactive runtime shell. CLI and terminals are ordinary classes; commands,
 // theme params and the service are declared here.
 extern "C" void compose(NodeBuild root) {
-    auto local = root.emplace<CLIPlugin::LocalTerminal, CLIPlugin::Terminal>("local");
+    auto local = root.emplace<Console::LocalTerminal, Console::Terminal>("local");
     exportStyle(local);
 
-    auto cli = root.construct<CLIPlugin::CLI>(
-        root.exports(), root.tree(), root.id(), root.children<CLIPlugin::Terminal>());
+    auto cli = root.construct<Console::CLI>(
+        root.exports(), root.tree(), root.id(), root.children<Console::Terminal>());
     for (auto& entry : cli->theme().entries())
         cli.param(std::format("theme.{}", entry.name), entry.style);
 
-    cli.globalAction("ls", &CLIPlugin::CLI::showList);
-    cli.globalAction("help", &CLIPlugin::CLI::showHelp);
-    cli.globalAction("cd", &CLIPlugin::CLI::changeDirectory);
-    cli.globalAction("tree", &CLIPlugin::CLI::showTree);
-    cli.globalAction("logo", &CLIPlugin::CLI::showLogo);
-    cli.service(&CLIPlugin::CLI::run, &CLIPlugin::CLI::requestStop);
+    cli.globalAction("ls", &Console::CLI::showList);
+    cli.globalAction("help", &Console::CLI::showHelp);
+    cli.globalAction("cd", &Console::CLI::changeDirectory);
+    cli.globalAction("tree", &Console::CLI::showTree);
+    cli.globalAction("logo", &Console::CLI::showLogo);
+    cli.service(&Console::CLI::run, &Console::CLI::requestStop);
 }

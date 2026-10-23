@@ -3,7 +3,7 @@
 #include <iostream>
 #include <Lattice/Composition.hpp>
 #include <Lattice/Kernel/Context.hpp>
-#include <Lattice/Kernel/PluginManager.hpp>
+#include <Lattice/Kernel/PackageManager.hpp>
 #include <Serialization/Serializer.hpp>
 #include <StdIo/IOSubsystem.hpp>
 #include <StdIo/YamlParser.hpp>
@@ -64,16 +64,16 @@ Object& params(Document& document) {
 struct Fixture {
     DLLoader libraries; // Unload only after destroying nodes and their blueprints.
     Context runtime;
-    PluginManager plugins{runtime.blueprints, libraries};
+    PackageManager packages{runtime.blueprints, libraries};
     NodeId root = InvalidNodeId;
     NodeId serializer = InvalidNodeId;
     NodeId ioBranch = InvalidNodeId;
     IOSubsystem* io = nullptr;
     std::filesystem::path directory;
     explicit Fixture(const std::filesystem::path& project) {
-        plugins.scanDirectory(project / "Packages/StdIo");
-        plugins.checkCandidates();
-        check(plugins.loadCandidates() == 1, "Failed to load the real StdIo package");
+        packages.scanDirectory(project / "Packages/StdIo");
+        packages.checkCandidates();
+        check(packages.loadCandidates() == 1, "Failed to load the real StdIo package");
         runtime.blueprints.addComposition("TestRun", composeRun);
         root = runtime.nodes.factory.folder(InvalidNodeId, "root");
         ioBranch = runtime.nodes.builder.add(root, runtime.blueprints.resolve("StdIo"), "io-package");

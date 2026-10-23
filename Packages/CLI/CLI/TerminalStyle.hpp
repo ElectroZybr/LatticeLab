@@ -5,7 +5,7 @@
 
 #include <Lattice/Tools/TextStyle.hpp>
 
-namespace CLIPlugin {
+namespace Console {
 
 enum class CursorStyle : uint8_t {
     Default = 0,

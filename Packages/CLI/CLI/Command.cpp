@@ -9,7 +9,7 @@
 #include "ValueParser.hpp"
 #include <Logger/Logger.hpp>
 
-namespace CLIPlugin {
+namespace Console {
 namespace {
 
 std::optional<Lattice::ExportId> parseExportId(std::string_view command) {

@@ -1,4 +1,4 @@
-// No NodeSystem, builders, plugin loader or runtime registration in this executable.
+// No NodeSystem, builders, package loader or runtime registration in this executable.
 #include <StdIo/IOSubsystem.hpp>
 #include <StdIo/LoaderAPI.hpp>
 #include <StdIo/YamlParser.hpp>

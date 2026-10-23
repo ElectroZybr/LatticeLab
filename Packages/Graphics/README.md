@@ -6,9 +6,9 @@
 ```text
 Graphics:render
 ├── Slot<WindowAPI>:window          choice Shell::Glfw
-│   ├── glfwKeyboard:keyboard
-│   ├── glfwMouse:mouse
-│   └── glfwWindow:glfw
+│   ├── GlfwKeyboard:keyboard
+│   ├── GlfwMouse:mouse
+│   └── GlfwWindow:glfw
 ├── Surface:surface                 → device (mount), window
 ├── TestViewport:viewport           узел вьюпорта: → device, camera; param cursor
 │   ├── Camera:camera

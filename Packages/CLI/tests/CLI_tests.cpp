@@ -1,4 +1,4 @@
-// CLI over a plain Context runtime with scripted terminals; no plugin loading.
+// CLI over a plain Context runtime with scripted terminals; no package loading.
 #include <deque>
 #include <iostream>
 #include <stdexcept>
@@ -12,14 +12,14 @@
 #include <CLI/ValueParser.hpp>
 
 using namespace Lattice;
-static_assert(!std::is_base_of_v<ServiceAPI, CLIPlugin::CLI>);
+static_assert(!std::is_base_of_v<ServiceAPI, Console::CLI>);
 
 namespace {
 void check(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
 
-class ScriptTerminal final : public CLIPlugin::Terminal {
+class ScriptTerminal final : public Console::Terminal {
 public:
     std::deque<std::string> lines;
     std::string output;
@@ -40,10 +40,10 @@ protected:
 struct PathComponent {};
 
 void parsesArguments() {
-    const auto parsed = CLIPlugin::parseArguments("one \"two words\" three\\ four");
+    const auto parsed = Console::parseArguments("one \"two words\" three\\ four");
     check(parsed && parsed->size() == 3, "argument count");
     check((*parsed)[0] == "one" && (*parsed)[1] == "two words" && (*parsed)[2] == "three four", "arguments");
-    check(!CLIPlugin::parseArguments("\"unfinished").has_value(), "unfinished quote");
+    check(!Console::parseArguments("\"unfinished").has_value(), "unfinished quote");
 }
 
 void resolvesTreePaths() {
@@ -55,12 +55,12 @@ void resolvesTreePaths() {
         auto component = folder.emplace<PathComponent>("one");
         const TreeView tree = root.tree();
         const NodeId folderId = folder.id();
-        check(CLIPlugin::resolveTreePath(tree, rootId, "folder") == folderId, "child path");
-        check(CLIPlugin::resolveTreePath(tree, folderId, "PathComponent:one") == component.id(), "typed name");
-        check(CLIPlugin::resolveTreePath(tree, component.id(), "..") == folderId, "parent");
-        check(CLIPlugin::resolveTreePath(tree, component.id(), "/") == rootId, "root");
-        check(CLIPlugin::resolveTreePath(tree, component.id(), "Root/folder") == folderId, "absolute");
-        check(CLIPlugin::resolveTreePath(tree, rootId, "missing") == InvalidNodeId, "missing");
+        check(Console::resolveTreePath(tree, rootId, "folder") == folderId, "child path");
+        check(Console::resolveTreePath(tree, folderId, "PathComponent:one") == component.id(), "typed name");
+        check(Console::resolveTreePath(tree, component.id(), "..") == folderId, "parent");
+        check(Console::resolveTreePath(tree, component.id(), "/") == rootId, "root");
+        check(Console::resolveTreePath(tree, component.id(), "Root/folder") == folderId, "absolute");
+        check(Console::resolveTreePath(tree, rootId, "missing") == InvalidNodeId, "missing");
     }
     runtime.nodes.ops.destroyBranch(rootId);
 }
@@ -71,12 +71,12 @@ void servesScriptedTerminal() {
     {
         ::NodeBuild root{rootId, runtime.nodes};
         root.branch("folder");
-        auto terminal = root.emplace<ScriptTerminal, CLIPlugin::Terminal>("script");
+        auto terminal = root.emplace<ScriptTerminal, Console::Terminal>("script");
         terminal->lines = {"cd folder", "ls", "nope", "cd missing"};
-        auto cli = root.emplace<CLIPlugin::CLI>("cli",
-            root.exports(), root.tree(), root.id(), root.children<CLIPlugin::Terminal>());
-        cli.globalAction("ls", &CLIPlugin::CLI::showList);
-        cli.globalAction("cd", &CLIPlugin::CLI::changeDirectory);
+        auto cli = root.emplace<Console::CLI>("cli",
+            root.exports(), root.tree(), root.id(), root.children<Console::Terminal>());
+        cli.globalAction("ls", &Console::CLI::showList);
+        cli.globalAction("cd", &Console::CLI::changeDirectory);
         check(!terminal->path.empty(), "initial path is set");
 
         cli->theme().style(cli->theme().find("err")) = TextStyle::rgb(0x336688);
@@ -103,10 +103,10 @@ void explicitAssignmentsAndReset() {
             if (change == ParamChange::Set) ++sets;
             if (change == ParamChange::Reset) ++resets;
         });
-        auto terminal = root.emplace<ScriptTerminal, CLIPlugin::Terminal>("script");
+        auto terminal = root.emplace<ScriptTerminal, Console::Terminal>("script");
         terminal->lines = {"gain 4", "reset gain"};
-        auto cli = root.emplace<CLIPlugin::CLI>("cli", root.exports(), root.tree(), root.id(),
-                                               root.children<CLIPlugin::Terminal>());
+        auto cli = root.emplace<Console::CLI>("cli", root.exports(), root.tree(), root.id(),
+                                               root.children<Console::Terminal>());
         cli->run([] {});
         check(gain == 4 && sets == 1 && resets == 1, "CLI records edits and reset without rewriting state");
         runtime.nodes.exports.unobserveParameters(observer);

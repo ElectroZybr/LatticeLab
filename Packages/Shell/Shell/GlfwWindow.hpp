@@ -5,20 +5,20 @@
 
 #include "WindowAPI.hpp"
 
-class glfwKeyboard;
-class glfwMouse;
+class GlfwKeyboard;
+class GlfwMouse;
 
-class glfwWindow final : public WindowAPI {
+class GlfwWindow final : public WindowAPI {
 public:
-    glfwWindow(glfwKeyboard& keyboard, glfwMouse& mouse);
+    GlfwWindow(GlfwKeyboard& keyboard, GlfwMouse& mouse);
 
-    ~glfwWindow() override;
+    ~GlfwWindow() override;
 
-    glfwWindow(const glfwWindow&) = delete;
-    glfwWindow& operator=(const glfwWindow&) = delete;
+    GlfwWindow(const GlfwWindow&) = delete;
+    GlfwWindow& operator=(const GlfwWindow&) = delete;
 
-    glfwWindow(glfwWindow&&) = delete;
-    glfwWindow& operator=(glfwWindow&&) = delete;
+    GlfwWindow(GlfwWindow&&) = delete;
+    GlfwWindow& operator=(GlfwWindow&&) = delete;
 
     // WindowAPI
     bool shouldClose() const override;
@@ -45,8 +45,8 @@ private:
     void applyWindowed();
     void applyFullscreen(GLFWmonitor* monitor);
 
-    glfwKeyboard* keyboard_;
-    glfwMouse* mouse_;
+    GlfwKeyboard* keyboard_;
+    GlfwMouse* mouse_;
     std::shared_ptr<GLFWwindow> windowOwner_;
     GLFWwindow* window_ = nullptr;
     State state_{};

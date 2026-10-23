@@ -4,7 +4,7 @@
 
 #include "Terminal.hpp"
 
-namespace CLIPlugin {
+namespace Console {
 
 class LocalTerminal final : public Terminal {
 public:

@@ -5,9 +5,9 @@
 #include <Graphics/Render.hpp>
 #include <Graphics/TestViewport.hpp>
 #include <Graphics/TransformMode.hpp>
-#include <Shell/glfwKeyboard.hpp>
-#include <Shell/glfwMouse.hpp>
-#include <Shell/glfwWindow.hpp>
+#include <Shell/GlfwKeyboard.hpp>
+#include <Shell/GlfwMouse.hpp>
+#include <Shell/GlfwWindow.hpp>
 #include <WGPU/Resources.hpp>
 
 extern "C" constinit const Lattice::Package lattice_package{
@@ -20,9 +20,9 @@ namespace {
 
 // Window variant: the window owns its input devices.
 auto composeGlfwWindow(NodeBuild& slot) {
-    auto keyboard = slot.emplace<glfwKeyboard, InputAPI>("keyboard");
-    auto mouse = slot.emplace<glfwMouse, InputAPI>("mouse");
-    return slot.emplace<glfwWindow>("glfw", keyboard, mouse);
+    auto keyboard = slot.emplace<GlfwKeyboard, InputAPI>("keyboard");
+    auto mouse = slot.emplace<GlfwMouse, InputAPI>("mouse");
+    return slot.emplace<GlfwWindow>("glfw", keyboard, mouse);
 }
 
 auto composeFreeCamera(NodeBuild& slot) {

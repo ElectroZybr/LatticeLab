@@ -11,8 +11,8 @@
 #include <StdIo/TomlParser.hpp>
 
 #include <Shell/KeybindLoader.hpp>
-#include <Shell/glfwKeyboard.hpp>
-#include <Shell/glfwMouse.hpp>
+#include <Shell/GlfwKeyboard.hpp>
+#include <Shell/GlfwMouse.hpp>
 
 using namespace Lattice;
 
@@ -68,8 +68,8 @@ int main() {
         check(speed == 2.0, "hold binding adds every frame");
         router.unregisterInput(input);
 
-        glfwKeyboard keyboard;
-        glfwMouse mouse;
+        GlfwKeyboard keyboard;
+        GlfwMouse mouse;
         router.registerInput(keyboard);
         router.registerInput(mouse);
         glm::vec2 look{}, cursor{};

@@ -3,9 +3,9 @@
 #include "InputState.hpp"
 #include <GLFW/glfw3.h>
 
-class glfwMouse final : public InputAPI {
+class GlfwMouse final : public InputAPI {
 public:
-    glfwMouse() = default;
+    GlfwMouse() = default;
     void registerTriggers(TriggerRegistry& triggers) override {
         buttons_.fill(InvalidTriggerId);
         auto add = [&](std::string_view name, InputKind kind) {

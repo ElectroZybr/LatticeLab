@@ -12,7 +12,7 @@
 #include "Command.hpp"
 #include "Terminal.hpp"
 
-namespace CLIPlugin {
+namespace Console {
 
 /**
  @file CLI.hpp
@@ -50,7 +50,7 @@ private:
 
     std::atomic<bool> stop_{false};
     std::vector<Terminal*> terminals_;
-    CLIPlugin::CommandDispatcher commands_;
+    Console::CommandDispatcher commands_;
     ExportsView exports_;
     Lattice::TreeView tree_;
     Lattice::TextTheme theme_ = Lattice::TextTheme::system();

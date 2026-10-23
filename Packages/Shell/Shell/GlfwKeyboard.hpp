@@ -3,9 +3,9 @@
 #include "InputState.hpp"
 #include <GLFW/glfw3.h>
 
-class glfwKeyboard final : public InputAPI {
+class GlfwKeyboard final : public InputAPI {
 public:
-    glfwKeyboard() {
+    GlfwKeyboard() {
         keys_.fill(InvalidTriggerId);
     }
 

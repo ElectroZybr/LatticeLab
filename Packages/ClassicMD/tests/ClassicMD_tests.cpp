@@ -1,4 +1,4 @@
-// Ordinary MD classes without NodeSystem, builders or plugin loading.
+// Ordinary MD classes without NodeSystem, builders or package loading.
 #include <chrono>
 #include <iostream>
 #include <stdexcept>

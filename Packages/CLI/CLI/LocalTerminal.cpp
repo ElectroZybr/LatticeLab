@@ -17,7 +17,7 @@
 #include <unistd.h>
 #endif
 
-namespace CLIPlugin {
+namespace Console {
 namespace {
 
 std::string styled(std::string_view text, Lattice::TextStyle style) {

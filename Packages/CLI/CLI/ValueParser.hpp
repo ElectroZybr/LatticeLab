@@ -7,7 +7,7 @@
 #include "Lattice/Kernel/Consts.hpp"
 #include "Lattice/Kernel/TreeView.hpp"
 
-namespace CLIPlugin {
+namespace Console {
 
 std::string_view trim(std::string_view value);
 std::optional<Lattice::Value> parseValue(

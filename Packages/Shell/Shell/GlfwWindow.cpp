@@ -1,4 +1,4 @@
-#include "glfwWindow.hpp"
+#include "GlfwWindow.hpp"
 // Lattice headers go before native X11 headers: X11 defines macros such as None.
 #include <Lattice/Tools/Exception.hpp>
 #include <Logger/Logger.hpp>
@@ -42,8 +42,8 @@
 #endif
     #include <GLFW/glfw3native.h>
 
-#include "glfwKeyboard.hpp"
-#include "glfwMouse.hpp"
+#include "GlfwKeyboard.hpp"
+#include "GlfwMouse.hpp"
 
 namespace {
 
@@ -169,16 +169,16 @@ bool monitorWorkArea(GLFWmonitor* monitor, int& x, int& y, int& w, int& h) {
 // ctor / dtor / move
 // ============================================================
 
-glfwWindow::glfwWindow(glfwKeyboard& keyboard, glfwMouse& mouse)
+GlfwWindow::GlfwWindow(GlfwKeyboard& keyboard, GlfwMouse& mouse)
     : keyboard_(&keyboard), mouse_(&mouse) {
     createWindow();
 }
 
-void glfwWindow::createWindow() {
+void GlfwWindow::createWindow() {
     if (window_) return;
 
     if (!glfwInit()) {
-        throw Lattice::Exception<glfwWindow>("Failed to initialize GLFW");
+        throw Lattice::Exception<GlfwWindow>("Failed to initialize GLFW");
     }
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -220,7 +220,7 @@ void glfwWindow::createWindow() {
 
     if (!window_) {
         glfwTerminate();
-        throw Lattice::Exception<glfwWindow>("Failed to create GLFW window");
+        throw Lattice::Exception<GlfwWindow>("Failed to create GLFW window");
     }
 
     windowOwner_ = std::shared_ptr<GLFWwindow>(window_, glfwDestroyWindow);
@@ -271,11 +271,11 @@ void glfwWindow::createWindow() {
     show();
 }
 
-void glfwWindow::setupCallbacks() {
+void GlfwWindow::setupCallbacks() {
     glfwSetWindowUserPointer(window_, this);
 
     glfwSetWindowPosCallback(window_, [](GLFWwindow* w, int x, int y) {
-        if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w))) {
+        if (auto* self = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(w))) {
             if (self->state_.fullscreen || self->state_.maximized) return;
             self->state_.x = x;
             self->state_.y = y;
@@ -285,7 +285,7 @@ void glfwWindow::setupCallbacks() {
     });
 
     glfwSetWindowSizeCallback(window_, [](GLFWwindow* w, int width, int height) {
-        if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w))) {
+        if (auto* self = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(w))) {
             if (self->state_.fullscreen || self->state_.maximized || width <= 0 || height <= 0) return;
             self->state_.width = width;
             self->state_.height = height;
@@ -295,7 +295,7 @@ void glfwWindow::setupCallbacks() {
     });
 
     glfwSetWindowMaximizeCallback(window_, [](GLFWwindow* w, int maximized) {
-        if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w))) {
+        if (auto* self = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(w))) {
             if (self->state_.fullscreen) return;
 
             self->state_.maximized = maximized == GLFW_TRUE;
@@ -309,27 +309,27 @@ void glfwWindow::setupCallbacks() {
     });
 
     glfwSetKeyCallback(window_, [](GLFWwindow* w, int key, int, int action, int) {
-        if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w)))
+        if (auto* self = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(w)))
             self->keyboard_->onKey(key, action);
     });
 
     glfwSetMouseButtonCallback(window_, [](GLFWwindow* w, int button, int action, int) {
-        if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w)))
+        if (auto* self = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(w)))
             self->mouse_->onButton(button, action);
     });
 
     glfwSetCursorPosCallback(window_, [](GLFWwindow* w, double x, double y) {
-        if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w)))
+        if (auto* self = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(w)))
             self->mouse_->onMove(x, y);
     });
 
     glfwSetScrollCallback(window_, [](GLFWwindow* w, double x, double y) {
-        if (auto* self = static_cast<glfwWindow*>(glfwGetWindowUserPointer(w)))
+        if (auto* self = static_cast<GlfwWindow*>(glfwGetWindowUserPointer(w)))
             self->mouse_->onScroll(x, y);
     });
 }
 
-glfwWindow::~glfwWindow() {
+GlfwWindow::~GlfwWindow() {
     if (window_) {
         glfwSetWindowUserPointer(window_, nullptr);
         window_ = nullptr;
@@ -340,48 +340,48 @@ glfwWindow::~glfwWindow() {
 // WindowAPI
 // ============================================================
 
-bool glfwWindow::shouldClose() const {
+bool GlfwWindow::shouldClose() const {
     return window_ && glfwWindowShouldClose(window_);
 }
 
-void glfwWindow::requestClose() {
+void GlfwWindow::requestClose() {
     if (window_) {
         glfwSetWindowShouldClose(window_, GLFW_TRUE);
     }
 }
 
-void glfwWindow::pollEvents() {
+void GlfwWindow::pollEvents() {
     keyboard_->beginFrame();
     mouse_->beginFrame();
     glfwPollEvents();
 }
 
-glm::vec2 glfwWindow::windowSize() const {
+glm::vec2 GlfwWindow::windowSize() const {
     if (!window_) return {0.f, 0.f};
     int w = 0, h = 0;
     glfwGetWindowSize(window_, &w, &h);
     return {static_cast<float>(w), static_cast<float>(h)};
 }
 
-glm::vec2 glfwWindow::framebufferSize() const {
+glm::vec2 GlfwWindow::framebufferSize() const {
     if (!window_) return {0.f, 0.f};
     int w = 0, h = 0;
     glfwGetFramebufferSize(window_, &w, &h);
     return {static_cast<float>(w), static_cast<float>(h)};
 }
 
-float glfwWindow::contentScale() const {
+float GlfwWindow::contentScale() const {
     if (!window_) return 1.f;
     float x = 1.f, y = 1.f;
     glfwGetWindowContentScale(window_, &x, &y);
     return x;
 }
 
-bool glfwWindow::fullscreen() const {
+bool GlfwWindow::fullscreen() const {
     return state_.fullscreen;
 }
 
-void glfwWindow::setFullscreen(bool enabled) {
+void GlfwWindow::setFullscreen(bool enabled) {
     if (!window_ || enabled == state_.fullscreen) return;
 
     if (enabled) {
@@ -403,19 +403,19 @@ void glfwWindow::setFullscreen(bool enabled) {
     }
 }
 
-void glfwWindow::show() {
+void GlfwWindow::show() {
     if (window_) {
         glfwShowWindow(window_);
     }
 }
 
-void glfwWindow::setTitle(std::string_view title) {
+void GlfwWindow::setTitle(std::string_view title) {
     if (window_) {
         glfwSetWindowTitle(window_, std::string(title).c_str());
     }
 }
 
-WGPU::NativeWindow glfwWindow::native() const {
+WGPU::NativeWindow GlfwWindow::native() const {
     WGPU::NativeWindow n{};
     n.owner = windowOwner_;
     if (!window_) return n;
@@ -449,14 +449,14 @@ WGPU::NativeWindow glfwWindow::native() const {
     return n;
 }
 
-GLFWmonitor* glfwWindow::monitorByIndex(int index) const {
+GLFWmonitor* GlfwWindow::monitorByIndex(int index) const {
     int count = 0;
     GLFWmonitor** monitors = glfwGetMonitors(&count);
     if (!monitors || index < 0 || index >= count) return nullptr;
     return monitors[index];
 }
 
-int glfwWindow::monitorIndex(GLFWmonitor* monitor) const {
+int GlfwWindow::monitorIndex(GLFWmonitor* monitor) const {
     int count = 0;
     GLFWmonitor** monitors = glfwGetMonitors(&count);
     if (!monitors || !monitor) return 0;
@@ -465,7 +465,7 @@ int glfwWindow::monitorIndex(GLFWmonitor* monitor) const {
     return 0;
 }
 
-GLFWmonitor* glfwWindow::currentMonitor() const {
+GLFWmonitor* GlfwWindow::currentMonitor() const {
     if (!window_) return glfwGetPrimaryMonitor();
 
     if (auto* fs = glfwGetWindowMonitor(window_))
@@ -505,7 +505,7 @@ GLFWmonitor* glfwWindow::currentMonitor() const {
     return best;
 }
 
-void glfwWindow::syncFromWindow() {
+void GlfwWindow::syncFromWindow() {
     if (!window_ || state_.fullscreen) return;
 
     state_.maximized = glfwGetWindowAttrib(window_, GLFW_MAXIMIZED) == GLFW_TRUE;
@@ -525,7 +525,7 @@ void glfwWindow::syncFromWindow() {
     glfwGetWindowSize(window_, &state_.width, &state_.height);
 }
 
-void glfwWindow::applyWindowed() {
+void GlfwWindow::applyWindowed() {
     if (!window_) return;
 
     int x = state_.x, y = state_.y, w = state_.width, h = state_.height;
@@ -539,7 +539,7 @@ void glfwWindow::applyWindowed() {
     glfwFocusWindow(window_);
 }
 
-void glfwWindow::applyFullscreen(GLFWmonitor* monitor) {
+void GlfwWindow::applyFullscreen(GLFWmonitor* monitor) {
     if (!window_ || !monitor) return;
     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
     if (!mode) return;

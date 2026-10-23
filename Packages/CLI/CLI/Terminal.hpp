@@ -9,7 +9,7 @@
 #include <Lattice/Kernel/Consts.hpp>
 #include "TerminalStyle.hpp"
 
-namespace CLIPlugin {
+namespace Console {
 
 /**
  @file Terminal.hpp
