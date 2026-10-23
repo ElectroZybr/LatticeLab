@@ -27,7 +27,7 @@ target("Shell")
     add_includedirs("../StdIo/include")
     add_includedirs("../GPU/include")
 
-    add_deps("Lattice")
+    add_deps("Lattice", "StdIo.core")
 
 -- target("Shell.tests")
 --     set_kind("shared")

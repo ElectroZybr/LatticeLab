@@ -69,3 +69,5 @@ cmake --build --preset debug
 ```
 
 - [Сериализация runtime-конфигурации](Serialization.md) — внешний Lattice, StdIo и плагин Serialization.
+
+- [StdIo: обычные реализации и compose](../../Plugins/StdIo/README.md).

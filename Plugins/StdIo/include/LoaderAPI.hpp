@@ -1,12 +1,13 @@
 #pragma once
 
-#include <Lattice/Kernel/Consts.hpp>
+#include <string_view>
 
 
 #include <Lattice/Kernel/Value.hpp>
 
 
-class LoaderAPI : public Lattice::Component {
+/// Domain loader contract; the owning domain explicitly creates and invokes it.
+class LoaderAPI {
 public:
     virtual ~LoaderAPI() = default;
     virtual std::string_view section() const = 0;

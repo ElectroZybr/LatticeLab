@@ -12,3 +12,7 @@ version = ">=1.0.0"
 [[dependencies]]
 id = "Actions"
 version = ">=1.0.0"
+
+[[dependencies]]
+id = "StdIo"
+version = ">=1.0.0"

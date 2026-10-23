@@ -5,11 +5,11 @@
 
 | Задача | Код |
 |---|---|
-| Создать сервис и экспортировать load/save | `Plugins/Serialization/composition.cpp` |
+| Создать сервис и экспортировать load/save | `Plugins/Serialization/compose.cpp` |
 | Достроить ветки, применить/считать перечисленные параметры | `Plugins/Serialization/src/Serializer.cpp` |
-| Выбрать существующий parser по расширению, прочитать/записать Document | `Plugins/StdIo/include/IOSubsystem.hpp` |
-| Преобразовать Document в TOML и сохранить файл | `Plugins/StdIo/include/TomlParser.hpp` |
-| Задать частичную конфигурацию | `Config/runtime.toml` |
+| Выбрать существующий parser по расширению, прочитать/записать Document | `Plugins/StdIo/src/IOSubsystem.cpp` |
+| Преобразовать Document в YAML и сохранить файл | `Plugins/StdIo/src/YamlParser.cpp` |
+| Задать частичную конфигурацию | `Config/runtime.yaml` |
 
 Документ задаёт и значения при загрузке, и набор параметров для сохранения.
 Данные объектов вне экспортированных параметров не сериализуются. Параметры,
@@ -17,3 +17,10 @@
 
 Пример формата, команды сборки с внешним Lattice и ограничения описаны в
 [документации плагина](../../Plugins/Serialization/README.md).
+
+Формат по умолчанию — YAML. StdIo распознаёт `.yaml` и `.yml`; TOML доступен
+по явному расширению файла.
+
+[StdIo](../../Plugins/StdIo/README.md) теперь предоставляет обычные парсеры и
+IO-сервис через явную композицию. Serialization монтирует общий IO, а создание
+и вызов предметных LoaderAPI принадлежат соответствующим веткам.

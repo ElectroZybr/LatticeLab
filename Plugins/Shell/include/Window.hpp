@@ -8,12 +8,23 @@
 
 #include "ActionRouter.hpp"
 #include "Render.hpp"
+#include "KeybindLoader.hpp"
 
 
 class WindowSystem final : public ServiceAPI {
 public:
     explicit WindowSystem(NodeBuild branch) {
         router_ = branch.add<ActionRouter>();
+        auto io = branch.mount<IOSubsystem>();
+        auto keybinds = branch.emplace<KeybindsLoader, LoaderAPI>("keybinds", router_, io.ref());
+        const auto load = keybinds.action("load", &KeybindsLoader::loadFile);
+        branch.action<std::optional<std::string>>("load",
+            [exports = &router_.runtime()->exports, load](Lattice::ActionContext& context, std::optional<std::string> path) {
+                if (path) {
+                    const Lattice::Value argument{*path};
+                    exports->invoke(load, context, {&argument, 1});
+                } else exports->invoke(load, context);
+            });
         branch.add<Render>();
     }
 

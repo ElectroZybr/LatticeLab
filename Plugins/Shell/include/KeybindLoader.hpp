@@ -4,18 +4,23 @@
 #include <string_view>
 #include <utility>
 #include <Lattice/Tools/Exception.hpp>
-#include <Lattice/Kernel/NodeViews.hpp>
 #include <Lattice/Kernel/Value.hpp>
 
 #include "ActionRouter.hpp"
 #include "LoaderAPI.hpp"
+#include "IOSubsystem.hpp"
+#include <optional>
 
 class KeybindsLoader final : public LoaderAPI {
-    Focus<ActionRouter> actionMap_;
+    ActionRouter& actionMap_;
+    IOSubsystem& io_;
 
 public:
-    void configure(NodeConfigure node) {
-        actionMap_ = node.focus<ActionRouter>();
+    KeybindsLoader(ActionRouter& actionMap, IOSubsystem& io) : actionMap_(actionMap), io_(io) {}
+
+    void loadFile(std::optional<std::string> path) {
+        auto document = io_.read(path.value_or("Config/keybinds.toml"));
+        if (const auto* bindings = document.section(section())) load(*bindings);
     }
 
     std::string_view section() const override { return "keybinds"; }
@@ -23,9 +28,6 @@ public:
     void load(const Lattice::Value& section) override {
         if (!section.is<Lattice::Object>())
             return;
-
-        if (!actionMap_)
-            throw Lattice::Exception<KeybindsLoader>("loader is not configured");
 
         loadTable(section.require<Lattice::Object>(), "");
     }
@@ -113,10 +115,10 @@ private:
         }
 
         if (op == "toggle")
-            actionMap_->bindToggle(verb, trigger, mode);
+            actionMap_.bindToggle(verb, trigger, mode);
         else if (op == "add" || op == "sub")
-            actionMap_->bindAdd(verb, trigger, op == "sub" ? -delta : delta, mode);
+            actionMap_.bindAdd(verb, trigger, op == "sub" ? -delta : delta, mode);
         else
-            actionMap_->bind(verb, trigger, mode);
+            actionMap_.bind(verb, trigger, mode);
     }
 };

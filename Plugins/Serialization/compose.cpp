@@ -2,7 +2,8 @@
 #include "Serializer.hpp"
 
 extern "C" void compose(NodeBuild root) {
-    auto io = root.require<IOSubsystem>();
+    auto mountedIO = root.mount<IOSubsystem>();
+    auto io = mountedIO.ref();
     auto& nodes = *io.runtime();
     auto serializer = root.emplace<Serialization::Serializer>("config", nodes,
         nodes.ops.root(root.id()), io);

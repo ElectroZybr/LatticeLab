@@ -1,6 +1,6 @@
 target("Integrator")
     set_kind("shared")
-    add_files("composition.cpp")
+    add_files("compose.cpp")
     set_targetdir(".")
 
     add_files("src/**.cpp")

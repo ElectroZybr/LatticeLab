@@ -1,8 +1,8 @@
 [Startup]
+StdIo = "on"
 "ClassicMD::Default".Universe1 = "aff"
 WGPU = "on"
 WindowSystem.1 = ["on", "host"]
-IOSubsystem = "on"
 Serialization = "on"
 CLI = ["on"]
 Benchmarks = "on"

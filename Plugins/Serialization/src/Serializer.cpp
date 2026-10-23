@@ -92,7 +92,7 @@ void Serializer::checkRoot() const {
 void Serializer::load(std::optional<std::string> path) {
     checkRoot();
     const std::filesystem::path input = path ? std::filesystem::path(*path) :
-        (document_ ? path_ : std::filesystem::path("Config/runtime.toml"));
+        (document_ ? path_ : std::filesystem::path("Config/runtime.yaml"));
     auto document = io_.read(input);
     auto* section = document.get("Lattice");
     if (!section) throw Error("'{}' has no [Lattice] section", input.string());
