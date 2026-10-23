@@ -6,7 +6,7 @@
 
 
 ActionRouter::ActionRouter(ExportsView exports, Lattice::NodeId context, std::vector<InputAPI*> inputs)
-    : exports(exports), context_(context) {
+    : exports(exports), context_(context), target_(context) {
     for (auto* input : inputs)
         if (input) registerInput(*input);
 }
@@ -59,8 +59,18 @@ std::optional<ActionRouter::TriggerChain> ActionRouter::parseTriggerChain(std::s
     return chain;
 }
 
+void ActionRouter::setTarget(Lattice::NodeId node) {
+    const auto next = node == Lattice::InvalidNodeId ? context_ : node;
+    if (next == target_)
+        return;
+    target_ = next;
+    resolveBindings();
+}
+
 void ActionRouter::resolve(Binding& binding) {
-    binding.resolved = exports.resolve(binding.role);
+    binding.resolved = target_ == Lattice::InvalidNodeId
+        ? exports.resolve(binding.role)
+        : exports.resolve(binding.role, target_);
     if (!binding.resolved) return;
 
     switch (binding.target) {

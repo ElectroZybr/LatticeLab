@@ -9,15 +9,28 @@
 - [x] Shell: `glfw*` → `Glfw*` (классы и файлы); namespace CLI `CLIPlugin` → `Console`
 - [x] Host-режим: SIGINT останавливает host-сервис на ближайшем `idle`
 - [x] Один курсор окна: параметр `cursor` у `Render` (владелец surface), hit-test по слоям вьюпортов, локальная координата у вьюпорта под курсором
-- [ ] Параметры контроллеров камеры (`look`, `zoom`, `pan`, `move`) тоже глобальные: при втором вьюпорте направлять ввод контроллеру вьюпорта под курсором
+- [x] `cursor` и управление камерой — локальные экспорты; роутер разрешает кейбинды от цели (`setTarget`), цель — контроллер вьюпорта под курсором
 
 ## 1. Видимая симуляция
 
-- [ ] Вьюпорт атомов в Graphics (`atom2d`/`atom3d` из старых шейдеров) поверх предметного контракта данных, без зависимости от ClassicMD
-- [ ] Контракт данных для отрисовки (таблица позиций/типов или `AtomStorage`-подобный интерфейс в `Libs/`)
-- [ ] Композиция, связывающая ветку симуляции и вьюпорт (сцена или вариант ClassicMD)
-- [ ] Несколько вьюпортов в одном окне: раскладка, активный вьюпорт для ввода
-- [ ] Синхронизация данных симуляции (worker) и рендера (host): снимок/двойной буфер
+Рамки: вьюпорт общий, содержимое — `SceneObject`; данные для рендера — GPU-таблица
+(линейная копия SoA одним `writeBuffer` для CPU-симуляции, сам буфер — для GPU-симуляции);
+рендер про модель не знает; сцена собирается кодом, сохраняется через `Serializer`.
+
+- [x] `WGPU::GpuSoA : Lattice::Table` — GPU-зеркало `StdData::SoA` (та же раскладка, загрузка одним `writeBuffer`) и GPU-владеемая таблица (`addColumn`/`resize`); `ColumnView` без данных на хосте не разыменовывается
+- [x] WGPU: явные layout'ы bind group (`BindingLayout`, `PipelineDesc::layouts` — общий group 0 камеры), depth (`PipelineDesc::depthFormat`, depth-цель у `beginRenderPass`, view у `Texture`), `draw(vertexCount, instanceCount)`, `copyBuffer`, счётчик ошибок `errorCount()`
+- [x] Ядро: `extern "C" configure(NodeConfigure)` у пакета (и у вариантов слотов) — повторяемое связывание с текущим деревом в `maintain`, мягкие зависимости; наборы детей обновляются Lattice, а не вручную. Переведены StdIo (парсеры), Shell (окна, ввод, кадры), Graphics (вьюпорты, контроллеры)
+- [x] CLI: терминалы через `configure` (`setTerminals` ждёт конца итерации потока CLI)
+- [x] Убрать дублирование механизмов Lattice: `Viewport::controller` и набор вьюпортов `Render` — из `configure`; цель ввода — `Focus<InputTargetAPI>` (ядро: `Focus::set(T*)`, `NodeConfigure::focusId`), роутеру её назначает `configure` Shell; `Terminal::current_` оставлен как позиция навигации
+- [x] `Viewport` — один конкретный класс (`ViewportArea` + камера + объекты из `configure`); uniform камеры — bind group 0 вьюпорта; `RenderLayout` — общие форматы и layout группы камеры; `TestViewport` → `TestObject : SceneObject`
+- [x] `SceneObject::render(RenderPass&, const ViewState&)`; `Render` владеет depth
+- [ ] Рендер сфер (`SceneObject`): `GpuSoA` + смещения x/y/z + колонка индекса + палитра (индекс → радиус, цвет); шейдер из `atom3d.wgsl` с `frag_depth`
+- [ ] ClassicMD: после шага при `wanted()` — `gpuAtoms.upload(atoms)`; `ClassicMD.core` без WGPU, связь — в композиции
+- [x] Пакет `Scene`: сборка кодом (окно, surface, `RenderLayout`, объекты сцены, вьюпорты, Render); Shell вкладывает `Scene`; Graphics — модуль без ветки
+- [ ] Scene: источник атомов — `mount<GpuSoA>` и рендер сфер как объект сцены
+- [ ] Несколько вьюпортов с одними данными и разными камерами; активный — под курсором
+- [ ] Параметры камер/объектов — `param`, сохранение/загрузка через `Serializer`
+- [ ] Чистка: обновить `Packages/Graphics/README.md`, `AGENTS.md`
 
 ## 2. Перенос старого приложения (`App/`, `legacy/`)
 

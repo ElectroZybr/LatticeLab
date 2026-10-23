@@ -7,14 +7,14 @@
 #include <glm/gtc/quaternion.hpp>
 #include "Camera.hpp"
 #include "TransformController.hpp"
-#include "Viewport.hpp"
+#include "ViewportArea.hpp"
 
 namespace TransformModeDetail {
 inline glm::vec3 cameraForward(const Camera& c) { return c.transform().rotation * glm::vec3{0, 0, -1}; }
 inline glm::vec3 cameraRight(const Camera& c) { return c.transform().rotation * glm::vec3{1, 0, 0}; }
 inline glm::vec3 cameraUp(const Camera& c) { return c.transform().rotation * glm::vec3{0, 1, 0}; }
 
-inline glm::vec3 panDelta(Camera& camera, Viewport& viewport, glm::vec2 delta, glm::vec3 planePoint) {
+inline glm::vec3 panDelta(Camera& camera, ViewportArea& viewport, glm::vec2 delta, glm::vec3 planePoint) {
     return camera.screenDeltaToPlane(viewport.cursor(), delta, glm::vec2(viewport.size()), planePoint, cameraForward(camera));
 }
 
@@ -28,12 +28,8 @@ using namespace TransformModeDetail;
 
 class Camera2DController final : public TransformController {
 public:
-    Camera2DController(Camera& camera, Viewport& viewport)
+    Camera2DController(Camera& camera, ViewportArea& viewport)
         : camera_(&camera), viewport_(&viewport) {}
-
-    // Input accumulated between frames; exported as runtime params by composition.
-    glm::vec2 pan{};
-    float zoom = 0.0f;
 
     void update() override {
         if (!camera_ || !viewport_) return;
@@ -55,7 +51,7 @@ public:
 
 private:
     Camera* camera_;
-    Viewport* viewport_;
+    ViewportArea* viewport_;
     glm::vec3 pivot_{0.0f};
     float zoomSpeed_ = 0.1f;
     float minDistance_ = 0.01f;
@@ -63,13 +59,8 @@ private:
 
 class FreeCameraController final : public TransformController {
 public:
-    FreeCameraController(Camera& camera, Viewport& viewport)
+    FreeCameraController(Camera& camera, ViewportArea& viewport)
         : camera_(&camera), viewport_(&viewport) {}
-
-    // Input accumulated between frames; exported as runtime params by composition.
-    glm::vec3 move{};
-    glm::vec2 look{}, pan{};
-    float zoom = 0.0f;
 
     void update() override {
         if (!camera_) return;
@@ -97,24 +88,20 @@ public:
 
 private:
     Camera* camera_;
-    Viewport* viewport_;
+    ViewportArea* viewport_;
     float lookSensitivity_ = 0.003f, moveSpeed_ = 0.1f, zoomSpeed_ = 0.2f, panDistance_ = 1.0f;
 };
 
 class OrbitCameraController final : public TransformController {
 public:
-    OrbitCameraController(Camera& camera, Viewport& viewport)
+    OrbitCameraController(Camera& camera, ViewportArea& viewport)
         : camera_(&camera), viewport_(&viewport) {
         lookAtPivot();
     }
 
-    // Input accumulated between frames; exported as runtime params by composition.
-    glm::vec2 orbit{}, pan{};
-    float zoom = 0.0f;
-
     void update() override {
         if (!camera_) return;
-        if (viewport_ && orbit != glm::vec2{}) { orbitBy(orbit); orbit = {}; }
+        if (viewport_ && look != glm::vec2{}) { orbitBy(look); look = {}; }
         if (viewport_ && pan != glm::vec2{}) {
             const glm::vec3 d = panDelta(*camera_, *viewport_, pan, pivot_);
             camera_->move(d);
@@ -162,14 +149,14 @@ private:
 
 private:
     Camera* camera_;
-    Viewport* viewport_;
+    ViewportArea* viewport_;
     glm::vec3 pivot_{0.0f};
     float orbitSpeed_ = 1.0f, zoomSpeed_ = 0.1f, minDistance_ = 0.01f;
 };
 
 class TrackballCameraController final : public TransformController {
 public:
-    TrackballCameraController(Camera& camera, Viewport& viewport)
+    TrackballCameraController(Camera& camera, ViewportArea& viewport)
         : camera_(&camera), viewport_(&viewport) {
         orbitUp_ = camera_->transform().rotation * glm::vec3{0, 1, 0};
         if (glm::dot(orbitUp_, orbitUp_) <= 1e-8f) orbitUp_ = {0, 1, 0};
@@ -177,13 +164,9 @@ public:
         lookAtPivot();
     }
 
-    // Input accumulated between frames; exported as runtime params by composition.
-    glm::vec2 orbit{}, pan{};
-    float zoom = 0.0f;
-
     void update() override {
         if (!camera_) return;
-        if (viewport_ && orbit != glm::vec2{}) { orbitBy(orbit); orbit = {}; }
+        if (viewport_ && look != glm::vec2{}) { orbitBy(look); look = {}; }
         if (viewport_ && pan != glm::vec2{}) {
             const glm::vec3 d = panDelta(*camera_, *viewport_, pan, pivot_);
             camera_->move(d);
@@ -240,7 +223,7 @@ private:
 
 private:
     Camera* camera_;
-    Viewport* viewport_;
+    ViewportArea* viewport_;
     glm::vec3 pivot_{0.0f}, orbitUp_{0, 1, 0};
     float orbitSpeed_ = 1.0f, zoomSpeed_ = 0.1f, minDistance_ = 0.01f;
 };

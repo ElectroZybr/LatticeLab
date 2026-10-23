@@ -1,4 +1,6 @@
 // CLI over a plain Context runtime with scripted terminals; no package loading.
+#include <thread>
+#include <atomic>
 #include <deque>
 #include <iostream>
 #include <stdexcept>
@@ -22,13 +24,14 @@ void check(bool condition, const char* message) {
 class ScriptTerminal final : public Console::Terminal {
 public:
     std::deque<std::string> lines;
+    std::atomic<bool> keepOpen{false};
     std::string output;
     std::string path;
 protected:
     void onAttach() override {}
     void onDetach() override {}
     Input onPoll() override {
-        if (lines.empty()) return {.closed = true};
+        if (lines.empty()) return {.closed = !keepOpen};
         Input input{.line = lines.front()};
         lines.pop_front();
         return input;
@@ -73,8 +76,8 @@ void servesScriptedTerminal() {
         root.branch("folder");
         auto terminal = root.emplace<ScriptTerminal, Console::Terminal>("script");
         terminal->lines = {"cd folder", "ls", "nope", "cd missing"};
-        auto cli = root.emplace<Console::CLI>("cli",
-            root.exports(), root.tree(), root.id(), root.children<Console::Terminal>());
+        auto cli = root.emplace<Console::CLI>("cli", root.exports(), root.tree(), root.id());
+        cli->setTerminals({terminal.get()});
         cli.globalAction("ls", &Console::CLI::showList);
         cli.globalAction("cd", &Console::CLI::changeDirectory);
         check(!terminal->path.empty(), "initial path is set");
@@ -91,6 +94,33 @@ void servesScriptedTerminal() {
     }
     runtime.nodes.ops.destroyBranch(rootId);
 }
+void terminalsChangeWhileServing() {
+    Context runtime;
+    const NodeId rootId = runtime.nodes.factory.folder(InvalidNodeId, "Root");
+    {
+        ::NodeBuild root{rootId, runtime.nodes};
+        auto first = root.emplace<ScriptTerminal, Console::Terminal>("first");
+        auto second = root.emplace<ScriptTerminal, Console::Terminal>("second");
+        first->keepOpen = true;
+        second->keepOpen = true;
+        auto cli = root.emplace<Console::CLI>("cli", root.exports(), root.tree(), root.id());
+        cli->setTerminals({first.get()});
+        std::thread worker([&] { cli->run([] {}); });
+        while (!first->attached())
+            std::this_thread::yield();
+
+        cli->setTerminals({first.get(), second.get()});
+        check(second->attached() && !second->path.empty(), "added terminal attaches at the root");
+        cli->setTerminals({second.get()});
+        check(!first->attached(), "removed terminal is detached and no longer served");
+
+        second->keepOpen = false;
+        worker.join();
+        check(!second->attached(), "closed terminal detached");
+    }
+    runtime.nodes.ops.destroyBranch(rootId);
+}
+
 void explicitAssignmentsAndReset() {
     Context runtime;
     const auto rootId = runtime.nodes.factory.folder(InvalidNodeId, "Root");
@@ -105,8 +135,8 @@ void explicitAssignmentsAndReset() {
         });
         auto terminal = root.emplace<ScriptTerminal, Console::Terminal>("script");
         terminal->lines = {"gain 4", "reset gain"};
-        auto cli = root.emplace<Console::CLI>("cli", root.exports(), root.tree(), root.id(),
-                                               root.children<Console::Terminal>());
+        auto cli = root.emplace<Console::CLI>("cli", root.exports(), root.tree(), root.id());
+        cli->setTerminals({terminal.get()});
         cli->run([] {});
         check(gain == 4 && sets == 1 && resets == 1, "CLI records edits and reset without rewriting state");
         runtime.nodes.exports.unobserveParameters(observer);
@@ -120,6 +150,7 @@ int main() {
     parsesArguments();
     resolvesTreePaths();
     servesScriptedTerminal();
+    terminalsChangeWhileServing();
     explicitAssignmentsAndReset();
     std::cout << "CLI: arguments, tree paths and scripted terminal passed\n";
 }

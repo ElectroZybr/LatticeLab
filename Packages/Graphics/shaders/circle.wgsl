@@ -1,7 +1,11 @@
 struct Camera {
     viewProjection: mat4x4<f32>,
+    view: mat4x4<f32>,
+    projection: mat4x4<f32>,
+    position: vec4<f32>,
 };
 @group(0) @binding(0) var<uniform> camera: Camera;
+@group(1) @binding(0) var<uniform> model: mat4x4<f32>;
 
 struct VSOut {
     @builtin(position) position: vec4<f32>,
@@ -23,7 +27,7 @@ fn vs(@builtin(vertex_index) vertex: u32) -> VSOut {
     let p = positions[vertex];
 
     var out: VSOut;
-    out.position = camera.viewProjection * vec4<f32>(p * 0.5, 0.0, 1.0);
+    out.position = camera.viewProjection * model * vec4<f32>(p * 0.5, 0.0, 1.0);
     out.uv = p;
     return out;
 }

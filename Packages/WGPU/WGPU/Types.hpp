@@ -4,10 +4,12 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace WGPU {
 
 class Buffer;
+class BindingLayout;
 
 enum class BufferUsage : uint64_t {
     None            = 0,
@@ -60,6 +62,10 @@ enum class TextureUsage : uint32_t {
     RenderAttachment = 0x10
 };
 
+constexpr TextureUsage operator|(TextureUsage a, TextureUsage b) {
+    return static_cast<TextureUsage>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
 struct TextureDesc {
     uint32_t width = 1;
     uint32_t height = 1;
@@ -75,8 +81,38 @@ struct ShaderDesc {
     std::string label;
 };
 
+enum class ShaderStage : uint32_t {
+    None     = 0,
+    Vertex   = 1u << 0,
+    Fragment = 1u << 1,
+    Compute  = 1u << 2
+};
+
+constexpr ShaderStage operator|(ShaderStage a, ShaderStage b) {
+    return static_cast<ShaderStage>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+enum class BindingType {
+    Uniform,
+    Storage,
+    ReadOnlyStorage
+};
+
+/// One buffer binding of a bind group layout.
+struct LayoutEntry {
+    uint32_t binding = 0;
+    BindingType type = BindingType::Uniform;
+    ShaderStage visibility = ShaderStage::Vertex | ShaderStage::Fragment;
+};
+
 struct PipelineDesc {
     TextureFormat colorFormat = TextureFormat::BGRA8Unorm;
+    /// Undefined: no depth test. Otherwise the render pass must have a depth target.
+    TextureFormat depthFormat = TextureFormat::Undefined;
+    bool depthWrite = true;
+    /// Explicit bind group layouts, group i = layouts[i]; shared between pipelines
+    /// (a viewport's camera group). Empty: layout inferred from the shader (not shareable).
+    std::vector<BindingLayout*> layouts;
     std::string vertexEntry = "vs";
     std::string fragmentEntry = "fs";
     std::string label;

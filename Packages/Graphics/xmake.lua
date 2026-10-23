@@ -1,6 +1,7 @@
 add_requires("glm")
 
--- Rendering building blocks over WGPU: viewports, cameras, controllers, Render.
+-- Rendering building blocks over WGPU: viewports, scene objects, cameras, controllers,
+-- Render. No branch of its own: the Scene package composes them.
 target("Graphics.core")
     set_kind("static")
     set_targetdir("$(builddir)/lib")
@@ -11,13 +12,6 @@ target("Graphics.core")
     add_includedirs(".", {public = true})
     add_packages("glm", {public = true})
     add_deps("WGPU.core", "Shell.core", {public = true})
-
--- Composition: the render branch of one window.
-target("Graphics")
-    set_kind("shared")
-    set_targetdir(".")
-    add_files("compose.cpp")
-    add_deps("Lattice", "Graphics.core")
 
 target("Graphics.tests")
     set_kind("binary")

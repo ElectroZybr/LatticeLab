@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include <cstdint>
 #include <string_view>
 #include <vector>
@@ -84,6 +86,12 @@ public:
     void resolve(Binding& binding);
     void resolveBindings();
 
+    /// Node from which bindings resolve exports: its own and its ancestors' local exports
+    /// plus global ones. Invalid means the context node; a change re-resolves bindings.
+    /// Composition assigns it from the input target (Focus<InputTargetAPI>).
+    void setTarget(Lattice::NodeId node);
+    Lattice::NodeId target() const noexcept { return target_; }
+
     std::optional<ActionRouter::TriggerChain> parseTriggerChain(std::string_view expression);
 
     /// output слой
@@ -103,6 +111,7 @@ public:
 private:
     ExportsView exports;
     Lattice::NodeId context_ = Lattice::InvalidNodeId;
+    Lattice::NodeId target_ = Lattice::InvalidNodeId;
     std::vector<InputAPI*> inputs_;
     BindRegistry bindings_;
     TriggerRegistry triggers_;

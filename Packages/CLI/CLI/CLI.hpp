@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <functional>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -22,15 +23,23 @@ namespace Console {
  позволяет просматривать, вызывать, менять значения параметров и таблиц. 
  предоставляет навигацию по дереву компонентов.
 
- Инфраструктурный объект: получает runtime views и терминалы через конструктор.
- Команды, параметры темы и запуск как сервиса объявляются в композиции.
+ Инфраструктурный объект: получает runtime views через конструктор, а текущий набор
+ терминалов — от композиции (setTerminals в configure). Команды, параметры темы и
+ запуск как сервиса объявляются в композиции.
+
+ Терминалы обслуживает поток CLI, а набор меняется из host-потока: setTerminals ждёт
+ конца текущей итерации, после возврата убранные терминалы больше не используются.
+ Команда CLI поэтому не должна ждать host-поток.
 */
 
 class CLI final {
 public:
     /// @param context node whose runtime root becomes the initial terminal path.
-    CLI(ExportsView exports, Lattice::TreeView tree, Lattice::NodeId context,
-        std::vector<Terminal*> terminals);
+    CLI(ExportsView exports, Lattice::TreeView tree, Lattice::NodeId context);
+
+    /// Serve exactly these terminals: new ones start at the runtime root (and attach
+    /// if serving), removed ones detach.
+    void setTerminals(std::vector<Terminal*> terminals);
 
     /// Serve terminals until stopped or all terminals close. `idle` is called each poll.
     void run(const std::function<void()>& idle);
@@ -39,6 +48,8 @@ public:
     void showList(Lattice::ActionContext& context) const;
     void showHelp(Lattice::ActionContext& context) const;
     void showTree(Lattice::ActionContext& context) const;
+    /// Subtree of params and actions: only nodes that own exports or lead to them.
+    void showExports(Lattice::ActionContext& context) const;
     void showLogo() const;
     void changeDirectory(Lattice::ActionContext& context, std::string path) const;
 
@@ -49,11 +60,16 @@ private:
     bool pollTerminals();
 
     std::atomic<bool> stop_{false};
+    bool serving_ = false;
+    // Recursive: commands and logging on the CLI thread write back to terminals.
+    std::recursive_mutex mutex_;
     std::vector<Terminal*> terminals_;
+    Lattice::NodeId root_ = Lattice::InvalidNodeId;
     Console::CommandDispatcher commands_;
     ExportsView exports_;
     Lattice::TreeView tree_;
-    Lattice::TextTheme theme_ = Lattice::TextTheme::system();
+    // The shared system theme: its exported styles recolor every output, not a copy.
+    Lattice::TextTheme& theme_ = Lattice::TextTheme::system();
 };
 
 }

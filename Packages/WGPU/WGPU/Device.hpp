@@ -82,6 +82,10 @@ private:
     ResourceRegistry resources_;
 };
 
+/// Uncaptured WGPU errors (validation, out of memory) of all devices since start.
+/// Errors are also logged; tests compare the count before and after.
+uint64_t errorCount() noexcept;
+
 /// RAII registration of a resource in its device's registry.
 class Tracked {
 public:

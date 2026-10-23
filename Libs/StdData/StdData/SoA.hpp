@@ -80,6 +80,19 @@ public:
 
     [[nodiscard]] size_t rows() const noexcept override { return size_; }
 
+    /// The whole storage block: every column at its offset, capacity() rows each;
+    /// its size is a multiple of 4 bytes.
+    [[nodiscard]] std::span<const std::byte> bytes() const noexcept { return {storage_, storageBytes_}; }
+
+    /// Byte offset of a visible column inside bytes().
+    [[nodiscard]] size_t columnOffset(size_t index) const {
+        size_t visibleIndex = 0;
+        for (const auto& column : columns_)
+            if (column.active && visibleIndex++ == index)
+                return column.offset;
+        throw Lattice::Exception<SoA>("Column {} is out of range [0, {})", index, visibleIndex);
+    }
+
     [[nodiscard]] size_t columns() const noexcept override {
         return std::count_if(columns_.begin(), columns_.end(), [](const Column& column) {
             return column.active;
@@ -388,6 +401,8 @@ private:
             col.offset = totalBytes;
             totalBytes += col.elementSize * newCapacity;
         }
+        // Whole 32-bit words: the block can be copied as is (e.g. to a GPU buffer).
+        totalBytes = alignUp(totalBytes, 4);
 
         std::byte* newStorage = allocate(totalBytes);
 

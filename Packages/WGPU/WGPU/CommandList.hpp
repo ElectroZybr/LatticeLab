@@ -15,13 +15,14 @@ public:
     RenderPass& operator=(const RenderPass&) = delete;
 
     bool active() const noexcept { return pass_ != nullptr; }
-    void begin(WGPUCommandEncoder encoder, Surface& surface, Color clear);
+    /// `depth`: optional depth target of the surface size, cleared to 1.
+    void begin(WGPUCommandEncoder encoder, Surface& surface, Color clear, Texture* depth = nullptr);
 
     void setViewport(Rect rect);
     void setScissor(Rect rect);
     void setPipeline(Pipeline& pipeline);
     void setBindings(uint32_t group, BindingSet& bindings);
-    void draw(uint32_t vertexCount, uint32_t firstVertex = 0);
+    void draw(uint32_t vertexCount, uint32_t instanceCount = 1, uint32_t firstVertex = 0);
     void end();
 
 private:
@@ -40,7 +41,9 @@ public:
     CommandList(const CommandList&) = delete;
     CommandList& operator=(const CommandList&) = delete;
 
-    RenderPass& beginRenderPass(Surface& surface, Color clear = {});
+    RenderPass& beginRenderPass(Surface& surface, Color clear = {}, Texture* depth = nullptr);
+    /// Offsets and size must be multiples of 4; buffers need CopySource / CopyDestination.
+    void copyBuffer(Buffer& source, uint64_t sourceOffset, Buffer& target, uint64_t targetOffset, uint64_t size);
     void submit();
 
 private:

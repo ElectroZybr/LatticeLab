@@ -1,4 +1,5 @@
 #include "IOSubsystem.hpp"
+#include <mutex>
 #include <utility>
 #include <Lattice/Tools/Exception.hpp>
 
@@ -6,16 +7,24 @@ namespace {
 using Error = Lattice::Exception<IOSubsystem>;
 }
 
-IOSubsystem::IOSubsystem(std::vector<ParserAPI*> parsers) : parsers_(std::move(parsers)) {
-    for (auto* parser : parsers_)
+IOSubsystem::IOSubsystem(std::vector<ParserAPI*> parsers) {
+    setParsers(std::move(parsers));
+}
+
+void IOSubsystem::setParsers(std::vector<ParserAPI*> parsers) {
+    for (auto* parser : parsers)
         if (!parser) throw Error("IO requires non-null parsers");
+    std::unique_lock lock(mutex_);
+    parsers_ = std::move(parsers);
 }
 
 Document IOSubsystem::read(const std::filesystem::path& path) const {
+    std::shared_lock lock(mutex_);
     return requireParser(path).parseFile(path);
 }
 
 void IOSubsystem::write(const std::filesystem::path& path, const Document& document) const {
+    std::shared_lock lock(mutex_);
     requireParser(path).writeFile(path, document);
 }
 

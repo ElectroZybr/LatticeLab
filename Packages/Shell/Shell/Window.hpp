@@ -12,20 +12,26 @@
 #include "WindowAPI.hpp"
 
 /// Window loop: pumps events, routes input and advances frames until every window
-/// closes or a stop is requested. Composition runs it as the host service.
+/// closes or a stop is requested. Composition runs it as the host service and assigns
+/// the current windows, inputs and frames (between iterations, from idle()).
 class WindowSystem final {
 public:
-    WindowSystem(ActionRouter& router, std::vector<WindowAPI*> windows,
-                 std::vector<InputAPI*> inputs, std::vector<FrameAPI*> frames)
-        : router_(router), windows_(std::move(windows)), inputs_(std::move(inputs)), frames_(std::move(frames)) {
-        for (InputAPI* input : inputs_)
-            router_.registerInput(*input);
-    }
+    explicit WindowSystem(ActionRouter& router) : router_(router) {}
 
     // The shared router outlives this window system (it is mounted).
-    ~WindowSystem() {
+    ~WindowSystem() { setInputs({}); }
+
+    void setWindows(std::vector<WindowAPI*> windows) { windows_ = std::move(windows); }
+    void setFrames(std::vector<FrameAPI*> frames) { frames_ = std::move(frames); }
+
+    /// Inputs feed the router: removed ones are unregistered, new ones registered.
+    void setInputs(std::vector<InputAPI*> inputs) {
         for (InputAPI* input : inputs_)
-            router_.unregisterInput(*input);
+            if (std::ranges::find(inputs, input) == inputs.end())
+                router_.unregisterInput(*input);
+        for (InputAPI* input : inputs)
+            router_.registerInput(*input);
+        inputs_ = std::move(inputs);
     }
 
     WindowSystem(const WindowSystem&) = delete;

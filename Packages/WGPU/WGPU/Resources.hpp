@@ -29,9 +29,17 @@ public:
     ~Texture();
 
     WGPUTexture native() const noexcept { return texture_; }
+    /// Default view of the whole texture (render attachments).
+    WGPUTextureView view() const noexcept { return view_; }
+    uint32_t width() const noexcept { return width_; }
+    uint32_t height() const noexcept { return height_; }
+    TextureFormat format() const noexcept { return format_; }
 
 private:
     WGPUTexture texture_ = nullptr;
+    WGPUTextureView view_ = nullptr;
+    uint32_t width_ = 0, height_ = 0;
+    TextureFormat format_ = TextureFormat::Undefined;
 };
 
 class Shader final : Tracked {
@@ -57,14 +65,31 @@ private:
     WGPURenderPipeline pipeline_ = nullptr;
 };
 
+/// Explicit bind group layout: shareable between pipelines and bind groups.
+class BindingLayout final : Tracked {
+public:
+    BindingLayout(Device& device, std::span<const LayoutEntry> entries, std::string label = {});
+    ~BindingLayout();
+
+    WGPUBindGroupLayout native() const noexcept { return layout_; }
+
+private:
+    WGPUBindGroupLayout layout_ = nullptr;
+};
+
 class BindingSet final : Tracked {
 public:
+    /// Bind group for a group of a pipeline with an inferred layout.
     BindingSet(Device& device, Pipeline& pipeline, uint32_t group, std::span<const Binding> bindings);
+    /// Bind group for an explicit layout: usable with every pipeline built on it.
+    BindingSet(Device& device, BindingLayout& layout, std::span<const Binding> bindings);
     ~BindingSet();
 
     WGPUBindGroup native() const noexcept { return bindGroup_; }
 
 private:
+    void create(WGPUBindGroupLayout layout, std::span<const Binding> bindings);
+
     WGPUBindGroup bindGroup_ = nullptr;
 };
 

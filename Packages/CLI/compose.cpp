@@ -17,14 +17,11 @@ void exportStyle(Lattice::ObjectBuild<Console::LocalTerminal>& terminal) {
 }
 }
 
-// Interactive runtime shell. CLI and terminals are ordinary classes; commands,
-// theme params and the service are declared here.
 extern "C" void compose(NodeBuild root) {
     auto local = root.emplace<Console::LocalTerminal, Console::Terminal>("local");
     exportStyle(local);
 
-    auto cli = root.construct<Console::CLI>(
-        root.exports(), root.tree(), root.id(), root.children<Console::Terminal>());
+    auto cli = root.construct<Console::CLI>(root.exports(), root.tree(), root.id());
     for (auto& entry : cli->theme().entries())
         cli.param(std::format("theme.{}", entry.name), entry.style);
 
@@ -32,6 +29,12 @@ extern "C" void compose(NodeBuild root) {
     cli.globalAction("help", &Console::CLI::showHelp);
     cli.globalAction("cd", &Console::CLI::changeDirectory);
     cli.globalAction("tree", &Console::CLI::showTree);
+    cli.globalAction("exports", &Console::CLI::showExports);
     cli.globalAction("logo", &Console::CLI::showLogo);
     cli.service(&Console::CLI::run, &Console::CLI::requestStop);
+}
+
+// CLI serves the terminals currently below its branch.
+extern "C" void configure(NodeConfigure root) {
+    root.self<Console::CLI>()->setTerminals(root.children<Console::Terminal>());
 }

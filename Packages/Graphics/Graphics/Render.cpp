@@ -4,12 +4,15 @@
 
 #include <WGPU/CommandList.hpp>
 
-Render::Render(WGPU::Device& device, WindowAPI& window, WGPU::Surface& surface,
-               std::vector<Viewport*> viewports, std::vector<TransformController*> controllers)
-    : device_(device), window_(window), surface_(surface),
-      viewports_(std::move(viewports)), controllers_(std::move(controllers)) {
-    // Draw order is by layer; the stable sort keeps composition order within a layer.
+Render::Render(WindowAPI& window, WGPU::Surface& surface, RenderLayout& layout)
+    : device_(layout.device()), window_(window), surface_(surface), layout_(layout) {}
+
+void Render::setViewports(std::vector<Viewport*> viewports) {
+    viewports_ = std::move(viewports);
+    // Draw order is by layer; the stable sort keeps tree order within a layer.
     std::ranges::stable_sort(viewports_, {}, &Viewport::layer);
+    if (std::ranges::find(viewports_, hovered_) == viewports_.end())
+        hovered_ = nullptr;
 }
 
 void Render::routeCursor(glm::uvec2 surfaceSize) {
@@ -21,6 +24,10 @@ void Render::routeCursor(glm::uvec2 surfaceSize) {
         viewport->hover(viewport == target
             ? std::optional{cursor_ - glm::vec2(viewport->position())}
             : std::nullopt);
+    if (target != hovered_) {
+        hovered_ = target;
+        if (onHover_) onHover_(target);
+    }
 }
 
 void Render::frame(float) {
@@ -31,16 +38,23 @@ void Render::frame(float) {
     const glm::uvec2 framebuffer{size.x > 0 ? uint32_t(size.x) : 0u, size.y > 0 ? uint32_t(size.y) : 0u};
 
     routeCursor(framebuffer);
-    for (TransformController* controller : controllers_)
-        controller->update();
+    for (Viewport* viewport : viewports_)
+        if (viewport->controller)
+            viewport->controller->update();
 
     surface_.resize(framebuffer.x, framebuffer.y);
+    if (!framebuffer.x || !framebuffer.y)
+        return;
+    if (!depth_ || depth_->width() != framebuffer.x || depth_->height() != framebuffer.y)
+        depth_ = std::make_unique<WGPU::Texture>(device_, WGPU::TextureDesc{
+            .width = framebuffer.x, .height = framebuffer.y, .format = layout_.depthFormat(),
+            .usage = WGPU::TextureUsage::RenderAttachment, .label = "render/depth"});
     if (!surface_.acquire())
         return;
 
     try {
         WGPU::CommandList commands{device_};
-        auto& pass = commands.beginRenderPass(surface_, {0.1f, 0.2f, 0.3f, 1.0f});
+        auto& pass = commands.beginRenderPass(surface_, {0.1f, 0.2f, 0.3f, 1.0f}, depth_.get());
         for (Viewport* viewport : viewports_)
             viewport->render(pass, framebuffer);
         pass.end();

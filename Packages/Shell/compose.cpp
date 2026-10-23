@@ -2,6 +2,7 @@
 #include <string>
 
 #include <Lattice/Composition.hpp>
+#include <Actions/InputTargetAPI.hpp>
 #include <Shell/FrameAPI.hpp>
 #include <Shell/KeybindLoader.hpp>
 #include <Shell/Window.hpp>
@@ -10,12 +11,11 @@
 extern "C" constinit const Lattice::Package lattice_package{
     .id = "Shell",
     .version = {1, 0, 0},
-    .dependencies = {{.id = "StdIo", .min = {1, 0, 0}}, {.id = "Graphics", .min = {1, 0, 0}}},
+    .dependencies = {{.id = "StdIo", .min = {1, 0, 0}}, {.id = "Scene", .min = {1, 0, 0}}},
 };
 
-// Application shell: the input router, keybinds, the render branch (Graphics) and the
-// window loop as the host service. The loop collects windows, inputs and frames after
-// the render branch is composed.
+// Application shell: the input router, keybinds, the window scene (Scene) and the
+// window loop as the host service.
 extern "C" void compose(NodeBuild root) {
     auto io = root.mount<IOSubsystem>();
     auto router = root.emplace<ActionRouter>("router", root.exports(), root.id());
@@ -32,9 +32,31 @@ extern "C" void compose(NodeBuild root) {
             } else exports->invoke(load, context);
         });
 
-    root.compose("Graphics", "render");
+    root.compose("Scene", "render");
 
-    auto loop = root.construct<WindowSystem>(router,
-        root.collect<WindowAPI>(), root.collect<InputAPI>(), root.collect<FrameAPI>());
+    auto loop = root.construct<WindowSystem>(router);
     loop.service(&WindowSystem::run, &WindowSystem::requestStop);
+}
+
+// The loop serves the windows, inputs and frames currently in the shell branch
+// (the render branch included); it picks changes up on its next idle().
+extern "C" void configure(NodeConfigure root) {
+    // Keybinds resolve from the input target chosen in the frame's branch, or from the
+    // frame node itself (its local exports, e.g. the cursor) while none is chosen.
+    const auto frames = root.collectNodes<FrameAPI>();
+    if (frames.size() > 1)
+        throw Lattice::Exception<WindowSystem>("{} frames share one router; input focus between windows is not supported yet",
+            frames.size());
+    Lattice::NodeId target = Lattice::InvalidNodeId;
+    if (!frames.empty()) {
+        target = frames.front().node.focusId<InputTargetAPI>();
+        if (target == Lattice::InvalidNodeId)
+            target = frames.front().node.id();
+    }
+    root.require<ActionRouter>("router").setTarget(target);
+
+    auto* loop = root.self<WindowSystem>();
+    loop->setWindows(root.collect<WindowAPI>());
+    loop->setInputs(root.collect<InputAPI>());
+    loop->setFrames(root.collect<FrameAPI>());
 }

@@ -1,9 +1,11 @@
-// Camera math and controllers without GPU; TestViewport only when an adapter exists.
+// Camera math and controllers without GPU; scene resources only when an adapter exists.
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
 #include <Graphics/Camera.hpp>
-#include <Graphics/TestViewport.hpp>
+#include <Graphics/RenderLayout.hpp>
+#include <Graphics/TestObject.hpp>
+#include <Graphics/Viewport.hpp>
 #include <Graphics/TransformMode.hpp>
 #include <Lattice/Tools/Exception.hpp>
 
@@ -11,10 +13,6 @@ namespace {
 void check(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
-
-struct NullViewport final : Viewport {
-    void render(WGPU::RenderPass&, glm::uvec2) override {}
-};
 
 void cameraProjectsCenterRayForward() {
     Camera camera;
@@ -27,7 +25,7 @@ void cameraProjectsCenterRayForward() {
 
 void freeControllerConsumesInput() {
     Camera camera;
-    NullViewport viewport;
+    ViewportArea viewport;
     FreeCameraController controller{camera, viewport};
     controller.move = {0, 0, 1};
     TransformController& generic = controller;
@@ -37,7 +35,7 @@ void freeControllerConsumesInput() {
 }
 
 void viewportHitTestAndLocalCursor() {
-    NullViewport panel;
+    ViewportArea panel;
     panel.setPosition({100, 50});
     panel.setSize({200, 100});
     check(panel.contains({150, 60}, {1280, 720}), "inside the panel");
@@ -51,23 +49,31 @@ void viewportHitTestAndLocalCursor() {
 void orbitControllerKeepsDistance() {
     Camera camera;
     camera.setPosition({0, 0, 5});
-    NullViewport viewport;
+    ViewportArea viewport;
     OrbitCameraController controller{camera, viewport};
-    controller.orbit = {100, 0};
+    controller.look = {100, 0};
     controller.update();
     check(std::abs(glm::length(camera.transform().position) - 5.0f) < 1e-3f, "orbit keeps the distance to the pivot");
 }
 
-bool testViewportOnDevice() {
+bool sceneResourcesOnDevice() {
     WGPU::Instance instance;
     try {
         WGPU::Device device{instance};
-        Camera camera;
+        const auto errors = WGPU::errorCount();
         {
-            TestViewport viewport{device, WGPU::TextureFormat::BGRA8Unorm, camera, GRAPHICS_SHADERS "/circle.wgsl"};
-            check(device.resources().size() == 4, "viewport owns buffer, shader, pipeline and bindings");
+            RenderLayout layout{device, WGPU::TextureFormat::BGRA8Unorm};
+            Camera camera;
+            Viewport viewport{layout, camera};
+            TestObject marker{layout, GRAPHICS_SHADERS "/circle.wgsl"};
+            viewport.setObjects({&marker});
+            check(viewport.objects().size() == 1, "viewport draws its objects");
+            // layout (camera group) + viewport (uniform, group) + object (layout, uniform,
+            // group, shader, pipeline)
+            check(device.resources().size() == 8, "scene owns its GPU resources");
         }
-        check(device.resources().size() == 0, "viewport releases its resources");
+        check(device.resources().size() == 0, "scene releases its resources");
+        check(WGPU::errorCount() == errors, "object pipeline matches the shared camera layout");
         return true;
     } catch (const Lattice::ExceptionBase& error) {
         std::cout << "Graphics: GPU checks skipped (" << error.what() << ")\n";
@@ -81,6 +87,6 @@ int main() {
     freeControllerConsumesInput();
     viewportHitTestAndLocalCursor();
     orbitControllerKeepsDistance();
-    const bool gpu = testViewportOnDevice();
-    std::cout << "Graphics: camera, controllers" << (gpu ? " and TestViewport resources" : "") << " passed\n";
+    const bool gpu = sceneResourcesOnDevice();
+    std::cout << "Graphics: camera, controllers" << (gpu ? " and scene resources" : "") << " passed\n";
 }

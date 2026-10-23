@@ -1,56 +1,40 @@
 #pragma once
 
-#include <optional>
+#include <vector>
 
-#include <glm/glm.hpp>
 #include <WGPU/CommandList.hpp>
+#include <WGPU/Resources.hpp>
 
-enum class ViewportSizeMode {
-    Fixed,
-    Fill
-};
+#include "Camera.hpp"
+#include "RenderLayout.hpp"
+#include "SceneObject.hpp"
+#include "ViewportArea.hpp"
 
-/// A rectangular region of a surface that records its own draw commands.
-class Viewport {
+class TransformController;
+
+/// A view of a scene: an area of the surface, a camera and the objects it draws.
+/// Owns the camera uniform (bind group 0 of every object pipeline), so one object
+/// can be drawn by several viewports with different cameras.
+class Viewport final : public ViewportArea {
 public:
-    virtual ~Viewport() = default;
-    virtual void render(WGPU::RenderPass& pass, glm::uvec2 surfaceSize) = 0;
+    Viewport(RenderLayout& layout, Camera& camera);
 
-    glm::uvec2 position() const noexcept { return position_; }
-    void setPosition(glm::uvec2 position) noexcept { position_ = position; }
+    /// Write the camera and record every object into its rectangle.
+    void render(WGPU::RenderPass& pass, glm::uvec2 surfaceSize);
 
-    glm::uvec2 size() const noexcept { return size_; }
-    void setSize(glm::uvec2 size) noexcept {
-        size_ = size;
-        sizeMode_ = ViewportSizeMode::Fixed;
-    }
+    Camera& camera() const noexcept { return camera_; }
 
-    void fitSurface() noexcept { sizeMode_ = ViewportSizeMode::Fill; }
+    /// Objects drawn in order; composition assigns the current set.
+    void setObjects(std::vector<SceneObject*> objects) { objects_ = std::move(objects); }
+    const std::vector<SceneObject*>& objects() const noexcept { return objects_; }
 
-    /// Higher layers are drawn later and receive the cursor first (GUI panels over a scene).
-    int layer() const noexcept { return layer_; }
-    void setLayer(int layer) noexcept { layer_ = layer; }
-
-    /// Whether a surface position falls inside this viewport's rectangle.
-    bool contains(glm::vec2 position, glm::uvec2 surfaceSize) const noexcept;
-
-    /// Cursor in viewport-local coordinates; valid while hovered().
-    glm::vec2 cursor() const noexcept { return cursor_; }
-    bool hovered() const noexcept { return hovered_; }
-    /// Called by the surface owner: local cursor position, or nullopt when the cursor is elsewhere.
-    void hover(std::optional<glm::vec2> local) noexcept {
-        hovered_ = local.has_value();
-        if (local) cursor_ = *local;
-    }
-
-protected:
-    bool resolveRect(glm::uvec2 surfaceSize, WGPU::Rect& rect) const noexcept;
+    /// Controller of this viewport's camera (its child in the tree), assigned by composition.
+    TransformController* controller = nullptr;
 
 private:
-    glm::uvec2 position_{};
-    glm::uvec2 size_{1280, 720};
-    ViewportSizeMode sizeMode_ = ViewportSizeMode::Fill;
-    int layer_ = 0;
-    glm::vec2 cursor_{};
-    bool hovered_ = false;
+    WGPU::Device& device_;
+    Camera& camera_;
+    WGPU::Buffer uniform_;
+    WGPU::BindingSet group_;
+    std::vector<SceneObject*> objects_;
 };

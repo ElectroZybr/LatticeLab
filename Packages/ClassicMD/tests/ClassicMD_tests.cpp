@@ -6,7 +6,6 @@
 #include <ClassicMD/AtomData.hpp>
 #include <ClassicMD/AtomStorage.hpp>
 #include <ClassicMD/ClassicMD.hpp>
-#include <ClassicMD/SimulationLoop.hpp>
 #include <Integrators/Verlet.hpp>
 
 namespace {
@@ -27,16 +26,15 @@ void simulationStepsThroughIntegrator() {
 void loopStopsPromptly() {
     ClassicMD::AtomStorage atoms;
     Integrators::Verlet verlet{atoms};
-    ClassicMD::ClassicMD simulation{atoms, verlet};
-    ClassicMD::SimulationLoop loop{simulation, std::chrono::hours(1)};
-    std::thread worker([&] { loop.run(); });
-    while (loop.steps() == 0)
+    ClassicMD::ClassicMD simulation{atoms, verlet, std::chrono::hours(1)};
+    std::thread worker([&] { simulation.run(); });
+    while (simulation.steps() == 0)
         std::this_thread::yield();
     const auto started = std::chrono::steady_clock::now();
-    loop.requestStop();
+    simulation.requestStop();
     worker.join();
     check(std::chrono::steady_clock::now() - started < std::chrono::seconds(1), "stop wakes the loop");
-    check(loop.steps() == 1, "one step per period");
+    check(simulation.steps() == 1, "one step per period");
 }
 
 void atomDataHasNamedRows() {

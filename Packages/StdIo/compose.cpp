@@ -14,12 +14,13 @@ extern "C" constinit const Lattice::Package lattice_package{
     .version = {1, 0, 0},
 };
 
-// Parsers, the shared IO and the runtime configuration serializer built on it.
+// The branch object is the shared IO over its parsers; the serializer is built on it.
 extern "C" void compose(NodeBuild root) {
     root.emplace<YamlParser, ParserAPI>("yaml");
     root.emplace<TomlParser, ParserAPI>("toml");
     root.emplace<TsvParser, ParserAPI>("tsv");
-    auto io = root.emplaceShared<IOSubsystem>("io", root.children<ParserAPI>());
+    // Parsers are assigned by configure: they follow the children of the branch.
+    auto io = root.constructShared<IOSubsystem>();
 
     auto& nodes = *io.ref().runtime();
     auto serializer = root.emplace<Serialization::Serializer>("config", nodes,
@@ -44,4 +45,9 @@ extern "C" void compose(NodeBuild root) {
     root.globalAction("config", [exports = &nodes.exports, status](Lattice::ActionContext& context) {
         exports->invoke(status, context);
     });
+}
+
+// The IO reads with the parsers currently below the branch.
+extern "C" void configure(NodeConfigure root) {
+    root.self<IOSubsystem>()->setParsers(root.children<ParserAPI>());
 }

@@ -408,18 +408,21 @@ void compositionLifetime(const std::filesystem::path& project) {
     auto& nodes = f.runtime.nodes;
     const auto service = NodeBuild{f.root, nodes}.focus<IOSubsystem>().ref();
     const auto yaml = nodes.registry.find("yaml", f.ioBranch, f.runtime.blueprints.id<YamlParser>());
-    check(nodes.dependencies.retained(service.id(), yaml), "IO did not retain its parser dependency");
+    // Parsers are configured values of IO, not dependencies: removing one only shrinks the set.
+    check(!nodes.dependencies.retained(service.id(), yaml), "IO retained a configured parser");
     check(nodes.dependencies.retained(f.serializer, service.id()), "Serializer did not retain IO");
     nodes.ops.retireBranch(yaml);
-    check(nodes.registry.require(service.id()).state == NodeState::Retiring, "IO survived removal of a required parser");
+    nodes.ops.maintain();
+    check(nodes.registry.require(service.id()).state == NodeState::Active, "IO retired with one of its parsers");
+    rejects([&] { f.action("load"); });
+
+    // IO itself is required: its removal retires the serializer built on it.
+    nodes.ops.retireBranch(f.ioBranch);
     check(nodes.registry.require(f.serializer).state == NodeState::Retiring, "Serializer survived removal of IO");
     check(nodes.exports.find(f.serializer, "load") == InvalidExportId, "Retiring serializer still exports load");
-    rejects([&] { f.action("load"); });
     nodes.ops.maintain();
     check(!nodes.registry.get(f.serializer), "Serializer was not retired");
     check(f.settings()->dt == .125, "Unrelated simulation branch was removed");
-    nodes.ops.retireBranch(f.ioBranch);
-    nodes.ops.maintain();
     f.ioBranch = nodes.builder.add(f.root, f.runtime.blueprints.resolve("StdIo"), "io-package");
     f.io = NodeBuild{f.root, nodes}.focus<IOSubsystem>().get();
     f.serializer = f.findSerializer(f.ioBranch);
@@ -430,9 +433,9 @@ void compositionLifetime(const std::filesystem::path& project) {
 void separateIOBranches(const std::filesystem::path& project) {
     Fixture f(project);
     auto& nodes = f.runtime.nodes;
-    const auto first = NodeBuild{f.ioBranch, nodes}.require<IOSubsystem>("io");
+    const auto first = detail::reference<IOSubsystem>(nodes, f.ioBranch);
     const auto other = nodes.builder.add(f.root, f.runtime.blueprints.resolve("StdIo"), "other-io");
-    const auto second = NodeBuild{other, nodes}.require<IOSubsystem>("io");
+    const auto second = detail::reference<IOSubsystem>(nodes, other);
     check(nodes.dependencies.retained(f.findSerializer(other), second.id()), "Serializer did not use its branch IO");
     check(nodes.dependencies.retained(f.serializer, first.id()), "Existing serializer was rebound");
 }

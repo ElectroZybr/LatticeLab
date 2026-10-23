@@ -12,6 +12,14 @@
 
 namespace WGPU {
 
+namespace {
+std::atomic<uint64_t> errors{0};
+}
+
+uint64_t errorCount() noexcept {
+    return errors.load(std::memory_order_relaxed);
+}
+
 Instance::Instance() {
     WGPUInstanceDescriptor desc{};
 
@@ -80,6 +88,7 @@ WGPUDevice Instance::createDevice(WGPUAdapter& selectedAdapter) {
         };
     desc.uncapturedErrorCallbackInfo.callback =
         [](WGPUDevice const*, WGPUErrorType type, WGPUStringView message, void*, void*) {
+            errors.fetch_add(1, std::memory_order_relaxed);
             Logger::error("WGPU", "error ({}): {}", static_cast<int>(type), std::string_view(message.data, message.length));
         };
 

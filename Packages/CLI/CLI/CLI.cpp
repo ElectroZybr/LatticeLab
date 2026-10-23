@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "CLI.hpp"
 
 #include <chrono>
@@ -104,19 +105,33 @@ std::string formatExport(
 
 }
 
-CLI::CLI(ExportsView exports, Lattice::TreeView tree, Lattice::NodeId context,
-         std::vector<Terminal*> terminals)
-    : terminals_(std::move(terminals)), exports_(exports), tree_(tree) {
-    theme_.add("param", TextStyle::rgb(0x28D08A));
-    theme_.add("action", TextStyle::rgb(0xffff55));
+CLI::CLI(ExportsView exports, Lattice::TreeView tree, Lattice::NodeId context)
+    : exports_(exports), tree_(tree) {
+    if (theme_.find("param") == Lattice::TextTheme::InvalidTextStyleId)
+        theme_.add("param", TextStyle::rgb(0x28D08A));
+    if (theme_.find("action") == Lattice::TextTheme::InvalidTextStyleId)
+        theme_.add("action", TextStyle::rgb(0xffff55));
 
     commands_.setExports(exports_);
     commands_.setTree(tree_);
     commands_.setTheme(theme_);
 
-    const Lattice::NodeId root = tree_.root(context);
-    for (Console::Terminal* terminal : terminals_)
-        terminal->setCurrent(root, tree_.path(root));
+    root_ = tree_.root(context);
+}
+
+void CLI::setTerminals(std::vector<Terminal*> terminals) {
+    std::lock_guard lock(mutex_);
+    for (Terminal* terminal : terminals_)
+        if (std::ranges::find(terminals, terminal) == terminals.end())
+            terminal->detach();
+    for (Terminal* terminal : terminals) {
+        if (std::ranges::find(terminals_, terminal) != terminals_.end())
+            continue;
+        terminal->setCurrent(root_, tree_.path(root_));
+        if (serving_)
+            terminal->attach();
+    }
+    terminals_ = std::move(terminals);
 }
 
 void CLI::showLogo() const {
@@ -199,6 +214,62 @@ void CLI::showTree(Lattice::ActionContext& context) const {
     context.emit(Lattice::Value{logTree.format().render()});
 }
 
+void CLI::showExports(Lattice::ActionContext& context) const {
+    Lattice::TreeFormatter output(tree_.label(context.node()), theme_);
+
+    const auto formatOwned = [&](Lattice::ExportId id) {
+        const std::string_view name = exports_.name(id);
+        if (exports_.kind(id) == Lattice::ExportKind::Param) {
+            const auto value = exports_.value(id);
+            std::string text = value ? value->toString() : "unreadable";
+            // Color params get a preview dot, as in help.
+            if (value && value->is<std::string>() && (name.starts_with("theme.") || name.ends_with("color"))) {
+                TextFormatter preview;
+                preview.append("●", Lattice::parseTextStyle(value->get<std::string>()));
+                text = std::format("{} {}", preview.markup(), text);
+            }
+            return std::format("<param>@</> {} <mut>= {}</> <mut2>#{}</>", name, text, id);
+        }
+        std::string arguments;
+        const auto types = exports_.argumentTypes(id);
+        const size_t required = exports_.requiredArguments(id);
+        for (size_t index = 0; index < types.size(); ++index)
+            arguments += std::format(" <mut><{}{}></>", index < required ? "" : "?", valueType(types[index]));
+        return std::format("<action>λ</> {}{} <mut2>#{}</>", name, arguments, id);
+    };
+    // Global exports are listed once, at the root; owners show only their local ones.
+    const auto local = [&](Lattice::NodeId node) {
+        std::vector<Lattice::ExportId> result;
+        for (Lattice::ExportId id : exports_.owned(node))
+            if (!exports_.global(id)) result.push_back(id);
+        return result;
+    };
+    if (tree_.parent(context.node()) == Lattice::InvalidNodeId)
+        for (const Lattice::TreeEntry entry : tree_.subtree(context.node()))
+            for (Lattice::ExportId id : exports_.owned(entry.id))
+                if (exports_.global(id)) output.node(formatOwned(id), 0);
+
+    // A node is shown only when it or a descendant owns exports.
+    const auto owns = [&](auto&& self, Lattice::NodeId node) -> bool {
+        if (!local(node).empty())
+            return true;
+        for (Lattice::NodeId child : tree_.children(node))
+            if (self(self, child)) return true;
+        return false;
+    };
+    const auto append = [&](auto&& self, Lattice::NodeId node, size_t depth) -> void {
+        if (depth > 0)
+            output.node(std::format("<h>{}</> <mut2>#{}</>", tree_.label(node), node), depth - 1);
+        for (Lattice::ExportId id : local(node))
+            output.node(formatOwned(id), depth);
+        for (Lattice::NodeId child : tree_.children(node))
+            if (owns(owns, child)) self(self, child, depth + 1);
+    };
+    append(append, context.node(), 0);
+
+    context.emit(Lattice::Value{output.format().render()});
+}
+
 void CLI::changeDirectory(Lattice::ActionContext& context, std::string path) const {
     const Lattice::NodeId target = Console::resolveTreePath(tree_, context.node(), path);
     if (target == Lattice::InvalidNodeId)
@@ -212,6 +283,8 @@ void CLI::run(const std::function<void()>& idle) {
         [this](std::string_view text) { broadcast(text); }
     );
 
+    std::unique_lock lock(mutex_);
+    serving_ = true;
     for (Console::Terminal* terminal : terminals_) {
         terminal->attach();
 
@@ -234,20 +307,28 @@ void CLI::run(const std::function<void()>& idle) {
         }
     }
 
+    // Terminals are used only under the lock; idle and sleep let setTerminals in.
     while (!stop_) {
+        lock.unlock();
         idle();
+        lock.lock();
         if (!pollTerminals())
             break;
+        lock.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        lock.lock();
     }
 
+    serving_ = false;
     for (Console::Terminal* terminal : terminals_)
         terminal->detach();
+    lock.unlock();
 
     LogSystem::resetConsoleWriter(writer);
 }
 
 void CLI::broadcast(std::string_view text) {
+    std::lock_guard lock(mutex_);
     for (Console::Terminal* terminal : terminals_)
         terminal->write(text);
 }

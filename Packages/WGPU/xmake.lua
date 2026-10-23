@@ -12,6 +12,8 @@ target("WGPU.core")
     add_headerfiles("(WGPU/*.hpp)")
     add_includedirs(".", {public = true})
     add_packages("wgpu-native", {public = true})
+    -- GpuSoA mirrors StdData::SoA tables.
+    add_deps("StdData", {public = true})
     -- Standalone Logger and header-only utilities; no runtime linkage.
     add_packages("lattice-logger", {public = true})
 

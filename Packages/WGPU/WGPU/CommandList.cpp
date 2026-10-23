@@ -8,7 +8,7 @@ RenderPass::~RenderPass() {
     end();
 }
 
-void RenderPass::begin(WGPUCommandEncoder encoder, Surface& surface, Color clear) {
+void RenderPass::begin(WGPUCommandEncoder encoder, Surface& surface, Color clear, Texture* depth) {
     if (active())
         throw Lattice::Exception<RenderPass>("render pass already active");
 
@@ -22,6 +22,15 @@ void RenderPass::begin(WGPUCommandEncoder encoder, Surface& surface, Color clear
     WGPURenderPassDescriptor desc{};
     desc.colorAttachmentCount = 1;
     desc.colorAttachments = &color;
+
+    WGPURenderPassDepthStencilAttachment depthAttachment{};
+    if (depth) {
+        depthAttachment.view = depth->view();
+        depthAttachment.depthLoadOp = WGPULoadOp_Clear;
+        depthAttachment.depthStoreOp = WGPUStoreOp_Discard;
+        depthAttachment.depthClearValue = 1.0f;
+        desc.depthStencilAttachment = &depthAttachment;
+    }
 
     pass_ = wgpuCommandEncoderBeginRenderPass(encoder, &desc);
     if (!pass_)
@@ -69,12 +78,12 @@ void RenderPass::setBindings(uint32_t group, BindingSet& bindings) {
     wgpuRenderPassEncoderSetBindGroup(pass_, group, bindings.native(), 0, nullptr);
 }
 
-void RenderPass::draw(uint32_t vertexCount, uint32_t firstVertex) {
+void RenderPass::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex) {
     requireActive();
     if (!pipeline_)
         throw Lattice::Exception<RenderPass>("draw requires a pipeline");
 
-    wgpuRenderPassEncoderDraw(pass_, vertexCount, 1, firstVertex, 0);
+    wgpuRenderPassEncoderDraw(pass_, vertexCount, instanceCount, firstVertex, 0);
 }
 
 void RenderPass::end() {
@@ -109,14 +118,23 @@ CommandList::~CommandList() {
         wgpuCommandEncoderRelease(encoder_);
 }
 
-RenderPass& CommandList::beginRenderPass(Surface& surface, Color clear) {
+RenderPass& CommandList::beginRenderPass(Surface& surface, Color clear, Texture* depth) {
     if (submitted_ || commandBuffer_)
         throw Lattice::Exception<CommandList>("command list already finished");
     if (&surface.device() != &device_ || !surface.view())
         throw Lattice::Exception<CommandList>("expected acquired surface from the same WGPU device");
 
-    renderPass_.begin(encoder_, surface, clear);
+    renderPass_.begin(encoder_, surface, clear, depth);
     return renderPass_;
+}
+
+void CommandList::copyBuffer(Buffer& source, uint64_t sourceOffset, Buffer& target, uint64_t targetOffset,
+                             uint64_t size) {
+    if (submitted_ || commandBuffer_)
+        throw Lattice::Exception<CommandList>("command list already finished");
+    if (renderPass_.active())
+        throw Lattice::Exception<CommandList>("end the render pass before copying");
+    wgpuCommandEncoderCopyBufferToBuffer(encoder_, source.native(), sourceOffset, target.native(), targetOffset, size);
 }
 
 void CommandList::submit() {
