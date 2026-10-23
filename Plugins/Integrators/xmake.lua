@@ -1,6 +1,6 @@
 target("Integrator")
     set_kind("shared")
-    add_rules("lattice.plugin_codegen")
+    add_files("composition.cpp")
     set_targetdir(".")
 
     add_files("src/**.cpp")

@@ -1,11 +1,9 @@
 #pragma once
 
-#include <Lattice/Tools/Logger.hpp>
 
 #include <ParticleDynamics/include/ParticleAPI.hpp>
 #include <ParticleDynamics/include/ParticleStorage.hpp>
 
-#include <Lattice/Kernel/NodeViews.hpp>
 
 namespace Integrators {
 
@@ -15,38 +13,29 @@ public:
     struct PrevForceY {using type = float;};
     struct PrevForceZ {using type = float;};
 
-    Verlet(NodeBuild branch) {}
-
-    void configure(NodeConfigure branch) {
-        // интегратор требует для работы буфер. Если нет - исключение
-        particles = branch.require<ParticleDynamics::ParticleStorage>();
-        // branch.bind("dt", &dt, 0, 0.1, true);
+    explicit Verlet(ParticleDynamics::ParticleStorage& storage) : particles(&storage) {
         particles->addCol<PrevForceX>();
         particles->addCol<PrevForceY>();
         particles->addCol<PrevForceZ>();
-        configured = true;
     }
+
+    Verlet(const Verlet&) = delete;
+    Verlet& operator=(const Verlet&) = delete;
+
+    float dt = 0.01f;
 
     void step() override;
 
-    ~Verlet () {
-        // if (settings)
-        //     settings->unbind("verlet", "dt");
-        if (configured && particles) {
-            particles->removeCol<PrevForceX>();
-            particles->removeCol<PrevForceY>();
-            particles->removeCol<PrevForceZ>();
-        }
-        Logger::info("Verlet", "destroying object");
+    ~Verlet() {
+        particles->removeCol<PrevForceX>();
+        particles->removeCol<PrevForceY>();
+        particles->removeCol<PrevForceZ>();
     }
 
 private:
     void predict();
     void correct();
 
-    float dt = 0.01;
-    bool configured = false;
-
-    Ref<ParticleDynamics::ParticleStorage> particles;
+    ParticleDynamics::ParticleStorage* particles;
 };
 }

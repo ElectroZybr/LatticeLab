@@ -1,6 +1,6 @@
 target("ClassicMD")
     set_kind("shared")
-    add_rules("lattice.plugin_codegen")
+    add_files("composition.cpp")
     set_targetdir(".")
 
     -- add_files("src/**.cpp")
@@ -12,4 +12,4 @@ target("ClassicMD")
     add_includedirs("../StdData/include", {public = true})
     add_includedirs("../GPU/include", {public = true})
 
-    add_deps("Lattice")
+    add_deps("Lattice", "Integrator")

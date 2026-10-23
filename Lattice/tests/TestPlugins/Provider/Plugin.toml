@@ -1,6 +1,0 @@
-id = "Provider"
-name = "Test Provider"
-version = "1.0.0"
-
-[core]
-api = "1.0"

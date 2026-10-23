@@ -6,4 +6,5 @@ target("StdIo")
     add_includedirs("include", {public = true})
     add_includedirs("..", {public = true})
 
+    add_packages("toml++", {public = true})
     add_deps("Lattice")

@@ -54,24 +54,22 @@ public:
         loadScope.finish();
     }
 
-    void load(const std::filesystem::path& path ) {
-        Logger::info("IOSubsystem", "load from: {}", std::string(path));
-        ParserAPI* parser = findParser(path);
-        Document doc;
-        if (parser) {
-            doc = parser->parseFile(path);
-
-            for (LoaderAPI* loader : loaders) {
-                const Lattice::Value* section = doc.section(loader->section());
-
-                if (section)
-                    loader->load(*section);
-            }
-        }
+    /// File access stays in StdIo; clients work with the existing Document model.
+    Document read(const std::filesystem::path& path) const {
+        return requireParser(path).parseFile(path);
     }
 
-    void save() {
+    void write(const std::filesystem::path& path, const Document& document) const {
+        requireParser(path).writeFile(path, document);
+    }
 
+    void load(const std::filesystem::path& path) {
+        Logger::info("IOSubsystem", "load from: {}", path.string());
+        Document doc = read(path);
+        for (LoaderAPI* loader : loaders) {
+            const Lattice::Value* section = doc.section(loader->section());
+            if (section) loader->load(*section);
+        }
     }
 
     ~IOSubsystem() {
@@ -79,12 +77,11 @@ public:
     }
 
 private:
-    ParserAPI* findParser(const std::filesystem::path& path) {
+    ParserAPI& requireParser(const std::filesystem::path& path) const {
         for (ParserAPI* parser : parsers)
             if (parser && parser->extension() == path.extension())
-                return parser;
-        Logger::warning("IOSubsystem", "Parser for extension {} not found", std::string(path.extension()));
-        return nullptr;
+                return *parser;
+        throw Lattice::Exception<IOSubsystem>("Parser for '{}' not found", path.extension().string());
     }
     Children<LoaderAPI> loaders;
     Children<ParserAPI> parsers;

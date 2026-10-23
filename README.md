@@ -117,3 +117,6 @@ cmake --build --preset release
 #### [Official site](https://latticelab.dev)
 #### [YouTube channel](https://www.youtube.com/@ElectroChajnik) (Russian)
 #### [Support the project!](https://latticelab.dev/donate.html)
+
+Сериализация частичной runtime-конфигурации и подключение внешнего Lattice:
+[Serialization](Plugins/Serialization/README.md).

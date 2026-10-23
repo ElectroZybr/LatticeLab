@@ -67,3 +67,5 @@ LatticeLab — desktop-приложение для интерактивного 
 cmake --preset debug
 cmake --build --preset debug
 ```
+
+- [Сериализация runtime-конфигурации](Serialization.md) — внешний Lattice, StdIo и плагин Serialization.

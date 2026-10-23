@@ -3,7 +3,7 @@
 
 // #include "src/StepOps.hpp"
 #include <Lattice/Kernel/Restrict.hpp>
-#include "Lattice/Tools/Logger.hpp"
+
 
 namespace Integrators {
 
@@ -16,8 +16,7 @@ void Verlet::step() {
     correct();
     // StepOps::applyThermostat();
     // StepOps::postProcessVelocities();
-    const glm::vec3 pos = particles->get<Pos>(0);
-    Logger::info("Verlet", "{} {} {}", pos.x, pos.y, pos.z);
+
 }
 
 void Verlet::predict() {
@@ -50,7 +49,7 @@ void Verlet::predict() {
         z[i] += (vz[i] + fz[i] * invMass[i] * 0.5f * dt) * dt;
     }
 
-    Logger::ok("Verlet", "step dt: {}", dt);
+
 }
 
 void Verlet::correct() {

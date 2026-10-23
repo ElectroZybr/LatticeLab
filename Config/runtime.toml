@@ -1,0 +1,3 @@
+# Partial runtime configuration. Only listed params are saved by Serialization.
+# See Plugins/Serialization/README.md for branch creation examples.
+[Lattice]
