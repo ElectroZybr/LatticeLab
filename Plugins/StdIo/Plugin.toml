@@ -1,6 +1,0 @@
-id = "StdIo"
-name = "Standard input/output"
-version = "1.0.0"
-
-[core]
-api = "1.0"

@@ -119,4 +119,4 @@ cmake --build --preset release
 #### [Support the project!](https://latticelab.dev/donate.html)
 
 Сериализация частичной runtime-конфигурации и подключение внешнего Lattice:
-[Serialization](Plugins/Serialization/README.md).
+[Serialization](Packages/Serialization/README.md).

@@ -1,8 +1,9 @@
 [Startup]
 StdIo = "on"
-"ClassicMD::Default".Universe1 = "aff"
+Actions = "on"
+ClassicMD.Universe1 = "aff"
 WGPU = "on"
-WindowSystem.1 = ["on", "host"]
+Shell = ["on", "host"]
 Serialization = "on"
 CLI = ["on"]
-Benchmarks = "on"
+Bench = "on"

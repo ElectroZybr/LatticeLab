@@ -1,73 +1,45 @@
 # Композиция C++ пакета
 
-Пакет может явно регистрировать типы и фабрики в `compose.cpp`, реализуя
-существующую точку входа `plugin_register`. Для такого пакета codegen регистрации
-не нужен: файл включается в сборку библиотеки напрямую.
+Пакет экспортирует одну точку входа в `compose.cpp`. Остальной код пакета — обычные
+C++ классы, которые не знают о Lattice. Подробный контракт ядра (Context, Focus,
+пересборка, снимки) — в `../Lattice/Docs/ru/Kernel/Composition.md`.
 
 ```cpp
 #include <Lattice/Composition.hpp>
 #include <vendor/Storage.hpp>
 #include <vendor/Algorithm.hpp>
-#include <vendor/Simulation.hpp>
+#include <vendor/Loop.hpp>
 
-vendor::Simulation buildDefault(NodeBuild root) {
+extern "C" void compose(NodeBuild root) {
     auto storage = root.emplace<vendor::Storage>("storage", 1024);
-    auto algorithm = root.emplace<vendor::Algorithm>("algorithm", *storage);
-    root.dependsOn(algorithm, storage);
-    root.dependsOn(algorithm);
-    root.param("dt", algorithm->dt);
-    return vendor::Simulation{*algorithm};
-}
+    auto algorithm = root.emplace<vendor::Algorithm, vendor::AlgorithmAPI>("algorithm", storage);
+    algorithm.param("dt", &vendor::Algorithm::dt);
 
-extern "C" bool plugin_register(Lattice::Blueprints& types) {
-    using namespace Lattice::BlueprintRegister;
-    object<vendor::Storage>(types);
-    object<vendor::Algorithm>(types);
-    factory<vendor::Simulation>(types, buildDefault);
-    return true;
+    auto loop = root.emplace<vendor::Loop>("loop", algorithm);
+    loop.service(&vendor::Loop::run, &vendor::Loop::requestStop);
 }
 ```
 
-`object<T, APIs...>` регистрирует хранение, уничтожение и явные приведения к API.
-Наследование от `Component` не требуется. Для указанных API требуется обычное
-публичное однозначное наследование C++; произвольная библиотека без такого
-интерфейса доступна как свой собственный тип.
+* Метаданные пакета — `extern "C" constinit const Lattice::Package lattice_package{...}`
+  в том же файле; blueprint называется по его `id`; стартовая запись —
+  `<id>.<instance> = "on"` в `lattice.toml`.
+* `emplace` регистрирует тип и явно указанные API на месте; отдельных списков
+  регистрации и codegen нет.
+* Handles в аргументах `emplace` становятся зависимостями и превращаются в обычные
+  `T&`, `T*`, `std::vector<T*>`. Ручной `dependsOn` не нужен.
+* Экспорты принадлежат объекту: `obj.param`, `obj.action`, `obj.globalAction`.
+* Долгий цикл объявляется через `obj.service(run, stop)`, без наследования `ServiceAPI`.
+* Таблица (`Lattice::Table`) получает `view`/`addRow` через `Lattice::exportTable(obj)`.
+* Ошибка в `compose` откатывает создаваемую ветку.
 
-Регистрация не интерпретирует `T::Desc`, `configure`, `retire` или другие методы
-предметного класса как инструкции фреймворку. Default-конструктор, если он есть,
-доступен также обычному runtime созданию. Тип без default-конструктора создаётся
-через `emplace` либо явно зарегистрированную фабрику.
+Код без собственной ветки и без зависимости от runtime (контракты, данные, алгоритмы)
+оформляется библиотекой в `Libs/<Name>` без `compose.cpp`; пакеты
+размещают её объекты сами.
 
-`factory<T, APIs...>` описывает сборку обычной функцией или лямбдой, возвращающей
-`T` непосредственно. Благодаря copy elision поддерживаются некопируемые и
-неперемещаемые объекты. Аргументы и захваты фабрики должны оставаться валидными
-всё время, пока зарегистрированная фабрика может вызываться.
+Рабочие примеры: `Packages/ClassicMD/compose.cpp` (ветка симуляции и сервис),
+`Packages/CLI/compose.cpp` (инфраструктура: views runtime, глобальные команды),
+`Packages/StdIo/compose.cpp` (общий ресурс и коллекция API).
 
-`NodeBuild::emplace<T>(name, args...)` создаёт новый экземпляр зарегистрированного
-типа с обычными аргументами конструктора. Аргументы используются синхронно;
-move-only значения поддерживаются. Повторное создание того же экземпляра — ошибка,
-а не повторное использование с проигнорированными аргументами. Ошибка конструктора
-удаляет частично созданный узел; ошибка фабрики откатывает создаваемую ветку.
-
-Зависимости между обычными C++ ссылками указываются явно:
-`root.dependsOn(consumer, provider)`. Эти связи сохраняются при повторном configure,
-а удаление provider через retire включает его потребителей.
-`root.dependsOn(provider)` задаёт зависимость самого корня: это нужно, когда он
-хранит ссылки на дочерние объекты или экспортирует их состояние. Владение по-прежнему
-определяется деревом. Для зависимостей конструктора поставщики создаются раньше
-потребителей; дочерние ветки удаляются в обратном порядке создания.
-
-Обычная ссылка не переключается вслед за `Slot` или `Focus`. Подключение к
-контексту, повторная настройка и специальные правила завершения работы остаются
-явной ответственностью композиции. `NodeConfigure` продолжает разрешать существующее
-окружение; `emplace` не выполняет автоматический поиск зависимостей.
-
-`Plugins/ClassicMD/compose.cpp` содержит рабочую сборку по умолчанию и границу
-с runtime сервисов. `ClassicMD` и `Verlet` получают зависимости через обычные
-конструкторы. Адаптер запуска сервиса находится в файле композиции. Табличные
-контейнеры пока используют существующую интеграцию `Table`/`SoA`; перенос всех
-плагинов на внешнюю композицию не является требованием для использования нового API.
-
-После изменения структуры blueprint metadata библиотеки плагинов нужно пересобрать
-вместе с ядром. Загрузчик динамических библиотек должен жить дольше реестра blueprint,
-поскольку фабрики содержат callbacks из кода плагинов.
+После изменения заголовков ядра бинарник `LatticeLab` нужно пересобрать
+(`xmake build -r LatticeLab`): `Runtime` компилируется из заголовков в `main.cpp`,
+и xmake не отслеживает изменения заголовков пакета.

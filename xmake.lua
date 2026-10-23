@@ -20,10 +20,10 @@ option("lattice_source")
     set_description("External Lattice source/package repository")
 option_end()
 
-option("lab_plugins")
+option("lab_packages")
     set_default("")
     set_showmenu(true)
-    set_description("Comma-separated plugin directories; empty builds all plugins")
+    set_description("Comma-separated package directories; empty builds all packages")
 option_end()
 
 local lattice_source = path.absolute(get_config("lattice_source") or "../Lattice")
@@ -44,8 +44,15 @@ target("Lattice")
     end)
 target_end()
 
-local selected = get_config("lab_plugins") or ""
-for _, dir in ipairs(os.dirs("Plugins/*")) do
+-- Ordinary libraries independent of the runtime; always available to packages.
+for _, dir in ipairs(os.dirs("Libs/*")) do
+    if os.isfile(path.join(dir, "xmake.lua")) then
+        includes(dir)
+    end
+end
+
+local selected = get_config("lab_packages") or ""
+for _, dir in ipairs(os.dirs("Packages/*")) do
     if os.isfile(path.join(dir, "xmake.lua")) and
        (selected == "" or ("," .. selected .. ","):find("," .. path.filename(dir) .. ",", 1, true)) then
         includes(dir)
