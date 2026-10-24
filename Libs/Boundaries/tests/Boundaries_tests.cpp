@@ -6,7 +6,9 @@
 #include <vector>
 
 #include <glm/gtc/quaternion.hpp>
+#include <Boundaries/Checks.hpp>
 #include <Boundaries/Geometry.hpp>
+#include <Boundaries/Walls.hpp>
 #include <Boundaries/Space.hpp>
 #include <Lattice/Tools/Exception.hpp>
 
@@ -138,6 +140,89 @@ void batchesMatchPointsAndStayLipschitz() {
     check(geometry.program().depth == 2, "stack depth of (box − sphere) ∪ capsule");
 }
 
+struct Particles {
+    std::vector<float> x, y, z, vx, vy, vz, fx, fy, fz;
+    explicit Particles(size_t n) : x(n), y(n), z(n), vx(n), vy(n), vz(n), fx(n), fy(n), fz(n) {}
+    ParticleColumns columns() { return {x, y, z, vx, vy, vz, fx, fy, fz}; }
+    glm::vec3 position(size_t i) const { return {x[i], y[i], z[i]}; }
+    glm::vec3 velocity(size_t i) const { return {vx[i], vy[i], vz[i]}; }
+};
+
+void hardWallsReflect() {
+    const Geometry sphere{Shape::sphere(1)};
+    const Walls walls{sphere};
+    Particles p(2);
+    p.x = {1.2f, 0.5f};
+    p.vx = {1, 1};
+    walls.constrain(p.columns());
+    check(near(glm::length(p.position(0)), 1.0f, 1e-4f) && sphere.distance(p.position(0)) >= -1e-5f,
+          "a particle in the wall is moved onto the surface");
+    check(near(p.velocity(0), {-1, 0, 0}) , "normal velocity reflected, speed kept (elastic)");
+    check(p.x[1] == 0.5f && p.vx[1] == 1, "particles inside the region are untouched");
+
+    const Walls damped{sphere, {Laws::Hard::make(0.5f)}};
+    Particles q(1);
+    q.x = {1.1f};
+    q.vx = {2};
+    q.vy = {1};
+    damped.constrain(q.columns());
+    check(near(q.velocity(0), {-1, 1, 0}), "restitution scales only the normal velocity");
+}
+
+void softWallsPushBack() {
+    // Region y <= 10: the wall is above. Layer 1 thick, harmonic.
+    const Geometry ceiling{Shape::halfSpace({0, 1, 0}, 10)};
+    const auto soft = Laws::Soft::make(2, 1, 2);
+    const Walls walls{ceiling, {soft}};
+    Particles p(3);
+    p.y = {9.5f, 8.0f, 9.9f};
+    walls.addForces(p.columns());
+    check(near(p.fy[0], -1.0f) && p.fy[1] == 0.0f, "harmonic: F = k (range − d), zero outside the layer");
+
+    // Force is minus the potential gradient (numerical check at y = 9.9).
+    const float h = 1e-3f;
+    const float dU = Laws::Soft::potential(ceiling.distance({0, 9.9f + h, 0}), soft)
+                   - Laws::Soft::potential(ceiling.distance({0, 9.9f - h, 0}), soft);
+    check(near(p.fy[2], -dU / (2 * h), 1e-2f), "F = −dU/dy");
+
+    check(throws([&] { Walls{ceiling, {Laws::Soft::make(0, 1)}}; }), "invalid soft parameters");
+    check(throws([&] { Walls{Geometry{std::move(Shape::sphere(1)).material(3)}}; }), "missing material");
+}
+
+void materialsChooseTheLaw() {
+    // Box with a hole: box faces soft, the hole hard.
+    const Geometry holed{std::move(Shape::box({2, 2, 2})).material(0) - std::move(Shape::sphere(0.5f)).material(1)};
+    const Walls walls{holed, {Laws::Soft::make(1, 0.5f), Laws::Hard::make()}};
+    Particles p(2);
+    p.x = {1.8f, 0.4f};
+    p.vx = {0, 1};
+    walls.addForces(p.columns());
+    walls.constrain(p.columns());
+    check(p.fx[0] < 0 && p.vx[0] == 0, "near a box face: soft force, no reflection");
+    check(p.fx[1] == 0 && near(p.x[1], 0.5f, 1e-4f) && p.vx[1] > 0, "in the hole: pushed out and reflected");
+}
+
+void wallsCoverEveryChunk() {
+    const Geometry sphere{Shape::sphere(1)};
+    const Walls walls{sphere};
+    Particles p(1000);   // several chunks of 256
+    for (size_t i = 0; i < p.x.size(); ++i)
+        p.x[i] = 1.5f, p.vx[i] = 1;
+    walls.constrain(p.columns());
+    bool all = true;
+    for (size_t i = 0; i < p.x.size(); ++i)
+        all &= near(p.x[i], 1.0f, 1e-4f) && p.vx[i] < 0;
+    check(all, "every chunk is processed");
+}
+
+void periodicSeamsAreChecked() {
+    const Space space{{-5, -5, -5}, {10, 10, 10}, {true, false, false}};
+    const auto alongX = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 0, 1));
+    checkPeriodicSeams(space, Geometry{std::move(Shape::infiniteCylinder(2)).rotated(alongX)});
+    check(throws([&] { checkPeriodicSeams(space, Geometry{std::move(Shape::sphere(2)).translated({3, 0, 0})}); }),
+          "an off-centre sphere tears at the periodic seam");
+}
+
 }
 
 int main() {
@@ -148,5 +233,10 @@ int main() {
     materialOfTheNearestSurface();
     normalsPointIntoTheRegion();
     batchesMatchPointsAndStayLipschitz();
-    std::cout << "Boundaries: space, primitives, operations, transforms, materials and normals passed\n";
+    hardWallsReflect();
+    softWallsPushBack();
+    materialsChooseTheLaw();
+    wallsCoverEveryChunk();
+    periodicSeamsAreChecked();
+    std::cout << "Boundaries: space, geometry, walls and seam checks passed\n";
 }

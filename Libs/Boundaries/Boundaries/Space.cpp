@@ -31,8 +31,12 @@ Space::Space(glm::vec3 origin, glm::vec3 size, glm::bvec3 periodic)
 
 glm::vec3 Space::minimumImage(glm::vec3 delta) const noexcept {
     for (int axis = 0; axis < 3; ++axis)
-        if (periodic_[axis])
-            delta[axis] -= size_[axis] * std::round(delta[axis] * inverse_[axis]);
+        if (periodic_[axis]) {
+            // Round half away from zero by truncation: inlined, unlike std::round. Valid
+            // while the separation is below 2^31 periods.
+            const float periods = delta[axis] * inverse_[axis];
+            delta[axis] -= size_[axis] * float(int(periods + std::copysign(0.5f, periods)));
+        }
     return delta;
 }
 

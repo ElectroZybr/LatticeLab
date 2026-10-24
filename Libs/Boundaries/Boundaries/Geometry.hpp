@@ -35,6 +35,10 @@ public:
     /// Central differences of size `step` (tetrahedral, four evaluations).
     glm::vec3 normal(glm::vec3 point, float step = 1e-4f) const;
 
+    /// Normals of SoA points (same as normal(), four evaluations per point in one pass).
+    void normals(std::span<const float> x, std::span<const float> y, std::span<const float> z,
+                 std::span<float> nx, std::span<float> ny, std::span<float> nz, float step = 1e-4f) const;
+
     /// Distances (and optionally materials) of SoA points.
     void evaluate(std::span<const float> x, std::span<const float> y, std::span<const float> z,
                   std::span<float> distance, std::span<uint32_t> material = {}) const;

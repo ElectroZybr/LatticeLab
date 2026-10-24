@@ -164,6 +164,31 @@ Sample Geometry::sample(glm::vec3 point) const {
     return {distance, primitive.material, primitive.motion};
 }
 
+void Geometry::normals(std::span<const float> x, std::span<const float> y, std::span<const float> z,
+                       std::span<float> nx, std::span<float> ny, std::span<float> nz, float step) const {
+    const size_t count = x.size();
+    if (y.size() != count || z.size() != count || nx.size() != count || ny.size() != count || nz.size() != count)
+        throw Error("normals: columns differ in length");
+    static constexpr glm::vec3 k[4] = {{1, -1, -1}, {-1, -1, 1}, {-1, 1, -1}, {1, 1, 1}};
+    // The four tetrahedral offsets of every point, evaluated together.
+    std::vector<float> ox(4 * count), oy(4 * count), oz(4 * count), d(4 * count);
+    for (size_t corner = 0; corner < 4; ++corner)
+        for (size_t i = 0; i < count; ++i) {
+            ox[corner * count + i] = x[i] + k[corner].x * step;
+            oy[corner * count + i] = y[i] + k[corner].y * step;
+            oz[corner * count + i] = z[i] + k[corner].z * step;
+        }
+    run(ox, oy, oz, d, {});
+    for (size_t i = 0; i < count; ++i) {
+        glm::vec3 gradient(0.0f);
+        for (size_t corner = 0; corner < 4; ++corner)
+            gradient += k[corner] * d[corner * count + i];
+        const float length = glm::length(gradient);
+        const glm::vec3 n = length > 0.0f ? gradient / length : glm::vec3(0.0f);
+        nx[i] = n.x, ny[i] = n.y, nz[i] = n.z;
+    }
+}
+
 glm::vec3 Geometry::normal(glm::vec3 point, float step) const {
     // Tetrahedral differences: four evaluations in one block.
     const glm::vec3 k[4] = {{1, -1, -1}, {-1, -1, 1}, {-1, 1, -1}, {1, 1, 1}};

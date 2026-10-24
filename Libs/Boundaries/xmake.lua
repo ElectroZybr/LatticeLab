@@ -18,3 +18,11 @@ target("Boundaries.tests")
     set_targetdir("$(builddir)/tests")
     add_files("tests/*.cpp")
     add_deps("Boundaries")
+
+-- Benchmarks of the hot paths (BmRunner, no runtime): xmake run Boundaries.bench [name]
+target("Boundaries.bench")
+    set_kind("binary")
+    set_targetdir("$(builddir)/bench")
+    add_files("bench/*.cpp")
+    add_deps("Boundaries")
+    add_packages("lattice-bmrunner")

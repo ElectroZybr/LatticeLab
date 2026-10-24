@@ -8,16 +8,19 @@
 
 | Где | Что | Зависит от |
 |---|---|---|
-| `Libs/Boundaries` | `Space`, `Geometry` (сборщик программы, стековая машина на CPU), `Walls` (законы на CPU), аниматор, проверки конфигурации | `StdData`, `glm`; без runtime Lattice, без WGPU, без предметной области |
-| `Packages/BoundariesGpu` (модуль без `compose.cpp`) | WGSL-стековая машина и законы, compute-проход границ, GPU-копия программы; тесты «CPU == GPU» | `Boundaries`, `WGPU.core` |
-| `Packages/WGPU` | Только общий GPU-примитив: compute pipeline и dispatch | — |
-| `Packages/ClassicMD` (`compose.cpp`) | Узлы `Space`/`Geometry`/`Walls`/аниматора в ветке симуляции, параметры под `executeOn(commands)`, публикация геометрии читателям | `Boundaries`; не WGPU |
-| `Packages/Graphics` | Объект сцены отрисовки геометрии (трассировка лучей по SDF), копия программы в ветке рендера | `BoundariesGpu` (общая WGSL-машина) |
+| `Libs/Boundaries/Boundaries` — цель `Boundaries` | модель: `Space`, `Shape`/`Program`, материалы, законы (параметры и смысл), `ParticleLayout`, проверки конфигурации | `glm`; без runtime Lattice, без бэкендов, без предметной области |
+| `Libs/Boundaries/cpu` — `Boundaries.cpu` | стековая машина, `Walls`, аниматор на CPU по `StdData::SoA` | `Boundaries`, `StdData` |
+| `Libs/Boundaries/wgpu` — `Boundaries.wgpu` | WGSL-стековая машина и законы, compute-проход по `GpuSoA` | `Boundaries`, `Libs/Wgpu` |
+| `Libs/Boundaries/cuda` — `Boundaries.cuda` | позже | `Boundaries`, `Libs/Cuda` |
+| `Packages/ClassicMD` (`compose.cpp`) | узлы `Space`/`Geometry`/`Walls`/аниматора в ветке симуляции, параметры под `executeOn(commands)`, выбор бэкенда | бэкенд-цель |
+| `Packages/Graphics` | объект сцены отрисовки геометрии (трассировка лучей по SDF) | `Boundaries.wgpu` (общая WGSL-машина) |
 
 * Ядро Lattice не меняется.
-* Симуляция не знает о рендере и GPU-рендере: геометрию читатели получают так же, как
-  частицы — через опубликованный контракт и копию командой очереди симуляции.
+* Симуляция не знает о рендере: геометрию рендер получает так же, как частицы — через
+  опубликованный контракт и копию командой очереди симуляции.
 * WGSL-код геометрии один: его подключают и compute-проход границ, и отрисовка.
+* Ядра пишутся «на раздел» (`AGENTS.md`): границы локальны по частице, `Space` и
+  `Geometry` — общие данные только для чтения.
 
 ## Три слоя
 
