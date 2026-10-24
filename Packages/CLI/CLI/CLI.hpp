@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <deque>
 #include <functional>
 #include <mutex>
 #include <string>
@@ -27,9 +28,8 @@ namespace Console {
  терминалов — от композиции (setTerminals в configure). Команды, параметры темы и
  запуск как сервиса объявляются в композиции.
 
- Терминалы обслуживает поток CLI, а набор меняется из host-потока: setTerminals ждёт
- конца текущей итерации, после возврата убранные терминалы больше не используются.
- Команда CLI поэтому не должна ждать host-поток.
+ Терминалы обслуживает поток CLI. Строки и ответы передаются без ожидания;
+ processCommands выполняется только на host, не обращаясь к физическим терминалам.
 */
 
 class CLI final {
@@ -37,13 +37,15 @@ public:
     /// @param context node whose runtime root becomes the initial terminal path.
     CLI(ExportsView exports, Lattice::TreeView tree, Lattice::NodeId context);
 
-    /// Serve exactly these terminals: new ones start at the runtime root (and attach
-    /// if serving), removed ones detach.
+    /// Host: replace the terminal set. Removed sessions and their pending work are
+    /// cancelled before returning; new terminals attach on the I/O thread.
     void setTerminals(std::vector<Terminal*> terminals);
 
     /// Serve terminals until stopped or all terminals close. `idle` is called each poll.
     void run(const std::function<void()>& idle);
     void requestStop() { stop_ = true; }
+    /// Host checkpoint: execute queued lines, returning replies to the I/O thread.
+    void processCommands();
 
     void showList(Lattice::ActionContext& context) const;
     void showHelp(Lattice::ActionContext& context) const;
@@ -56,15 +58,35 @@ public:
     Lattice::TextTheme& theme() noexcept { return theme_; }
 
 private:
-    void broadcast(std::string_view text);
     bool pollTerminals();
 
     std::atomic<bool> stop_{false};
-    bool serving_ = false;
-    // Recursive: commands and logging on the CLI thread write back to terminals.
-    std::recursive_mutex mutex_;
-    std::vector<Terminal*> terminals_;
+    struct Reply {
+        std::string text;
+        Lattice::NodeId current = Lattice::InvalidNodeId;
+        std::string path;
+    };
+    struct Session {
+        uint64_t id;
+        Terminal* terminal; // Borrowed only under mutex_; requests carry the id.
+        Lattice::NodeId current;
+        bool started = false;
+        bool closed = false;
+        size_t pending = 0;
+        std::deque<Reply> replies;
+    };
+    struct Request {
+        uint64_t session;
+        std::string line;
+        bool startup = false;
+    };
+    std::mutex mutex_;
+    std::vector<Session> sessions_;
+    std::deque<Request> requests_;
+    uint64_t nextSession_ = 1;
+    bool processing_ = false; // host only: a command may enter maintain recursively.
     Lattice::NodeId root_ = Lattice::InvalidNodeId;
+    std::string rootPath_;
     Console::CommandDispatcher commands_;
     ExportsView exports_;
     Lattice::TreeView tree_;

@@ -2,6 +2,7 @@
 #include "CLI.hpp"
 
 #include <chrono>
+#include <memory>
 #include <thread>
 
 #include <Lattice/Tools/TreeFormatter.hpp>
@@ -117,21 +118,22 @@ CLI::CLI(ExportsView exports, Lattice::TreeView tree, Lattice::NodeId context)
     commands_.setTheme(theme_);
 
     root_ = tree_.root(context);
+    rootPath_ = tree_.path(root_);
 }
 
 void CLI::setTerminals(std::vector<Terminal*> terminals) {
     std::lock_guard lock(mutex_);
-    for (Terminal* terminal : terminals_)
-        if (std::ranges::find(terminals, terminal) == terminals.end())
-            terminal->detach();
+    std::erase_if(sessions_, [&](Session& session) {
+        if (std::ranges::find(terminals, session.terminal) != terminals.end()) return false;
+        session.terminal->detach();
+        std::erase_if(requests_, [&](const Request& request) { return request.session == session.id; });
+        return true;
+    });
     for (Terminal* terminal : terminals) {
-        if (std::ranges::find(terminals_, terminal) != terminals_.end())
-            continue;
-        terminal->setCurrent(root_, tree_.path(root_));
-        if (serving_)
-            terminal->attach();
+        if (std::ranges::find(sessions_, terminal, &Session::terminal) != sessions_.end()) continue;
+        terminal->setCurrent(root_, rootPath_);
+        sessions_.push_back(Session{.id = nextSession_++, .terminal = terminal, .current = root_});
     }
-    terminals_ = std::move(terminals);
 }
 
 void CLI::showLogo() const {
@@ -278,81 +280,136 @@ void CLI::changeDirectory(Lattice::ActionContext& context, std::string path) con
     context.setNode(target);
 }
 
-void CLI::run(const std::function<void()>& idle) {
-    const auto writer = LogSystem::setConsoleWriter(
-        [this](std::string_view text) { broadcast(text); }
-    );
-
-    std::unique_lock lock(mutex_);
-    serving_ = true;
-    for (Console::Terminal* terminal : terminals_) {
-        terminal->attach();
-
-        const auto resolved = commands_.getExports().resolve(
-            commands_.getExports().role("logo"),
-            terminal->current()
-        );
-
-        if (resolved && resolved.invoke) {
-            Lattice::ActionContext context{terminal->current()};
-            resolved.invoke(resolved.object, context, {});
-        }
-        const auto config = exports_.resolve(exports_.role("config"), terminal->current());
-        if (config && config.invoke) {
-            Lattice::ActionContext context{terminal->current()};
-            config.invoke(config.object, context, {});
-            for (const auto& output : context.output())
-                if (const auto* value = std::get_if<Lattice::Value>(&output))
-                    terminal->write(value->toString() + "\n");
-        }
-    }
-
-    // Terminals are used only under the lock; idle and sleep let setTerminals in.
-    while (!stop_) {
-        lock.unlock();
-        idle();
-        lock.lock();
-        if (!pollTerminals())
-            break;
-        lock.unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
-        lock.lock();
-    }
-
-    serving_ = false;
-    for (Console::Terminal* terminal : terminals_)
-        terminal->detach();
-    lock.unlock();
-
-    LogSystem::resetConsoleWriter(writer);
+namespace {
+// A host-local command session. It captures output and navigation, never terminal I/O.
+class CommandTerminal final : public Terminal {
+public:
+    std::string output;
+    std::string path;
+protected:
+    void onAttach() override {}
+    void onDetach() override {}
+    Input onPoll() override { return {}; }
+    void onWrite(std::string_view text) override { output += text; }
+    void onPathChanged(std::string value) override { path = std::move(value); }
+};
 }
 
-void CLI::broadcast(std::string_view text) {
+void CLI::processCommands() {
+    if (processing_) return;
+    processing_ = true;
+    struct Guard { bool& active; ~Guard() { active = false; } } guard{processing_};
+    // A bounded batch keeps one busy console from monopolizing the host checkpoint.
+    for (size_t count = 0; count < 32 && !stop_; ++count) {
+        Request request;
+        Lattice::NodeId current;
+        {
+            std::lock_guard lock(mutex_);
+            if (requests_.empty()) break;
+            request = std::move(requests_.front());
+            requests_.pop_front();
+            const auto session = std::ranges::find(sessions_, request.session, &Session::id);
+            if (session == sessions_.end()) continue;
+            current = session->current;
+        }
+        if (!tree_.contains(current)) current = root_;
+        CommandTerminal terminal;
+        terminal.setCurrent(current, tree_.path(current));
+        terminal.attach();
+        if (request.startup) {
+            for (std::string_view name : {"logo", "config"})
+                if (exports_.resolve(exports_.role(name), current)) commands_.execute(terminal, name);
+        } else commands_.execute(terminal, request.line);
+        {
+            std::lock_guard lock(mutex_);
+            const auto session = std::ranges::find(sessions_, request.session, &Session::id);
+            if (session == sessions_.end() || stop_) continue; // Removed or stopped during the command.
+            session->current = terminal.current();
+            --session->pending;
+            session->replies.push_back({std::move(terminal.output), terminal.current(), std::move(terminal.path)});
+        }
+    }
+}
+
+void CLI::run(const std::function<void()>& idle) {
+    struct Output {
+        std::mutex mutex;
+        std::deque<std::string> lines;
+    };
+    // A logger callback already copied by another thread may outlive its registration.
+    // It owns only this mailbox, never the CLI or a physical terminal.
+    auto output = std::make_shared<Output>();
+    const auto writer = LogSystem::setConsoleWriter(
+        [output](std::string_view text) {
+            std::lock_guard lock(output->mutex);
+            output->lines.emplace_back(text);
+        });
+    struct WriterGuard {
+        decltype(writer) token;
+        ~WriterGuard() { LogSystem::resetConsoleWriter(token); }
+    } writerGuard{writer};
+    const auto flushLogs = [&] {
+        std::deque<std::string> lines;
+        {
+            std::lock_guard lock(output->mutex);
+            lines.swap(output->lines);
+        }
+        std::lock_guard lock(mutex_);
+        for (auto& session : sessions_)
+            for (const auto& line : lines) session.terminal->write(line);
+    };
+    while (!stop_) {
+        // All runtime access is in processCommands(), called by the host's maintain.
+        // When CLI itself is the host service, idle() drives that checkpoint too.
+        idle();
+        flushLogs();
+        {
+            std::lock_guard lock(mutex_);
+            if (!pollTerminals()) break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+    }
+    flushLogs();
     std::lock_guard lock(mutex_);
-    for (Console::Terminal* terminal : terminals_)
-        terminal->write(text);
+    requests_.clear();
+    for (auto& session : sessions_) {
+        for (const auto& reply : session.replies) {
+            if (!reply.path.empty()) session.terminal->setCurrent(reply.current, reply.path);
+            session.terminal->write(reply.text);
+        }
+        session.replies.clear();
+        session.pending = 0;
+        session.terminal->detach();
+    }
 }
 
 bool CLI::pollTerminals() {
-    bool anyAttached = false;
-
-    for (Console::Terminal* terminal : terminals_) {
-        if (!terminal->attached())
-            continue;
-
-        auto input = terminal->poll();
-        if (input.closed) {
-            terminal->detach();
-            continue;
+    bool active = false;
+    for (auto& session : sessions_) {
+        auto& terminal = *session.terminal;
+        if (!session.started) {
+            terminal.attach();
+            session.started = true;
+            requests_.push_back({session.id, {}, true});
+            ++session.pending;
         }
-
-        if (input.line)
-            commands_.execute(*terminal, *input.line);
-
-        anyAttached = true;
+        for (auto& reply : session.replies) {
+            if (!reply.path.empty()) terminal.setCurrent(reply.current, std::move(reply.path));
+            terminal.write(reply.text);
+        }
+        session.replies.clear();
+        if (!session.closed) {
+            auto input = terminal.poll();
+            if (input.line) {
+                requests_.push_back({session.id, std::move(*input.line)});
+                ++session.pending;
+            }
+            session.closed = input.closed;
+        }
+        if (session.closed && !session.pending) terminal.detach();
+        else active = true; // Drain accepted commands and replies before handling EOF.
     }
-
-    return anyAttached;
+    return active;
 }
 
 }

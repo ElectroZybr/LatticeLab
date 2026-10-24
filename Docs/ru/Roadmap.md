@@ -26,7 +26,7 @@
 - [x] `SceneObject::render(RenderPass&, const ViewState&)`; `Render` владеет depth
 - [x] Рендер сфер (`Spheres : SceneObject`): `GpuSoA` + смещения x/y/z + колонка вида (необязательна) + палитра (вид → цвет, радиус); `spheres3d.wgsl` с `frag_depth`
 - [x] Границы: GPU-копия в ветке рендера (`GpuSoA` с `CpuSource`), симуляция — `ParticleSystemAPI` без WGPU; экспорты симуляции — через очередь потока-владельца (`Tasks::Queue`, `executeOn` объекта, обычные `param`/`action`/`exportTable`); `configure` будится сменой Context только по прочитанным ролям
-- [ ] CLI: выполнять команды в host-потоке (сейчас worker-поток читает дерево и экспорты)
+- [x] CLI: команды, чтение дерева и экспортов — на host через `onMaintain`; worker обслуживает терминалы, строки и ответы передаются по ID сессии без ожидания host; удаление терминала отменяет запросы
 - [x] Ветка рендера собирается кодом (пакет Graphics): `Render` (surface, depth, `RenderLayout` внутри) → общие GPU-данные → вьюпорты-сцены (камера, контроллер, объекты); окно и ввод — в Shell
 - [x] Источник атомов — `mount<ParticleSystemAPI>`, GPU-копия в ветке рендера (`GpuSoA` с `CpuSource`), сферы — объект сцены вьюпорта
 - [ ] Цвет и радиус по элементу: колонка вида (`DataId`) и палитра из `AtomData` — без знания Graphics о ClassicMD

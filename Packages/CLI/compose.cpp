@@ -31,6 +31,7 @@ extern "C" void compose(NodeBuild root) {
     cli.globalAction("tree", &Console::CLI::showTree);
     cli.globalAction("exports", &Console::CLI::showExports);
     cli.globalAction("logo", &Console::CLI::showLogo);
+    cli.onMaintain(&Console::CLI::processCommands);
     cli.service(&Console::CLI::run, &Console::CLI::requestStop);
 }
 

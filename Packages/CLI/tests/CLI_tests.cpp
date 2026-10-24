@@ -2,6 +2,7 @@
 #include <thread>
 #include <atomic>
 #include <deque>
+#include <chrono>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -27,6 +28,7 @@ public:
     std::atomic<bool> keepOpen{false};
     std::string output;
     std::string path;
+    std::thread::id wroteOn;
 protected:
     void onAttach() override {}
     void onDetach() override {}
@@ -36,7 +38,7 @@ protected:
         lines.pop_front();
         return input;
     }
-    void onWrite(std::string_view text) override { output += text; }
+    void onWrite(std::string_view text) override { wroteOn = std::this_thread::get_id(); output += text; }
     void onPathChanged(std::string value) override { path = std::move(value); }
 };
 
@@ -84,7 +86,7 @@ void servesScriptedTerminal() {
 
         cli->theme().style(cli->theme().find("err")) = TextStyle::rgb(0x336688);
         int idles = 0;
-        cli->run([&] { ++idles; });
+        cli->run([&] { ++idles; cli->processCommands(); });
         check(idles > 0, "idle is called while serving");
         check(terminal->current() != rootId && terminal->path.find("folder") != std::string::npos, "cd moved terminal");
         check(terminal->output.find("Unknown command 'nope'") != std::string::npos, "unknown command reported");
@@ -110,11 +112,18 @@ void terminalsChangeWhileServing() {
             std::this_thread::yield();
 
         cli->setTerminals({first.get(), second.get()});
+        for (int i = 0; i < 1000 && !second->attached(); ++i)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         check(second->attached() && !second->path.empty(), "added terminal attaches at the root");
         cli->setTerminals({second.get()});
         check(!first->attached(), "removed terminal is detached and no longer served");
 
         second->keepOpen = false;
+        for (int i = 0; i < 1000 && second->attached(); ++i) {
+            cli->processCommands();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        cli->requestStop();
         worker.join();
         check(!second->attached(), "closed terminal detached");
     }
@@ -137,11 +146,96 @@ void explicitAssignmentsAndReset() {
         terminal->lines = {"gain 4", "reset gain"};
         auto cli = root.emplace<Console::CLI>("cli", root.exports(), root.tree(), root.id());
         cli->setTerminals({terminal.get()});
-        cli->run([] {});
+        cli->run([&] { cli->processCommands(); });
         check(gain == 4 && sets == 1 && resets == 1, "CLI records edits and reset without rewriting state");
         runtime.nodes.exports.unobserveParameters(observer);
     }
     runtime.nodes.ops.destroyBranch(rootId);
+}
+
+struct RunningCLI {
+    Console::CLI& cli;
+    std::thread thread;
+    explicit RunningCLI(Console::CLI& cli) : cli(cli), thread([&cli] { cli.run([] {}); }) {}
+    ~RunningCLI() { cli.requestStop(); thread.join(); }
+};
+template<class Predicate>
+void waitFor(Predicate done, const char* message) {
+    for (int i = 0; i < 2000; ++i) {
+        if (done()) return;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    throw std::runtime_error(message);
+}
+
+void commandsRunOnHostAndSurviveErrors() {
+    Context runtime;
+    const auto id = runtime.nodes.factory.folder(InvalidNodeId, "Root");
+    NodeBuild root{id, runtime.nodes};
+    root.branch("folder");
+    auto terminal = root.emplace<ScriptTerminal, Console::Terminal>("script");
+    terminal->lines = {"cd folder", "fail", "mark"};
+    auto cli = root.emplace<Console::CLI>("cli", root.exports(), root.tree(), root.id());
+    cli->setTerminals({terminal.get()});
+    cli.onMaintain(&Console::CLI::processCommands);
+    cli.globalAction("cd", &Console::CLI::changeDirectory);
+    const auto host = std::this_thread::get_id();
+    std::thread::id executed;
+    root.globalAction("fail", [] { throw std::runtime_error("expected failure"); });
+    root.globalAction("mark", [&] { executed = std::this_thread::get_id(); });
+    {
+        RunningCLI worker{*cli};
+        waitFor([&] { return terminal->attached(); }, "terminal did not attach");
+        std::this_thread::sleep_for(std::chrono::milliseconds(70));
+        check(executed == std::thread::id{}, "worker must not execute commands without a host checkpoint");
+        waitFor([&] {
+            runtime.nodes.ops.maintain();
+            return executed == host && !terminal->attached();
+        }, "host did not execute queued commands or drain EOF");
+    }
+    check(terminal->path.find("folder") != std::string::npos, "navigation replies preserve command order");
+    check(terminal->output.find("expected failure") != std::string::npos, "action exception returned to terminal");
+    check(terminal->wroteOn != host, "physical output belongs to the I/O thread");
+    runtime.nodes.ops.destroyBranch(id);
+}
+
+void removingTerminalCancelsRequestsAndStopDoesNotWait() {
+    Context runtime;
+    const auto id = runtime.nodes.factory.folder(InvalidNodeId, "Root");
+    NodeBuild root{id, runtime.nodes};
+    int calls = 0;
+    root.globalAction("mark", [&] { ++calls; });
+    auto terminal = root.emplace<ScriptTerminal, Console::Terminal>("script");
+    terminal->lines = {"mark"};
+    terminal->keepOpen = true;
+    auto cli = root.emplace<Console::CLI>("cli", root.exports(), root.tree(), root.id());
+    cli->setTerminals({terminal.get()});
+    cli.onMaintain(&Console::CLI::processCommands);
+    {
+        RunningCLI worker{*cli};
+        waitFor([&] { return terminal->attached(); }, "terminal did not attach");
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        cli->setTerminals({});
+        runtime.nodes.ops.destroyBranch(terminal.id());
+        runtime.nodes.ops.maintain();
+        check(calls == 0, "requests of a removed terminal must not execute");
+    }
+    runtime.nodes.ops.destroyBranch(id);
+
+    Context secondRuntime;
+    const auto secondId = secondRuntime.nodes.factory.folder(InvalidNodeId, "Root");
+    NodeBuild secondRoot{secondId, secondRuntime.nodes};
+    auto second = secondRoot.emplace<ScriptTerminal, Console::Terminal>("script");
+    second->lines = {"mark"};
+    second->keepOpen = true;
+    auto secondCLI = secondRoot.emplace<Console::CLI>("cli", secondRoot.exports(), secondRoot.tree(), secondId);
+    secondCLI->setTerminals({second.get()});
+    {
+        RunningCLI worker{*secondCLI};
+        waitFor([&] { return second->attached(); }, "terminal did not attach");
+        // No host pumping: requestStop and join must still finish.
+    }
+    secondRuntime.nodes.ops.destroyBranch(secondId);
 }
 
 }
@@ -152,5 +246,7 @@ int main() {
     servesScriptedTerminal();
     terminalsChangeWhileServing();
     explicitAssignmentsAndReset();
+    commandsRunOnHostAndSurviveErrors();
+    removingTerminalCancelsRequestsAndStopDoesNotWait();
     std::cout << "CLI: arguments, tree paths and scripted terminal passed\n";
 }
