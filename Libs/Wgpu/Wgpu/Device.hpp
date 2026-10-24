@@ -66,6 +66,13 @@ public:
 
     void writeBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data);
 
+    /// Copy `size` bytes of a GPU buffer (CopySource) back to the host; waits for the
+    /// GPU. For tests, checks and small results — not a per-frame path.
+    std::vector<std::byte> readBuffer(Buffer& buffer, uint64_t offset, uint64_t size);
+
+    /// Wait until the GPU has finished all submitted work.
+    void wait();
+
     WGPUDevice native() const noexcept { return device_; }
     WGPUAdapter adapter() const noexcept { return adapter_; }
     WGPUInstance instance() const noexcept { return instance_; }

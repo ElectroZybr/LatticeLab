@@ -111,6 +111,38 @@ WGPUBufferBindingType nativeBindingType(BindingType type) {
 
 }
 
+ComputePipeline::ComputePipeline(Device& device, Shader& shader, const ComputePipelineDesc& desc)
+    : Tracked(device, "ComputePipeline", desc.label, 0) {
+    std::vector<WGPUBindGroupLayout> groups;
+    for (const BindingLayout* group : desc.layouts) {
+        if (!group)
+            throw Lattice::Exception<ComputePipeline>("pipeline '{}': layout of group {} is null", desc.label, groups.size());
+        groups.push_back(group->native());
+    }
+    WGPUPipelineLayoutDescriptor layoutDesc{};
+    layoutDesc.label = nativeString(desc.label);
+    layoutDesc.bindGroupLayoutCount = groups.size();
+    layoutDesc.bindGroupLayouts = groups.data();
+    WGPUPipelineLayout layout = wgpuDeviceCreatePipelineLayout(device.native(), &layoutDesc);
+    if (!layout)
+        throw Lattice::Exception<ComputePipeline>("failed to create layout of pipeline '{}'", desc.label);
+
+    WGPUComputePipelineDescriptor pipeline{};
+    pipeline.label = nativeString(desc.label);
+    pipeline.layout = layout;
+    pipeline.compute.module = shader.native();
+    pipeline.compute.entryPoint = nativeString(desc.entry);
+    pipeline_ = wgpuDeviceCreateComputePipeline(device.native(), &pipeline);
+    wgpuPipelineLayoutRelease(layout);
+    if (!pipeline_)
+        throw Lattice::Exception<ComputePipeline>("failed to create pipeline '{}'", desc.label);
+}
+
+ComputePipeline::~ComputePipeline() {
+    if (pipeline_)
+        wgpuComputePipelineRelease(pipeline_);
+}
+
 BindingLayout::BindingLayout(Device& device, std::span<const LayoutEntry> entries, std::string label)
     : Tracked(device, "BindingLayout", label, 0) {
     std::vector<WGPUBindGroupLayoutEntry> native(entries.size());

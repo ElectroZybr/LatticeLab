@@ -23,3 +23,11 @@ target("Wgpu.tests")
     set_targetdir("$(builddir)/tests")
     add_files("tests/*.cpp")
     add_deps("Wgpu")
+
+-- GPU against CPU on the same work (BmRunner): xmake run Wgpu.bench [name]
+target("Wgpu.bench")
+    set_kind("binary")
+    set_targetdir("$(builddir)/bench")
+    add_files("bench/*.cpp")
+    add_deps("Wgpu")
+    add_packages("lattice-bmrunner")

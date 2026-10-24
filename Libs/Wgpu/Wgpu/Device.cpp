@@ -1,4 +1,5 @@
 #include "Device.hpp"
+#include "CommandList.hpp"
 #include "Resources.hpp"
 
 #include <algorithm>
@@ -195,6 +196,50 @@ Device::~Device() {
 
 void Device::writeBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data) {
     wgpuQueueWriteBuffer(queue_, buffer.native(), offset, data.data(), data.size());
+}
+
+void Device::wait() {
+    wgpuDevicePoll(device_, true, nullptr);
+}
+
+std::vector<std::byte> Device::readBuffer(Buffer& buffer, uint64_t offset, uint64_t size) {
+    if (offset % 4 || size % 4)
+        throw Lattice::Exception<Device>("readBuffer: offset {} and size {} must be multiples of 4", offset, size);
+    if (offset + size > buffer.size())
+        throw Lattice::Exception<Device>("readBuffer: {} bytes at {} exceed the buffer of {}", size, offset, buffer.size());
+    std::vector<std::byte> result(size);
+    if (!size)
+        return result;
+
+    Buffer staging{*this, {.size = size, .usage = BufferUsage::MapRead | BufferUsage::CopyDestination,
+        .label = "readback"}};
+    CommandList commands{*this};
+    commands.copyBuffer(buffer, offset, staging, 0, size);
+    commands.submit();
+
+    struct Mapping {
+        std::atomic<bool> done = false;
+        WGPUMapAsyncStatus status = WGPUMapAsyncStatus_Error;
+    } mapping;
+    WGPUBufferMapCallbackInfo callback{};
+    callback.mode = WGPUCallbackMode_AllowProcessEvents;
+    callback.callback = [](WGPUMapAsyncStatus status, WGPUStringView, void* data, void*) {
+        auto& self = *static_cast<Mapping*>(data);
+        self.status = status;
+        self.done = true;
+    };
+    callback.userdata1 = &mapping;
+    wgpuBufferMapAsync(staging.native(), WGPUMapMode_Read, 0, size, callback);
+    while (!mapping.done) {
+        wgpuDevicePoll(device_, true, nullptr);
+        wgpuInstanceProcessEvents(instance_);
+    }
+    if (mapping.status != WGPUMapAsyncStatus_Success)
+        throw Lattice::Exception<Device>("readBuffer: mapping failed ({})", static_cast<int>(mapping.status));
+    const auto* data = static_cast<const std::byte*>(wgpuBufferGetConstMappedRange(staging.native(), 0, size));
+    std::copy(data, data + size, result.begin());
+    wgpuBufferUnmap(staging.native());
+    return result;
 }
 
 }

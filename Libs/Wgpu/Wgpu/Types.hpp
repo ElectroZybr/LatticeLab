@@ -3,13 +3,17 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace Wgpu {
 
 class Buffer;
+class BindingLayout;
 
 enum class BufferUsage : uint64_t {
     None            = 0,
+    MapRead         = 1ull << 0,
+    MapWrite        = 1ull << 1,
     CopySource      = 1ull << 2,
     CopyDestination = 1ull << 3,
     Index           = 1ull << 4,
@@ -100,6 +104,13 @@ struct LayoutEntry {
     uint32_t binding = 0;
     BindingType type = BindingType::Uniform;
     ShaderStage visibility = ShaderStage::Vertex | ShaderStage::Fragment;
+};
+
+struct ComputePipelineDesc {
+    /// Bind group layouts, group i = layouts[i].
+    std::vector<BindingLayout*> layouts;
+    std::string entry = "main";
+    std::string label;
 };
 
 struct Binding {

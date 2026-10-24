@@ -67,7 +67,8 @@
 
 - [x] `Libs/Wgpu` (namespace `Wgpu`) — вычислительная GPU-библиотека из `WGPU.core`: ядро (Device, Buffer, Texture, Shader, BindingLayout/BindingSet, CommandList, ошибки, учёт ресурсов), данные (`GpuSoA`), без рендера; `Packages/WGPU` — только `compose.cpp`
 - [x] Рендерные части (`Surface`, `RenderPass`, `RenderPipeline`, `Color`/`Rect`) — в `Graphics.core`; `NativeWindow` — в Shell, Shell больше не зависит от GPU
-- [ ] `Libs/Wgpu`: compute pipeline и dispatch, тесты
+- [x] `Libs/Wgpu`: `ComputePipeline`, `ComputePass` (dispatch), `Device::readBuffer`/`wait`; тесты со сверкой данных (удвоение массива, побайтовая копия `GpuSoA`); бенчи GPU против CPU, загрузки и чтения
+- [ ] Время самого ядра без накладных расходов (timestamp queries) — для честного сравнения GPU и CPU
 - [ ] `Libs/Wgpu`: алгоритмы по мере надобности — prefix scan, stream compaction (частицы у стенки), reduction (min/max/sum), radix sort и сетка соседей
 - [ ] Перевести `Integrators`, `ParticleDynamics::SpatialGrid` на раскладку «модель + `cpu`» при переносе соответствующих пунктов
 - [ ] Позже: `Libs/Cuda` и бэкенды `<Name>.cuda`

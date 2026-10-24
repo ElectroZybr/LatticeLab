@@ -53,6 +53,19 @@ private:
     WGPUShaderModule shader_ = nullptr;
 };
 
+/// A compute shader entry point on explicit bind group layouts.
+class ComputePipeline final : Tracked {
+public:
+    ComputePipeline(Device& device, Shader& shader, const ComputePipelineDesc& desc);
+    ~ComputePipeline();
+
+    WGPUComputePipeline native() const noexcept { return pipeline_; }
+    Device& device() const noexcept { return Tracked::device(); }
+
+private:
+    WGPUComputePipeline pipeline_ = nullptr;
+};
+
 /// Explicit bind group layout: shareable between pipelines and bind groups.
 class BindingLayout final : Tracked {
 public:

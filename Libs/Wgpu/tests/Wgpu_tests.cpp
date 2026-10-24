@@ -1,4 +1,5 @@
 // Registry logic always; device and resources only when an adapter is available.
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -8,6 +9,7 @@
 #include <string>
 #include <thread>
 #include <Wgpu/CommandList.hpp>
+#include <Wgpu/ComputePass.hpp>
 #include <Wgpu/Device.hpp>
 #include <Wgpu/GpuSoA.hpp>
 #include <Wgpu/Resources.hpp>
@@ -64,10 +66,15 @@ void gpuSoAMirrorsCpuTable(Wgpu::Device& device) {
     check(table.offset(atoms.column(2).name()) == atoms.columnOffset(2), "same layout as the source");
     check(!table.wanted(), "upload is pending until read");
 
-    bool seen = false;
+    atoms.at<PosX>(1) = 7.5f;
+    table.upload(atoms);
+    bool seen = false, same = false;
     table.read([&](const Wgpu::GpuSoA::View& view) {
         seen = view.rows == 3 && view.generation == first && view.buffer.size() >= atoms.bytes().size();
+        const auto copy = device.readBuffer(view.buffer, 0, atoms.bytes().size());
+        same = std::equal(copy.begin(), copy.end(), atoms.bytes().begin());
     });
+    check(same, "the GPU block is a byte copy of the CPU block");
     check(seen && table.wanted(), "read takes the upload");
 
     atoms.at<PosX>(0) = 1.0f;
@@ -131,6 +138,57 @@ void layoutsAndTexturesOnDevice(Wgpu::Device& device) {
     check(device.resources().size() == 0, "layouts and textures are released");
 }
 
+const char* doubleShader = R"(
+@group(0) @binding(0) var<storage, read_write> data : array<f32>;
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id : vec3<u32>) {
+    if (id.x < arrayLength(&data)) {
+        data[id.x] = data[id.x] * 2.0;
+    }
+}
+)";
+
+void computeDoublesAnArray(Wgpu::Device& device) {
+    const auto errors = Wgpu::errorCount();
+    {
+        constexpr size_t count = 1000;   // not a multiple of the workgroup size
+        std::vector<float> values(count);
+        for (size_t i = 0; i < count; ++i)
+            values[i] = float(i);
+        Wgpu::Buffer data{device, {.size = count * sizeof(float), .usage = Wgpu::BufferUsage::Storage |
+            Wgpu::BufferUsage::CopyDestination | Wgpu::BufferUsage::CopySource, .label = "data"}};
+        device.writeBuffer(data, 0, std::as_bytes(std::span(values)));
+
+        const std::array<Wgpu::LayoutEntry, 1> entries{{{.binding = 0, .type = Wgpu::BindingType::Storage,
+            .visibility = Wgpu::ShaderStage::Compute}}};
+        Wgpu::BindingLayout layout{device, entries, "data"};
+        const Wgpu::Binding binding{.binding = 0, .buffer = &data};
+        Wgpu::BindingSet set{device, layout, std::span(&binding, 1)};
+        Wgpu::Shader shader{device, {.source = doubleShader, .label = "double"}};
+        Wgpu::ComputePipeline pipeline{device, shader, {.layouts = {&layout}, .label = "double"}};
+
+        Wgpu::CommandList commands{device};
+        {
+            Wgpu::ComputePass pass{commands};
+            pass.setPipeline(pipeline);
+            pass.setBindings(0, set);
+            pass.dispatch(Wgpu::workgroups(count, 64));
+            check(throws([&] { commands.submit(); }), "submit waits for the open pass");
+        }
+        commands.submit();
+
+        const auto bytes = device.readBuffer(data, 0, count * sizeof(float));
+        const auto* doubled = reinterpret_cast<const float*>(bytes.data());
+        bool all = true;
+        for (size_t i = 0; i < count; ++i)
+            all &= doubled[i] == 2.0f * float(i);
+        check(all, "every element doubled, the tail of the last workgroup included");
+        check(device.readBuffer(data, 4, 8).size() == 8, "partial read");
+        check(throws([&] { device.readBuffer(data, 2, 4); }), "unaligned read is rejected");
+    }
+    check(Wgpu::errorCount() == errors, "compute pipeline, pass and readback are valid");
+}
+
 void mirrorCopiesOnTheOwnerThread(Wgpu::Device& device) {
     StdData::SoA atoms;
     atoms.addCol<PosX>();
@@ -191,6 +249,7 @@ bool resourcesRegisterOnDevice() {
     }
     check(device->resources().size() == 0, "RAII resources unregister");
     layoutsAndTexturesOnDevice(*device);
+    computeDoublesAnArray(*device);
     gpuSoAMirrorsCpuTable(*device);
     mirrorCopiesOnTheOwnerThread(*device);
     check(device->resources().size() == 0, "GpuSoA releases its buffers");
@@ -202,5 +261,5 @@ bool resourcesRegisterOnDevice() {
 int main() {
     registryTracksLiveResources();
     const bool device = resourcesRegisterOnDevice();
-    std::cout << "Wgpu: registry" << (device ? ", device resources, layouts, textures, submit and GpuSoA (mirror)" : "") << " passed\n";
+    std::cout << "Wgpu: registry" << (device ? ", device resources, layouts, textures, compute, readback and GpuSoA (mirror)" : "") << " passed\n";
 }
