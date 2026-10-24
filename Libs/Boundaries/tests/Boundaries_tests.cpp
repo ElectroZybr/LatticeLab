@@ -1,4 +1,5 @@
 // Space and geometry on the CPU: no runtime, no GPU.
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <random>
@@ -6,13 +7,16 @@
 #include <vector>
 
 #include <glm/gtc/quaternion.hpp>
-#include <Boundaries/Checks.hpp>
-#include <Boundaries/Geometry.hpp>
-#include <Boundaries/Walls.hpp>
 #include <Boundaries/Space.hpp>
+#include <BoundariesCpu/Checks.hpp>
+#include <BoundariesCpu/Geometry.hpp>
+#include <BoundariesCpu/Walls.hpp>
+#include <BoundariesCpu/Wrap.hpp>
+#include <Lattice/Tools/TypeName.hpp>
 #include <Lattice/Tools/Exception.hpp>
 
 using namespace Boundaries;
+using namespace Boundaries::Cpu;
 
 namespace {
 
@@ -29,6 +33,42 @@ bool throws(F&& f) {
     return false;
 }
 
+struct PX { using type = float; };
+struct PY { using type = float; };
+struct PZ { using type = float; };
+struct VX { using type = float; };
+struct VY { using type = float; };
+struct VZ { using type = float; };
+struct FX { using type = float; };
+struct FY { using type = float; };
+struct FZ { using type = float; };
+
+const ParticleLayout layout{
+    std::string(Lattice::typeName<PX>()), std::string(Lattice::typeName<PY>()), std::string(Lattice::typeName<PZ>()),
+    std::string(Lattice::typeName<VX>()), std::string(Lattice::typeName<VY>()), std::string(Lattice::typeName<VZ>()),
+    std::string(Lattice::typeName<FX>()), std::string(Lattice::typeName<FY>()), std::string(Lattice::typeName<FZ>())};
+
+/// A particle table as a simulation keeps it: one SoA with named columns.
+struct Particles {
+    explicit Particles(size_t n) {
+        table.addCol<PX>(), table.addCol<PY>(), table.addCol<PZ>();
+        table.addCol<VX>(), table.addCol<VY>(), table.addCol<VZ>();
+        table.addCol<FX>(), table.addCol<FY>(), table.addCol<FZ>();
+        table.resize(n);
+        x = table.span<PX>(), y = table.span<PY>(), z = table.span<PZ>();
+        vx = table.span<VX>(), vy = table.span<VY>(), vz = table.span<VZ>();
+        fx = table.span<FX>(), fy = table.span<FY>(), fz = table.span<FZ>();
+    }
+    static void fill(std::span<float> column, std::initializer_list<float> values) {
+        std::copy(values.begin(), values.end(), column.begin());
+    }
+    glm::vec3 position(size_t i) const { return {x[i], y[i], z[i]}; }
+    glm::vec3 velocity(size_t i) const { return {vx[i], vy[i], vz[i]}; }
+
+    StdData::SoA table;
+    std::span<float> x, y, z, vx, vy, vz, fx, fy, fz;
+};
+
 void spaceWrapsAndTakesMinimumImage() {
     const Space space{{0, 0, 0}, {10, 10, 10}, {true, false, true}};
     check(near(space.wrap({23.5f, 0, 0}).x, 3.5f) && near(space.wrap({-0.5f, 0, 0}).x, 9.5f),
@@ -38,10 +78,16 @@ void spaceWrapsAndTakesMinimumImage() {
     check(near(space.minimumImage({9, 9, -6}), {-1, 9, 4}), "minimum image on periodic axes only");
     check(space.contains({0, 0, 0}) && !space.contains({10, 5, 5}), "half-open box");
 
-    std::vector<float> x{23.5f, -0.5f, 3}, y{1, 2, 3}, z{-7, 15, 0};
-    space.wrap(x, y, z);
-    check(near(x[0], 3.5f) && near(x[1], 9.5f) && near(z[0], 3) && near(z[1], 5) && y[1] == 2,
+    Particles p(3);
+    Particles::fill(p.x, {23.5f, -0.5f, 3});
+    Particles::fill(p.y, {1, 2, 3});
+    Particles::fill(p.z, {-7, 15, 0});
+    wrapPositions(space, p.table, layout, 2);
+    check(near(p.x[0], 3.5f) && near(p.x[1], 9.5f) && near(p.z[0], 3) && near(p.z[1], 5) && p.y[1] == 2,
           "columns wrap like points");
+    check(p.x[2] == 3 && p.z[2] == 0, "rows past the count are untouched");
+    check(throws([&] { wrapPositions(space, p.table, {.x = "missing", .y = layout.y, .z = layout.z}, 3); }),
+          "a missing column is reported");
     check(throws([] { Space{{0, 0, 0}, {1, 0, 1}}; }), "zero size is rejected");
 }
 
@@ -140,32 +186,24 @@ void batchesMatchPointsAndStayLipschitz() {
     check(geometry.program().depth == 2, "stack depth of (box − sphere) ∪ capsule");
 }
 
-struct Particles {
-    std::vector<float> x, y, z, vx, vy, vz, fx, fy, fz;
-    explicit Particles(size_t n) : x(n), y(n), z(n), vx(n), vy(n), vz(n), fx(n), fy(n), fz(n) {}
-    ParticleColumns columns() { return {x, y, z, vx, vy, vz, fx, fy, fz}; }
-    glm::vec3 position(size_t i) const { return {x[i], y[i], z[i]}; }
-    glm::vec3 velocity(size_t i) const { return {vx[i], vy[i], vz[i]}; }
-};
-
 void hardWallsReflect() {
     const Geometry sphere{Shape::sphere(1)};
-    const Walls walls{sphere};
+    const Walls walls{sphere, layout};
     Particles p(2);
-    p.x = {1.2f, 0.5f};
-    p.vx = {1, 1};
-    walls.constrain(p.columns());
+    Particles::fill(p.x, {1.2f, 0.5f});
+    Particles::fill(p.vx, {1, 1});
+    walls.constrain(p.table, p.table.size());
     check(near(glm::length(p.position(0)), 1.0f, 1e-4f) && sphere.distance(p.position(0)) >= -1e-5f,
           "a particle in the wall is moved onto the surface");
     check(near(p.velocity(0), {-1, 0, 0}) , "normal velocity reflected, speed kept (elastic)");
     check(p.x[1] == 0.5f && p.vx[1] == 1, "particles inside the region are untouched");
 
-    const Walls damped{sphere, {Laws::Hard::make(0.5f)}};
+    const Walls damped{sphere, layout, {Laws::Hard::make(0.5f)}};
     Particles q(1);
-    q.x = {1.1f};
-    q.vx = {2};
-    q.vy = {1};
-    damped.constrain(q.columns());
+    Particles::fill(q.x, {1.1f});
+    Particles::fill(q.vx, {2});
+    Particles::fill(q.vy, {1});
+    damped.constrain(q.table, q.table.size());
     check(near(q.velocity(0), {-1, 1, 0}), "restitution scales only the normal velocity");
 }
 
@@ -173,10 +211,10 @@ void softWallsPushBack() {
     // Region y <= 10: the wall is above. Layer 1 thick, harmonic.
     const Geometry ceiling{Shape::halfSpace({0, 1, 0}, 10)};
     const auto soft = Laws::Soft::make(2, 1, 2);
-    const Walls walls{ceiling, {soft}};
+    const Walls walls{ceiling, layout, {soft}};
     Particles p(3);
-    p.y = {9.5f, 8.0f, 9.9f};
-    walls.addForces(p.columns());
+    Particles::fill(p.y, {9.5f, 8.0f, 9.9f});
+    walls.addForces(p.table, p.table.size());
     check(near(p.fy[0], -1.0f) && p.fy[1] == 0.0f, "harmonic: F = k (range − d), zero outside the layer");
 
     // Force is minus the potential gradient (numerical check at y = 9.9).
@@ -185,30 +223,30 @@ void softWallsPushBack() {
                    - Laws::Soft::potential(ceiling.distance({0, 9.9f - h, 0}), soft);
     check(near(p.fy[2], -dU / (2 * h), 1e-2f), "F = −dU/dy");
 
-    check(throws([&] { Walls{ceiling, {Laws::Soft::make(0, 1)}}; }), "invalid soft parameters");
-    check(throws([&] { Walls{Geometry{std::move(Shape::sphere(1)).material(3)}}; }), "missing material");
+    check(throws([&] { Walls{ceiling, layout, {Laws::Soft::make(0, 1)}}; }), "invalid soft parameters");
+    check(throws([&] { Walls{Geometry{std::move(Shape::sphere(1)).material(3)}, layout}; }), "missing material");
 }
 
 void materialsChooseTheLaw() {
     // Box with a hole: box faces soft, the hole hard.
     const Geometry holed{std::move(Shape::box({2, 2, 2})).material(0) - std::move(Shape::sphere(0.5f)).material(1)};
-    const Walls walls{holed, {Laws::Soft::make(1, 0.5f), Laws::Hard::make()}};
+    const Walls walls{holed, layout, {Laws::Soft::make(1, 0.5f), Laws::Hard::make()}};
     Particles p(2);
-    p.x = {1.8f, 0.4f};
-    p.vx = {0, 1};
-    walls.addForces(p.columns());
-    walls.constrain(p.columns());
+    Particles::fill(p.x, {1.8f, 0.4f});
+    Particles::fill(p.vx, {0, 1});
+    walls.addForces(p.table, p.table.size());
+    walls.constrain(p.table, p.table.size());
     check(p.fx[0] < 0 && p.vx[0] == 0, "near a box face: soft force, no reflection");
     check(p.fx[1] == 0 && near(p.x[1], 0.5f, 1e-4f) && p.vx[1] > 0, "in the hole: pushed out and reflected");
 }
 
 void wallsCoverEveryChunk() {
     const Geometry sphere{Shape::sphere(1)};
-    const Walls walls{sphere};
+    const Walls walls{sphere, layout};
     Particles p(1000);   // several chunks of 256
     for (size_t i = 0; i < p.x.size(); ++i)
         p.x[i] = 1.5f, p.vx[i] = 1;
-    walls.constrain(p.columns());
+    walls.constrain(p.table, p.table.size());
     bool all = true;
     for (size_t i = 0; i < p.x.size(); ++i)
         all &= near(p.x[i], 1.0f, 1e-4f) && p.vx[i] < 0;

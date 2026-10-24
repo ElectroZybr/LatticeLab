@@ -1,7 +1,5 @@
 #pragma once
 
-#include <span>
-
 #include <glm/glm.hpp>
 
 namespace Boundaries {
@@ -20,6 +18,8 @@ public:
 
     glm::vec3 origin() const noexcept { return origin_; }
     glm::vec3 size() const noexcept { return size_; }
+    /// 1 / size per axis (for batch executors).
+    glm::vec3 inverseSize() const noexcept { return inverse_; }
     glm::bvec3 periodic() const noexcept { return periodic_; }
 
     /// Nearest periodic image of a separation `a − b` (unchanged along non-periodic axes).
@@ -27,9 +27,6 @@ public:
 
     /// Position wrapped into the box along periodic axes, from any number of periods away.
     glm::vec3 wrap(glm::vec3 position) const noexcept;
-
-    /// Wrap SoA columns in place (one pass per periodic axis).
-    void wrap(std::span<float> x, std::span<float> y, std::span<float> z) const;
 
     /// Inside [origin, origin + size) along every axis.
     bool contains(glm::vec3 position) const noexcept;

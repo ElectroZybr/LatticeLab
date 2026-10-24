@@ -258,6 +258,29 @@ public:
     [[nodiscard]] std::span<const typename Tag::type> span() const noexcept {
         return {getCol<Tag>(), size_};
     }
+
+    /// Column by name, typed: for code that is told column names (a layout) instead
+    /// of tags. Throws with the list of columns when absent or of another type.
+    template<class T>
+    [[nodiscard]] std::span<T> span(std::string_view name) {
+        return {const_cast<T*>(std::as_const(*this).template span<T>(name).data()), size_};
+    }
+
+    template<class T>
+    [[nodiscard]] std::span<const T> span(std::string_view name) const {
+        const Column* column = findColumn(name);
+        if (!column) {
+            std::string names;
+            for (const auto& col : columns_)
+                if (col.active)
+                    names += (names.empty() ? "" : ", ") + col.name;
+            throw Lattice::Exception<SoA>("Column '{}' not found; columns: [{}]", name, names);
+        }
+        if (!column->type.template is<std::remove_cv_t<T>>())
+            throw Lattice::Exception<SoA>("Column '{}' contains '{}', requested '{}'",
+                name, column->type.name, Lattice::typeKey<std::remove_cv_t<T>>());
+        return {reinterpret_cast<const T*>(storage_ + column->offset), size_};
+    }
     // -------
     // доступ по индексу
     template<class Tag>

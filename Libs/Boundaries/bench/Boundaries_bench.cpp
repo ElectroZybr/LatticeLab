@@ -5,13 +5,49 @@
 #include <vector>
 
 #include <BmRunner/Benchmarks.hpp>
-#include <Boundaries/Geometry.hpp>
 #include <Boundaries/Space.hpp>
-#include <Boundaries/Walls.hpp>
+#include <BoundariesCpu/Geometry.hpp>
+#include <BoundariesCpu/Walls.hpp>
+#include <BoundariesCpu/Wrap.hpp>
+#include <Lattice/Tools/TypeName.hpp>
 
 using namespace Boundaries;
+using namespace Boundaries::Cpu;
 
 namespace {
+
+struct PX { using type = float; };
+struct PY { using type = float; };
+struct PZ { using type = float; };
+struct VX { using type = float; };
+struct VY { using type = float; };
+struct VZ { using type = float; };
+struct FX { using type = float; };
+struct FY { using type = float; };
+struct FZ { using type = float; };
+
+const ParticleLayout Layout{
+    std::string(Lattice::typeName<PX>()), std::string(Lattice::typeName<PY>()), std::string(Lattice::typeName<PZ>()),
+    std::string(Lattice::typeName<VX>()), std::string(Lattice::typeName<VY>()), std::string(Lattice::typeName<VZ>()),
+    std::string(Lattice::typeName<FX>()), std::string(Lattice::typeName<FY>()), std::string(Lattice::typeName<FZ>())};
+
+/// Particle table as a simulation keeps it, plus its initial state for prepare().
+struct Table {
+    explicit Table(size_t n) {
+        for (auto* t : {&table, &initial}) {
+            t->addCol<PX>(), t->addCol<PY>(), t->addCol<PZ>();
+            t->addCol<VX>(), t->addCol<VY>(), t->addCol<VZ>();
+            t->addCol<FX>(), t->addCol<FY>(), t->addCol<FZ>();
+            t->resize(n);
+        }
+    }
+    /// Restore the initial state (one block copy).
+    void reset() {
+        auto from = initial.bytes();
+        std::copy(from.begin(), from.end(), const_cast<std::byte*>(table.bytes().data()));
+    }
+    StdData::SoA table, initial;
+};
 
 const std::vector<size_t> Sizes = {1'000, 10'000, 100'000, 1'000'000};
 
@@ -41,9 +77,23 @@ Shape tube() {
 
 BENCH_GROUP(Space) { bench.config.sizes = Sizes; }
 
-BENCH_GROUPED(Space, WrapColumns, Points, "wrap SoA columns, three periodic axes") {
+namespace {
+/// Positions spread over three periods of the box.
+struct WrapTable : Lattice::Fixture, Table {
+    explicit WrapTable(size_t n) : Table(n) {
+        std::mt19937 random(1);
+        std::uniform_real_distribution<float> coordinate(-15, 25);
+        auto x = initial.span<PX>(), y = initial.span<PY>(), z = initial.span<PZ>();
+        for (size_t i = 0; i < n; ++i)
+            x[i] = coordinate(random), y[i] = coordinate(random), z[i] = coordinate(random);
+    }
+    void prepare() override { reset(); }
+};
+}
+
+BENCH_GROUPED(Space, WrapColumns, WrapTable, "wrap positions of a SoA, three periodic axes") {
     const Space space{{0, 0, 0}, {10, 10, 10}, {true, true, true}};
-    bench.measure<Points>([&](Points& points) { space.wrap(points.x, points.y, points.z); });
+    bench.measure<WrapTable>([&](WrapTable& t) { wrapPositions(space, t.table, Layout, t.table.size()); });
 }
 
 BENCH_GROUPED(Space, MinimumImage, Points, "minimum image of consecutive separations") {
@@ -87,24 +137,19 @@ BENCH_GROUPED(Geometry, Normals, Points, "normal per point (four evaluations)") 
 namespace {
 
 /// Particles inside and around the tube: most in the region, some in the walls.
-struct TubeParticles : Lattice::Fixture {
-    explicit TubeParticles(size_t n) : x(n), y(n), z(n), vx(n), vy(n), vz(n), fx(n), fy(n), fz(n) {
+struct TubeParticles : Lattice::Fixture, Table {
+    explicit TubeParticles(size_t n) : Table(n) {
         std::mt19937 random(2);
         std::uniform_real_distribution<float> radial(0, 4.4f), angle(0, 6.2831853f), height(0, 10), speed(-1, 1);
+        auto x = initial.span<PX>(), y = initial.span<PY>(), z = initial.span<PZ>();
+        auto vx = initial.span<VX>(), vy = initial.span<VY>(), vz = initial.span<VZ>();
         for (size_t i = 0; i < n; ++i) {
             const float r = radial(random), a = angle(random);
-            sx.push_back(5 + r * std::cos(a)), sy.push_back(height(random)), sz.push_back(5 + r * std::sin(a));
-            svx.push_back(speed(random)), svy.push_back(speed(random)), svz.push_back(speed(random));
+            x[i] = 5 + r * std::cos(a), y[i] = height(random), z[i] = 5 + r * std::sin(a);
+            vx[i] = speed(random), vy[i] = speed(random), vz[i] = speed(random);
         }
     }
-    void prepare() override {
-        x = sx, y = sy, z = sz, vx = svx, vy = svy, vz = svz;
-        std::fill(fx.begin(), fx.end(), 0.0f), std::fill(fy.begin(), fy.end(), 0.0f), std::fill(fz.begin(), fz.end(), 0.0f);
-    }
-    Boundaries::ParticleColumns columns() { return {x, y, z, vx, vy, vz, fx, fy, fz}; }
-
-    std::vector<float> x, y, z, vx, vy, vz, fx, fy, fz;
-    std::vector<float> sx, sy, sz, svx, svy, svz;
+    void prepare() override { reset(); }
 };
 
 }
@@ -113,14 +158,14 @@ BENCH_GROUP(Walls) { bench.config.sizes = Sizes; }
 
 BENCH_GROUPED(Walls, Constrain, TubeParticles, "hard tube walls: project and reflect the ~10% in walls") {
     const Geometry geometry{tube()};
-    const Walls walls{geometry};
-    bench.measure<TubeParticles>([&](TubeParticles& particles) { walls.constrain(particles.columns()); });
+    const Walls walls{geometry, Layout};
+    bench.measure<TubeParticles>([&](TubeParticles& p) { walls.constrain(p.table, p.table.size()); });
 }
 
 BENCH_GROUPED(Walls, SoftForces, TubeParticles, "soft tube walls, layer 0.5 thick") {
     const Geometry geometry{tube()};
-    const Walls walls{geometry, {Laws::Soft::make(10, 0.5f, 6)}};
-    bench.measure<TubeParticles>([&](TubeParticles& particles) { walls.addForces(particles.columns()); });
+    const Walls walls{geometry, Layout, {Laws::Soft::make(10, 0.5f, 6)}};
+    bench.measure<TubeParticles>([&](TubeParticles& p) { walls.addForces(p.table, p.table.size()); });
 }
 
 int main(int argc, char** argv) {

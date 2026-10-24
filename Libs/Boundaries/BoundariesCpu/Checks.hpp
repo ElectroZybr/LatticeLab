@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Geometry.hpp"
-#include "Space.hpp"
+#include <Boundaries/Space.hpp>
 
-namespace Boundaries {
+namespace Boundaries::Cpu {
 
 /// Along a periodic axis the geometry must match itself across the seam: distances on
 /// the two opposite faces of the box are compared on a grid of `samples` × `samples`

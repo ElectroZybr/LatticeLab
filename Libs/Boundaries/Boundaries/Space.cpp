@@ -47,19 +47,6 @@ glm::vec3 Space::wrap(glm::vec3 position) const noexcept {
     return position;
 }
 
-void Space::wrap(std::span<float> x, std::span<float> y, std::span<float> z) const {
-    if (x.size() != y.size() || x.size() != z.size())
-        throw Error("columns differ in length: {}, {}, {}", x.size(), y.size(), z.size());
-    const std::span<float> columns[3] = {x, y, z};
-    for (int axis = 0; axis < 3; ++axis) {
-        if (!periodic_[axis])
-            continue;
-        const float origin = origin_[axis], size = size_[axis], inverse = inverse_[axis];
-        for (float& value : columns[axis])
-            value = wrapCoordinate(value, origin, size, inverse);
-    }
-}
-
 bool Space::contains(glm::vec3 position) const noexcept {
     const glm::vec3 local = position - origin_;
     return glm::all(glm::greaterThanEqual(local, glm::vec3(0.0f))) && glm::all(glm::lessThan(local, size_));

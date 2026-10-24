@@ -5,10 +5,10 @@
 
 #include <glm/glm.hpp>
 
-#include "Program.hpp"
-#include "Shape.hpp"
+#include <Boundaries/Program.hpp>
+#include <Boundaries/Shape.hpp>
 
-namespace Boundaries {
+namespace Boundaries::Cpu {
 
 /// Distance from a point to the nearest wall and what that wall is.
 struct Sample {

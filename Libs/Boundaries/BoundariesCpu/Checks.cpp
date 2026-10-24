@@ -4,7 +4,7 @@
 
 #include <Lattice/Tools/Exception.hpp>
 
-namespace Boundaries {
+namespace Boundaries::Cpu {
 
 namespace {
 struct PeriodicSeam;

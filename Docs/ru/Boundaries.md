@@ -9,9 +9,9 @@
 | Где | Что | Зависит от |
 |---|---|---|
 | `Libs/Boundaries/Boundaries` — цель `Boundaries` | модель: `Space`, `Shape`/`Program`, материалы, законы (параметры и смысл), `ParticleLayout`, проверки конфигурации | `glm`; без runtime Lattice, без бэкендов, без предметной области |
-| `Libs/Boundaries/cpu` — `Boundaries.cpu` | стековая машина, `Walls`, аниматор на CPU по `StdData::SoA` | `Boundaries`, `StdData` |
-| `Libs/Boundaries/wgpu` — `Boundaries.wgpu` | WGSL-стековая машина и законы, compute-проход по `GpuSoA` | `Boundaries`, `Libs/Wgpu` |
-| `Libs/Boundaries/cuda` — `Boundaries.cuda` | позже | `Boundaries`, `Libs/Cuda` |
+| `Libs/Boundaries/BoundariesCpu` — `Boundaries.cpu` | стековая машина `Geometry`, `Walls`, `wrapPositions`, проверки, аниматор на CPU по `StdData::SoA` | `Boundaries`, `StdData` |
+| `Libs/Boundaries/BoundariesWgpu` — `Boundaries.wgpu` | WGSL-стековая машина и законы, compute-проход по `GpuSoA` | `Boundaries`, `Libs/Wgpu` |
+| `Libs/Boundaries/BoundariesCuda` — `Boundaries.cuda` | позже | `Boundaries`, `Libs/Cuda` |
 | `Packages/ClassicMD` (`compose.cpp`) | узлы `Space`/`Geometry`/`Walls`/аниматора в ветке симуляции, параметры под `executeOn(commands)`, выбор бэкенда | бэкенд-цель |
 | `Packages/Graphics` | объект сцены отрисовки геометрии (трассировка лучей по SDF) | `Boundaries.wgpu` (общая WGSL-машина) |
 

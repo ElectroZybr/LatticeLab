@@ -7,7 +7,7 @@
 
 #include <Lattice/Tools/Exception.hpp>
 
-namespace Boundaries {
+namespace Boundaries::Cpu {
 
 using Error = Lattice::Exception<Geometry>;
 

@@ -56,7 +56,7 @@
 - [ ] Анимация: аниматор «время → параметры», предыдущий буфер параметров, нормальная скорость поверхности разностью, касательная — из жёсткого движения; тест поршня (работа над газом) и вращающейся мешалки
 - [ ] Разметка ячеек сетки соседей (внутри / у поверхности / снаружи) с запасом на движение; `SpatialGrid` по `Space`
 - [ ] Встраивание в ClassicMD: стадии шага, узлы и параметры через `executeOn(commands)`
-- [ ] Раскладка модели и бэкендов: `Boundaries` (модель: Space, Shape/Program, материалы, законы, `ParticleLayout`) и `Boundaries.cpu` (`cpu/`); `Walls` на `StdData::SoA` + `ParticleLayout` (имена колонок, строки `[0, mobileCount)`) вместо `ParticleColumns`
+- [x] Раскладка модели и бэкендов: `Boundaries` (модель: Space, Shape/Program, материалы, законы, `ParticleLayout`) и `Boundaries.cpu` (`BoundariesCpu/`, namespace `Boundaries::Cpu`: Geometry, Walls, `wrapPositions`, проверки); `Walls` на `StdData::SoA` + `ParticleLayout` (имена колонок, строки `[0, rows)`); `SoA::span<T>(name)`
 - [ ] `Boundaries.wgpu` (`wgpu/`): стековая машина и законы в WGSL, compute-проход по `GpuSoA` + `ParticleLayout`; тест эквивалентности CPU и WGPU для каждой операции и закона; бенчи CPU против WGPU
 - [ ] Отрисовка геометрии в Graphics: трассировка лучей по WGSL-машине `Boundaries.wgpu`, `frag_depth`; сначала непрозрачная, затем полупрозрачная; копия программы командой очереди симуляции
 

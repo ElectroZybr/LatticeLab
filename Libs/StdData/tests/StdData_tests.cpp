@@ -19,6 +19,22 @@ template<class F> void rejects(F&& fn) {
     check(failed, "Expected a Lattice exception");
 }
 
+void soaColumnsByName() {
+    StdData::SoA soa;
+    soa.addCol<Mass>();
+    soa.addCol<Charge>();
+    soa.resize(3);
+    auto mass = soa.span<float>(Lattice::typeName<Mass>());
+    mass[2] = 9.0f;
+    check(soa.at<Mass>(2) == 9.0f && mass.size() == 3, "named span writes the column");
+    bool wrongType = false, missing = false;
+    try { (void)soa.span<int>(Lattice::typeName<Mass>()); } catch (const Lattice::ExceptionBase&) { wrongType = true; }
+    try { (void)soa.span<float>("nope"); } catch (const Lattice::ExceptionBase& e) {
+        missing = std::string(e.what()).find(Lattice::typeName<Charge>()) != std::string::npos;
+    }
+    check(wrongType && missing, "wrong type and missing name are reported, with the column list");
+}
+
 void soaImplementsTableContract() {
     StdData::SoA soa;
     soa.addCol<Mass>();
@@ -83,6 +99,7 @@ void csrGroupsValues() {
 
 int main() {
     soaImplementsTableContract();
+    soaColumnsByName();
     soaAddsTypedRowsAndKeepsDataOnGrowth();
     namedSoAFindsRowsByName();
     csrGroupsValues();

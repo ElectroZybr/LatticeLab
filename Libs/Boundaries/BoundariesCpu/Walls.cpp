@@ -6,7 +6,7 @@
 
 #include <Lattice/Tools/Exception.hpp>
 
-namespace Boundaries {
+namespace Boundaries::Cpu {
 
 using Error = Lattice::Exception<Walls>;
 
@@ -14,48 +14,12 @@ namespace {
 
 constexpr size_t Chunk = 256;
 
-void requireColumns(const ParticleColumns& p, bool velocities, bool forces) {
-    const size_t n = p.x.size();
-    bool same = p.y.size() == n && p.z.size() == n;
-    if (velocities) same &= p.vx.size() == n && p.vy.size() == n && p.vz.size() == n;
-    if (forces) same &= p.fx.size() == n && p.fy.size() == n && p.fz.size() == n;
-    if (!same)
-        throw Error("particle columns differ in length");
-}
-
-}
-
-Walls::Walls(const Geometry& geometry, std::vector<Material> materials)
-    : geometry_(geometry), materials_(std::move(materials)) {
-    if (materials_.empty())
-        throw Error("walls need at least the default material");
-    for (const auto& instruction : geometry_.program().code)
-        if (isPrimitive(instruction.op) && instruction.material >= materials_.size())
-            throw Error("geometry uses material {}, only {} defined", instruction.material, materials_.size());
-    for (size_t i = 0; i < materials_.size(); ++i) {
-        const auto& material = materials_[i];
-        switch (material.law) {
-            case Laws::Open::id:
-                break;
-            case Laws::Hard::id:
-                if (material.params[0] < 0.0f || material.params[0] > 1.0f)
-                    throw Error("material {}: restitution {} is outside [0, 1]", i, material.params[0]);
-                break;
-            case Laws::Soft::id:
-                if (material.params[0] <= 0.0f || material.params[1] <= 0.0f || material.params[2] < 1.0f)
-                    throw Error("material {}: soft wall needs stiffness > 0, range > 0, exponent >= 1", i);
-                forceRange_ = std::max(forceRange_, Laws::Soft::range(material));
-                break;
-            default:
-                throw Error("material {}: unknown law {}", i, material.law);
-        }
-    }
-}
-
 // Calls apply(index, contact, material) for every particle closer than `within` to a
 // surface (or inside a wall), with the contact's distance and normal filled in.
 template<class Apply>
-void Walls::forNear(const ParticleColumns& p, float within, Apply&& apply) const {
+void forNear(const Geometry& geometry_, const std::vector<Material>& materials_, std::span<float> px,
+             std::span<float> py, std::span<float> pz, float within, Apply&& apply) {
+    struct { std::span<float> x, y, z; } p{px, py, pz};
     std::array<float, Chunk> distance;
     std::array<uint32_t, Chunk> material;
     std::array<uint32_t, Chunk> selected;
@@ -93,11 +57,53 @@ void Walls::forNear(const ParticleColumns& p, float within, Apply&& apply) const
     }
 }
 
-void Walls::addForces(const ParticleColumns& p) const {
+
+}
+
+Walls::Walls(const Geometry& geometry, ParticleLayout layout, std::vector<Material> materials)
+    : geometry_(geometry), layout_(std::move(layout)), materials_(std::move(materials)) {
+    if (materials_.empty())
+        throw Error("walls need at least the default material");
+    for (const auto& instruction : geometry_.program().code)
+        if (isPrimitive(instruction.op) && instruction.material >= materials_.size())
+            throw Error("geometry uses material {}, only {} defined", instruction.material, materials_.size());
+    for (size_t i = 0; i < materials_.size(); ++i) {
+        const auto& material = materials_[i];
+        switch (material.law) {
+            case Laws::Open::id:
+                break;
+            case Laws::Hard::id:
+                if (material.params[0] < 0.0f || material.params[0] > 1.0f)
+                    throw Error("material {}: restitution {} is outside [0, 1]", i, material.params[0]);
+                break;
+            case Laws::Soft::id:
+                if (material.params[0] <= 0.0f || material.params[1] <= 0.0f || material.params[2] < 1.0f)
+                    throw Error("material {}: soft wall needs stiffness > 0, range > 0, exponent >= 1", i);
+                forceRange_ = std::max(forceRange_, Laws::Soft::range(material));
+                break;
+            default:
+                throw Error("material {}: unknown law {}", i, material.law);
+        }
+    }
+}
+
+Walls::Columns Walls::columns(StdData::SoA& particles, size_t rows, bool velocities, bool forces) const {
+    if (rows > particles.size())
+        throw Error("{} rows of a table with {}", rows, particles.size());
+    const auto column = [&](const std::string& name) { return particles.span<float>(name).first(rows); };
+    Columns c{column(layout_.x), column(layout_.y), column(layout_.z)};
+    if (velocities)
+        c.vx = column(layout_.vx), c.vy = column(layout_.vy), c.vz = column(layout_.vz);
+    if (forces)
+        c.fx = column(layout_.fx), c.fy = column(layout_.fy), c.fz = column(layout_.fz);
+    return c;
+}
+
+void Walls::addForces(StdData::SoA& particles, size_t rows) const {
     if (forceRange_ <= 0.0f)
         return;
-    requireColumns(p, false, true);
-    forNear(p, forceRange_, [&](size_t i, const Contact& contact, const Material& material) {
+    const Columns p = columns(particles, rows, false, true);
+    forNear(geometry_, materials_, p.x, p.y, p.z, forceRange_, [&](size_t i, const Contact& contact, const Material& material) {
         if (material.law != Laws::Soft::id)
             return;
         const glm::vec3 force = Laws::Soft::force(contact, material);
@@ -105,8 +111,8 @@ void Walls::addForces(const ParticleColumns& p) const {
     });
 }
 
-void Walls::constrain(const ParticleColumns& p) const {
-    requireColumns(p, true, false);
+void Walls::constrain(StdData::SoA& particles, size_t rows) const {
+    const Columns p = columns(particles, rows, true, false);
     std::array<float, Chunk> distance;
     std::array<uint32_t, Chunk> material;
     // Particles of the chunk in Hard walls: their index, position, distance, normal.
