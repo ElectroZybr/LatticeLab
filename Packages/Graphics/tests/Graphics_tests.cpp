@@ -1,18 +1,22 @@
 // Camera math and controllers without GPU; scene resources only when an adapter exists.
+#include <algorithm>
 #include <array>
 #include <cstring>
 #include <map>
 #include <tuple>
 #include <cmath>
 #include <iostream>
+#include <span>
 #include <stdexcept>
 #include <Boundaries/Shape.hpp>
 #include <Graphics/Camera.hpp>
-#include <Graphics/GeometrySurface.hpp>
 #include <Graphics/GpuMesh.hpp>
 #include <Graphics/MeshObject.hpp>
 #include <Graphics/MeshShapes.hpp>
 #include <Graphics/RenderPass.hpp>
+#include <Graphics/SdfMesh.hpp>
+#include <Graphics/SurfaceNets.hpp>
+#include <BoundariesCpu/Geometry.hpp>
 #include <Graphics/RenderLayout.hpp>
 #include <Graphics/RenderPipeline.hpp>
 #include <Graphics/Spheres.hpp>
@@ -68,8 +72,9 @@ void orbitControllerKeepsDistance() {
     check(std::abs(glm::length(camera.transform().position) - 5.0f) < 1e-3f, "orbit keeps the distance to the pivot");
 }
 
-/// Closed and consistently oriented: welded by position, every edge is walked once in
-/// each direction; faces turn the way their vertex normals point; normals are unit.
+/// Closed and consistently oriented: welded by position, every edge is walked as often in
+/// each direction (surface nets may share an edge among four faces); faces turn the way
+/// their vertex normals point; normals are unit.
 void checkClosed(const MeshData& mesh, const char* name) {
     std::map<std::tuple<long, long, long>, uint32_t> welded;
     std::vector<uint32_t> id(mesh.vertices.size());
@@ -90,7 +95,7 @@ void checkClosed(const MeshData& mesh, const char* name) {
             ++edges[{id[mesh.indices[t + k]], id[mesh.indices[t + (k + 1) % 3]]}];
     }
     for (const auto& [edge, count] : edges)
-        check(count == 1 && edges.contains({edge.second, edge.first}), name);
+        check(edges.contains({edge.second, edge.first}) && edges.at({edge.second, edge.first}) == count, name);
 }
 
 void meshShapesAreClosed() {
@@ -99,6 +104,25 @@ void meshShapesAreClosed() {
     const MeshData torus = MeshShapes::torus(1.0f, 0.3f, 32, 12);
     checkClosed(torus, "torus is closed and outward");
     check(torus.triangles() == 2 * 32 * 12, "torus has 2 · segments · sides triangles");
+}
+
+void surfaceNetsOfSphereAndPlane() {
+    const SurfaceGrid grid{.origin = glm::vec3(-1.0f), .cellSize = glm::vec3(0.0625f), .cells = glm::uvec3(32)};
+    const auto sphere = [](glm::vec3 p) { return 0.7f - glm::length(p - glm::vec3(0.05f, -0.02f, 0.03f)); };
+    const MeshData mesh = surfaceNets(grid, sampleGrid(grid, sphere));
+    check(!mesh.indices.empty(), "the sphere has a surface");
+    checkClosed(mesh, "the sphere net is closed and faces the region");
+    float worst = 0.0f;
+    for (const MeshVertex& vertex : mesh.vertices) {
+        worst = std::max(worst, std::abs(sphere(vertex.position)));
+        check(glm::dot(vertex.normal, glm::vec3(0.05f, -0.02f, 0.03f) - vertex.position) > 0.0f, "normals point inward");
+    }
+    check(worst < 0.2f * 0.0625f, "sphere net vertices lie on the surface");
+
+    const MeshData plane = surfaceNets(grid, sampleGrid(grid, [](glm::vec3 p) { return p.y - 0.3f; }));
+    check(plane.triangles() == 2 * 31 * 31, "a plane through the grid: a quad per inner crossed edge");
+    for (const MeshVertex& vertex : plane.vertices)
+        check(std::abs(vertex.position.y - 0.3f) < 1e-5f && vertex.normal.y > 0.999f, "plane net is flat and faces +y");
 }
 
 /// A frame of 64×64 into a texture, read back as RGBA8.
@@ -158,6 +182,62 @@ void meshIsDrawnAndLit(Wgpu::Device& device) {
     check(Wgpu::errorCount() == errors, "mesh pipelines in every mode match the layouts");
 }
 
+MeshData readMesh(Wgpu::Device& device, const SdfMesh& mesh) {
+    MeshData data;
+    data.vertices.resize(mesh.vertexCount());
+    data.indices.resize(mesh.indexCount());
+    device.readBuffer(*mesh.vertices(), 0, std::as_writable_bytes(std::span(data.vertices)));
+    device.readBuffer(*mesh.indices(), 0, std::as_writable_bytes(std::span(data.indices)));
+    return data;
+}
+
+/// The GPU net in bricks against the CPU net of the same grid. Sizes stay off the grid
+/// planes: a surface through corners leaves their sign to rounding, which differs.
+void sdfMeshMatchesTheCpu(Wgpu::Device& device) {
+    using Boundaries::Shape;
+    const auto errors = Wgpu::errorCount();
+    {
+        const Shape shape = Shape::cylinder(0.53f, 0.57f).rounded(0.17f) - Shape::sphere(0.31f);
+        const Boundaries::Space space{glm::vec3(-1.0f), glm::vec3(2.0f)};
+        Boundaries::Wgpu::GpuGeometry geometry{device, shape.compile()};
+        SdfMesh mesh{device, geometry, space, 48};
+        const Boundaries::Cpu::Geometry cpu{shape};
+        const SurfaceGrid grid = mesh.grid();
+        check(grid.cells == glm::uvec3(48), "the grid covers the space in whole bricks");
+        const MeshData expected = surfaceNets(grid, sampleGrid(grid, [&](glm::vec3 p) { return cpu.distance(p); }));
+        const MeshData actual = readMesh(device, mesh);
+        checkClosed(actual, "the GPU net is closed and faces the region");
+
+        const auto cellOf = [&](glm::vec3 p) {
+            const glm::uvec3 c = glm::uvec3((p - grid.origin) / grid.cellSize);
+            return (size_t(c.z) * grid.cells.y + c.y) * grid.cells.x + c.x;
+        };
+        std::map<size_t, glm::vec3> cpuVertices;
+        for (const MeshVertex& vertex : expected.vertices)
+            cpuVertices[cellOf(vertex.position)] = vertex.position;
+        size_t matched = 0;
+        for (const MeshVertex& vertex : actual.vertices) {
+            const auto found = cpuVertices.find(cellOf(vertex.position));
+            if (found != cpuVertices.end() && glm::length(found->second - vertex.position) < 1e-3f * grid.cellSize.x)
+                ++matched;
+        }
+        check(matched * 1000 >= expected.vertices.size() * 998 && actual.vertices.size() * 1000 <= expected.vertices.size() * 1002,
+              "GPU vertices are the CPU ones");
+        check(actual.indices.size() * 1000 >= expected.indices.size() * 995 &&
+              actual.indices.size() * 1000 <= expected.indices.size() * 1005, "GPU faces are the CPU ones");
+        check(mesh.activeBricks() < 6 * 6 * 6, "empty bricks are skipped");
+
+        check(!mesh.update(), "nothing changed, nothing rebuilt");
+        geometry.upload((Shape::cylinder(0.37f, 0.57f).rounded(0.17f) - Shape::sphere(0.21f)).compile());
+        const uint32_t before = mesh.indexCount();
+        check(mesh.update() && mesh.indexCount() < before, "new parameters rebuild the net");
+        mesh.resolution = 96;
+        check(mesh.update() && mesh.indexCount() > 2 * before, "a finer grid rebuilds the net");
+    }
+    check(device.resources().size() == 0, "the SDF mesh releases its resources");
+    check(Wgpu::errorCount() == errors, "surface nets passes are valid");
+}
+
 constexpr unsigned char LayoutShader[] = {
 #include "layouts.wgsl.h"
 };
@@ -213,19 +293,10 @@ bool sceneResourcesOnDevice() {
             check(spheres.count() == 0, "nothing drawn before a frame");
         }
         check(device.resources().size() == 0, "spheres release their resources");
-        {
-            // The surface shader = the geometry machine + the tracer: it compiles and
-            // its pipeline matches the camera layout.
-            RenderLayout layout{device, Wgpu::TextureFormat::BGRA8Unorm};
-            Boundaries::Space space{glm::vec3(-1.0f), glm::vec3(2.0f)};
-            Boundaries::Wgpu::GpuGeometry geometry{device,
-                (Boundaries::Shape::sphere(0.9f) - Boundaries::Shape::box(glm::vec3(0.3f))).compile()};
-            GeometrySurface surface{layout, geometry, space};
-        }
-        check(device.resources().size() == 0, "geometry surface releases its resources");
         check(Wgpu::errorCount() == errors, "object pipeline matches the shared camera layout");
         pipelinesShareTheCameraLayout(device);
         meshIsDrawnAndLit(device);
+        sdfMeshMatchesTheCpu(device);
         return true;
     } catch (const Lattice::ExceptionBase& error) {
         std::cout << "Graphics: GPU checks skipped (" << error.what() << ")\n";
@@ -240,6 +311,7 @@ int main() {
     viewportHitTestAndLocalCursor();
     orbitControllerKeepsDistance();
     meshShapesAreClosed();
+    surfaceNetsOfSphereAndPlane();
     const bool gpu = sceneResourcesOnDevice();
-    std::cout << "Graphics: camera, controllers, mesh shapes" << (gpu ? " and scene/spheres/geometry/mesh resources" : "") << " passed\n";
+    std::cout << "Graphics: camera, controllers, mesh shapes, surface nets" << (gpu ? " and scene/spheres/mesh/SDF mesh resources" : "") << " passed\n";
 }

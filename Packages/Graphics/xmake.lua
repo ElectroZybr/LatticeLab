@@ -28,7 +28,7 @@ target("Graphics.tests")
     set_targetdir("$(builddir)/tests")
     add_rules("utils.bin2c", {extensions = {".wgsl"}})
     add_files("tests/*.cpp", "tests/shaders/*.wgsl")
-    add_deps("Graphics.core")
+    add_deps("Graphics.core", "Boundaries.cpu")
     add_defines("GRAPHICS_SHADERS=\"" .. path.join(os.scriptdir(), "shaders"):gsub("\\", "/") .. "\"")
 
 -- Frame costs of scene objects on the GPU (BmRunner, no runtime): xmake run Graphics.bench [name]

@@ -1,5 +1,6 @@
 #include "GpuMesh.hpp"
 
+#include <algorithm>
 #include <span>
 
 #include <Lattice/Tools/Exception.hpp>
@@ -11,7 +12,8 @@ bool fit(Wgpu::Device& device, std::unique_ptr<Wgpu::Buffer>& buffer, uint64_t b
     if (buffer && buffer->size() >= bytes)
         return false;
     buffer = std::make_unique<Wgpu::Buffer>(device, Wgpu::BufferDesc{.size = bytes,
-        .usage = Wgpu::BufferUsage::Storage | Wgpu::BufferUsage::CopyDestination, .label = label});
+        .usage = Wgpu::BufferUsage::Storage | Wgpu::BufferUsage::CopyDestination | Wgpu::BufferUsage::CopySource,
+        .label = label});
     return true;
 }
 
@@ -35,10 +37,14 @@ void GpuMesh::upload(const MeshData& data) {
     indexCount_ = uint32_t(data.indices.size());
     if (data.indices.empty())
         return;
-    bool recreated = fit(device_, vertices_, data.vertices.size() * sizeof(MeshVertex), label_ + "/vertices");
-    recreated |= fit(device_, indices_, data.indices.size() * sizeof(uint32_t), label_ + "/indices");
-    if (recreated)
-        ++generation_;
+    reserve(data.vertices.size() * sizeof(MeshVertex), data.indices.size() * sizeof(uint32_t));
     device_.writeBuffer(*vertices_, 0, std::as_bytes(std::span(data.vertices)));
     device_.writeBuffer(*indices_, 0, std::as_bytes(std::span(data.indices)));
+}
+
+void GpuMesh::reserve(uint64_t vertexBytes, uint64_t indexBytes) {
+    bool recreated = fit(device_, vertices_, std::max<uint64_t>(vertexBytes, 4), label_ + "/vertices");
+    recreated |= fit(device_, indices_, std::max<uint64_t>(indexBytes, 4), label_ + "/indices");
+    if (recreated)
+        ++generation_;
 }

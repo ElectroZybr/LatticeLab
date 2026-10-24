@@ -1,11 +1,7 @@
-// Frame costs of scene objects on the GPU: run `xmake run Graphics.bench [name or group]`.
-// Mesh: a lit torus of N triangles at 1920×1080 — solid, with the wireframe, transparent.
-// N is the number of pixels of the frame (16:9); a frame is recorded, submitted and waited
-// for, its GPU time comes from timestamps of the render pass (BmRunner Trace).
-// GeometrySurface: the demo container from different camera positions — the cost of
-// sphere tracing grows with the covered pixels and with steps near surfaces. Each view is
-// a work with two implementations of the distance: the interpreting machine and code
-// generated for the program; generated frames are checked against interpreted ones.
+// Frame costs of scene objects on the GPU: `xmake run Graphics.bench [name or group]`.
+// A frame is recorded, submitted and waited for; its GPU time comes from timestamps of the
+// render pass. Mesh: a lit torus of N triangles. SdfMesh: surface nets of the demo
+// container with N cells along the box, its build and a frame near its wall.
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -17,14 +13,13 @@
 #include <BmRunner/Main.hpp>
 #include <Boundaries/Shape.hpp>
 #include <Boundaries/Space.hpp>
-#include <BoundariesWgpu/Codegen.hpp>
 #include <BoundariesWgpu/GpuGeometry.hpp>
 #include <Graphics/Camera.hpp>
-#include <Graphics/GeometrySurface.hpp>
 #include <Graphics/GpuMesh.hpp>
 #include <Graphics/Light.hpp>
 #include <Graphics/MeshObject.hpp>
 #include <Graphics/MeshShapes.hpp>
+#include <Graphics/SdfMesh.hpp>
 #include <Graphics/RenderLayout.hpp>
 #include <Graphics/RenderPass.hpp>
 #include <Graphics/Viewport.hpp>
@@ -33,7 +28,6 @@
 #include <Wgpu/Timer.hpp>
 
 using Lattice::Benchmarks::Phase;
-using Lattice::Benchmarks::Run;
 using Lattice::Benchmarks::Trace;
 
 namespace {
@@ -45,14 +39,6 @@ Wgpu::Device& device() {
     return device;
 }
 
-/// 480×270, 960×540, 1920×1080, 3840×2160.
-const std::vector<size_t> Pixels = {129'600, 518'400, 2'073'600, 8'294'400};
-
-glm::uvec2 resolution(size_t pixels) {
-    const auto width = uint32_t(std::lround(std::sqrt(double(pixels) * 16.0 / 9.0)));
-    return {width, uint32_t(pixels / width)};
-}
-
 /// The container drawn by the Graphics demo: a rounded cylinder minus a sphere joined
 /// with a bar, in the box [-2, 2]³.
 Boundaries::Program container() {
@@ -61,38 +47,6 @@ Boundaries::Program container() {
     const auto obstacle = Shape::smoothUnion(Shape::sphere(0.5f),
         Shape::capsule({-1.2f, 0.0f, 0.0f}, {1.2f, 0.0f, 0.0f}, 0.15f), 0.25f);
     return (vessel - obstacle).compile();
-}
-
-/// RGBA8 pixels of a frame, row after row.
-struct Image {
-    glm::uvec2 size;
-    std::vector<uint8_t> rgba;
-};
-
-/// A frame of N pixels seen from `eye`: the input of a view work; as an output, also the
-/// frame drawn.
-struct View {
-    size_t pixels;
-    glm::vec3 eye;
-    Image image;
-};
-
-/// Frames differ by at most 8 levels per channel except on 0.5% of the pixels: the
-/// distances of the two implementations round differently, which moves silhouettes by a
-/// pixel here and there.
-bool near(const View& expectedView, const View& actualView) {
-    const Image& expected = expectedView.image;
-    const Image& actual = actualView.image;
-    if (expected.size != actual.size || expected.rgba.size() != actual.rgba.size())
-        return false;
-    size_t differing = 0;
-    for (size_t i = 0; i < expected.rgba.size(); i += 4)
-        for (size_t c = 0; c < 4; ++c)
-            if (std::abs(int(expected.rgba[i + c]) - int(actual.rgba[i + c])) > 8) {
-                ++differing;
-                break;
-            }
-    return differing * 200 <= expected.rgba.size() / 4;
 }
 
 /// A frame target (color, depth) with one viewport, its camera and lights; a frame is
@@ -128,23 +82,6 @@ struct Target {
         trace.deferIntervals(timer);
     }
 
-    /// The last frame, read back (rows of the copy are padded to 256 bytes).
-    Image image() {
-        const uint32_t row = size.x * 4;
-        const uint32_t padded = (row + Wgpu::CommandList::RowAlignment - 1) / Wgpu::CommandList::RowAlignment *
-            Wgpu::CommandList::RowAlignment;
-        Wgpu::Buffer staging{device(), {.size = uint64_t(padded) * size.y,
-            .usage = Wgpu::BufferUsage::CopySource | Wgpu::BufferUsage::CopyDestination, .label = "bench/image"}};
-        Wgpu::CommandList commands{device()};
-        commands.copyTexture(color, staging, padded);
-        commands.submit();
-        const auto bytes = device().readBuffer(staging, 0, staging.size());
-        Image result{size, std::vector<uint8_t>(size_t(row) * size.y)};
-        for (uint32_t y = 0; y < size.y; ++y)
-            std::memcpy(result.rgba.data() + size_t(y) * row, bytes.data() + size_t(y) * padded, row);
-        return result;
-    }
-
     glm::uvec2 size;
     RenderLayout layout;
     Wgpu::Texture color, depth;
@@ -155,60 +92,7 @@ struct Target {
     Wgpu::Timer timer;
 };
 
-/// A frame target of N pixels drawing the container; one per point N.
-struct Frame : Lattice::Fixture {
-    using Input = View;
-    static constexpr bool Reuse = true;
-    Frame(const View& view, Boundaries::Wgpu::DistanceSource distance)
-        : pixels(view.pixels),
-          target(resolution(view.pixels)),
-          space(glm::vec3(-2.0f), glm::vec3(4.0f)),
-          geometry(device(), container()),
-          surface(target.layout, geometry, space, distance) {
-        target.camera.setPosition(view.eye);
-        target.viewport.setObjects({&surface});
-    }
-
-    size_t pixels;
-    Target target;
-    Boundaries::Space space;
-    Boundaries::Wgpu::GpuGeometry geometry;
-    GeometrySurface surface;
-};
-
-struct InterpretedFrame : Frame {
-    explicit InterpretedFrame(const View& view) : Frame(view, Boundaries::Wgpu::interpretedDistance) {}
-};
-
-struct GeneratedFrame : Frame {
-    explicit GeneratedFrame(const View& view) : Frame(view, Boundaries::Wgpu::generateDistance) {}
-};
-
-/// An implementation of a view work: draw frames, output the last one.
-template<class Implementation>
-void frames(Implementation& impl) {
-    impl.output([](Frame& frame) {
-        return View{frame.pixels, frame.target.camera.transform().position, frame.target.image()};
-    });
-    impl.measure([](Frame& frame, Run& run) { frame.target.draw(run.trace()); });
 }
-
-}
-
-BENCH_GROUP(GeometrySurface) { bench.config.sizes = Pixels; }
-
-#define VIEW_WORK(Name, eye, description)                                                       \
-    BENCH_WORK(GeometrySurface, Name, View, description) {                                    \
-        work.input([](size_t pixels) { return View{pixels, eye, {}}; });                          \
-        work.check(near);                                                                     \
-        work.reference("interpreter");                                                        \
-    }                                                                                         \
-    BENCH_IMPLEMENTATION(GeometrySurface, Name, "interpreter", InterpretedFrame) { frames(impl); } \
-    BENCH_IMPLEMENTATION(GeometrySurface, Name, "codegen", GeneratedFrame) { frames(impl); }
-
-VIEW_WORK(Far, glm::vec3(0.0f, 0.0f, 5.0f), "the whole container in view, outside the box")
-VIEW_WORK(NearWall, glm::vec3(0.0f, 0.0f, 1.9f), "inside the box, in the wall next to the cut-away side")
-VIEW_WORK(Inside, glm::vec3(0.0f, 0.0f, 0.9f), "in the region, 0.4 in front of the obstacle")
 
 namespace {
 
@@ -253,6 +137,44 @@ BENCH_GROUPED(Mesh, Transparent, MeshFrame, "the same torus at half opacity, bot
         frame.object.opacity = 0.5f;
         frame.object.cullBack = false;
         frame.target.draw(trace);
+    });
+}
+
+namespace {
+
+struct ContainerMesh : Lattice::Fixture {
+    static constexpr bool Reuse = true;
+    explicit ContainerMesh(size_t resolution)
+        : target({1920, 1080}),
+          space(glm::vec3(-2.0f), glm::vec3(4.0f)),
+          geometry(device(), container()),
+          mesh(device(), geometry, space, uint32_t(resolution)),
+          object(target.layout, mesh) {
+        target.viewport.setObjects({&object});
+    }
+
+    Target target;
+    Boundaries::Space space;
+    Boundaries::Wgpu::GpuGeometry geometry;
+    SdfMesh mesh;
+    MeshObject object;
+};
+
+}
+
+BENCH_GROUP(SdfMesh) { bench.config.sizes = {64, 128, 256, 512}; }
+
+BENCH_GROUPED(SdfMesh, Build, ContainerMesh, "surface nets of the container, N cells along the box") {
+    bench.measure<ContainerMesh>([](ContainerMesh& fixture, Trace& trace) {
+        auto complete = trace.span(Phase::Complete);
+        fixture.mesh.build();
+    });
+}
+
+BENCH_GROUPED(SdfMesh, FrameNearWall, ContainerMesh, "the container mesh at 1920×1080, the camera next to the wall") {
+    bench.measure<ContainerMesh>([](ContainerMesh& fixture, Trace& trace) {
+        fixture.target.camera.setPosition({0.0f, 0.0f, 1.9f});
+        fixture.target.draw(trace);
     });
 }
 

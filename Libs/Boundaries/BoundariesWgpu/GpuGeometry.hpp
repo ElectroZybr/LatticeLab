@@ -36,11 +36,14 @@ public:
         }
         device_.writeBuffer(*code_, 0, std::as_bytes(std::span(program.code)));
         program_ = std::move(program);
+        ++version_;
     }
 
     const Program& program() const noexcept { return program_; }
     ::Wgpu::Buffer& code() const noexcept { return *code_; }
     uint64_t generation() const noexcept { return generation_; }
+    /// Grows with every upload: the program's contents changed.
+    uint64_t version() const noexcept { return version_; }
     ::Wgpu::Device& device() const noexcept { return device_; }
 
 private:
@@ -48,6 +51,7 @@ private:
     Program program_;
     std::unique_ptr<::Wgpu::Buffer> code_;
     uint64_t generation_ = 0;
+    uint64_t version_ = 0;
 };
 
 }

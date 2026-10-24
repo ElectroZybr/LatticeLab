@@ -29,6 +29,11 @@ public:
     uint64_t generation() const noexcept { return generation_; }
     Wgpu::Device& device() const noexcept { return device_; }
 
+protected:
+    /// For meshes written on the device: buffers of at least these sizes.
+    void reserve(uint64_t vertexBytes, uint64_t indexBytes);
+    void setIndexCount(uint32_t count) noexcept { indexCount_ = count; }
+
 private:
     Wgpu::Device& device_;
     std::string label_;

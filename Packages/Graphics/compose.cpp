@@ -9,11 +9,11 @@
 #include <Boundaries/Space.hpp>
 #include <BoundariesWgpu/GpuGeometry.hpp>
 #include <Graphics/Camera.hpp>
-#include <Graphics/GeometrySurface.hpp>
 #include <Graphics/GpuMesh.hpp>
 #include <Graphics/Light.hpp>
 #include <Graphics/MeshObject.hpp>
 #include <Graphics/MeshShapes.hpp>
+#include <Graphics/SdfMesh.hpp>
 #include <Graphics/Render.hpp>
 #include <Graphics/Spheres.hpp>
 #include <Graphics/TransformMode.hpp>
@@ -115,6 +115,9 @@ extern "C" void compose(NodeBuild root) {
     // Geometry on the device and the box it is drawn in (hardcoded for now).
     auto space = root.emplace<Boundaries::Space>("space", glm::vec3(-2.0f), glm::vec3(4.0f));
     auto geometry = root.emplace<Boundaries::Wgpu::GpuGeometry>("geometry", device.ref(), demoGeometry());
+    auto walls = root.emplace<SdfMesh>("walls", device.ref(), geometry, space, 128u);
+    walls.param("resolution", &SdfMesh::resolution);
+    walls.onMaintain([](SdfMesh& mesh) { mesh.update(); });
 
     // Demo mesh: shared data, drawn by the viewports' mesh objects.
     auto torus = root.emplace<GpuMesh>("torus", device.ref(), MeshShapes::torus(0.8f, 0.25f, 96, 32),
@@ -136,7 +139,9 @@ extern "C" void compose(NodeBuild root) {
                 .z = std::string(Lattice::typeName<Pos::Z>()),
             },
             std::filesystem::path("Packages/Graphics/shaders/spheres3d.wgsl"));
-        viewport.emplace<GeometrySurface, SceneObject>("geometry", render->layout(), geometry, space);
+        auto wallsView = viewport.emplace<MeshObject, SceneObject>("walls", render->layout(), walls);
+        wallsView->color = {0.55f, 0.65f, 0.75f};
+        exportMesh(wallsView);
         auto mesh = viewport.emplace<MeshObject, SceneObject>("torus", render->layout(), torus);
         mesh->setPosition({3.2f, 0.0f, 0.0f});
         mesh->wireframe = true;
