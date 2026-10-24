@@ -29,6 +29,8 @@ public:
     /// Timestamp writes of a compute pass measured as `name` (ComputePass takes the
     /// timer); nullptr when unavailable or full — the pass then runs untimed.
     const WGPUComputePassTimestampWrites* pass(std::string_view name);
+    /// The same for a render pass (the renderer passes them to its pass).
+    const WGPURenderPassTimestampWrites* renderPass(std::string_view name);
 
     /// An interval between commands of an encoder (copies); needs EncoderTimestamps.
     /// begin() returns an interval id, or NoInterval when it cannot be measured.
@@ -55,6 +57,7 @@ private:
     std::vector<uint32_t> owners_;          // name of each used interval
     std::vector<Interval> intervals_;       // by name, in order of first use
     std::vector<WGPUComputePassTimestampWrites> writes_;
+    std::vector<WGPURenderPassTimestampWrites> renderWrites_;
 };
 
 }

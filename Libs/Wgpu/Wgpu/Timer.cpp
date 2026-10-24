@@ -28,6 +28,7 @@ Timer::Timer(Device& device, uint32_t capacity, std::string label)
     owners_.reserve(capacity);
     // Stable addresses: a pass keeps the pointer until it begins.
     writes_.reserve(capacity);
+    renderWrites_.reserve(capacity);
 }
 
 Timer::~Timer() {
@@ -61,6 +62,15 @@ const WGPUComputePassTimestampWrites* Timer::pass(std::string_view name) {
     writes_.push_back({.querySet = querySet_, .beginningOfPassWriteIndex = interval * 2,
                        .endOfPassWriteIndex = interval * 2 + 1});
     return &writes_.back();
+}
+
+const WGPURenderPassTimestampWrites* Timer::renderPass(std::string_view name) {
+    const uint32_t interval = take(name);
+    if (interval == NoInterval)
+        return nullptr;
+    renderWrites_.push_back({.querySet = querySet_, .beginningOfPassWriteIndex = interval * 2,
+                             .endOfPassWriteIndex = interval * 2 + 1});
+    return &renderWrites_.back();
 }
 
 uint32_t Timer::begin(CommandList& commands, std::string_view name) {
@@ -106,6 +116,7 @@ std::vector<Timer::Interval> Timer::read() {
         interval = {.name = std::move(interval.name)};
     owners_.clear();
     writes_.clear();
+    renderWrites_.clear();
     return result;
 }
 

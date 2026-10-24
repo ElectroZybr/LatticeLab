@@ -5,7 +5,11 @@
 #include <glm/vec3.hpp>
 #include <Lattice/Composition.hpp>
 #include <Actions/InputTargetAPI.hpp>
+#include <Boundaries/Shape.hpp>
+#include <Boundaries/Space.hpp>
+#include <BoundariesWgpu/GpuGeometry.hpp>
 #include <Graphics/Camera.hpp>
+#include <Graphics/GeometrySurface.hpp>
 #include <Graphics/Render.hpp>
 #include <Graphics/Spheres.hpp>
 #include <Graphics/TransformMode.hpp>
@@ -50,6 +54,16 @@ auto composeOrbitCamera(NodeBuild& slot) {
         slot.require<Camera>("camera"), slot.owner<Viewport>()));
 }
 
+// Demo geometry until the simulation publishes its own: a rounded cylindrical container
+// with an obstacle (a sphere smoothly joined with a bar) in the middle.
+Boundaries::Program demoGeometry() {
+    using Boundaries::Shape;
+    const auto container = Shape::cylinder(1.4f, 1.4f).rounded(0.3f);
+    const auto obstacle = Shape::smoothUnion(Shape::sphere(0.5f),
+        Shape::capsule({-1.2f, 0.0f, 0.0f}, {1.2f, 0.0f, 0.0f}, 0.15f), 0.25f);
+    return (container - obstacle).compile();
+}
+
 }
 
 // Render branch of one window. The window and its input belong to the shell; here:
@@ -70,6 +84,10 @@ extern "C" void compose(NodeBuild root) {
     particles.onRetire([](Wgpu::GpuSoA& self) { self.detach(); });
     particles.readyToDestroy([](const Wgpu::GpuSoA& self) { return self.idle(); });
 
+    // Geometry on the device and the box it is drawn in (hardcoded for now).
+    auto space = root.emplace<Boundaries::Space>("space", glm::vec3(-2.0f), glm::vec3(4.0f));
+    auto geometry = root.emplace<Boundaries::Wgpu::GpuGeometry>("geometry", device.ref(), demoGeometry());
+
     const auto addViewport = [&](std::string_view name, glm::vec3 eye) {
         auto viewport = root.branch(name);
         auto camera = viewport.emplace<Camera>("camera");
@@ -85,6 +103,7 @@ extern "C" void compose(NodeBuild root) {
                 .z = std::string(Lattice::typeName<Pos::Z>()),
             },
             std::filesystem::path("Packages/Graphics/shaders/spheres3d.wgsl"));
+        viewport.emplace<GeometrySurface, SceneObject>("geometry", render->layout(), geometry, space);
     };
     addViewport("main", {0.0f, 0.0f, 5.0f});
 

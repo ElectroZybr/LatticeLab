@@ -8,10 +8,13 @@ target("Graphics.core")
     if not is_plat("windows", "mingw") then
         add_cxflags("-fPIC")
     end
-    add_files("Graphics/*.cpp")
+    -- WGSL sources are embedded into the library (utils.bin2c → <file>.wgsl.h).
+    add_rules("utils.bin2c", {extensions = {".wgsl"}})
+    add_files("Graphics/*.cpp", "Graphics/*.wgsl")
     add_includedirs(".", {public = true})
     add_packages("glm", {public = true})
-    add_deps("Wgpu", "Shell.core", {public = true})
+    -- Boundaries.wgpu: the geometry machine, for drawing geometry programs.
+    add_deps("Wgpu", "Shell.core", "Boundaries.wgpu", {public = true})
 
 -- Composition: the render branch of one window (Shell nests it).
 target("Graphics")
@@ -27,3 +30,11 @@ target("Graphics.tests")
     add_files("tests/*.cpp", "tests/shaders/*.wgsl")
     add_deps("Graphics.core")
     add_defines("GRAPHICS_SHADERS=\"" .. path.join(os.scriptdir(), "shaders"):gsub("\\", "/") .. "\"")
+
+-- Frame costs of scene objects on the GPU (BmRunner, no runtime): xmake run Graphics.bench [name]
+target("Graphics.bench")
+    set_kind("binary")
+    set_targetdir("$(builddir)/bench")
+    add_files("bench/*.cpp")
+    add_deps("Graphics.core")
+    add_packages("lattice-bmrunner")

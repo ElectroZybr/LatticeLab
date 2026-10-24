@@ -3,7 +3,9 @@
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+#include <Boundaries/Shape.hpp>
 #include <Graphics/Camera.hpp>
+#include <Graphics/GeometrySurface.hpp>
 #include <Graphics/RenderLayout.hpp>
 #include <Graphics/RenderPipeline.hpp>
 #include <Graphics/Spheres.hpp>
@@ -114,6 +116,16 @@ bool sceneResourcesOnDevice() {
             check(spheres.count() == 0, "nothing drawn before a frame");
         }
         check(device.resources().size() == 0, "spheres release their resources");
+        {
+            // The surface shader = the geometry machine + the tracer: it compiles and
+            // its pipeline matches the camera layout.
+            RenderLayout layout{device, Wgpu::TextureFormat::BGRA8Unorm};
+            Boundaries::Space space{glm::vec3(-1.0f), glm::vec3(2.0f)};
+            Boundaries::Wgpu::GpuGeometry geometry{device,
+                (Boundaries::Shape::sphere(0.9f) - Boundaries::Shape::box(glm::vec3(0.3f))).compile()};
+            GeometrySurface surface{layout, geometry, space};
+        }
+        check(device.resources().size() == 0, "geometry surface releases its resources");
         check(Wgpu::errorCount() == errors, "object pipeline matches the shared camera layout");
         pipelinesShareTheCameraLayout(device);
         return true;
@@ -130,5 +142,5 @@ int main() {
     viewportHitTestAndLocalCursor();
     orbitControllerKeepsDistance();
     const bool gpu = sceneResourcesOnDevice();
-    std::cout << "Graphics: camera, controllers" << (gpu ? " and scene/spheres resources" : "") << " passed\n";
+    std::cout << "Graphics: camera, controllers" << (gpu ? " and scene/spheres/geometry resources" : "") << " passed\n";
 }

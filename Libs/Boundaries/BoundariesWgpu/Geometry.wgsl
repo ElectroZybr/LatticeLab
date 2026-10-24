@@ -164,6 +164,59 @@ fn sampleGeometry(p: vec3<f32>) -> GeometrySample {
     return GeometrySample(-result.w, owner[0], -unitOr(result.xyz, vec3<f32>(0.0)));
 }
 
-fn geometryDistance(p: vec3<f32>) -> f32 { return sampleGeometry(p).distance; }
+// Smooth union of two distances with blend radius k (scalar part of OP_SMOOTH_UNION).
+fn geometrySmoothUnion(a: f32, b: f32, k: f32) -> f32 {
+    let blend = max(k - abs(a - b), 0.0) / k;
+    return min(a, b) - blend * blend * k * 0.25;
+}
+
+// Distance in local coordinates of instruction i (codegen and the scalar machine).
+fn geometryLocal(instruction: Instruction, h: vec4<f32>) -> vec3<f32> {
+    return vec3<f32>(dot(instruction.local[0], h), dot(instruction.local[1], h), dot(instruction.local[2], h));
+}
+
+// Distance only: a scalar stack, no gradients and owners (primitives are the same
+// functions; the compiler drops their unused gradient). For marching and wall culling.
+fn geometryDistance(p: vec3<f32>) -> f32 {
+    var stack: array<f32, GEOMETRY_DEPTH>;
+    var top = 0u;
+    let count = arrayLength(&geometryCode);
+    let h = vec4<f32>(p, 1.0);
+    for (var i = 0u; i < count; i++) {
+        let instruction = geometryCode[i];
+        let op = instruction.op;
+        if (op <= OP_INFINITE_CYLINDER) {
+            let l = geometryLocal(instruction, h);
+            var d = 0.0;
+            switch op {
+                case OP_SPHERE: { d = length(l) - instruction.params[0].x; }
+                case OP_BOX: { d = sdBox(l, instruction.params).w; }
+                case OP_CAPSULE: { d = sdCapsule(l, instruction.params).w; }
+                case OP_CYLINDER: { d = sdCylinder(l, instruction.params).w; }
+                case OP_HALF_SPACE: { d = sdHalfSpace(l, instruction.params).w; }
+                default: { d = sdInfiniteCylinder(l, instruction.params).w; }
+            }
+            stack[top] = instruction.scale * d;
+            top += 1u;
+        } else if (op <= OP_SMOOTH_UNION) {
+            let a = stack[top - 2u];
+            let b = stack[top - 1u];
+            var value = 0.0;
+            switch op {
+                case OP_UNION: { value = min(a, b); }
+                case OP_INTERSECT: { value = max(a, b); }
+                case OP_SUBTRACT: { value = max(a, -b); }
+                default: { value = geometrySmoothUnion(a, b, instruction.params[0].x); }
+            }
+            stack[top - 2u] = value;
+            top -= 1u;
+        } else if (op == OP_ROUND) {
+            stack[top - 1u] = stack[top - 1u] - instruction.params[0].x;
+        } else {
+            stack[top - 1u] = abs(stack[top - 1u]) - instruction.params[0].x;
+        }
+    }
+    return -stack[0];
+}
 
 fn geometryNormal(p: vec3<f32>) -> vec3<f32> { return sampleGeometry(p).normal; }

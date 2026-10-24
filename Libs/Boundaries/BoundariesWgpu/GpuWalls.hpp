@@ -10,6 +10,8 @@
 #include <Wgpu/CommandList.hpp>
 #include <Wgpu/GpuSoA.hpp>
 #include <Wgpu/Timer.hpp>
+
+#include "Codegen.hpp"
 #include <Wgpu/Resources.hpp>
 
 #include "GpuGeometry.hpp"
@@ -60,7 +62,9 @@ private:
 /// the GPU side of Geometry::evaluate, for checks and tools.
 class GpuDistances final {
 public:
-    explicit GpuDistances(const GpuGeometry& geometry);
+    /// `source`: the interpreting machine or code generated for the program's structure
+    /// (rebuilt when the structure changes).
+    explicit GpuDistances(const GpuGeometry& geometry, DistanceSource source = interpretedDistance);
     ~GpuDistances();
 
     void evaluate(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& points, const ParticleLayout& layout, size_t rows,
@@ -68,7 +72,11 @@ public:
 
 private:
     struct State;
+    void build();
+
     const GpuGeometry& geometry_;
+    DistanceSource source_;
+    std::vector<Op> structure_;
     std::unique_ptr<State> state_;
 };
 

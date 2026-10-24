@@ -4,13 +4,24 @@
 
 using Error = Lattice::Exception<RenderPass>;
 
-RenderPass::RenderPass(Wgpu::CommandList& commands, Surface& surface, Color clear, Wgpu::Texture* depth)
+RenderPass::RenderPass(Wgpu::CommandList& commands, Surface& surface, Color clear, Wgpu::Texture* depth,
+                       const WGPURenderPassTimestampWrites* timestamps)
     : commands_(commands) {
     if (&surface.device() != &commands.device() || !surface.view())
         throw Error("expected an acquired surface of the command list's device");
+    begin(surface.view(), clear, depth, timestamps);
+}
 
+RenderPass::RenderPass(Wgpu::CommandList& commands, Wgpu::Texture& target, Color clear, Wgpu::Texture* depth,
+                       const WGPURenderPassTimestampWrites* timestamps)
+    : commands_(commands) {
+    begin(target.view(), clear, depth, timestamps);
+}
+
+void RenderPass::begin(WGPUTextureView target, Color clear, Wgpu::Texture* depth,
+                       const WGPURenderPassTimestampWrites* timestamps) {
     WGPURenderPassColorAttachment color{};
-    color.view = surface.view();
+    color.view = target;
     color.loadOp = WGPULoadOp_Clear;
     color.storeOp = WGPUStoreOp_Store;
     color.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
@@ -19,6 +30,7 @@ RenderPass::RenderPass(Wgpu::CommandList& commands, Surface& surface, Color clea
     WGPURenderPassDescriptor desc{};
     desc.colorAttachmentCount = 1;
     desc.colorAttachments = &color;
+    desc.timestampWrites = timestamps;
 
     WGPURenderPassDepthStencilAttachment depthAttachment{};
     if (depth) {
@@ -29,7 +41,7 @@ RenderPass::RenderPass(Wgpu::CommandList& commands, Surface& surface, Color clea
         desc.depthStencilAttachment = &depthAttachment;
     }
 
-    pass_ = wgpuCommandEncoderBeginRenderPass(commands.encoder(), &desc);
+    pass_ = wgpuCommandEncoderBeginRenderPass(commands_.encoder(), &desc);
     if (!pass_)
         throw Error("failed to begin render pass");
     commands_.passBegan();

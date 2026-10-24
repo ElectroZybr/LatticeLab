@@ -1,4 +1,5 @@
-// Distances of arbitrary points, after the geometry machine (Geometry.wgsl).
+// Distances of arbitrary points, after the geometry machine (Geometry.wgsl) and
+// `pointDistance` (interpreted or generated, Codegen.hpp).
 
 @group(0) @binding(0) var<storage, read> geometryCode: array<Instruction>;
 @group(0) @binding(1) var<storage, read> data: array<f32>;
@@ -13,5 +14,5 @@ fn gridIndex(id: vec3<u32>, groups: vec3<u32>) -> u32 { return id.x + id.y * gro
 fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
     let i = gridIndex(id, groups);
     if (i >= params.rows) { return; }
-    distances[i] = geometryDistance(vec3<f32>(data[params.x + i], data[params.y + i], data[params.z + i]));
+    distances[i] = pointDistance(vec3<f32>(data[params.x + i], data[params.y + i], data[params.z + i]));
 }

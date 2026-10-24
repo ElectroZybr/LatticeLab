@@ -9,6 +9,7 @@
 #include <Wgpu/ComputePass.hpp>
 #include <Wgpu/ShaderSource.hpp>
 
+#include "GeometrySource.hpp"
 #include "GpuGeometry.hpp"
 
 namespace Boundaries::Wgpu {
@@ -17,11 +18,7 @@ using Error = Lattice::Exception<GpuWalls>;
 
 namespace {
 
-// Shaders embedded at build time (utils.bin2c): the geometry machine, then a kernel.
-constexpr unsigned char Geometry[] = {
-#include "Geometry.wgsl.h"
-};
-
+// Kernels embedded at build time (utils.bin2c), run after the geometry machine.
 constexpr unsigned char Walls[] = {
 #include "Walls.wgsl.h"
 };
@@ -30,16 +27,7 @@ constexpr unsigned char Distances[] = {
 #include "Distances.wgsl.h"
 };
 
-// The shaders mirror the C++ code: a mismatch fails the build, not a simulation.
-constexpr bool sameOp(std::string_view name, Op op) { return ::Wgpu::shaderConstant(Geometry, name) == int64_t(op); }
-static_assert(::Wgpu::shaderConstant(Geometry, "GEOMETRY_DEPTH") == MaxDepth);
-static_assert(sameOp("OP_SPHERE", Op::Sphere) && sameOp("OP_BOX", Op::Box) && sameOp("OP_CAPSULE", Op::Capsule) &&
-              sameOp("OP_CYLINDER", Op::Cylinder) && sameOp("OP_HALF_SPACE", Op::HalfSpace) &&
-              sameOp("OP_INFINITE_CYLINDER", Op::InfiniteCylinder) && sameOp("OP_UNION", Op::Union) &&
-              sameOp("OP_INTERSECT", Op::Intersect) && sameOp("OP_SUBTRACT", Op::Subtract) &&
-              sameOp("OP_SMOOTH_UNION", Op::SmoothUnion) && sameOp("OP_ROUND", Op::Round) && sameOp("OP_SHELL", Op::Shell));
-// The machine relies on the order primitives < binary < unary.
-static_assert(Op::InfiniteCylinder < Op::Union && Op::SmoothUnion < Op::Round && Op::Round < Op::Shell);
+// The kernels mirror the C++ code: a mismatch fails the build, not a simulation.
 static_assert(::Wgpu::shaderConstant(Walls, "WORKGROUP") == GpuWalls::WorkgroupSize);
 static_assert(::Wgpu::shaderConstant(Walls, "LAW_HARD") == Laws::Hard::id);
 static_assert(::Wgpu::shaderConstant(Walls, "LAW_SOFT") == Laws::Soft::id);
@@ -65,7 +53,7 @@ uint32_t column(const ::Wgpu::GpuSoA::View& view, const std::string& name) {
 }
 
 std::string withGeometry(const unsigned char* kernel) {
-    return std::string(::Wgpu::shaderText(Geometry)) + reinterpret_cast<const char*>(kernel);
+    return std::string(geometrySource()) + reinterpret_cast<const char*>(kernel);
 }
 
 constexpr std::array<::Wgpu::LayoutEntry, 4> WallEntries{{
@@ -180,9 +168,10 @@ void GpuWalls::constrain(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particle
 }
 
 struct GpuDistances::State {
-    explicit State(::Wgpu::Device& device)
+    State(::Wgpu::Device& device, const std::string& distance)
         : layout(device, DistanceEntries, "distances"),
-          shader(device, {.source = withGeometry(Distances), .label = "distances"}),
+          shader(device, {.source = std::string(geometrySource()) + distance +
+              reinterpret_cast<const char*>(Distances), .label = "distances"}),
           pipeline(device, shader, {.layouts = {&layout}, .label = "distances"}),
           params(device, uniform(16, "distances/params")) {}
 
@@ -193,9 +182,16 @@ struct GpuDistances::State {
     std::unique_ptr<::Wgpu::BindingSet> set;   // kept until the next call
 };
 
-GpuDistances::GpuDistances(const GpuGeometry& geometry) : geometry_(geometry) {
+GpuDistances::GpuDistances(const GpuGeometry& geometry, DistanceSource source)
+    : geometry_(geometry), source_(source) {
+    build();
+}
+
+void GpuDistances::build() {
     const uint64_t before = ::Wgpu::errorCount();
-    state_ = std::make_unique<State>(geometry.device());
+    structure_ = structure(geometry_.program());
+    state_.reset();
+    state_ = std::make_unique<State>(geometry_.device(), source_(geometry_.program(), "pointDistance"));
     requireNoNewErrors(before, "distances");
 }
 
@@ -205,6 +201,8 @@ void GpuDistances::evaluate(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& point
                             size_t rows, ::Wgpu::Buffer& distances) {
     if (distances.size() < rows * sizeof(float))
         throw Lattice::Exception<GpuDistances>("output of {} bytes for {} distances", distances.size(), rows);
+    if (structure(geometry_.program()) != structure_)
+        build();
     auto& set = state_->set;
     points.read([&](const ::Wgpu::GpuSoA::View& view) {
         const std::array<uint32_t, 4> params{uint32_t(rows), column(view, layout.x), column(view, layout.y),

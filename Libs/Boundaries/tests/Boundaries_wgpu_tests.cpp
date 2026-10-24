@@ -11,6 +11,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <BoundariesCpu/Geometry.hpp>
 #include <BoundariesCpu/Walls.hpp>
+#include <BoundariesWgpu/Codegen.hpp>
 #include <BoundariesWgpu/GpuGeometry.hpp>
 #include <BoundariesWgpu/GpuWalls.hpp>
 #include <Lattice/Tools/Exception.hpp>
@@ -116,10 +117,12 @@ void distancesMatchTheCpu(::Wgpu::Device& device) {
     gpu.upload(points);
     ::Wgpu::Buffer out{device, {.size = n * sizeof(float), .usage = ::Wgpu::BufferUsage::Storage |
         ::Wgpu::BufferUsage::CopySource, .label = "distances"}};
+    // The interpreting machine and the code generated for each program's structure.
+    for (auto [source, how] : {std::pair{&Gpu::interpretedDistance, "interpreted"}, std::pair{&Gpu::generateDistance, "generated"}})
     for (auto& [name, shape] : shapes()) {
         const Cpu::Geometry cpu{shape};
         const Gpu::GpuGeometry geometry{device, shape.compile()};
-        Gpu::GpuDistances distances{geometry};
+        Gpu::GpuDistances distances{geometry, source};
         ::Wgpu::CommandList commands{device};
         distances.evaluate(commands, gpu, layout, n, out);
         commands.submit();
@@ -130,7 +133,7 @@ void distancesMatchTheCpu(::Wgpu::Device& device) {
         float worst = 0;
         for (size_t i = 0; i < n; ++i)
             worst = std::max(worst, std::abs(got[i] - expected[i]));
-        check(worst < 1e-5f, std::string("distances of ") + name + ": max difference " + std::to_string(worst));
+        check(worst < 1e-5f, std::string(how) + " distances of " + name + ": max difference " + std::to_string(worst));
     }
 }
 
@@ -234,5 +237,5 @@ void wgpuMatchesTheCpu() {
     deepProgramsAreRejected(*device);
     check(::Wgpu::errorCount() == errors, "no GPU validation errors");
     check(device->resources().size() == 0, "every GPU resource is released");
-    std::cout << "Boundaries.wgpu: distances of every primitive and operation, walls, 5M rows and depth limit match the CPU\n";
+    std::cout << "Boundaries.wgpu: distances of every primitive and operation (interpreted and generated), walls, 5M rows and depth limit match the CPU\n";
 }
