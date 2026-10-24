@@ -113,6 +113,20 @@ GPU — первый потребитель, тот же словарь подх
 - [ ] Wgpu: загрузка через `copyBuffer` с timestamps (сейчас `writeBuffer` меряет только staging), постоянный staging для readback (сейчас 1,6 мс на вызов), разобрать `Complete` ≈ 2 × `Execute@dev`
 - [ ] `GpuWalls`: больше 65535 групп на измерение (≈ 4,2 млн частиц при группе 64) — двумерный dispatch
 
+### История бенчмарков
+
+Проект и чеклист — `../Lattice/Docs/ru/BmHistory.md`: самостоятельный инструмент lattice-benchmarks (`lbm`)
+рядом с Lattice; результаты — git-репозиторий `lattice-bmrunner-results/` в папке запуска
+(папка на машину, TSV-файл на набор — строка на значение метрики с семплами, коммит на запуск с трейлерами окружения),
+baseline — теги; деградации — статистикой по семплам и поиском точки сдвига по истории.
+
+- [x] BmRunner: `RunResult` в TSV, `Benchmarks::main` (`--list`, `--filter`, `--tsv`), семплы в результатах
+- [x] BmHistory: репозиторий результатов, окружение, baseline, статистика, история
+- [x] `lbm`: `list`, `run`, `log`, `show`, `compare`, `history`, `regressions`, `tag`; `lbm.toml`
+- [ ] `lbm`: вывод `--tsv`/`--json`, Windows, тесты `lbm.toml`
+- [x] LatticeLab: наборы через `Benchmarks::main`, `.gitignore`; `lbm.toml` не нужен (наборы — цели `*.bench`, код ядра — локальный репозиторий пакетов)
+- [x] Установка `lbm`: `xmake install-lbm` в `../Lattice`; поиск наборов через xmake
+
 ## Позже
 
 - [ ] SDK для других языков (Rust)

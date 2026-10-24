@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <BmRunner/Benchmarks.hpp>
+#include <BmRunner/Main.hpp>
 #include <BmRunner/Evict.hpp>
 #include <Wgpu/CommandList.hpp>
 #include <Wgpu/ComputePass.hpp>
@@ -156,14 +157,8 @@ BENCH_GROUPED(Transfer, Readback, GpuValues, "readBuffer of the whole array") {
     });
 }
 
-// An argument names a bench or a group (a group also compares its executors).
+// [filter] [--filter <group|bench|mask>] [--tsv <file>] [--list]; a group run also
+// compares its executors.
 int main(int argc, char** argv) {
-    namespace Bm = Lattice::Benchmarks;
-    if (argc < 2)
-        return Bm::runAll(), 0;
-    const std::string_view name = argv[1];
-    for (const auto group : Bm::groups())
-        if (group == name)
-            return Bm::runGroup(name), 0;
-    Bm::run(name);
+    return Lattice::Benchmarks::main(argc, argv);
 }

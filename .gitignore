@@ -42,3 +42,6 @@ __pycache__/
 
 # user data
 User/
+
+# bm: results repository (a git repository of its own)
+lattice-bmrunner-results/
