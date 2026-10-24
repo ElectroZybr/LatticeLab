@@ -219,15 +219,32 @@ namespace {
     return device;
 }
 
-/// The tube particles resident on the GPU; prepare() uploads the initial state again.
+/// The tube particles resident on the GPU. The initial state is uploaded once into a
+/// second table on the device; prepare() resets the working table by a copy on the GPU —
+/// resident data never goes through the host between iterations.
 struct GpuTubeParticles : TubeParticles {
-    explicit GpuTubeParticles(size_t n) : TubeParticles(n), gpu(device(), "bench/particles") { prepare(); }
+    // One per point N: the walls' bind groups stay cached as in a simulation, instead of
+    // being created anew for the new buffers of every sample.
+    static constexpr bool Reuse = true;
+    explicit GpuTubeParticles(size_t n)
+        : TubeParticles(n), gpu(device(), "bench/particles"), initialGpu(device(), "bench/initial") {
+        gpu.upload(table);
+        initialGpu.upload(table);
+        // upload() only stages the data: the GPU copies it at the next submit.
+        device().flush();
+    }
     void prepare() override {
         TubeParticles::prepare();
-        gpu.upload(table);
+        ::Wgpu::CommandList commands{device()};
+        initialGpu.read([&](const ::Wgpu::GpuSoA::View& from) {
+            gpu.read([&](const ::Wgpu::GpuSoA::View& to) {
+                commands.copyBuffer(from.buffer, 0, to.buffer, 0, table.bytes().size());
+            });
+        });
+        commands.submit();
         device().wait();
     }
-    ::Wgpu::GpuSoA gpu;
+    ::Wgpu::GpuSoA gpu, initialGpu;
 };
 
 }
@@ -275,18 +292,22 @@ BENCH_GROUPED(Walls, ConstrainGpuOffload, GpuTubeParticles, "hard tube walls on 
     bench.measure<GpuTubeParticles>([&](GpuTubeParticles& p, Trace& trace) {
         const size_t bytes = p.table.bytes().size();
         {
+            // upload() only stages; flush() makes the copy to the device part of this phase.
             auto upload = trace.span(Phase::TransferIn);
             p.gpu.upload(p.table);
+            device().flush();
             upload.bytes(bytes);
         }
         stepOnGpu(trace, timer, [&](::Wgpu::CommandList& commands) {
             walls.constrain(commands, p.gpu, p.table.size(), &timer);
         });
         {
+            // Back into the particle table, as an offloading simulation would.
             auto readback = trace.span(Phase::TransferOut);
             p.gpu.read([&](const ::Wgpu::GpuSoA::View& view) {
-                readback.bytes(device().readBuffer(view.buffer, 0, bytes).size());
+                device().readBuffer(view.buffer, 0, std::span(const_cast<std::byte*>(p.table.bytes().data()), bytes));
             });
+            readback.bytes(bytes);
         }
     });
 }

@@ -89,9 +89,17 @@ WGPUDevice Instance::createDevice(WGPUAdapter& selectedAdapter) {
         if (wgpuAdapterHasFeature(adapter, feature))
             features.push_back(feature);
 
+    // The adapter's own limits instead of WebGPU's defaults (256 MB buffers, 128 MB storage
+    // bindings): a table of millions of particles needs more.
+    WGPULimits limits{};
+    const bool haveLimits = wgpuAdapterGetLimits(adapter, &limits) == WGPUStatus_Success;
+    limits.nextInChain = nullptr;
+
     WGPUDeviceDescriptor desc{};
     desc.requiredFeatureCount = features.size();
     desc.requiredFeatures = features.data();
+    if (haveLimits)
+        desc.requiredLimits = &limits;
     desc.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
     desc.deviceLostCallbackInfo.callback =
         [](WGPUDevice const*, WGPUDeviceLostReason reason, WGPUStringView message, void*, void*) {
@@ -194,6 +202,8 @@ Device::~Device() {
         for (const auto& info : leaked)
             Logger::warning("WGPU", "  {} '{}'", info.kind, info.label);
     }
+    if (readback_)
+        wgpuBufferRelease(readback_);
     if (queue_)
         wgpuQueueRelease(queue_);
     if (device_)
@@ -218,6 +228,14 @@ bool Device::has(Feature feature) const noexcept {
     return false;
 }
 
+DeviceLimits Device::limits() const noexcept {
+    WGPULimits limits{};
+    if (wgpuDeviceGetLimits(device_, &limits) != WGPUStatus_Success)
+        return {};
+    return {.maxBufferSize = limits.maxBufferSize, .maxStorageBinding = limits.maxStorageBufferBindingSize,
+            .maxWorkgroupsPerDimension = limits.maxComputeWorkgroupsPerDimension};
+}
+
 double Device::timestampPeriod() const noexcept {
     return double(wgpuQueueGetTimestampPeriod(queue_));
 }
@@ -226,19 +244,35 @@ void Device::wait() {
     wgpuDevicePoll(device_, true, nullptr);
 }
 
-std::vector<std::byte> Device::readBuffer(Buffer& buffer, uint64_t offset, uint64_t size) {
+void Device::flush() {
+    CommandList{*this}.submit();
+    wait();
+}
+
+void Device::readBuffer(Buffer& buffer, uint64_t offset, std::span<std::byte> out) {
+    const uint64_t size = out.size();
     if (offset % 4 || size % 4)
         throw Lattice::Exception<Device>("readBuffer: offset {} and size {} must be multiples of 4", offset, size);
     if (offset + size > buffer.size())
         throw Lattice::Exception<Device>("readBuffer: {} bytes at {} exceed the buffer of {}", size, offset, buffer.size());
-    std::vector<std::byte> result(size);
     if (!size)
-        return result;
+        return;
 
-    Buffer staging{*this, {.size = size, .usage = BufferUsage::MapRead | BufferUsage::CopyDestination,
-        .label = "readback"}};
+    std::lock_guard lock(readbackMutex_);
+    if (!readback_ || readbackSize_ < size) {
+        if (readback_)
+            wgpuBufferRelease(readback_);
+        WGPUBufferDescriptor desc{};
+        desc.label = {"readback", 8};
+        desc.size = std::max(size, readbackSize_ * 2);
+        desc.usage = WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst;
+        readback_ = wgpuDeviceCreateBuffer(device_, &desc);
+        if (!readback_)
+            throw Lattice::Exception<Device>("readBuffer: cannot create a staging buffer of {} bytes", desc.size);
+        readbackSize_ = desc.size;
+    }
     CommandList commands{*this};
-    commands.copyBuffer(buffer, offset, staging, 0, size);
+    wgpuCommandEncoderCopyBufferToBuffer(commands.encoder(), buffer.native(), offset, readback_, 0, size);
     commands.submit();
 
     struct Mapping {
@@ -253,16 +287,21 @@ std::vector<std::byte> Device::readBuffer(Buffer& buffer, uint64_t offset, uint6
         self.done = true;
     };
     callback.userdata1 = &mapping;
-    wgpuBufferMapAsync(staging.native(), WGPUMapMode_Read, 0, size, callback);
+    wgpuBufferMapAsync(readback_, WGPUMapMode_Read, 0, size, callback);
     while (!mapping.done) {
         wgpuDevicePoll(device_, true, nullptr);
         wgpuInstanceProcessEvents(instance_);
     }
     if (mapping.status != WGPUMapAsyncStatus_Success)
         throw Lattice::Exception<Device>("readBuffer: mapping failed ({})", static_cast<int>(mapping.status));
-    const auto* data = static_cast<const std::byte*>(wgpuBufferGetConstMappedRange(staging.native(), 0, size));
-    std::copy(data, data + size, result.begin());
-    wgpuBufferUnmap(staging.native());
+    const auto* data = static_cast<const std::byte*>(wgpuBufferGetConstMappedRange(readback_, 0, size));
+    std::copy(data, data + size, out.begin());
+    wgpuBufferUnmap(readback_);
+}
+
+std::vector<std::byte> Device::readBuffer(Buffer& buffer, uint64_t offset, uint64_t size) {
+    std::vector<std::byte> result(size);
+    readBuffer(buffer, offset, result);
     return result;
 }
 

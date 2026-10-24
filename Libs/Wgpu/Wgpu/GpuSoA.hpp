@@ -76,6 +76,8 @@ public:
 
     /// Mirror `source`: schema, layout and rows follow it. The buffer is recreated
     /// only when the block outgrows it or the layout changes (generation grows).
+    /// Like writeBuffer it only stages the block: the GPU copies it at the next submit
+    /// (Device::flush() to have it done now).
     void upload(const StdData::SoA& source);
 
     /// Writer: true when the reader has taken the last upload — upload no more often

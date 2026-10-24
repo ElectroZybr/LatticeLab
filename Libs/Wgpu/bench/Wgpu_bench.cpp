@@ -47,8 +47,9 @@ struct ColdValues : Values {
     void prepare() override { Lattice::Benchmarks::evictCaches(); }
 };
 
-/// The same array resident on the GPU, with its pipeline ready.
+/// The same array resident on the GPU, with its pipeline ready; one per point N.
 struct GpuValues : Lattice::Fixture {
+    static constexpr bool Reuse = true;
     explicit GpuValues(size_t n)
         : count(n),
           host(n, 1.0f),
@@ -129,31 +130,33 @@ BENCH_GROUPED(Compute, ScaleAddGpuOffload, GpuValues, "on the GPU with the copie
     bench.measure<GpuValues>([](GpuValues& values, Trace& trace) {
         const auto bytes = std::as_bytes(std::span(values.host));
         {
+            // writeBuffer only stages; flush() makes the copy to the device part of this phase.
             auto upload = trace.span(Phase::TransferIn);
             device().writeBuffer(values.data, 0, bytes);
+            device().flush();
             upload.bytes(bytes.size());
         }
         scaleAddOnGpu(values, trace);
         {
             auto readback = trace.span(Phase::TransferOut);
-            const auto result = device().readBuffer(values.data, 0, bytes.size());
-            readback.bytes(result.size());
+            device().readBuffer(values.data, 0, std::as_writable_bytes(std::span(values.host)));
+            readback.bytes(bytes.size());
         }
     });
 }
 
 BENCH_GROUP(Transfer) { bench.config.sizes = Sizes; }
 
-BENCH_GROUPED(Transfer, Upload, GpuValues, "writeBuffer of the whole array, waited") {
+BENCH_GROUPED(Transfer, Upload, GpuValues, "writeBuffer of the whole array, submitted and waited") {
     bench.measure<GpuValues>([](GpuValues& values) {
         device().writeBuffer(values.data, 0, std::as_bytes(std::span(values.host)));
-        device().wait();
+        device().flush();
     });
 }
 
-BENCH_GROUPED(Transfer, Readback, GpuValues, "readBuffer of the whole array") {
+BENCH_GROUPED(Transfer, Readback, GpuValues, "readBuffer of the whole array into the host array") {
     bench.measure<GpuValues>([](GpuValues& values) {
-        return device().readBuffer(values.data, 0, values.count * sizeof(float)).size();
+        device().readBuffer(values.data, 0, std::as_writable_bytes(std::span(values.host)));
     });
 }
 

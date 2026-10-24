@@ -167,7 +167,7 @@ void GpuWalls::record(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particles, 
     ::Wgpu::ComputePass pass{commands, stage.name, timer};
     pass.setPipeline(stage.pipeline);
     pass.setBindings(0, *stage.set);
-    pass.dispatch(::Wgpu::workgroups(rows, WorkgroupSize));
+    pass.dispatchCovering(rows, WorkgroupSize);
 }
 
 void GpuWalls::addForces(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particles, size_t rows, ::Wgpu::Timer* timer) {
@@ -222,7 +222,7 @@ void GpuDistances::evaluate(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& point
     ::Wgpu::ComputePass pass{commands, "distances"};
     pass.setPipeline(state_->pipeline);
     pass.setBindings(0, *set);
-    pass.dispatch(::Wgpu::workgroups(rows, 64));
+    pass.dispatchCovering(rows, 64);
 }
 
 }

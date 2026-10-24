@@ -63,6 +63,13 @@ enum class Feature {
     EncoderTimestamps   // GPU time between commands of an encoder (copies)
 };
 
+/// What the device allows (requested at creation as the adapter's maxima).
+struct DeviceLimits {
+    uint64_t maxBufferSize = 0;
+    uint64_t maxStorageBinding = 0;
+    uint32_t maxWorkgroupsPerDimension = 0;
+};
+
 class Device final {
 public:
     explicit Device(Instance& instance);
@@ -73,13 +80,22 @@ public:
     void writeBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data);
 
     /// Copy `size` bytes of a GPU buffer (CopySource) back to the host; waits for the
-    /// GPU. For tests, checks and small results — not a per-frame path.
+    /// GPU. The mappable staging buffer is the device's own and is kept (creating one
+    /// costs ~1 ms); it grows to the largest read.
     std::vector<std::byte> readBuffer(Buffer& buffer, uint64_t offset, uint64_t size);
+    /// The same into the caller's memory (`out.size()` bytes): no allocation per read.
+    void readBuffer(Buffer& buffer, uint64_t offset, std::span<std::byte> out);
 
     /// Wait until the GPU has finished all submitted work.
     void wait();
 
+    /// Submit what writeBuffer has staged and wait for it: writeBuffer only copies into a
+    /// staging area, the GPU copies to the buffer at the next submit. Measuring code calls
+    /// this to keep a transfer inside its own phase.
+    void flush();
+
     bool has(Feature feature) const noexcept;
+    DeviceLimits limits() const noexcept;
     /// Nanoseconds per timestamp tick.
     double timestampPeriod() const noexcept;
 
@@ -97,6 +113,10 @@ private:
     WGPUDevice device_ = nullptr;
     WGPUQueue queue_ = nullptr;
     ResourceRegistry resources_;
+    // readBuffer's staging buffer: device-internal, not a registered resource.
+    std::mutex readbackMutex_;
+    WGPUBuffer readback_ = nullptr;
+    uint64_t readbackSize_ = 0;
 };
 
 /// Uncaptured WGPU errors (validation, out of memory) of all devices since start.

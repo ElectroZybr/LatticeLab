@@ -281,6 +281,11 @@ bool resourcesRegisterOnDevice() {
         commands.submit();
     }
     check(device->resources().size() == 0, "RAII resources unregister");
+    // The adapter's limits, not WebGPU's defaults: room for tables of millions of rows.
+    const auto limits = device->limits();
+    check(limits.maxStorageBinding >= (128ull << 20) && limits.maxBufferSize >= (256ull << 20), "device limits");
+    std::cout << "Wgpu: limits — buffer " << (limits.maxBufferSize >> 20) << " MiB, storage binding "
+              << (limits.maxStorageBinding >> 20) << " MiB, " << limits.maxWorkgroupsPerDimension << " workgroups\n";
     layoutsAndTexturesOnDevice(*device);
     computeDoublesAnArray(*device);
     timerMeasuresPasses(*device);

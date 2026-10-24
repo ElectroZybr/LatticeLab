@@ -4,6 +4,7 @@
 #include <cstring>
 #include <iostream>
 #include <random>
+#include <span>
 #include <stdexcept>
 #include <vector>
 
@@ -15,6 +16,7 @@
 #include <Lattice/Tools/Exception.hpp>
 #include <Lattice/Tools/TypeName.hpp>
 #include <Wgpu/CommandList.hpp>
+#include <Wgpu/ComputePass.hpp>
 #include <Wgpu/Device.hpp>
 #include <Wgpu/GpuSoA.hpp>
 
@@ -132,6 +134,32 @@ void distancesMatchTheCpu(::Wgpu::Device& device) {
     }
 }
 
+/// More rows than one dimension of workgroups holds (65535 × 64 = 4.19M): the 2D grid
+/// covers every row, the tail included.
+void manyRowsAreCovered(::Wgpu::Device& device) {
+    constexpr size_t n = 5'000'000;
+    const auto points = randomParticles(n, 2.5f, 5);
+    ::Wgpu::GpuSoA gpu{device, "points"};
+    gpu.upload(points);
+    ::Wgpu::Buffer out{device, {.size = n * sizeof(float), .usage = ::Wgpu::BufferUsage::Storage |
+        ::Wgpu::BufferUsage::CopySource, .label = "distances"}};
+    const Shape shape = Shape::sphere(1.2f);
+    const Cpu::Geometry cpu{shape};
+    const Gpu::GpuGeometry geometry{device, shape.compile()};
+    Gpu::GpuDistances distances{geometry};
+    ::Wgpu::CommandList commands{device};
+    distances.evaluate(commands, gpu, layout, n, out);
+    commands.submit();
+    std::vector<float> got(n), expected(n);
+    device.readBuffer(out, 0, std::as_writable_bytes(std::span(got)));
+    cpu.evaluate(points.span<float>(layout.x), points.span<float>(layout.y), points.span<float>(layout.z), expected);
+    float worst = 0;
+    for (size_t i = 0; i < n; ++i)
+        worst = std::max(worst, std::abs(got[i] - expected[i]));
+    check(worst < 1e-5f, "5M distances: max difference " + std::to_string(worst));
+    check(::Wgpu::workgroupGrid(n, 64).y == 2, "5M rows fold into two rows of workgroups");
+}
+
 void wallsMatchTheCpu(::Wgpu::Device& device) {
     const Shape vessel = (std::move(Shape::capsule({0, -2, 0}, {0, 2, 0}, 1.8f)).material(0) -
         std::move(Shape::sphere(0.6f)).translated({0.8f, 0, 0}).material(1)) -
@@ -201,9 +229,10 @@ void wgpuMatchesTheCpu() {
     }
     const auto errors = ::Wgpu::errorCount();
     distancesMatchTheCpu(*device);
+    manyRowsAreCovered(*device);
     wallsMatchTheCpu(*device);
     deepProgramsAreRejected(*device);
     check(::Wgpu::errorCount() == errors, "no GPU validation errors");
     check(device->resources().size() == 0, "every GPU resource is released");
-    std::cout << "Boundaries.wgpu: distances of every primitive and operation, walls and depth limit match the CPU\n";
+    std::cout << "Boundaries.wgpu: distances of every primitive and operation, walls, 5M rows and depth limit match the CPU\n";
 }

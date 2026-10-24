@@ -6,6 +6,9 @@ const LAW_HARD: u32 = 1u;                 // Boundaries::Laws::Hard::id
 const LAW_SOFT: u32 = 2u;                 // Boundaries::Laws::Soft::id
 
 @group(0) @binding(0) var<storage, read> geometryCode: array<Instruction>;
+
+// Index of an invocation in a 2D grid of workgroups (ComputePass::dispatchCovering).
+fn gridIndex(id: vec3<u32>, groups: vec3<u32>) -> u32 { return id.x + id.y * groups.x * WORKGROUP; }
 struct Material {
     law: u32,
     params: array<f32, 7>,
@@ -25,8 +28,8 @@ fn position(i: u32) -> vec3<f32> { return vec3<f32>(data[params.x + i], data[par
 fn triple(i: u32) -> vec3<f32> { return vec3<f32>(data[params.a + i], data[params.b + i], data[params.c + i]); }
 
 @compute @workgroup_size(WORKGROUP)
-fn constrain(@builtin(global_invocation_id) id: vec3<u32>) {
-    let i = id.x;
+fn constrain(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+    let i = gridIndex(id, groups);
     if (i >= params.rows) { return; }
     var p = position(i);
     let sample = sampleGeometry(p);
@@ -50,8 +53,8 @@ fn constrain(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 
 @compute @workgroup_size(WORKGROUP)
-fn forces(@builtin(global_invocation_id) id: vec3<u32>) {
-    let i = id.x;
+fn forces(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {
+    let i = gridIndex(id, groups);
     if (i >= params.rows) { return; }
     let p = position(i);
     let sample = sampleGeometry(p);

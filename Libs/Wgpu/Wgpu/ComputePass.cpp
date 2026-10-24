@@ -49,6 +49,13 @@ void ComputePass::dispatch(uint32_t x, uint32_t y, uint32_t z) {
     wgpuComputePassEncoderDispatchWorkgroups(pass_, x, y, z);
 }
 
+void ComputePass::dispatchCovering(uint64_t count, uint32_t size) {
+    const auto grid = workgroupGrid(count, size);
+    if (grid.y > MaxWorkgroupsPerDimension)
+        throw Error("{} invocations need more than {}² workgroups", count, MaxWorkgroupsPerDimension);
+    dispatch(grid.x, grid.y);
+}
+
 void ComputePass::end() {
     if (!pass_)
         return;
