@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -9,6 +10,7 @@
 
 #include <Lattice/Kernel/TableAPI.hpp>
 #include <StdData/SoA.hpp>
+#include <Tasks/Queue.hpp>
 
 #include "Device.hpp"
 #include "Resources.hpp"
@@ -19,9 +21,12 @@ namespace WGPU {
 /// capacity() rows. The schema is the common Lattice::Table; column data is not
 /// host-accessible (ColumnView without data).
 ///
-/// Two ways to fill it:
-/// * upload(soa) — mirror of a CPU StdData::SoA: same layout, the whole block in one
-///   writeBuffer, so a frame never sees a half-updated table;
+/// Ways to fill it:
+/// * a CPU mirror (CpuSource): a copy of a StdData::SoA that belongs to another
+///   thread. The copy is a command of that thread's queue (between its steps); when
+///   the reader takes a copy the next one is requested, one at a time;
+/// * upload(soa) — the copy itself: same layout, the whole block in one writeBuffer,
+///   so a frame never sees a half-updated table;
 /// * addColumn + resize — a table owned on the GPU (a GPU simulation writes it itself).
 ///
 /// The writer may run on another thread than the reader (render).
@@ -42,8 +47,21 @@ public:
         const std::vector<Column>& columns;
     };
 
+    /// CPU data a mirror copies from and the queue of the thread that owns it.
+    struct CpuSource {
+        const StdData::SoA& table;
+        Tasks::Queue& owner;
+    };
+
     GpuSoA(Device& device, std::string label);
+    /// Mirror of `source`; the first copy is requested at once.
+    GpuSoA(Device& device, CpuSource source, std::string label);
     ~GpuSoA() override;
+
+    /// Mirror: stop requesting copies; one already requested still completes.
+    void detach() noexcept { attached_ = false; }
+    /// Mirror: no copy is requested or running — safe to destroy.
+    bool idle() const noexcept { return !pending_; }
 
     // Lattice::Table
     size_t rows() const noexcept override;
@@ -64,12 +82,16 @@ public:
     /// than frames are drawn.
     bool wanted() const noexcept;
 
-    /// Reader: call use(const View&) under the table lock and mark the upload taken.
+    /// Reader: call use(const View&) under the table lock and mark the upload taken;
+    /// a mirror then requests the next copy (outside the lock).
     template<class Use>
     void read(Use&& use) {
-        std::lock_guard lock(mutex_);
-        use(View{*buffer_, generation_, rows_, capacity_, columns_});
-        taken_ = true;
+        {
+            std::lock_guard lock(mutex_);
+            use(View{*buffer_, generation_, rows_, capacity_, columns_});
+            taken_ = true;
+        }
+        requestCopy();
     }
 
     /// Byte offset of a column in the buffer.
@@ -81,6 +103,7 @@ protected:
     void* mutableElement(size_t column, size_t row) override;
 
 private:
+    void requestCopy();
     void relayout(size_t capacity, std::vector<Column> columns);
     void allocate(uint64_t bytes);
 
@@ -93,6 +116,10 @@ private:
     size_t capacity_ = 0;
     uint64_t generation_ = 0;
     bool taken_ = true;
+    const StdData::SoA* source_ = nullptr;
+    Tasks::Queue* owner_ = nullptr;
+    std::atomic<bool> attached_{false};
+    std::atomic<bool> pending_{false};
 };
 
 }

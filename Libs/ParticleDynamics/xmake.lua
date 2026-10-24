@@ -4,7 +4,7 @@ target("ParticleDynamics")
     set_kind("headeronly")
     add_headerfiles("(ParticleDynamics/*.hpp)")
     add_includedirs(".", {public = true})
-    add_deps("StdData", {public = true})
+    add_deps("StdData", "Tasks", {public = true})
     add_packages("glm", {public = true})
 
 target("ParticleDynamics.tests")

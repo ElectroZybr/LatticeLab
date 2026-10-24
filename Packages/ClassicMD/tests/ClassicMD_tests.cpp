@@ -7,6 +7,7 @@
 #include <ClassicMD/AtomStorage.hpp>
 #include <ClassicMD/ClassicMD.hpp>
 #include <Integrators/Verlet.hpp>
+#include <Tasks/Queue.hpp>
 
 namespace {
 void check(bool condition, const char* message) {
@@ -17,16 +18,39 @@ void simulationStepsThroughIntegrator() {
     ClassicMD::AtomStorage atoms;
     Integrators::Verlet verlet{atoms};
     verlet.dt = 0.1f;
-    ClassicMD::ClassicMD simulation{atoms, verlet};
+    Tasks::Queue commands;
+    ClassicMD::ClassicMD simulation{atoms, verlet, commands};
     check(atoms.size() == 1 && atoms.has("Energy") && atoms.has("PrevForceX"), "atoms and columns");
     simulation.step();
     check(atoms.get<Pos>(0).y > 0.0f, "simulation moved the atom");
 }
 
+void commandsRunOnTheSimulationThread() {
+    ClassicMD::AtomStorage atoms;
+    Integrators::Verlet verlet{atoms};
+    Tasks::Queue commands;
+    ClassicMD::ClassicMD simulation{atoms, verlet, commands, std::chrono::hours(1)};
+    simulation.commands().post([&] { verlet.dt = 0.5f; });
+    check(verlet.dt == 0.5f, "without a running loop a command runs at once");
+
+    std::thread worker([&] { simulation.run(); });
+    while (!simulation.commands().serving())
+        std::this_thread::yield();
+    const auto thread = simulation.commands().call([] { return std::this_thread::get_id(); });
+    check(thread == worker.get_id(), "commands run on the simulation thread");
+    const auto before = simulation.commands().call([&] { return simulation.steps(); });
+    simulation.commands().call([&] { simulation.step(); return 0; });
+    check(simulation.commands().call([&] { return simulation.steps(); }) == before + 1,
+          "an extra step runs between the loop's steps");
+    simulation.requestStop();
+    worker.join();
+}
+
 void loopStopsPromptly() {
     ClassicMD::AtomStorage atoms;
     Integrators::Verlet verlet{atoms};
-    ClassicMD::ClassicMD simulation{atoms, verlet, std::chrono::hours(1)};
+    Tasks::Queue commands;
+    ClassicMD::ClassicMD simulation{atoms, verlet, commands, std::chrono::hours(1)};
     std::thread worker([&] { simulation.run(); });
     while (simulation.steps() == 0)
         std::this_thread::yield();
@@ -47,7 +71,8 @@ void atomDataHasNamedRows() {
 
 int main() {
     simulationStepsThroughIntegrator();
+    commandsRunOnTheSimulationThread();
     loopStopsPromptly();
     atomDataHasNamedRows();
-    std::cout << "ClassicMD: simulation, loop and atom data passed\n";
+    std::cout << "ClassicMD: simulation, commands, loop and atom data passed\n";
 }

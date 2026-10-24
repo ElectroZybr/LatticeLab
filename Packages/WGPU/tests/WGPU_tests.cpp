@@ -1,5 +1,7 @@
 // Registry logic always; device and resources only when an adapter is available.
 #include <array>
+#include <atomic>
+#include <chrono>
 #include <cstdio>
 #include <iostream>
 #include <stdexcept>
@@ -159,6 +161,41 @@ void explicitLayoutsAndDepth(WGPU::Device& device) {
     check(WGPU::errorCount() > errors, "a pipeline without the data group is reported");
 }
 
+void mirrorCopiesOnTheOwnerThread(WGPU::Device& device) {
+    StdData::SoA atoms;
+    atoms.addCol<PosX>();
+    atoms.resize(2);
+    Tasks::Queue owner;
+    {
+        WGPU::GpuSoA table{device, {.table = atoms, .owner = owner}, "mirrored"};
+        check(table.rows() == 2 && table.idle(), "the first copy is made at once without a running owner");
+
+        std::atomic<bool> stop{false};
+        std::thread thread([&] {
+            owner.beginServing();
+            while (!stop)
+                owner.runUntil(std::chrono::steady_clock::now() + std::chrono::milliseconds(2),
+                    [&] { return stop.load(); });
+            owner.endServing();
+        });
+        while (!owner.serving())
+            std::this_thread::yield();
+        // The owner changes its data; the reader takes a copy and asks for the next one.
+        owner.call([&] { atoms.resize(5); });
+        table.read([](const WGPU::GpuSoA::View&) {});
+        while (!table.idle())
+            std::this_thread::yield();
+        check(table.rows() == 5, "the next copy is made by a command of the owner");
+
+        table.detach();
+        table.read([](const WGPU::GpuSoA::View&) {});
+        check(table.idle(), "a detached mirror requests no copies");
+        stop = true;
+        owner.wake();
+        thread.join();
+    }
+}
+
 bool resourcesRegisterOnDevice() {
     WGPU::Instance instance;
     WGPU::Device* device = nullptr;
@@ -184,6 +221,7 @@ bool resourcesRegisterOnDevice() {
     check(device->resources().size() == 0, "RAII resources unregister");
     explicitLayoutsAndDepth(*device);
     gpuSoAMirrorsCpuTable(*device);
+    mirrorCopiesOnTheOwnerThread(*device);
     check(device->resources().size() == 0, "GpuSoA releases its buffers");
     delete device;
     return true;
@@ -193,5 +231,5 @@ bool resourcesRegisterOnDevice() {
 int main() {
     registryTracksLiveResources();
     const bool device = resourcesRegisterOnDevice();
-    std::cout << "WGPU: registry" << (device ? ", device resources, submit, layouts, depth and GpuSoA" : "") << " passed\n";
+    std::cout << "WGPU: registry" << (device ? ", device resources, submit, layouts, depth and GpuSoA (mirror)" : "") << " passed\n";
 }

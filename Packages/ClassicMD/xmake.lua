@@ -3,7 +3,7 @@ target("ClassicMD.core")
     set_kind("headeronly")
     add_headerfiles("(ClassicMD/*.hpp)")
     add_includedirs(".", {public = true})
-    add_deps("StdData", "ParticleDynamics", "Integrators", {public = true})
+    add_deps("StdData", "ParticleDynamics", "Integrators", "Tasks", {public = true})
 
 target("ClassicMD")
     set_kind("shared")

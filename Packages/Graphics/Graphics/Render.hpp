@@ -13,12 +13,17 @@
 #include "TransformController.hpp"
 #include "Viewport.hpp"
 
-/// Renders viewports of one window into its surface, once per frame. Owns the single
-/// window cursor and gives it, in local coordinates, to the topmost viewport under it.
-/// Owns the depth target of the surface (layout's depth format, resized with it).
+/// Renders viewports of one window into its surface, once per frame. Owns the surface,
+/// its depth target and the pipeline layout of the window (RenderLayout) — internal
+/// resources, not tree nodes — and the single window cursor, given in local
+/// coordinates to the topmost viewport under it.
 class Render final : public FrameAPI {
 public:
-    Render(WindowAPI& window, WGPU::Surface& surface, RenderLayout& layout);
+    Render(WGPU::Device& device, WindowAPI& window);
+
+    /// What viewports and scene objects of this window build their pipelines on.
+    /// They use it while constructing; their resources do not refer to it later.
+    RenderLayout& layout() noexcept { return layout_; }
 
     void frame(float dt) override;
 
@@ -34,8 +39,8 @@ public:
 private:
     WGPU::Device& device_;
     WindowAPI& window_;
-    WGPU::Surface& surface_;
-    RenderLayout& layout_;
+    WGPU::Surface surface_;
+    RenderLayout layout_;
     std::unique_ptr<WGPU::Texture> depth_;
     std::vector<Viewport*> viewports_;
     glm::vec2 cursor_{};

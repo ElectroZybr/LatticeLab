@@ -1,7 +1,7 @@
 [Startup]
 StdIo = "on"
-ClassicMD.Universe1 = "on"
 WGPU = "on"
+ClassicMD.Universe1 = "on"
 Shell = ["on", "host"]
 CLI = ["on"]
 Bench = "on"

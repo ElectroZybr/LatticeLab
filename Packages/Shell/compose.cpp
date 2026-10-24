@@ -4,6 +4,9 @@
 #include <Lattice/Composition.hpp>
 #include <Actions/InputTargetAPI.hpp>
 #include <Shell/FrameAPI.hpp>
+#include <Shell/GlfwKeyboard.hpp>
+#include <Shell/GlfwMouse.hpp>
+#include <Shell/GlfwWindow.hpp>
 #include <Shell/KeybindLoader.hpp>
 #include <Shell/Window.hpp>
 #include <Shell/WindowAPI.hpp>
@@ -11,11 +14,22 @@
 extern "C" constinit const Lattice::Package lattice_package{
     .id = "Shell",
     .version = {1, 0, 0},
-    .dependencies = {{.id = "StdIo", .min = {1, 0, 0}}, {.id = "Scene", .min = {1, 0, 0}}},
+    .dependencies = {{.id = "StdIo", .min = {1, 0, 0}}, {.id = "Graphics", .min = {1, 0, 0}}},
 };
 
-// Application shell: the input router, keybinds, the window scene (Scene) and the
-// window loop as the host service.
+namespace {
+
+// Window variant: the window owns its input devices.
+auto composeGlfwWindow(NodeBuild& slot) {
+    auto keyboard = slot.emplace<GlfwKeyboard, InputAPI>("keyboard");
+    auto mouse = slot.emplace<GlfwMouse, InputAPI>("mouse");
+    return slot.construct<GlfwWindow, WindowAPI>(keyboard, mouse);
+}
+
+}
+
+// Application shell: the input router, keybinds, the window with its input, the
+// render branch of the window (Graphics) and the window loop as the host service.
 extern "C" void compose(NodeBuild root) {
     auto io = root.mount<IOSubsystem>();
     auto router = root.emplace<ActionRouter>("router", root.exports(), root.id());
@@ -32,7 +46,9 @@ extern "C" void compose(NodeBuild root) {
             } else exports->invoke(load, context);
         });
 
-    root.compose("Scene", "render");
+    auto window = root.addSlot<WindowAPI>("window");
+    window.choice("Shell::Glfw", composeGlfwWindow);
+    root.compose("Graphics", "render");
 
     auto loop = root.construct<WindowSystem>(router);
     loop.service(&WindowSystem::run, &WindowSystem::requestStop);

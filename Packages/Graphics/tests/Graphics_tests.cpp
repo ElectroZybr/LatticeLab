@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <Graphics/Camera.hpp>
 #include <Graphics/RenderLayout.hpp>
+#include <Graphics/Spheres.hpp>
 #include <Graphics/TestObject.hpp>
 #include <Graphics/Viewport.hpp>
 #include <Graphics/TransformMode.hpp>
@@ -73,6 +74,14 @@ bool sceneResourcesOnDevice() {
             check(device.resources().size() == 8, "scene owns its GPU resources");
         }
         check(device.resources().size() == 0, "scene releases its resources");
+        {
+            RenderLayout layout{device, WGPU::TextureFormat::BGRA8Unorm};
+            WGPU::GpuSoA table{device, "particles"};
+            Spheres spheres{layout, table, {.x = "x", .y = "y", .z = "z"}, GRAPHICS_SHADERS "/spheres3d.wgsl"};
+            spheres.setPalette({{1, 0, 0, 0.5f}, {0, 1, 0, 0.25f}});
+            check(spheres.count() == 0, "nothing drawn before a frame");
+        }
+        check(device.resources().size() == 0, "spheres release their resources");
         check(WGPU::errorCount() == errors, "object pipeline matches the shared camera layout");
         return true;
     } catch (const Lattice::ExceptionBase& error) {
@@ -88,5 +97,5 @@ int main() {
     viewportHitTestAndLocalCursor();
     orbitControllerKeepsDistance();
     const bool gpu = sceneResourcesOnDevice();
-    std::cout << "Graphics: camera, controllers" << (gpu ? " and scene resources" : "") << " passed\n";
+    std::cout << "Graphics: camera, controllers" << (gpu ? " and scene/spheres resources" : "") << " passed\n";
 }

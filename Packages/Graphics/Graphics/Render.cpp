@@ -4,8 +4,9 @@
 
 #include <WGPU/CommandList.hpp>
 
-Render::Render(WindowAPI& window, WGPU::Surface& surface, RenderLayout& layout)
-    : device_(layout.device()), window_(window), surface_(surface), layout_(layout) {}
+Render::Render(WGPU::Device& device, WindowAPI& window)
+    : device_(device), window_(window), surface_(device, window.native()),
+      layout_(device, surface_.format()) {}
 
 void Render::setViewports(std::vector<Viewport*> viewports) {
     viewports_ = std::move(viewports);

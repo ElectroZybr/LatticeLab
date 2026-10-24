@@ -32,7 +32,24 @@ GpuSoA::GpuSoA(Device& device, std::string label)
     allocate(4);
 }
 
+GpuSoA::GpuSoA(Device& device, CpuSource source, std::string label)
+    : GpuSoA(device, std::move(label)) {
+    source_ = &source.table;
+    owner_ = &source.owner;
+    attached_ = true;
+    requestCopy();
+}
+
 GpuSoA::~GpuSoA() = default;
+
+void GpuSoA::requestCopy() {
+    if (!attached_ || !wanted() || pending_.exchange(true))
+        return;
+    owner_->post([this] {
+        upload(*source_);
+        pending_ = false;
+    });
+}
 
 size_t GpuSoA::rows() const noexcept {
     std::lock_guard lock(mutex_);

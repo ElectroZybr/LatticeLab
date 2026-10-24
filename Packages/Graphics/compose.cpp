@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <string>
 #include <string_view>
 
 #include <glm/vec3.hpp>
@@ -6,29 +7,20 @@
 #include <Actions/InputTargetAPI.hpp>
 #include <Graphics/Camera.hpp>
 #include <Graphics/Render.hpp>
-#include <Graphics/RenderLayout.hpp>
-#include <Graphics/TestObject.hpp>
+#include <Graphics/Spheres.hpp>
 #include <Graphics/TransformMode.hpp>
 #include <Graphics/Viewport.hpp>
-#include <Shell/GlfwKeyboard.hpp>
-#include <Shell/GlfwMouse.hpp>
-#include <Shell/GlfwWindow.hpp>
-#include <WGPU/Resources.hpp>
+#include <ParticleDynamics/ParticleSystemAPI.hpp>
+#include <Shell/WindowAPI.hpp>
+#include <WGPU/GpuSoA.hpp>
 
 extern "C" constinit const Lattice::Package lattice_package{
-    .id = "Scene",
+    .id = "Graphics",
     .version = {1, 0, 0},
     .dependencies = {{.id = "WGPU", .min = {1, 0, 0}}},
 };
 
 namespace {
-
-// Window variant: the window owns its input devices.
-auto composeGlfwWindow(NodeBuild& slot) {
-    auto keyboard = slot.emplace<GlfwKeyboard, InputAPI>("keyboard");
-    auto mouse = slot.emplace<GlfwMouse, InputAPI>("mouse");
-    return slot.construct<GlfwWindow, WindowAPI>(keyboard, mouse);
-}
 
 // Input of any camera controller, declared once on TransformController.
 template<class T>
@@ -58,39 +50,43 @@ auto composeOrbitCamera(NodeBuild& slot) {
         slot.require<Camera>("camera"), slot.owner<Viewport>()));
 }
 
-// A viewport is its own node: the viewport object, its camera and its controller.
-void addViewport(NodeBuild& root, const Ref<RenderLayout>& layout, std::string_view name, glm::vec3 eye) {
-    auto viewport = root.branch(name);
-    auto camera = viewport.emplace<Camera>("camera");
-    camera->setPosition(eye);
-    camera.param("position", camera->transform().position);
-    viewport.construct<Viewport>(layout, camera);
-    auto controller = viewport.addSlot<TransformController>("controller");
-    controller.choice("Scene::FreeCamera", composeFreeCamera);
 }
 
-}
-
-// Scene of one window, assembled in code:
-//   window and surface → the window's RenderLayout →
-//   scene objects (direct children: every viewport draws them) →
-//   viewports (camera, controller) → Render (draws the viewports, owns cursor and depth).
+// Render branch of one window. The window and its input belong to the shell; here:
+//   Render (surface, depth, pipeline layout inside) →
+//   GPU data shared by the viewports (a copy of the simulation's particles) →
+//   viewports: each is a scene — area, camera, controller and what it draws.
 extern "C" void compose(NodeBuild root) {
     auto device = root.mount<WGPU::Device>();
-
-    auto window = root.addSlot<WindowAPI>("window");
-    window.choice("Shell::Glfw", composeGlfwWindow);
-    auto surface = root.emplace<WGPU::Surface>("surface", device.ref(), window.get()->native());
-    auto layout = root.emplace<RenderLayout>("layout", device.ref(), surface->format());
-
-    auto marker = root.emplace<TestObject, SceneObject>("marker", layout,
-        std::filesystem::path("Packages/Graphics/shaders/circle.wgsl"));
-    marker.param("position", marker->transform().position);
-
-    addViewport(root, layout.ref(), "main", {0.0f, 0.0f, 2.0f});
-
-    auto render = root.construct<Render, FrameAPI>(window.ref(), surface, layout);
+    auto render = root.construct<Render, FrameAPI>(device.ref(), root.require<WindowAPI>("window"));
     render.param("cursor", render->cursor());
+
+    // The GPU copy belongs to the render branch: removing it frees the copy and the
+    // simulation keeps running. Copies are commands of the simulation thread.
+    auto system = root.mount<ParticleDynamics::ParticleSystemAPI>().ref();
+    auto particles = root.emplace<WGPU::GpuSoA>("particles", device.ref(),
+        WGPU::GpuSoA::CpuSource{.table = system->particles(), .owner = system->commands()},
+        std::string("particles"));
+    particles.onRetire([](WGPU::GpuSoA& self) { self.detach(); });
+    particles.readyToDestroy([](const WGPU::GpuSoA& self) { return self.idle(); });
+
+    const auto addViewport = [&](std::string_view name, glm::vec3 eye) {
+        auto viewport = root.branch(name);
+        auto camera = viewport.emplace<Camera>("camera");
+        camera->setPosition(eye);
+        camera.param("position", camera->transform().position);
+        viewport.construct<Viewport>(render->layout(), camera);
+        auto controller = viewport.addSlot<TransformController>("controller");
+        controller.choice("Graphics::FreeCamera", composeFreeCamera);
+        viewport.emplace<Spheres, SceneObject>("particles", render->layout(), particles,
+            SphereColumns{
+                .x = std::string(Lattice::typeName<Pos::X>()),
+                .y = std::string(Lattice::typeName<Pos::Y>()),
+                .z = std::string(Lattice::typeName<Pos::Z>()),
+            },
+            std::filesystem::path("Packages/Graphics/shaders/spheres3d.wgsl"));
+    };
+    addViewport("main", {0.0f, 0.0f, 5.0f});
 
     // Input target of this window: the controller of the viewport under the cursor.
     // It stays on the last one when the cursor leaves every viewport.
@@ -101,16 +97,11 @@ extern "C" void compose(NodeBuild root) {
 }
 
 // Live wiring with the tree: Render draws the current viewports; each viewport draws
-// the scene objects of the branch plus its own and is driven by the controller below it.
+// its scene objects and is driven by the controller below it.
 extern "C" void configure(NodeConfigure root) {
     root.self<Render>()->setViewports(root.collect<Viewport>());
-    const auto scene = root.children<SceneObject>();
     for (auto [viewport, node] : root.collectNodes<Viewport>()) {
-        auto objects = scene;
-        for (SceneObject* own : node.children<SceneObject>())
-            objects.push_back(own);
-        viewport->setObjects(std::move(objects));
-
+        viewport->setObjects(node.children<SceneObject>());
         const auto controllers = node.children<TransformController>();
         if (controllers.size() > 1)
             throw Lattice::Exception<Viewport>("Viewport #{} has {} controllers", node.id(), controllers.size());

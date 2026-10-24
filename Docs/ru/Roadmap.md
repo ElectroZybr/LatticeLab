@@ -24,10 +24,12 @@
 - [x] Убрать дублирование механизмов Lattice: `Viewport::controller` и набор вьюпортов `Render` — из `configure`; цель ввода — `Focus<InputTargetAPI>` (ядро: `Focus::set(T*)`, `NodeConfigure::focusId`), роутеру её назначает `configure` Shell; `Terminal::current_` оставлен как позиция навигации
 - [x] `Viewport` — один конкретный класс (`ViewportArea` + камера + объекты из `configure`); uniform камеры — bind group 0 вьюпорта; `RenderLayout` — общие форматы и layout группы камеры; `TestViewport` → `TestObject : SceneObject`
 - [x] `SceneObject::render(RenderPass&, const ViewState&)`; `Render` владеет depth
-- [ ] Рендер сфер (`SceneObject`): `GpuSoA` + смещения x/y/z + колонка индекса + палитра (индекс → радиус, цвет); шейдер из `atom3d.wgsl` с `frag_depth`
-- [ ] ClassicMD: после шага при `wanted()` — `gpuAtoms.upload(atoms)`; `ClassicMD.core` без WGPU, связь — в композиции
-- [x] Пакет `Scene`: сборка кодом (окно, surface, `RenderLayout`, объекты сцены, вьюпорты, Render); Shell вкладывает `Scene`; Graphics — модуль без ветки
-- [ ] Scene: источник атомов — `mount<GpuSoA>` и рендер сфер как объект сцены
+- [x] Рендер сфер (`Spheres : SceneObject`): `GpuSoA` + смещения x/y/z + колонка вида (необязательна) + палитра (вид → цвет, радиус); `spheres3d.wgsl` с `frag_depth`
+- [x] Границы: GPU-копия в ветке рендера (`GpuSoA` с `CpuSource`), симуляция — `ParticleSystemAPI` без WGPU; экспорты симуляции — через очередь потока-владельца (`Tasks::Queue`, `executeOn` объекта, обычные `param`/`action`/`exportTable`); `configure` будится сменой Context только по прочитанным ролям
+- [ ] CLI: выполнять команды в host-потоке (сейчас worker-поток читает дерево и экспорты)
+- [x] Ветка рендера собирается кодом (пакет Graphics): `Render` (surface, depth, `RenderLayout` внутри) → общие GPU-данные → вьюпорты-сцены (камера, контроллер, объекты); окно и ввод — в Shell
+- [x] Источник атомов — `mount<ParticleSystemAPI>`, GPU-копия в ветке рендера (`GpuSoA` с `CpuSource`), сферы — объект сцены вьюпорта
+- [ ] Цвет и радиус по элементу: колонка вида (`DataId`) и палитра из `AtomData` — без знания Graphics о ClassicMD
 - [ ] Несколько вьюпортов с одними данными и разными камерами; активный — под курсором
 - [ ] Параметры камер/объектов — `param`, сохранение/загрузка через `Serializer`
 - [ ] Чистка: обновить `Packages/Graphics/README.md`, `AGENTS.md`
