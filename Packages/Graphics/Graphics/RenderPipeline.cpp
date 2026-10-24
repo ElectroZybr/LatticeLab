@@ -47,7 +47,12 @@ RenderPipeline::RenderPipeline(Wgpu::Device& device, Wgpu::Shader& shader, const
     if (desc.depthFormat != Wgpu::TextureFormat::Undefined) {
         depth.format = nativeFormat(desc.depthFormat);
         depth.depthWriteEnabled = desc.depthWrite ? WGPUOptionalBool_True : WGPUOptionalBool_False;
-        depth.depthCompare = WGPUCompareFunction_Less;
+        switch (desc.depthCompare) {
+        case DepthCompare::Less: depth.depthCompare = WGPUCompareFunction_Less; break;
+        case DepthCompare::LessEqual: depth.depthCompare = WGPUCompareFunction_LessEqual; break;
+        case DepthCompare::Greater: depth.depthCompare = WGPUCompareFunction_Greater; break;
+        case DepthCompare::Always: depth.depthCompare = WGPUCompareFunction_Always; break;
+        }
         depth.stencilFront.compare = WGPUCompareFunction_Always;
         depth.stencilBack.compare = WGPUCompareFunction_Always;
         depth.stencilReadMask = 0;

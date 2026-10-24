@@ -28,11 +28,13 @@ struct Params {
 };
 
 struct Counters {
-    uint32_t slots, vertices, indices, pad;
+    uint32_t slots, vertices, indices, edges;
 };
 
 constexpr uint32_t BrickCells = SdfMesh::Brick * SdfMesh::Brick * SdfMesh::Brick;
 constexpr uint32_t BrickCorners = (SdfMesh::Brick + 1) * (SdfMesh::Brick + 1) * (SdfMesh::Brick + 1);
+constexpr uint32_t SlotWords = BrickCorners + BrickCells;
+static_assert(Wgpu::shaderConstant(Shader, "SLOT_WORDS") == SlotWords);
 
 constexpr std::array<Wgpu::LayoutEntry, 9> Entries{{
     {.binding = 0, .type = Wgpu::BindingType::ReadOnlyStorage, .visibility = Wgpu::ShaderStage::Compute},
@@ -62,10 +64,11 @@ struct SdfMesh::Pipelines {
           classify(device, shader, {.layouts = {&layout}, .entry = "classify", .label = "sdf-mesh/classify"}),
           sample(device, shader, {.layouts = {&layout}, .entry = "sample", .label = "sdf-mesh/sample"}),
           place(device, shader, {.layouts = {&layout}, .entry = "place", .label = "sdf-mesh/place"}),
-          connect(device, shader, {.layouts = {&layout}, .entry = "connect", .label = "sdf-mesh/connect"}) {}
+          connect(device, shader, {.layouts = {&layout}, .entry = "connect", .label = "sdf-mesh/connect"}),
+          outline(device, shader, {.layouts = {&layout}, .entry = "outline", .label = "sdf-mesh/outline"}) {}
 
     Wgpu::Shader shader;
-    Wgpu::ComputePipeline clear, classify, sample, place, connect;
+    Wgpu::ComputePipeline clear, classify, sample, place, connect, outline;
 };
 
 SdfMesh::SdfMesh(Wgpu::Device& device, const Boundaries::Wgpu::GpuGeometry& geometry,
@@ -110,6 +113,7 @@ void SdfMesh::prepare() {
         capacity_ = {uint32_t(std::min(total, area * 2)), 0, 0};
         capacity_[1] = capacity_[0] * 128;
         capacity_[2] = capacity_[1] * 7;
+        capacity_[3] = capacity_[1] * 3;
         brickOf_.reset();
     }
     const auto structure = Boundaries::Wgpu::structure(geometry_.program());
@@ -123,10 +127,10 @@ void SdfMesh::prepare() {
 bool SdfMesh::run() {
     if (!brickOf_ || brickOf_->size() < uint64_t(capacity_[0]) * 4) {
         brickOf_ = storage(device_, uint64_t(capacity_[0]) * 4, "sdf-mesh/brick-of");
-        samples_ = storage(device_, uint64_t(capacity_[0]) * BrickCorners * 4, "sdf-mesh/samples");
-        cellVertex_ = storage(device_, uint64_t(capacity_[0]) * BrickCells * 4, "sdf-mesh/cell-vertex");
+        slotData_ = storage(device_, uint64_t(capacity_[0]) * SlotWords * 4, "sdf-mesh/slot-data");
     }
     reserve(uint64_t(capacity_[1]) * sizeof(MeshVertex), uint64_t(capacity_[2]) * sizeof(uint32_t));
+    reserveEdges(uint64_t(capacity_[3]) * sizeof(MeshEdge));
 
     const std::array bindings{
         Wgpu::Binding{.binding = 0, .buffer = &geometry_.code()},
@@ -134,10 +138,10 @@ bool SdfMesh::run() {
         Wgpu::Binding{.binding = 2, .buffer = &counters_},
         Wgpu::Binding{.binding = 3, .buffer = slotOf_.get()},
         Wgpu::Binding{.binding = 4, .buffer = brickOf_.get()},
-        Wgpu::Binding{.binding = 5, .buffer = samples_.get()},
-        Wgpu::Binding{.binding = 6, .buffer = cellVertex_.get()},
-        Wgpu::Binding{.binding = 7, .buffer = vertices()},
-        Wgpu::Binding{.binding = 8, .buffer = indices()},
+        Wgpu::Binding{.binding = 5, .buffer = slotData_.get()},
+        Wgpu::Binding{.binding = 6, .buffer = vertices()},
+        Wgpu::Binding{.binding = 7, .buffer = indices()},
+        Wgpu::Binding{.binding = 8, .buffer = edges()},
     };
     set_.reset();
     set_ = std::make_unique<Wgpu::BindingSet>(device_, layout_, bindings);
@@ -146,7 +150,7 @@ bool SdfMesh::run() {
     const Params params{
         .origin = glm::vec4(grid_.origin, grid_.cellSize.x),
         .bricks = glm::uvec4(bricks_, uint32_t(total)),
-        .capacity = glm::uvec4(capacity_[0], capacity_[1], capacity_[2], 0u),
+        .capacity = glm::uvec4(capacity_[0], capacity_[1], capacity_[2], capacity_[3]),
     };
     device_.writeBuffer(params_, 0, std::as_bytes(std::span(&params, 1)));
     const Counters zero{};
@@ -160,7 +164,7 @@ bool SdfMesh::run() {
         pass.dispatchCovering(total, 64);
         pass.setPipeline(pipelines_->classify);
         pass.dispatchCovering(total, 64);
-        for (auto* stage : {&pipelines_->sample, &pipelines_->place, &pipelines_->connect}) {
+        for (auto* stage : {&pipelines_->sample, &pipelines_->place, &pipelines_->connect, &pipelines_->outline}) {
             pass.setPipeline(*stage);
             pass.dispatchCovering(uint64_t(capacity_[0]) * 64, 64);
         }
@@ -169,9 +173,9 @@ bool SdfMesh::run() {
 
     Counters counts{};
     device_.readBuffer(counters_, 0, std::as_writable_bytes(std::span(&counts, 1)));
-    const std::array<uint32_t, 3> needed{counts.slots, counts.vertices, counts.indices};
+    const std::array<uint32_t, 4> needed{counts.slots, counts.vertices, counts.indices, counts.edges};
     bool fits = true;
-    for (size_t i = 0; i < 3; ++i)
+    for (size_t i = 0; i < 4; ++i)
         if (needed[i] > capacity_[i]) {
             capacity_[i] = needed[i] + needed[i] / 4;
             fits = false;
@@ -179,6 +183,7 @@ bool SdfMesh::run() {
     activeBricks_ = counts.slots;
     vertexCount_ = counts.vertices;
     setIndexCount(fits ? counts.indices : 0);
+    setEdgeCount(fits ? counts.edges : 0);
     return fits;
 }
 

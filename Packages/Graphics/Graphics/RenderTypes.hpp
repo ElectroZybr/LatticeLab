@@ -21,12 +21,14 @@ struct Rect {
 
 /// Faces a pipeline discards; front faces are counter-clockwise.
 enum class CullMode { None, Back };
+enum class DepthCompare { Less, LessEqual, Greater, Always };
 
 struct RenderPipelineDesc {
     Wgpu::TextureFormat colorFormat = Wgpu::TextureFormat::BGRA8Unorm;
     /// Undefined: no depth test. Otherwise the render pass must have a depth target.
     Wgpu::TextureFormat depthFormat = Wgpu::TextureFormat::Undefined;
     bool depthWrite = true;
+    DepthCompare depthCompare = DepthCompare::Less;
     /// Alpha blending of the color target (transparent objects; usually without depth writes).
     bool blend = false;
     CullMode cull = CullMode::None;

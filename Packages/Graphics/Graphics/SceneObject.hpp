@@ -17,6 +17,7 @@ struct CameraUniform {
     glm::mat4 view;
     glm::mat4 projection;
     glm::vec4 position;
+    glm::vec4 viewport;   // width, height in pixels
 };
 
 /// One viewport drawing: its rectangle, camera matrices and the camera bind group.

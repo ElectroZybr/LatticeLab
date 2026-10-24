@@ -26,18 +26,23 @@ public:
     Wgpu::Buffer* vertices() const noexcept { return vertices_.get(); }
     Wgpu::Buffer* indices() const noexcept { return indices_.get(); }
     uint32_t indexCount() const noexcept { return indexCount_; }
+    /// MeshEdge records; null while the mesh has none.
+    Wgpu::Buffer* edges() const noexcept { return edges_.get(); }
+    uint32_t edgeCount() const noexcept { return edgeCount_; }
     uint64_t generation() const noexcept { return generation_; }
     Wgpu::Device& device() const noexcept { return device_; }
 
 protected:
     /// For meshes written on the device: buffers of at least these sizes.
     void reserve(uint64_t vertexBytes, uint64_t indexBytes);
+    void reserveEdges(uint64_t bytes);
     void setIndexCount(uint32_t count) noexcept { indexCount_ = count; }
+    void setEdgeCount(uint32_t count) noexcept { edgeCount_ = count; }
 
 private:
     Wgpu::Device& device_;
     std::string label_;
-    std::unique_ptr<Wgpu::Buffer> vertices_, indices_;
-    uint32_t indexCount_ = 0;
+    std::unique_ptr<Wgpu::Buffer> vertices_, indices_, edges_;
+    uint32_t indexCount_ = 0, edgeCount_ = 0;
     uint64_t generation_ = 0;
 };

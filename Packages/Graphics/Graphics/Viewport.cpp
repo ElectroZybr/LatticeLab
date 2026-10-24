@@ -55,6 +55,7 @@ void Viewport::render(RenderPass& pass, glm::uvec2 surfaceSize) {
         .view = camera_.viewMatrix(),
         .projection = camera_.projectionMatrix(aspect),
         .position = glm::vec4(camera_.transform().position, 1.0f),
+        .viewport = glm::vec4(float(rect.width), float(rect.height), 0.0f, 0.0f),
     };
     device_.writeBuffer(uniform_, 0, std::as_bytes(std::span(&camera, 1)));
     uploadLights();

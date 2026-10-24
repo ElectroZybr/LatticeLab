@@ -46,11 +46,11 @@ private:
     Wgpu::Buffer params_, counters_;
     std::vector<Boundaries::Op> structure_;
     std::unique_ptr<Pipelines> pipelines_;
-    std::unique_ptr<Wgpu::Buffer> slotOf_, brickOf_, samples_, cellVertex_;
+    std::unique_ptr<Wgpu::Buffer> slotOf_, brickOf_, slotData_;
     std::unique_ptr<Wgpu::BindingSet> set_;
     SurfaceGrid grid_{};
     glm::uvec3 bricks_{0u};
-    std::array<uint32_t, 3> capacity_{};
+    std::array<uint32_t, 4> capacity_{};
     uint64_t builtVersion_ = ~0ull;
     uint32_t builtResolution_ = 0;
     uint32_t activeBricks_ = 0, vertexCount_ = 0;

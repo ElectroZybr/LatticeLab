@@ -125,9 +125,16 @@ BENCH_GROUPED(Mesh, Solid, MeshFrame, "lit torus of N triangles, 1920×1080") {
     bench.measure<MeshFrame>([](MeshFrame& frame, Trace& trace) { frame.target.draw(trace); });
 }
 
-BENCH_GROUPED(Mesh, Wireframe, MeshFrame, "the same torus with the wireframe over it") {
+BENCH_GROUPED(Mesh, Triangles, MeshFrame, "the same torus with its triangles over it") {
     bench.measure<MeshFrame>([](MeshFrame& frame, Trace& trace) {
-        frame.object.wireframe = true;
+        frame.object.triangles = true;
+        frame.target.draw(trace);
+    });
+}
+
+BENCH_GROUPED(Mesh, HiddenVisible, MeshFrame, "the same torus, visible and dashed hidden lines") {
+    bench.measure<MeshFrame>([](MeshFrame& frame, Trace& trace) {
+        frame.object.display = "hidden-visible";
         frame.target.draw(trace);
     });
 }

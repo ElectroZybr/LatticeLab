@@ -98,6 +98,18 @@ void checkClosed(const MeshData& mesh, const char* name) {
         check(edges.contains({edge.second, edge.first}) && edges.at({edge.second, edge.first}) == count, name);
 }
 
+void meshEdgesOfShapes() {
+    const auto count = [](const std::vector<MeshEdge>& edges, auto predicate) {
+        return std::ranges::count_if(edges, predicate);
+    };
+    const auto crease = [](const MeshEdge& e) { return e.second.w > 0 && glm::dot(glm::vec3(e.first), glm::vec3(e.second)) < 0.866f; };
+    const auto boundary = [](const MeshEdge& e) { return e.second.w == 0; };
+    const auto box = meshEdges(MeshShapes::box({1.0f, 0.5f, 0.25f}));
+    check(box.size() == 18 && count(box, crease) == 12 && count(box, boundary) == 0, "a box: 12 creases, 6 flat diagonals");
+    const auto sphere = meshEdges(MeshShapes::sphere(1.0f, 32, 16));
+    check(count(sphere, crease) == 0 && count(sphere, boundary) == 0, "a fine sphere has no creases");
+}
+
 void meshShapesAreClosed() {
     checkClosed(MeshShapes::box({1.0f, 0.5f, 0.25f}), "box is closed and outward");
     checkClosed(MeshShapes::sphere(1.0f, 24, 12), "sphere is closed and outward");
@@ -171,12 +183,20 @@ void meshIsDrawnAndLit(Wgpu::Device& device) {
         pixels = drawFrame(device, layout, viewport);
         check(at(32, 32) < 50, "without lights only the ambient light is left");
 
-        object.wireframe = true;
+        object.triangles = true;
         object.opacity = 0.5f;
         object.cullBack = false;
         drawFrame(device, layout, viewport);
-        object.solid = false;
-        drawFrame(device, layout, viewport);
+        object.triangles = false;
+        object.opacity = 1.0f;
+        for (const char* display : {"shaded-edges", "hidden-removed", "hidden-visible", "wireframe"}) {
+            object.display = display;
+            pixels = drawFrame(device, layout, viewport);
+        }
+        check(at(32, 32) == 0 && at(32 + 31, 32) == 0, "a sphere in wireframe: no faces, no creases inside");
+        object.display = "hidden-removed";
+        pixels = drawFrame(device, layout, viewport);
+        check(at(32, 32) > 200, "hidden lines removed: faces are filled");
     }
     check(device.resources().size() == 0, "mesh resources are released");
     check(Wgpu::errorCount() == errors, "mesh pipelines in every mode match the layouts");
@@ -226,6 +246,13 @@ void sdfMeshMatchesTheCpu(Wgpu::Device& device) {
         check(actual.indices.size() * 1000 >= expected.indices.size() * 995 &&
               actual.indices.size() * 1000 <= expected.indices.size() * 1005, "GPU faces are the CPU ones");
         check(mesh.activeBricks() < 6 * 6 * 6, "empty bricks are skipped");
+
+        std::vector<MeshEdge> edges(mesh.edgeCount());
+        device.readBuffer(*mesh.edges(), 0, std::as_writable_bytes(std::span(edges)));
+        check(std::ranges::none_of(edges, [](const MeshEdge& e) { return e.second.w == 0; }), "a closed net has no boundary");
+        // Two closed quad surfaces (the cylinder and the sphere): E = 2V − 8.
+        const auto expectedEdges = 2 * int64_t(actual.vertices.size()) - 8;
+        check(std::abs(int64_t(edges.size()) - expectedEdges) * 200 <= expectedEdges, "one edge between neighbouring cells");
 
         check(!mesh.update(), "nothing changed, nothing rebuilt");
         geometry.upload((Shape::cylinder(0.37f, 0.57f).rounded(0.17f) - Shape::sphere(0.21f)).compile());
@@ -311,6 +338,7 @@ int main() {
     viewportHitTestAndLocalCursor();
     orbitControllerKeepsDistance();
     meshShapesAreClosed();
+    meshEdgesOfShapes();
     surfaceNetsOfSphereAndPlane();
     const bool gpu = sceneResourcesOnDevice();
     std::cout << "Graphics: camera, controllers, mesh shapes, surface nets" << (gpu ? " and scene/spheres/mesh/SDF mesh resources" : "") << " passed\n";

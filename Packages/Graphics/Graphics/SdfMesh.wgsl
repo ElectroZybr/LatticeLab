@@ -3,22 +3,31 @@
 const BRICK: u32 = 8u;
 const BRICK_CELLS: u32 = 512u;
 const BRICK_CORNERS: u32 = 729u;
+const SLOT_WORDS: u32 = 1241u;           // samples (729 f32), then cell vertices (512 u32)
 const NONE: u32 = 0xFFFFFFFFu;
 
 struct Params {
     origin: vec4<f32>,      // w: cell size
     bricks: vec4<u32>,      // w: total
-    capacity: vec4<u32>,    // slots, vertices, indices
+    capacity: vec4<u32>,    // slots, vertices, indices, edges
 };
 struct Counters {
     slots: atomic<u32>,
     vertices: atomic<u32>,
     indices: atomic<u32>,
-    pad: u32,
+    edges: atomic<u32>,
 };
 struct Vertex {
     position: vec4<f32>,
     normal: vec4<f32>,
+};
+struct Edge {
+    a: u32,
+    b: u32,
+    pad0: u32,
+    pad1: u32,
+    first: vec4<f32>,
+    second: vec4<f32>,
 };
 
 @group(0) @binding(0) var<storage, read> geometryCode: array<Instruction>;
@@ -26,10 +35,10 @@ struct Vertex {
 @group(0) @binding(2) var<storage, read_write> counters: Counters;
 @group(0) @binding(3) var<storage, read_write> slotOf: array<u32>;
 @group(0) @binding(4) var<storage, read_write> brickOf: array<u32>;
-@group(0) @binding(5) var<storage, read_write> samples: array<f32>;
-@group(0) @binding(6) var<storage, read_write> cellVertex: array<u32>;
-@group(0) @binding(7) var<storage, read_write> vertices: array<Vertex>;
-@group(0) @binding(8) var<storage, read_write> indices: array<u32>;
+@group(0) @binding(5) var<storage, read_write> slotData: array<u32>;
+@group(0) @binding(6) var<storage, read_write> vertices: array<Vertex>;
+@group(0) @binding(7) var<storage, read_write> indices: array<u32>;
+@group(0) @binding(8) var<storage, read_write> edges: array<Edge>;
 
 fn gridIndex(id: vec3<u32>, groups: vec3<u32>) -> u32 { return id.x + id.y * groups.x * 64u; }
 
@@ -47,7 +56,11 @@ fn activeSlots() -> u32 {
 }
 
 fn sampleAt(slot: u32, local: vec3<u32>) -> f32 {
-    return samples[slot * BRICK_CORNERS + (local.z * 9u + local.y) * 9u + local.x];
+    return bitcast<f32>(slotData[slot * SLOT_WORDS + (local.z * 9u + local.y) * 9u + local.x]);
+}
+
+fn cellVertexAt(slot: u32, cell: u32) -> u32 {
+    return slotData[slot * SLOT_WORDS + BRICK_CORNERS + cell];
 }
 
 @compute @workgroup_size(64)
@@ -80,7 +93,7 @@ fn sample(@builtin(workgroup_id) group: vec3<u32>, @builtin(num_workgroups) grou
     let base = brickCoord(brickOf[slot]) * BRICK;
     for (var k = lane; k < BRICK_CORNERS; k += 64u) {
         let local = vec3<u32>(k % 9u, (k / 9u) % 9u, k / 81u);
-        samples[slot * BRICK_CORNERS + k] = sdfDistance(cornerPosition(base + local));
+        slotData[slot * SLOT_WORDS + k] = bitcast<u32>(sdfDistance(cornerPosition(base + local)));
     }
 }
 
@@ -109,7 +122,7 @@ fn place(@builtin(workgroup_id) group: vec3<u32>, @builtin(num_workgroups) group
             d[k] = sampleAt(slot, local + CORNERS[k]);
             if (d[k] > 0.0) { inside = true; } else { outside = true; }
         }
-        cellVertex[slot * BRICK_CELLS + c] = NONE;
+        slotData[slot * SLOT_WORDS + BRICK_CORNERS + c] = NONE;
         if (!inside || !outside) { continue; }
 
         var sum = vec3<f32>(0.0);
@@ -136,7 +149,7 @@ fn place(@builtin(workgroup_id) group: vec3<u32>, @builtin(num_workgroups) group
         let cell = params.origin.w;
         vertices[index] = Vertex(vec4<f32>(params.origin.xyz + (vec3<f32>(base + local) + u) * cell, 0.0),
                                  vec4<f32>(normal, 0.0));
-        cellVertex[slot * BRICK_CELLS + c] = index;
+        slotData[slot * SLOT_WORDS + BRICK_CORNERS + c] = index;
     }
 }
 
@@ -145,7 +158,41 @@ fn vertexOfCell(cell: vec3<u32>) -> u32 {
     let slot = slotOf[(b.z * params.bricks.y + b.y) * params.bricks.x + b.x];
     if (slot == NONE) { return NONE; }
     let local = cell % BRICK;
-    return cellVertex[slot * BRICK_CELLS + (local.z * 8u + local.y) * 8u + local.x];
+    return cellVertexAt(slot, (local.z * 8u + local.y) * 8u + local.x);
+}
+
+fn unit(axis: u32) -> vec3<u32> {
+    var e = vec3<u32>(0u);
+    e[axis] = 1u;
+    return e;
+}
+
+// The quad of the grid edge from corner s along axis d (as connect makes it), or no
+// normal (w 0) when connect makes none there.
+fn quadNormal(s: vec3<u32>, d: u32) -> vec4<f32> {
+    let cells = params.bricks.xyz * BRICK;
+    let b = (d + 1u) % 3u;
+    let c = (d + 2u) % 3u;
+    if (s[d] >= cells[d] || s[b] == 0u || s[c] == 0u || s[b] >= cells[b] || s[c] >= cells[c]) {
+        return vec4<f32>(0.0);
+    }
+    let brick = s / BRICK;
+    let slot = slotOf[(brick.z * params.bricks.y + brick.y) * params.bricks.x + brick.x];
+    if (slot == NONE) { return vec4<f32>(0.0); }
+    let local = s % BRICK;
+    let near = sampleAt(slot, local) > 0.0;
+    let far = sampleAt(slot, local + unit(d)) > 0.0;
+    if (near == far) { return vec4<f32>(0.0); }
+    let q0 = vertexOfCell(s - unit(b) - unit(c));
+    let q1 = vertexOfCell(s - unit(c));
+    let q2 = vertexOfCell(s);
+    let q3 = vertexOfCell(s - unit(b));
+    if (q0 == NONE || q1 == NONE || q2 == NONE || q3 == NONE) { return vec4<f32>(0.0); }
+    let n = cross(vertices[q2].position.xyz - vertices[q0].position.xyz,
+                  vertices[q3].position.xyz - vertices[q1].position.xyz);
+    let size = length(n);
+    if (size == 0.0) { return vec4<f32>(0.0); }
+    return vec4<f32>(select(-n, n, far) / size, 1.0);
 }
 
 // An edge belongs to the brick of its start corner; its quad joins the four cells around
@@ -188,6 +235,45 @@ fn connect(@builtin(workgroup_id) group: vec3<u32>, @builtin(num_workgroups) gro
         } else {
             indices[at] = q0; indices[at + 1u] = q2; indices[at + 2u] = q1;
             indices[at + 3u] = q0; indices[at + 4u] = q3; indices[at + 5u] = q2;
+        }
+    }
+}
+
+// An edge of the mesh joins the vertices of two neighbouring cells; its faces are the quads
+// of the crossed grid edges on the face between those cells.
+@compute @workgroup_size(64)
+fn outline(@builtin(workgroup_id) group: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>,
+           @builtin(local_invocation_index) lane: u32) {
+    let slot = group.x + group.y * groups.x;
+    if (slot >= activeSlots()) { return; }
+    let base = brickCoord(brickOf[slot]) * BRICK;
+    let cells = params.bricks.xyz * BRICK;
+    for (var k = lane; k < 3u * BRICK_CELLS; k += 64u) {
+        let a = k / BRICK_CELLS;
+        let index = k % BRICK_CELLS;
+        let cell = base + vec3<u32>(index % 8u, (index / 8u) % 8u, index / 64u);
+        if (cell[a] + 1u >= cells[a]) { continue; }
+        let v0 = cellVertexAt(slot, index);
+        let v1 = vertexOfCell(cell + unit(a));
+        if (v0 == NONE || v1 == NONE) { continue; }
+
+        let b = (a + 1u) % 3u;
+        let c = (a + 2u) % 3u;
+        let q = cell + unit(a);
+        let candidates = array<vec4<f32>, 4>(
+            quadNormal(q, b), quadNormal(q + unit(c), b), quadNormal(q, c), quadNormal(q + unit(b), c));
+        var normals = array<vec4<f32>, 2>(vec4<f32>(0.0), vec4<f32>(0.0));
+        var found = 0u;
+        for (var i = 0u; i < 4u; i++) {
+            if (candidates[i].w > 0.0 && found < 2u) {
+                normals[found] = candidates[i];
+                found += 1u;
+            }
+        }
+        if (found == 0u) { continue; }
+        let at = atomicAdd(&counters.edges, 1u);
+        if (at < params.capacity.w) {
+            edges[at] = Edge(v0, v1, 0u, 0u, normals[0], normals[1]);
         }
     }
 }

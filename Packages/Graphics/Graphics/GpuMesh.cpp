@@ -35,16 +35,26 @@ void GpuMesh::upload(const MeshData& data) {
         if (index >= data.vertices.size())
             throw Error("mesh '{}': index {} of {} vertices", label_, index, data.vertices.size());
     indexCount_ = uint32_t(data.indices.size());
+    edgeCount_ = 0;
     if (data.indices.empty())
         return;
     reserve(data.vertices.size() * sizeof(MeshVertex), data.indices.size() * sizeof(uint32_t));
     device_.writeBuffer(*vertices_, 0, std::as_bytes(std::span(data.vertices)));
     device_.writeBuffer(*indices_, 0, std::as_bytes(std::span(data.indices)));
+    const std::vector<MeshEdge> edges = meshEdges(data);
+    edgeCount_ = uint32_t(edges.size());
+    reserveEdges(edges.size() * sizeof(MeshEdge));
+    device_.writeBuffer(*edges_, 0, std::as_bytes(std::span(edges)));
 }
 
 void GpuMesh::reserve(uint64_t vertexBytes, uint64_t indexBytes) {
     bool recreated = fit(device_, vertices_, std::max<uint64_t>(vertexBytes, 4), label_ + "/vertices");
     recreated |= fit(device_, indices_, std::max<uint64_t>(indexBytes, 4), label_ + "/indices");
     if (recreated)
+        ++generation_;
+}
+
+void GpuMesh::reserveEdges(uint64_t bytes) {
+    if (fit(device_, edges_, std::max<uint64_t>(bytes, sizeof(MeshEdge)), label_ + "/edges"))
         ++generation_;
 }

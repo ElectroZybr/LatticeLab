@@ -60,15 +60,22 @@ auto composeOrbitCamera(NodeBuild& slot) {
 
 // Material and display modes of a drawn mesh.
 void exportMesh(Lattice::ObjectBuild<MeshObject>& mesh) {
+    mesh.param("display", &MeshObject::display);
     mesh.param("color", &MeshObject::color);
     mesh.param("opacity", &MeshObject::opacity);
     mesh.param("specular", &MeshObject::specular);
     mesh.param("shininess", &MeshObject::shininess);
-    mesh.param("solid", &MeshObject::solid);
-    mesh.param("wireframe", &MeshObject::wireframe);
-    mesh.param("wireColor", &MeshObject::wireColor);
-    mesh.param("wireWidth", &MeshObject::wireWidth);
     mesh.param("cullBack", &MeshObject::cullBack);
+    mesh.param("fillColor", &MeshObject::fillColor);
+    mesh.param("edgeColor", &MeshObject::edgeColor);
+    mesh.param("edgeWidth", &MeshObject::edgeWidth);
+    mesh.param("hiddenColor", &MeshObject::hiddenColor);
+    mesh.param("hiddenWidth", &MeshObject::hiddenWidth);
+    mesh.param("dashLength", &MeshObject::dashLength);
+    mesh.param("creaseAngle", &MeshObject::creaseAngle);
+    mesh.param("triangles", &MeshObject::triangles);
+    mesh.param("triangleColor", &MeshObject::triangleColor);
+    mesh.param("triangleWidth", &MeshObject::triangleWidth);
 }
 
 Lattice::ObjectBuild<Light> addLight(NodeBuild& scene, std::string_view name, Light light) {
@@ -144,7 +151,7 @@ extern "C" void compose(NodeBuild root) {
         exportMesh(wallsView);
         auto mesh = viewport.emplace<MeshObject, SceneObject>("torus", render->layout(), torus);
         mesh->setPosition({3.2f, 0.0f, 0.0f});
-        mesh->wireframe = true;
+        mesh->display = "shaded-edges";
         exportMesh(mesh);
         addLight(viewport, "sun", Light{.color = {1.0f, 0.96f, 0.9f}, .intensity = 0.9f, .direction = {-0.4f, -1.0f, -0.6f}});
         addLight(viewport, "fill", Light{.color = {0.6f, 0.7f, 1.0f}, .intensity = 0.35f, .direction = {0.7f, 0.2f, 0.5f}});
