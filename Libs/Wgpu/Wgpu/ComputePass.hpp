@@ -10,11 +10,14 @@
 
 namespace Wgpu {
 
+class Timer;
+
 /// A compute pass recorded into a command list. Begins on construction, ends with
-/// end() or on destruction; the list submits after it ends.
+/// end() or on destruction; the list submits after it ends. With a timer, the GPU time
+/// of the pass is measured as an interval named by the label.
 class ComputePass final {
 public:
-    explicit ComputePass(CommandList& commands, std::string_view label = {});
+    explicit ComputePass(CommandList& commands, std::string_view label = {}, Timer* timer = nullptr);
     ~ComputePass();
     ComputePass(const ComputePass&) = delete;
     ComputePass& operator=(const ComputePass&) = delete;

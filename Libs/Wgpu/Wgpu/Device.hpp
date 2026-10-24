@@ -57,6 +57,12 @@ private:
     uint64_t next_ = 1;
 };
 
+/// Optional device capabilities, requested at creation when the adapter has them.
+enum class Feature {
+    Timestamps,         // GPU time at the beginning and end of passes (Timer)
+    EncoderTimestamps   // GPU time between commands of an encoder (copies)
+};
+
 class Device final {
 public:
     explicit Device(Instance& instance);
@@ -72,6 +78,10 @@ public:
 
     /// Wait until the GPU has finished all submitted work.
     void wait();
+
+    bool has(Feature feature) const noexcept;
+    /// Nanoseconds per timestamp tick.
+    double timestampPeriod() const noexcept;
 
     WGPUDevice native() const noexcept { return device_; }
     WGPUAdapter adapter() const noexcept { return adapter_; }

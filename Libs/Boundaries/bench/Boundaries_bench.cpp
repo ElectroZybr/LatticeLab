@@ -1,10 +1,14 @@
-// Hot paths of the boundaries library: run `xmake run Boundaries.bench [name]`.
+// Hot paths of the boundaries library: run `xmake run Boundaries.bench [name or group]`.
+// Walls: CPU and GPU pairs of one work split into phases (BmRunner Trace), Resident (data
+// in the cache / on the device) and Offload (cold cache / copies there and back); the
+// group run prints the crossover N*.
 #include <algorithm>
 #include <cmath>
 #include <random>
 #include <vector>
 
 #include <BmRunner/Benchmarks.hpp>
+#include <BmRunner/Evict.hpp>
 #include <Boundaries/Space.hpp>
 #include <BoundariesCpu/Geometry.hpp>
 #include <BoundariesCpu/Walls.hpp>
@@ -14,10 +18,14 @@
 #include <Wgpu/CommandList.hpp>
 #include <Wgpu/Device.hpp>
 #include <Wgpu/GpuSoA.hpp>
+#include <Wgpu/Timer.hpp>
 #include <Lattice/Tools/TypeName.hpp>
 
 using namespace Boundaries;
 using namespace Boundaries::Cpu;
+using Lattice::Benchmarks::Mode;
+using Lattice::Benchmarks::Phase;
+using Lattice::Benchmarks::Trace;
 
 namespace {
 
@@ -159,18 +167,47 @@ struct TubeParticles : Lattice::Fixture, Table {
 
 }
 
+namespace {
+/// The same particles out of every cache before each iteration (Offload on the CPU).
+struct ColdTubeParticles : TubeParticles {
+    using TubeParticles::TubeParticles;
+    void prepare() override {
+        TubeParticles::prepare();
+        Lattice::Benchmarks::evictCaches();
+    }
+};
+}
+
 BENCH_GROUP(Walls) { bench.config.sizes = Sizes; }
 
 BENCH_GROUPED(Walls, Constrain, TubeParticles, "hard tube walls: project and reflect the ~10% in walls") {
+    bench.work("Constrain").executor("cpu").mode(Mode::Resident);
     const Geometry geometry{tube()};
     const Walls walls{geometry, Layout};
-    bench.measure<TubeParticles>([&](TubeParticles& p) { walls.constrain(p.table, p.table.size()); });
+    bench.measure<TubeParticles>([&](TubeParticles& p, Trace& trace) {
+        auto execute = trace.span(Phase::Execute);
+        walls.constrain(p.table, p.table.size());
+    });
+}
+
+BENCH_GROUPED(Walls, ConstrainCold, ColdTubeParticles, "hard tube walls from a cold cache") {
+    bench.work("Constrain").executor("cpu").mode(Mode::Offload);
+    const Geometry geometry{tube()};
+    const Walls walls{geometry, Layout};
+    bench.measure<ColdTubeParticles>([&](ColdTubeParticles& p, Trace& trace) {
+        auto execute = trace.span(Phase::Execute);
+        walls.constrain(p.table, p.table.size());
+    });
 }
 
 BENCH_GROUPED(Walls, SoftForces, TubeParticles, "soft tube walls, layer 0.5 thick") {
+    bench.work("SoftForces").executor("cpu").mode(Mode::Resident);
     const Geometry geometry{tube()};
     const Walls walls{geometry, Layout, {Laws::Soft::make(10, 0.5f, 6)}};
-    bench.measure<TubeParticles>([&](TubeParticles& p) { walls.addForces(p.table, p.table.size()); });
+    bench.measure<TubeParticles>([&](TubeParticles& p, Trace& trace) {
+        auto execute = trace.span(Phase::Execute);
+        walls.addForces(p.table, p.table.size());
+    });
 }
 
 namespace {
@@ -194,31 +231,85 @@ struct GpuTubeParticles : TubeParticles {
 
 }
 
-BENCH_GROUPED(Walls, ConstrainGpu, GpuTubeParticles, "hard tube walls on the GPU: record, submit, wait") {
+namespace {
+
+/// One GPU step: record, submit, wait; the GPU time of the pass comes from the timer.
+template<class Record>
+void stepOnGpu(Trace& trace, ::Wgpu::Timer& timer, Record&& record) {
+    ::Wgpu::CommandList commands{device()};
+    {
+        auto prepare = trace.span(Phase::Prepare);
+        record(commands);
+    }
+    {
+        auto issue = trace.span(Phase::Issue);
+        commands.submit();
+    }
+    {
+        auto complete = trace.span(Phase::Complete);
+        device().wait();
+    }
+    trace.deferIntervals(timer);
+}
+
+}
+
+BENCH_GROUPED(Walls, ConstrainGpu, GpuTubeParticles, "hard tube walls on the GPU, particles on the device") {
+    bench.work("Constrain").executor("gpu").mode(Mode::Resident);
     const Boundaries::Wgpu::GpuGeometry geometry{device(), tube().compile()};
     Boundaries::Wgpu::GpuWalls walls{geometry, Layout};
-    bench.measure<GpuTubeParticles>([&](GpuTubeParticles& p) {
-        ::Wgpu::CommandList commands{device()};
-        walls.constrain(commands, p.gpu, p.table.size());
-        commands.submit();
-        device().wait();
+    ::Wgpu::Timer timer{device(), 1024, "bench/walls"};
+    bench.measure<GpuTubeParticles>([&](GpuTubeParticles& p, Trace& trace) {
+        stepOnGpu(trace, timer, [&](::Wgpu::CommandList& commands) {
+            walls.constrain(commands, p.gpu, p.table.size(), &timer);
+        });
     });
 }
 
-BENCH_GROUPED(Walls, SoftForcesGpu, GpuTubeParticles, "soft tube walls on the GPU: record, submit, wait") {
+BENCH_GROUPED(Walls, ConstrainGpuOffload, GpuTubeParticles, "hard tube walls on the GPU with the copies there and back") {
+    bench.work("Constrain").executor("gpu").mode(Mode::Offload);
+    const Boundaries::Wgpu::GpuGeometry geometry{device(), tube().compile()};
+    Boundaries::Wgpu::GpuWalls walls{geometry, Layout};
+    ::Wgpu::Timer timer{device(), 1024, "bench/walls"};
+    bench.measure<GpuTubeParticles>([&](GpuTubeParticles& p, Trace& trace) {
+        const size_t bytes = p.table.bytes().size();
+        {
+            auto upload = trace.span(Phase::TransferIn);
+            p.gpu.upload(p.table);
+            upload.bytes(bytes);
+        }
+        stepOnGpu(trace, timer, [&](::Wgpu::CommandList& commands) {
+            walls.constrain(commands, p.gpu, p.table.size(), &timer);
+        });
+        {
+            auto readback = trace.span(Phase::TransferOut);
+            p.gpu.read([&](const ::Wgpu::GpuSoA::View& view) {
+                readback.bytes(device().readBuffer(view.buffer, 0, bytes).size());
+            });
+        }
+    });
+}
+
+BENCH_GROUPED(Walls, SoftForcesGpu, GpuTubeParticles, "soft tube walls on the GPU, particles on the device") {
+    bench.work("SoftForces").executor("gpu").mode(Mode::Resident);
     const Boundaries::Wgpu::GpuGeometry geometry{device(), tube().compile()};
     Boundaries::Wgpu::GpuWalls walls{geometry, Layout, {Laws::Soft::make(10, 0.5f, 6)}};
-    bench.measure<GpuTubeParticles>([&](GpuTubeParticles& p) {
-        ::Wgpu::CommandList commands{device()};
-        walls.addForces(commands, p.gpu, p.table.size());
-        commands.submit();
-        device().wait();
+    ::Wgpu::Timer timer{device(), 1024, "bench/walls"};
+    bench.measure<GpuTubeParticles>([&](GpuTubeParticles& p, Trace& trace) {
+        stepOnGpu(trace, timer, [&](::Wgpu::CommandList& commands) {
+            walls.addForces(commands, p.gpu, p.table.size(), &timer);
+        });
     });
 }
 
+// An argument names a bench or a group (a group also compares its executors).
 int main(int argc, char** argv) {
-    if (argc > 1)
-        Lattice::Benchmarks::run(argv[1]);
-    else
-        Lattice::Benchmarks::runAll();
+    namespace Bm = Lattice::Benchmarks;
+    if (argc < 2)
+        return Bm::runAll(), 0;
+    const std::string_view name = argv[1];
+    for (const auto group : Bm::groups())
+        if (group == name)
+            return Bm::runGroup(name), 0;
+    Bm::run(name);
 }

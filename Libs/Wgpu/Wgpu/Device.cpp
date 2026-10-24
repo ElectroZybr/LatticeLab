@@ -81,7 +81,17 @@ WGPUDevice Instance::createDevice(WGPUAdapter& selectedAdapter) {
         throw Lattice::Exception<Instance>("no GPU adapters found");
     const auto adapter = adapters.front();
 
+    // Timestamps (GPU time of passes and copies) when the adapter has them: measuring
+    // tools use them, everything else works without.
+    std::vector<WGPUFeatureName> features;
+    for (const auto feature : {WGPUFeatureName_TimestampQuery,
+                               static_cast<WGPUFeatureName>(WGPUNativeFeature_TimestampQueryInsideEncoders)})
+        if (wgpuAdapterHasFeature(adapter, feature))
+            features.push_back(feature);
+
     WGPUDeviceDescriptor desc{};
+    desc.requiredFeatureCount = features.size();
+    desc.requiredFeatures = features.data();
     desc.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
     desc.deviceLostCallbackInfo.callback =
         [](WGPUDevice const*, WGPUDeviceLostReason reason, WGPUStringView message, void*, void*) {
@@ -196,6 +206,20 @@ Device::~Device() {
 
 void Device::writeBuffer(Buffer& buffer, uint64_t offset, std::span<const std::byte> data) {
     wgpuQueueWriteBuffer(queue_, buffer.native(), offset, data.data(), data.size());
+}
+
+bool Device::has(Feature feature) const noexcept {
+    switch (feature) {
+        case Feature::Timestamps:
+            return wgpuDeviceHasFeature(device_, WGPUFeatureName_TimestampQuery);
+        case Feature::EncoderTimestamps:
+            return wgpuDeviceHasFeature(device_, static_cast<WGPUFeatureName>(WGPUNativeFeature_TimestampQueryInsideEncoders));
+    }
+    return false;
+}
+
+double Device::timestampPeriod() const noexcept {
+    return double(wgpuQueueGetTimestampPeriod(queue_));
 }
 
 void Device::wait() {

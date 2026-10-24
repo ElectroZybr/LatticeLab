@@ -93,11 +93,12 @@ struct GpuWalls::Stage {
     Stage(::Wgpu::Device& device, ::Wgpu::Shader& shader, ::Wgpu::BindingLayout& layout, const char* entry, bool velocities)
         : pipeline(device, shader, {.layouts = {&layout}, .entry = entry, .label = std::string("walls/") + entry}),
           params(device, uniform(sizeof(Params), "walls/params")),
-          velocities(velocities) {}
+          velocities(velocities), name(entry) {}
 
     ::Wgpu::ComputePipeline pipeline;
     ::Wgpu::Buffer params;
     bool velocities;
+    std::string_view name;   // pass label and timer interval
     std::unique_ptr<::Wgpu::BindingSet> set;
     const ::Wgpu::Buffer* table = nullptr;
     uint64_t tableGeneration = ~0ull, geometryGeneration = ~0ull;
@@ -130,7 +131,8 @@ GpuWalls::GpuWalls(const GpuGeometry& geometry, ParticleLayout layout, std::vect
 
 GpuWalls::~GpuWalls() = default;
 
-void GpuWalls::record(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particles, size_t rows, Stage& stage) {
+void GpuWalls::record(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particles, size_t rows, Stage& stage,
+                      ::Wgpu::Timer* timer) {
     if (!rows)
         return;
     auto& device = geometry_.device();
@@ -162,19 +164,19 @@ void GpuWalls::record(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particles, 
             stage.geometryGeneration = geometry_.generation();
         }
     });
-    ::Wgpu::ComputePass pass{commands, "walls"};
+    ::Wgpu::ComputePass pass{commands, stage.name, timer};
     pass.setPipeline(stage.pipeline);
     pass.setBindings(0, *stage.set);
     pass.dispatch(::Wgpu::workgroups(rows, WorkgroupSize));
 }
 
-void GpuWalls::addForces(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particles, size_t rows) {
+void GpuWalls::addForces(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particles, size_t rows, ::Wgpu::Timer* timer) {
     if (forceRange_ > 0.0f)
-        record(commands, particles, rows, *forces_);
+        record(commands, particles, rows, *forces_, timer);
 }
 
-void GpuWalls::constrain(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particles, size_t rows) {
-    record(commands, particles, rows, *constrain_);
+void GpuWalls::constrain(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particles, size_t rows, ::Wgpu::Timer* timer) {
+    record(commands, particles, rows, *constrain_, timer);
 }
 
 struct GpuDistances::State {

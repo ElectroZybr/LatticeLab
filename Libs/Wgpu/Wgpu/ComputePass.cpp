@@ -3,14 +3,17 @@
 #include <Lattice/Tools/Exception.hpp>
 
 #include "Native.hpp"
+#include "Timer.hpp"
 
 namespace Wgpu {
 
 using Error = Lattice::Exception<ComputePass>;
 
-ComputePass::ComputePass(CommandList& commands, std::string_view label) : commands_(commands) {
+ComputePass::ComputePass(CommandList& commands, std::string_view label, Timer* timer) : commands_(commands) {
     WGPUComputePassDescriptor desc{};
     desc.label = nativeString(label);
+    if (timer)
+        desc.timestampWrites = timer->pass(label);
     pass_ = wgpuCommandEncoderBeginComputePass(commands.encoder(), &desc);
     if (!pass_)
         throw Error("failed to begin compute pass");

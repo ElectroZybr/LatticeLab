@@ -9,6 +9,7 @@
 #include <Boundaries/ParticleLayout.hpp>
 #include <Wgpu/CommandList.hpp>
 #include <Wgpu/GpuSoA.hpp>
+#include <Wgpu/Timer.hpp>
 #include <Wgpu/Resources.hpp>
 
 #include "GpuGeometry.hpp"
@@ -29,15 +30,20 @@ public:
     ~GpuWalls();
 
     /// Force stage: add wall forces (Soft) to the force columns of rows [0, rows).
-    void addForces(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particles, size_t rows);
-    /// Constrain stage: move rows [0, rows) out of walls and reflect their velocities (Hard).
-    void constrain(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particles, size_t rows);
+    /// With a timer, the GPU time of the pass is measured as "forces".
+    void addForces(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particles, size_t rows,
+                   ::Wgpu::Timer* timer = nullptr);
+    /// Constrain stage: move rows [0, rows) out of walls and reflect their velocities (Hard);
+    /// measured as "constrain".
+    void constrain(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particles, size_t rows,
+                   ::Wgpu::Timer* timer = nullptr);
 
     static constexpr uint32_t WorkgroupSize = 64;
 
 private:
     struct Stage;
-    void record(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particles, size_t rows, Stage& stage);
+    void record(::Wgpu::CommandList& commands, ::Wgpu::GpuSoA& particles, size_t rows, Stage& stage,
+                ::Wgpu::Timer* timer);
 
     uint64_t errorsBefore_;   // first: counted before any GPU object is created
     const GpuGeometry& geometry_;

@@ -19,7 +19,9 @@ enum class BufferUsage : uint64_t {
     Index           = 1ull << 4,
     Vertex          = 1ull << 5,
     Uniform         = 1ull << 6,
-    Storage         = 1ull << 7
+    Storage         = 1ull << 7,
+    Indirect        = 1ull << 8,
+    QueryResolve    = 1ull << 9
 };
 
 constexpr BufferUsage operator|(BufferUsage a, BufferUsage b) {

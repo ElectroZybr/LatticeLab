@@ -13,6 +13,7 @@
 #include <Wgpu/Device.hpp>
 #include <Wgpu/GpuSoA.hpp>
 #include <Wgpu/Resources.hpp>
+#include <Wgpu/Timer.hpp>
 
 namespace {
 void check(bool condition, const char* message) {
@@ -178,6 +179,49 @@ void computeDoublesAnArray(Wgpu::Device& device) {
     check(Wgpu::errorCount() == errors, "compute pipeline, pass and readback are valid");
 }
 
+void timerMeasuresPasses(Wgpu::Device& device) {
+    const auto errors = Wgpu::errorCount();
+    {
+        Wgpu::Timer timer{device, 2, "test"};
+        if (!timer.available()) {
+            std::cout << "Wgpu: " << timer.unavailableReason() << ", timer checks skipped\n";
+            return;
+        }
+        constexpr size_t count = 1 << 21;   // 32768 groups of 64: under the 65535 limit
+        Wgpu::Buffer data{device, {.size = count * sizeof(float), .usage = Wgpu::BufferUsage::Storage, .label = "data"}};
+        const std::array<Wgpu::LayoutEntry, 1> entries{{{.binding = 0, .type = Wgpu::BindingType::Storage,
+            .visibility = Wgpu::ShaderStage::Compute}}};
+        Wgpu::BindingLayout layout{device, entries, "data"};
+        const Wgpu::Binding binding{.binding = 0, .buffer = &data};
+        Wgpu::BindingSet set{device, layout, std::span(&binding, 1)};
+        Wgpu::Shader shader{device, {.source = reinterpret_cast<const char*>(DoubleShader), .label = "double"}};
+        Wgpu::ComputePipeline pipeline{device, shader, {.layouts = {&layout}, .label = "double"}};
+
+        // Three passes into a timer of two intervals: the third runs untimed.
+        const auto started = std::chrono::steady_clock::now();
+        Wgpu::CommandList commands{device};
+        for (int i = 0; i < 3; ++i) {
+            Wgpu::ComputePass pass{commands, "double", &timer};
+            pass.setPipeline(pipeline);
+            pass.setBindings(0, set);
+            pass.dispatch(Wgpu::workgroups(count, 64));
+        }
+        const uint32_t copy = timer.begin(commands, "copy");
+        timer.end(commands, copy);
+        commands.submit();
+        device.wait();
+        const double wall = std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - started).count();
+
+        const auto intervals = timer.read();
+        check(intervals.size() == 2 && intervals[0].name == "double", "intervals by name");
+        check(intervals[0].count == 2 && intervals[0].skipped == 1, "a full timer skips and counts");
+        check(intervals[0].nanoseconds > 0 && intervals[0].nanoseconds < wall, "GPU time within the wall");
+        check(intervals[1].count == 0 && intervals[1].skipped == 1, "no room for the copy interval");
+        check(timer.read()[0].count == 0, "read starts over");
+    }
+    check(Wgpu::errorCount() == errors, "timestamp queries are valid");
+}
+
 void mirrorCopiesOnTheOwnerThread(Wgpu::Device& device) {
     StdData::SoA atoms;
     atoms.addCol<PosX>();
@@ -239,6 +283,7 @@ bool resourcesRegisterOnDevice() {
     check(device->resources().size() == 0, "RAII resources unregister");
     layoutsAndTexturesOnDevice(*device);
     computeDoublesAnArray(*device);
+    timerMeasuresPasses(*device);
     gpuSoAMirrorsCpuTable(*device);
     mirrorCopiesOnTheOwnerThread(*device);
     check(device->resources().size() == 0, "GpuSoA releases its buffers");
@@ -250,5 +295,5 @@ bool resourcesRegisterOnDevice() {
 int main() {
     registryTracksLiveResources();
     const bool device = resourcesRegisterOnDevice();
-    std::cout << "Wgpu: registry" << (device ? ", device resources, layouts, textures, compute, readback and GpuSoA (mirror)" : "") << " passed\n";
+    std::cout << "Wgpu: registry" << (device ? ", device resources, layouts, textures, compute, timer, readback and GpuSoA (mirror)" : "") << " passed\n";
 }
