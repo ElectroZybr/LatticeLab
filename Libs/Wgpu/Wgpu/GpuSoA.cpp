@@ -6,7 +6,7 @@
 
 #include "CommandList.hpp"
 
-namespace WGPU {
+namespace Wgpu {
 
 using Error = Lattice::Exception<GpuSoA>;
 

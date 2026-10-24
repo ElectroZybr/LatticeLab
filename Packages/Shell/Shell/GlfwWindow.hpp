@@ -31,7 +31,7 @@ public:
     bool fullscreen() const override;
     void setFullscreen(bool enabled) override;
 
-    WGPU::NativeWindow native() const override;
+    NativeWindow native() const override;
     void show() override;
     void setTitle(std::string_view title) override;
 

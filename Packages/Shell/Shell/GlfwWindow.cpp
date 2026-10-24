@@ -415,17 +415,17 @@ void GlfwWindow::setTitle(std::string_view title) {
     }
 }
 
-WGPU::NativeWindow GlfwWindow::native() const {
-    WGPU::NativeWindow n{};
+NativeWindow GlfwWindow::native() const {
+    NativeWindow n{};
     n.owner = windowOwner_;
     if (!window_) return n;
 
     #if defined(_WIN32)
-        n.kind = WGPU::NativeWindow::Kind::Win32;
+        n.kind = NativeWindow::Kind::Win32;
         n.window = glfwGetWin32Window(window_);
 
     #elif defined(__APPLE__)
-        n.kind = WGPU::NativeWindow::Kind::Metal;
+        n.kind = NativeWindow::Kind::Metal;
         n.window = glfwGetCocoaWindow(window_);
         n.extra = glfwMetalLayer(window_);
 
@@ -433,11 +433,11 @@ WGPU::NativeWindow GlfwWindow::native() const {
         const int platform = glfwGetPlatform(); // GLFW ≥ 3.4
 
         if (platform == GLFW_PLATFORM_WAYLAND) {
-            n.kind = WGPU::NativeWindow::Kind::Wayland;
+            n.kind = NativeWindow::Kind::Wayland;
             n.display = glfwGetWaylandDisplay();
             n.window  = glfwGetWaylandWindow(window_); // wl_surface*
         } else if (platform == GLFW_PLATFORM_X11) {
-            n.kind = WGPU::NativeWindow::Kind::X11;
+            n.kind = NativeWindow::Kind::X11;
             n.display = glfwGetX11Display();
             n.window  = reinterpret_cast<void*>(
                 static_cast<uintptr_t>(glfwGetX11Window(window_)));

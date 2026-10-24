@@ -21,7 +21,7 @@ target("Shell.core")
         add_syslinks("dl")
     end
     add_includedirs(".", {public = true})
-    add_deps("StdIo.core", "Actions.core", "WGPU.core", {public = true})
+    add_deps("StdIo.core", "Actions.core", {public = true})
 
 target("Shell")
     set_kind("shared")

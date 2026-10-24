@@ -36,6 +36,7 @@ Graphics:render                     объект Render: FrameAPI; surface, dept
 | `SceneObject` | Всё, что рисуется: transform и `render(pass, ViewState)` |
 | `Spheres` | Сферы из GPU-таблицы по колонкам, палитра «вид → цвет, радиус», `frag_depth` |
 | `RenderLayout` | Общее для pipeline окна: форматы цвета и глубины, layout группы камеры |
+| `Surface`, `RenderPass`, `RenderPipeline` | Рендерные примитивы над `Libs/Wgpu`: surface окна (`NativeWindow` из Shell), проход в него, pipeline на явных layout'ах |
 | `TestObject` | Простейший объект: диск в своём transform (тесты, `shaders/circle.wgsl`) |
 | `Camera`, `Ray`, `FreeCameraController`, … | Камера, лучи, контроллеры (`TransformController`, цель ввода `InputTargetAPI`) |
 

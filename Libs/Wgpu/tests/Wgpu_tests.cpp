@@ -7,10 +7,10 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
-#include <WGPU/CommandList.hpp>
-#include <WGPU/Device.hpp>
-#include <WGPU/GpuSoA.hpp>
-#include <WGPU/Resources.hpp>
+#include <Wgpu/CommandList.hpp>
+#include <Wgpu/Device.hpp>
+#include <Wgpu/GpuSoA.hpp>
+#include <Wgpu/Resources.hpp>
 
 namespace {
 void check(bool condition, const char* message) {
@@ -18,7 +18,7 @@ void check(bool condition, const char* message) {
 }
 
 void registryTracksLiveResources() {
-    WGPU::ResourceRegistry registry;
+    Wgpu::ResourceRegistry registry;
     const auto a = registry.add("Buffer", "uniform", 64);
     const auto b = registry.add("Shader", "scene", 0);
     check(registry.size() == 2 && registry.bytes() == 64, "two live resources");
@@ -47,7 +47,7 @@ bool throws(F&& f) {
     return false;
 }
 
-void gpuSoAMirrorsCpuTable(WGPU::Device& device) {
+void gpuSoAMirrorsCpuTable(Wgpu::Device& device) {
     StdData::SoA atoms;
     atoms.addCol<PosX>();
     atoms.addCol<Kind>();
@@ -55,7 +55,7 @@ void gpuSoAMirrorsCpuTable(WGPU::Device& device) {
     atoms.resize(3);
     check(atoms.bytes().size() % 4 == 0, "SoA block is whole words");
 
-    WGPU::GpuSoA table{device, "atoms"};
+    Wgpu::GpuSoA table{device, "atoms"};
     check(table.wanted(), "an empty table wants the first upload");
     table.upload(atoms);
     const auto first = table.generation();
@@ -65,7 +65,7 @@ void gpuSoAMirrorsCpuTable(WGPU::Device& device) {
     check(!table.wanted(), "upload is pending until read");
 
     bool seen = false;
-    table.read([&](const WGPU::GpuSoA::View& view) {
+    table.read([&](const Wgpu::GpuSoA::View& view) {
         seen = view.rows == 3 && view.generation == first && view.buffer.size() >= atoms.bytes().size();
     });
     check(seen && table.wanted(), "read takes the upload");
@@ -82,7 +82,7 @@ void gpuSoAMirrorsCpuTable(WGPU::Device& device) {
     check(throws([&] { (void)table.offset("missing"); }), "unknown column");
 
     // GPU-owned table: columns and growth on the device, rows are kept by a GPU copy.
-    WGPU::GpuSoA owned{device, "owned"};
+    Wgpu::GpuSoA owned{device, "owned"};
     owned.addColumn("x", Lattice::tableType<float>());
     owned.resize(10);
     const auto before = owned.generation();
@@ -99,75 +99,45 @@ void gpuSoAMirrorsCpuTable(WGPU::Device& device) {
         }
     });
     for (int i = 0; i < 200; ++i) {
-        table.read([](const WGPU::GpuSoA::View&) {});
-        WGPU::CommandList commands{device};
+        table.read([](const Wgpu::GpuSoA::View&) {});
+        Wgpu::CommandList commands{device};
         commands.submit();
     }
     writer.join();
 }
 
-const char* layoutShader = R"(
-struct Camera { viewProjection : mat4x4<f32> }
-@group(0) @binding(0) var<uniform> camera : Camera;
-@group(1) @binding(0) var<storage, read> data : array<f32>;
-@vertex fn vs(@builtin(vertex_index) i : u32, @builtin(instance_index) n : u32) -> @builtin(position) vec4<f32> {
-    return camera.viewProjection * vec4<f32>(data[n], f32(i), 0.0, 1.0);
-}
-@fragment fn fs() -> @location(0) vec4<f32> { return vec4<f32>(1.0); }
-)";
-
-void explicitLayoutsAndDepth(WGPU::Device& device) {
-    const auto errors = WGPU::errorCount();
+void layoutsAndTexturesOnDevice(Wgpu::Device& device) {
+    const auto errors = Wgpu::errorCount();
     {
-        const std::array<WGPU::LayoutEntry, 1> cameraEntries{{{.binding = 0, .type = WGPU::BindingType::Uniform}}};
-        const std::array<WGPU::LayoutEntry, 1> dataEntries{{{.binding = 0,
-            .type = WGPU::BindingType::ReadOnlyStorage, .visibility = WGPU::ShaderStage::Vertex}}};
-        WGPU::BindingLayout cameraLayout{device, cameraEntries, "camera"};
-        WGPU::BindingLayout dataLayout{device, dataEntries, "data"};
+        const std::array<Wgpu::LayoutEntry, 2> entries{{
+            {.binding = 0, .type = Wgpu::BindingType::Uniform},
+            {.binding = 1, .type = Wgpu::BindingType::ReadOnlyStorage, .visibility = Wgpu::ShaderStage::Vertex}}};
+        Wgpu::BindingLayout layout{device, entries, "camera+data"};
+        Wgpu::Buffer camera{device, {.size = 64,
+            .usage = Wgpu::BufferUsage::Uniform | Wgpu::BufferUsage::CopyDestination, .label = "camera"}};
+        Wgpu::Buffer data{device, {.size = 16,
+            .usage = Wgpu::BufferUsage::Storage | Wgpu::BufferUsage::CopyDestination, .label = "data"}};
+        const std::array bindings{Wgpu::Binding{.binding = 0, .buffer = &camera}, Wgpu::Binding{.binding = 1, .buffer = &data}};
+        Wgpu::BindingSet set{device, layout, bindings};
 
-        WGPU::Shader shader{device, {.source = layoutShader, .label = "layouts"}};
-        // Two pipelines on the same camera layout: one bind group serves both.
-        WGPU::Pipeline flat{device, shader, {.layouts = {&cameraLayout, &dataLayout}, .label = "flat"}};
-        WGPU::Pipeline deep{device, shader, {.depthFormat = WGPU::TextureFormat::Depth32Float,
-            .layouts = {&cameraLayout, &dataLayout}, .label = "deep"}};
-
-        WGPU::Buffer camera{device, {.size = 64,
-            .usage = WGPU::BufferUsage::Uniform | WGPU::BufferUsage::CopyDestination, .label = "camera"}};
-        WGPU::Buffer data{device, {.size = 16,
-            .usage = WGPU::BufferUsage::Storage | WGPU::BufferUsage::CopyDestination, .label = "data"}};
-        const WGPU::Binding cameraBinding{.binding = 0, .buffer = &camera};
-        const WGPU::Binding dataBinding{.binding = 0, .buffer = &data};
-        WGPU::BindingSet cameraSet{device, cameraLayout, std::span(&cameraBinding, 1)};
-        WGPU::BindingSet dataSet{device, dataLayout, std::span(&dataBinding, 1)};
-
-        WGPU::Texture depth{device, {.width = 64, .height = 32, .format = WGPU::TextureFormat::Depth32Float,
-            .usage = WGPU::TextureUsage::RenderAttachment, .label = "depth"}};
-        check(depth.view() && depth.width() == 64 && depth.format() == WGPU::TextureFormat::Depth32Float,
-            "depth texture has a view");
-        WGPU::CommandList commands{device};
+        Wgpu::Texture depth{device, {.width = 64, .height = 32, .format = Wgpu::TextureFormat::Depth32Float,
+            .usage = Wgpu::TextureUsage::RenderAttachment, .label = "depth"}};
+        check(depth.view() && depth.width() == 64 && depth.format() == Wgpu::TextureFormat::Depth32Float,
+            "texture has a view");
+        Wgpu::CommandList commands{device};
         commands.submit();
     }
-    check(WGPU::errorCount() == errors, "explicit layouts, depth pipeline and bind groups are valid");
+    check(Wgpu::errorCount() == errors, "explicit layouts, bind groups and textures are valid");
     check(device.resources().size() == 0, "layouts and textures are released");
-
-    {
-        const std::array<WGPU::LayoutEntry, 1> cameraEntries{{{.binding = 0, .type = WGPU::BindingType::Uniform}}};
-        WGPU::BindingLayout cameraLayout{device, cameraEntries, "camera"};
-        WGPU::Shader shader{device, {.source = layoutShader, .label = "layouts"}};
-        try {
-            WGPU::Pipeline missing{device, shader, {.layouts = {&cameraLayout}, .label = "missing group 1"}};
-        } catch (const Lattice::ExceptionBase&) {}
-    }
-    check(WGPU::errorCount() > errors, "a pipeline without the data group is reported");
 }
 
-void mirrorCopiesOnTheOwnerThread(WGPU::Device& device) {
+void mirrorCopiesOnTheOwnerThread(Wgpu::Device& device) {
     StdData::SoA atoms;
     atoms.addCol<PosX>();
     atoms.resize(2);
     Tasks::Queue owner;
     {
-        WGPU::GpuSoA table{device, {.table = atoms, .owner = owner}, "mirrored"};
+        Wgpu::GpuSoA table{device, {.table = atoms, .owner = owner}, "mirrored"};
         check(table.rows() == 2 && table.idle(), "the first copy is made at once without a running owner");
 
         std::atomic<bool> stop{false};
@@ -182,13 +152,13 @@ void mirrorCopiesOnTheOwnerThread(WGPU::Device& device) {
             std::this_thread::yield();
         // The owner changes its data; the reader takes a copy and asks for the next one.
         owner.call([&] { atoms.resize(5); });
-        table.read([](const WGPU::GpuSoA::View&) {});
+        table.read([](const Wgpu::GpuSoA::View&) {});
         while (!table.idle())
             std::this_thread::yield();
         check(table.rows() == 5, "the next copy is made by a command of the owner");
 
         table.detach();
-        table.read([](const WGPU::GpuSoA::View&) {});
+        table.read([](const Wgpu::GpuSoA::View&) {});
         check(table.idle(), "a detached mirror requests no copies");
         stop = true;
         owner.wake();
@@ -197,29 +167,30 @@ void mirrorCopiesOnTheOwnerThread(WGPU::Device& device) {
 }
 
 bool resourcesRegisterOnDevice() {
-    WGPU::Instance instance;
-    WGPU::Device* device = nullptr;
+    Wgpu::Instance instance;
+    Wgpu::Device* device = nullptr;
     try {
-        device = new WGPU::Device(instance);
+        device = new Wgpu::Device(instance);
     } catch (const std::exception& error) {
-        std::cout << "WGPU: no adapter, device checks skipped (" << error.what() << ")\n";
+        std::cout << "Wgpu: no adapter, device checks skipped (" << error.what() << ")\n";
         return false;
     }
     {
-        WGPU::Buffer uniform{*device, {.size = 16,
-            .usage = WGPU::BufferUsage::Uniform | WGPU::BufferUsage::CopyDestination, .label = "scale"}};
-        WGPU::Shader shader{*device, {.source = shaderSource, .label = "triangle"}};
-        WGPU::Pipeline pipeline{*device, shader, {.label = "triangle"}};
-        const WGPU::Binding binding{.binding = 0, .buffer = &uniform};
-        WGPU::BindingSet bindings{*device, pipeline, 0, std::span(&binding, 1)};
+        Wgpu::Buffer uniform{*device, {.size = 16,
+            .usage = Wgpu::BufferUsage::Uniform | Wgpu::BufferUsage::CopyDestination, .label = "scale"}};
+        Wgpu::Shader shader{*device, {.source = shaderSource, .label = "triangle"}};
+        const std::array<Wgpu::LayoutEntry, 1> entries{{{.binding = 0, .type = Wgpu::BindingType::Uniform}}};
+        Wgpu::BindingLayout layout{*device, entries, "scale"};
+        const Wgpu::Binding binding{.binding = 0, .buffer = &uniform};
+        Wgpu::BindingSet bindings{*device, layout, std::span(&binding, 1)};
         check(device->resources().size() == 4 && device->resources().bytes() == 16, "resources are tracked");
         const float scale[4] = {1, 1, 1, 1};
         device->writeBuffer(uniform, 0, std::as_bytes(std::span(scale)));
-        WGPU::CommandList commands{*device};
+        Wgpu::CommandList commands{*device};
         commands.submit();
     }
     check(device->resources().size() == 0, "RAII resources unregister");
-    explicitLayoutsAndDepth(*device);
+    layoutsAndTexturesOnDevice(*device);
     gpuSoAMirrorsCpuTable(*device);
     mirrorCopiesOnTheOwnerThread(*device);
     check(device->resources().size() == 0, "GpuSoA releases its buffers");
@@ -231,5 +202,5 @@ bool resourcesRegisterOnDevice() {
 int main() {
     registryTracksLiveResources();
     const bool device = resourcesRegisterOnDevice();
-    std::cout << "WGPU: registry" << (device ? ", device resources, submit, layouts, depth and GpuSoA (mirror)" : "") << " passed\n";
+    std::cout << "Wgpu: registry" << (device ? ", device resources, layouts, textures, submit and GpuSoA (mirror)" : "") << " passed\n";
 }

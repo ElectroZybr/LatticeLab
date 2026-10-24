@@ -5,7 +5,7 @@
 
 namespace {
 
-WGPU::Binding cameraBinding(WGPU::Buffer& buffer) {
+Wgpu::Binding cameraBinding(Wgpu::Buffer& buffer) {
     return {.binding = 0, .buffer = &buffer, .size = sizeof(CameraUniform)};
 }
 
@@ -15,12 +15,12 @@ Viewport::Viewport(RenderLayout& layout, Camera& camera)
     : device_(layout.device()),
       camera_(camera),
       uniform_(device_, {.size = sizeof(CameraUniform),
-          .usage = WGPU::BufferUsage::Uniform | WGPU::BufferUsage::CopyDestination,
+          .usage = Wgpu::BufferUsage::Uniform | Wgpu::BufferUsage::CopyDestination,
           .label = "viewport/camera"}),
-      group_(device_, layout.camera(), std::span<const WGPU::Binding>{std::array{cameraBinding(uniform_)}}) {}
+      group_(device_, layout.camera(), std::span<const Wgpu::Binding>{std::array{cameraBinding(uniform_)}}) {}
 
-void Viewport::render(WGPU::RenderPass& pass, glm::uvec2 surfaceSize) {
-    WGPU::Rect rect{};
+void Viewport::render(RenderPass& pass, glm::uvec2 surfaceSize) {
+    Rect rect{};
     if (!resolveRect(surfaceSize, rect))
         return;
 

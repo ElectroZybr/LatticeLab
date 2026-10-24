@@ -4,12 +4,13 @@
 #include <memory>
 #include <vector>
 
-#include <WGPU/Device.hpp>
-#include <WGPU/Resources.hpp>
+#include <Wgpu/Device.hpp>
+#include <Wgpu/Resources.hpp>
 #include <Shell/FrameAPI.hpp>
 #include <Shell/WindowAPI.hpp>
 
 #include "RenderLayout.hpp"
+#include "Surface.hpp"
 #include "TransformController.hpp"
 #include "Viewport.hpp"
 
@@ -19,7 +20,7 @@
 /// coordinates to the topmost viewport under it.
 class Render final : public FrameAPI {
 public:
-    Render(WGPU::Device& device, WindowAPI& window);
+    Render(Wgpu::Device& device, WindowAPI& window);
 
     /// What viewports and scene objects of this window build their pipelines on.
     /// They use it while constructing; their resources do not refer to it later.
@@ -37,11 +38,11 @@ public:
     void onHover(std::function<void(Viewport*)> callback) { onHover_ = std::move(callback); }
 
 private:
-    WGPU::Device& device_;
+    Wgpu::Device& device_;
     WindowAPI& window_;
-    WGPU::Surface surface_;
+    Surface surface_;
     RenderLayout layout_;
-    std::unique_ptr<WGPU::Texture> depth_;
+    std::unique_ptr<Wgpu::Texture> depth_;
     std::vector<Viewport*> viewports_;
     glm::vec2 cursor_{};
     Viewport* hovered_ = nullptr;

@@ -15,7 +15,7 @@
 #include "Device.hpp"
 #include "Resources.hpp"
 
-namespace WGPU {
+namespace Wgpu {
 
 /// SoA table on the GPU: one storage buffer, every column at its byte offset with
 /// capacity() rows. The schema is the common Lattice::Table; column data is not

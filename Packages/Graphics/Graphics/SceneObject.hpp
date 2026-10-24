@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <WGPU/CommandList.hpp>
+#include "RenderPass.hpp"
 
 struct Transform {
     glm::vec3 position{0.0f};
@@ -21,9 +21,9 @@ struct CameraUniform {
 
 /// One viewport drawing: its rectangle, camera matrices and the camera bind group.
 struct ViewState {
-    WGPU::Rect rect;
+    Rect rect;
     const CameraUniform& camera;
-    WGPU::BindingSet& cameraGroup;
+    Wgpu::BindingSet& cameraGroup;
 };
 
 /// Object of a scene: a transform, and drawing into a viewport. Pipelines are built
@@ -33,7 +33,7 @@ public:
     virtual ~SceneObject() = default;
 
     /// Record draw commands for one viewport. Objects without visuals draw nothing.
-    virtual void render(WGPU::RenderPass&, const ViewState&) {}
+    virtual void render(RenderPass&, const ViewState&) {}
 
     /// Model matrix of the transform.
     glm::mat4 model() const noexcept {

@@ -19,10 +19,10 @@ struct Params {
     uint32_t pad[3];
 };
 
-constexpr std::array<WGPU::LayoutEntry, 3> groupEntries{{
-    {.binding = 0, .type = WGPU::BindingType::ReadOnlyStorage, .visibility = WGPU::ShaderStage::Vertex},
-    {.binding = 1, .type = WGPU::BindingType::Uniform, .visibility = WGPU::ShaderStage::Vertex},
-    {.binding = 2, .type = WGPU::BindingType::ReadOnlyStorage, .visibility = WGPU::ShaderStage::Vertex},
+constexpr std::array<Wgpu::LayoutEntry, 3> groupEntries{{
+    {.binding = 0, .type = Wgpu::BindingType::ReadOnlyStorage, .visibility = Wgpu::ShaderStage::Vertex},
+    {.binding = 1, .type = Wgpu::BindingType::Uniform, .visibility = Wgpu::ShaderStage::Vertex},
+    {.binding = 2, .type = Wgpu::BindingType::ReadOnlyStorage, .visibility = Wgpu::ShaderStage::Vertex},
 }};
 
 std::string readShader(const std::filesystem::path& path) {
@@ -33,7 +33,7 @@ std::string readShader(const std::filesystem::path& path) {
 }
 
 /// Word offset of a 32-bit column; NoColumn for an empty name.
-uint32_t wordOffset(const WGPU::GpuSoA::View& view, const std::string& name, bool integer) {
+uint32_t wordOffset(const Wgpu::GpuSoA::View& view, const std::string& name, bool integer) {
     if (name.empty())
         return NoColumn;
     std::string names;
@@ -53,19 +53,19 @@ uint32_t wordOffset(const WGPU::GpuSoA::View& view, const std::string& name, boo
 
 /// Group 1 over the current table buffer: recreated when the table's buffer changes.
 struct Spheres::Group {
-    Group(WGPU::Device& device, WGPU::BindingLayout& layout, std::span<const WGPU::Binding> bindings)
+    Group(Wgpu::Device& device, Wgpu::BindingLayout& layout, std::span<const Wgpu::Binding> bindings)
         : set(device, layout, bindings) {}
-    WGPU::BindingSet set;
+    Wgpu::BindingSet set;
 };
 
-Spheres::Spheres(RenderLayout& layout, WGPU::GpuSoA& table, SphereColumns columns,
+Spheres::Spheres(RenderLayout& layout, Wgpu::GpuSoA& table, SphereColumns columns,
                  const std::filesystem::path& shader)
     : device_(layout.device()),
       table_(table),
       columns_(std::move(columns)),
       layout_(device_, groupEntries, "spheres"),
       params_(device_, {.size = sizeof(Params),
-          .usage = WGPU::BufferUsage::Uniform | WGPU::BufferUsage::CopyDestination, .label = "spheres/params"}),
+          .usage = Wgpu::BufferUsage::Uniform | Wgpu::BufferUsage::CopyDestination, .label = "spheres/params"}),
       shader_(device_, {.source = readShader(shader), .label = shader.filename().string()}),
       pipeline_(device_, shader_, {.colorFormat = layout.colorFormat(), .depthFormat = layout.depthFormat(),
           .layouts = {&layout.camera(), &layout_}, .label = "spheres"}) {
@@ -78,9 +78,9 @@ void Spheres::setPalette(std::vector<glm::vec4> palette) {
     if (palette.empty())
         throw Error("palette needs at least one kind");
     if (!palette_ || palette_->size() < palette.size() * sizeof(glm::vec4)) {
-        palette_ = std::make_unique<WGPU::Buffer>(device_, WGPU::BufferDesc{
+        palette_ = std::make_unique<Wgpu::Buffer>(device_, Wgpu::BufferDesc{
             .size = palette.size() * sizeof(glm::vec4),
-            .usage = WGPU::BufferUsage::Storage | WGPU::BufferUsage::CopyDestination, .label = "spheres/palette"});
+            .usage = Wgpu::BufferUsage::Storage | Wgpu::BufferUsage::CopyDestination, .label = "spheres/palette"});
         group_.reset();
     }
     device_.writeBuffer(*palette_, 0, std::as_bytes(std::span(palette)));
@@ -88,7 +88,7 @@ void Spheres::setPalette(std::vector<glm::vec4> palette) {
     paletteChanged_ = true;
 }
 
-void Spheres::rebuild(const WGPU::GpuSoA::View& view) {
+void Spheres::rebuild(const Wgpu::GpuSoA::View& view) {
     const Params params{
         .x = wordOffset(view, columns_.x, false),
         .y = wordOffset(view, columns_.y, false),
@@ -99,9 +99,9 @@ void Spheres::rebuild(const WGPU::GpuSoA::View& view) {
     };
     device_.writeBuffer(params_, 0, std::as_bytes(std::span(&params, 1)));
     const std::array bindings{
-        WGPU::Binding{.binding = 0, .buffer = &view.buffer},
-        WGPU::Binding{.binding = 1, .buffer = &params_},
-        WGPU::Binding{.binding = 2, .buffer = palette_.get()},
+        Wgpu::Binding{.binding = 0, .buffer = &view.buffer},
+        Wgpu::Binding{.binding = 1, .buffer = &params_},
+        Wgpu::Binding{.binding = 2, .buffer = palette_.get()},
     };
     group_.reset();
     group_ = std::make_unique<Group>(device_, layout_, bindings);
@@ -109,9 +109,9 @@ void Spheres::rebuild(const WGPU::GpuSoA::View& view) {
     paletteChanged_ = false;
 }
 
-void Spheres::render(WGPU::RenderPass& pass, const ViewState& view) {
+void Spheres::render(RenderPass& pass, const ViewState& view) {
     // The buffer and layout of the table are taken under its lock, as one snapshot.
-    table_.read([&](const WGPU::GpuSoA::View& table) {
+    table_.read([&](const Wgpu::GpuSoA::View& table) {
         if (!group_ || table.generation != generation_ || paletteChanged_)
             rebuild(table);
         count_ = table.rows;

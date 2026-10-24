@@ -8,7 +8,7 @@
 #include <vector>
 #include <webgpu/webgpu.h>
 
-namespace WGPU {
+namespace Wgpu {
 
 class Buffer;
 

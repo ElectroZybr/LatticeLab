@@ -5,11 +5,12 @@
 #include <windows.h>
 #endif
 
-#include "Resources.hpp"
-#include <Lattice/Tools/Exception.hpp>
-#include "Native.hpp"
+#include "Surface.hpp"
 
-namespace WGPU {
+#include <Lattice/Tools/Exception.hpp>
+#include <Wgpu/Native.hpp>
+
+using namespace Wgpu;
 
 namespace {
 
@@ -242,6 +243,4 @@ void Surface::present() {
     releaseFrame();
     if (status != WGPUStatus_Success)
         throw Lattice::Exception<Surface>("present failed");
-}
-
 }

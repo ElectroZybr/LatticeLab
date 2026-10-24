@@ -6,15 +6,8 @@
 #include <Lattice/Tools/Exception.hpp>
 #include "Native.hpp"
 
-namespace WGPU {
+namespace Wgpu {
 
-namespace {
-
-WGPUStringView nativeString(std::string_view value) {
-    return {value.data(), value.size()};
-}
-
-}
 
 WGPUTextureFormat nativeFormat(TextureFormat format) {
     switch (format) {
@@ -105,64 +98,6 @@ Shader::~Shader() {
         wgpuShaderModuleRelease(shader_);
 }
 
-Pipeline::Pipeline(Device& device, Shader& shader, const PipelineDesc& desc)
-    : Tracked(device, "Pipeline", desc.label, 0) {
-    WGPUColorTargetState color{};
-    color.format = nativeFormat(desc.colorFormat);
-    color.writeMask = WGPUColorWriteMask_All;
-
-    WGPUFragmentState fragment{};
-    fragment.module = shader.native();
-    fragment.entryPoint = nativeString(desc.fragmentEntry);
-    fragment.targetCount = 1;
-    fragment.targets = &color;
-
-    WGPURenderPipelineDescriptor pipeline{};
-    pipeline.label = nativeString(desc.label);
-    pipeline.vertex.module = shader.native();
-    pipeline.vertex.entryPoint = nativeString(desc.vertexEntry);
-    pipeline.fragment = &fragment;
-    pipeline.primitive.topology = WGPUPrimitiveTopology_TriangleList;
-    pipeline.multisample.count = 1;
-    pipeline.multisample.mask = 0xFFFFFFFF;
-
-    WGPUDepthStencilState depth{};
-    if (desc.depthFormat != TextureFormat::Undefined) {
-        depth.format = nativeFormat(desc.depthFormat);
-        depth.depthWriteEnabled = desc.depthWrite ? WGPUOptionalBool_True : WGPUOptionalBool_False;
-        depth.depthCompare = WGPUCompareFunction_Less;
-        depth.stencilFront.compare = WGPUCompareFunction_Always;
-        depth.stencilBack.compare = WGPUCompareFunction_Always;
-        depth.stencilReadMask = 0;
-        depth.stencilWriteMask = 0;
-        pipeline.depthStencil = &depth;
-    }
-
-    WGPUPipelineLayout layout = nullptr;
-    if (!desc.layouts.empty()) {
-        std::vector<WGPUBindGroupLayout> groups;
-        for (const BindingLayout* group : desc.layouts) {
-            if (!group)
-                throw Lattice::Exception<Pipeline>("pipeline '{}': layout of group {} is null", desc.label, groups.size());
-            groups.push_back(group->native());
-        }
-        WGPUPipelineLayoutDescriptor layoutDesc{};
-        layoutDesc.label = nativeString(desc.label);
-        layoutDesc.bindGroupLayoutCount = groups.size();
-        layoutDesc.bindGroupLayouts = groups.data();
-        layout = wgpuDeviceCreatePipelineLayout(device.native(), &layoutDesc);
-        if (!layout)
-            throw Lattice::Exception<Pipeline>("failed to create layout of pipeline '{}'", desc.label);
-        pipeline.layout = layout;
-    }
-
-    pipeline_ = wgpuDeviceCreateRenderPipeline(device.native(), &pipeline);
-    if (layout)
-        wgpuPipelineLayoutRelease(layout);
-    if (!pipeline_)
-        throw Lattice::Exception<Pipeline>("failed to create pipeline '{}'", desc.label);
-}
-
 namespace {
 
 WGPUBufferBindingType nativeBindingType(BindingType type) {
@@ -196,25 +131,6 @@ BindingLayout::BindingLayout(Device& device, std::span<const LayoutEntry> entrie
 BindingLayout::~BindingLayout() {
     if (layout_)
         wgpuBindGroupLayoutRelease(layout_);
-}
-
-Pipeline::~Pipeline() {
-    if (pipeline_)
-        wgpuRenderPipelineRelease(pipeline_);
-}
-
-BindingSet::BindingSet(Device& device, Pipeline& pipeline, uint32_t group, std::span<const Binding> bindings)
-    : Tracked(device, "BindingSet", {}, 0) {
-    auto layout = wgpuRenderPipelineGetBindGroupLayout(pipeline.native(), group);
-    if (!layout)
-        throw Lattice::Exception<BindingSet>("failed to get bind group layout");
-    try {
-        create(layout, bindings);
-    } catch (...) {
-        wgpuBindGroupLayoutRelease(layout);
-        throw;
-    }
-    wgpuBindGroupLayoutRelease(layout);
 }
 
 BindingSet::BindingSet(Device& device, BindingLayout& layout, std::span<const Binding> bindings)

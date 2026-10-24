@@ -10,7 +10,7 @@
 #include <Lattice/Tools/Exception.hpp>
 #include <Logger/Logger.hpp>
 
-namespace WGPU {
+namespace Wgpu {
 
 namespace {
 std::atomic<uint64_t> errors{0};

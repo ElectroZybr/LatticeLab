@@ -7,10 +7,11 @@
 #include <vector>
 
 #include <glm/vec4.hpp>
-#include <WGPU/GpuSoA.hpp>
-#include <WGPU/Resources.hpp>
+#include <Wgpu/GpuSoA.hpp>
+#include <Wgpu/Resources.hpp>
 
 #include "RenderLayout.hpp"
+#include "RenderPipeline.hpp"
 #include "SceneObject.hpp"
 
 /// Columns of a GPU table that make spheres: centers (f32) and an optional kind (u32)
@@ -24,11 +25,11 @@ struct SphereColumns {
 /// camera-facing impostors with true depth. The renderer knows columns, not models.
 class Spheres final : public SceneObject {
 public:
-    Spheres(RenderLayout& layout, WGPU::GpuSoA& table, SphereColumns columns,
+    Spheres(RenderLayout& layout, Wgpu::GpuSoA& table, SphereColumns columns,
             const std::filesystem::path& shader);
     ~Spheres() override;
 
-    void render(WGPU::RenderPass& pass, const ViewState& view) override;
+    void render(RenderPass& pass, const ViewState& view) override;
 
     /// Per kind: rgb color and radius (w).
     void setPalette(std::vector<glm::vec4> palette);
@@ -37,17 +38,17 @@ public:
 
 private:
     struct Group;
-    void rebuild(const WGPU::GpuSoA::View& view);
+    void rebuild(const Wgpu::GpuSoA::View& view);
 
-    WGPU::Device& device_;
-    WGPU::GpuSoA& table_;
+    Wgpu::Device& device_;
+    Wgpu::GpuSoA& table_;
     SphereColumns columns_;
-    WGPU::BindingLayout layout_;
-    WGPU::Buffer params_;
-    std::unique_ptr<WGPU::Buffer> palette_;
+    Wgpu::BindingLayout layout_;
+    Wgpu::Buffer params_;
+    std::unique_ptr<Wgpu::Buffer> palette_;
     size_t paletteSize_ = 0;
-    WGPU::Shader shader_;
-    WGPU::Pipeline pipeline_;
+    Wgpu::Shader shader_;
+    RenderPipeline pipeline_;
     std::unique_ptr<Group> group_;
     uint64_t generation_ = 0;
     bool paletteChanged_ = true;

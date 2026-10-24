@@ -3,7 +3,7 @@
 #include <optional>
 
 #include <glm/glm.hpp>
-#include <WGPU/Types.hpp>
+#include "RenderTypes.hpp"
 
 enum class ViewportSizeMode {
     Fixed,
@@ -33,7 +33,7 @@ public:
     bool contains(glm::vec2 position, glm::uvec2 surfaceSize) const noexcept;
 
     /// Pixel rectangle on a surface of this size; false when nothing is visible.
-    bool resolveRect(glm::uvec2 surfaceSize, WGPU::Rect& rect) const noexcept;
+    bool resolveRect(glm::uvec2 surfaceSize, Rect& rect) const noexcept;
 
     /// Cursor in local coordinates; valid while hovered().
     glm::vec2 cursor() const noexcept { return cursor_; }

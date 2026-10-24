@@ -1,25 +1,25 @@
 #pragma once
 
-#include <WGPU/Device.hpp>
-#include <WGPU/Resources.hpp>
+#include <Wgpu/Device.hpp>
+#include <Wgpu/Resources.hpp>
 
 /// What every pipeline drawing into one surface agrees on: color and depth formats
 /// and the camera group (bind group 0, owned by each viewport). Shared by the
 /// viewports and scene objects of a window.
 class RenderLayout final {
 public:
-    RenderLayout(WGPU::Device& device, WGPU::TextureFormat colorFormat,
-                 WGPU::TextureFormat depthFormat = WGPU::TextureFormat::Depth32Float);
+    RenderLayout(Wgpu::Device& device, Wgpu::TextureFormat colorFormat,
+                 Wgpu::TextureFormat depthFormat = Wgpu::TextureFormat::Depth32Float);
 
-    WGPU::Device& device() const noexcept { return device_; }
-    WGPU::TextureFormat colorFormat() const noexcept { return colorFormat_; }
-    WGPU::TextureFormat depthFormat() const noexcept { return depthFormat_; }
+    Wgpu::Device& device() const noexcept { return device_; }
+    Wgpu::TextureFormat colorFormat() const noexcept { return colorFormat_; }
+    Wgpu::TextureFormat depthFormat() const noexcept { return depthFormat_; }
     /// Group 0 of every scene pipeline: binding 0 — the camera uniform (CameraUniform).
-    WGPU::BindingLayout& camera() noexcept { return camera_; }
+    Wgpu::BindingLayout& camera() noexcept { return camera_; }
 
 private:
-    WGPU::Device& device_;
-    WGPU::TextureFormat colorFormat_;
-    WGPU::TextureFormat depthFormat_;
-    WGPU::BindingLayout camera_;
+    Wgpu::Device& device_;
+    Wgpu::TextureFormat colorFormat_;
+    Wgpu::TextureFormat depthFormat_;
+    Wgpu::BindingLayout camera_;
 };

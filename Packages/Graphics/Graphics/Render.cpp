@@ -2,9 +2,9 @@
 
 #include <algorithm>
 
-#include <WGPU/CommandList.hpp>
+#include "RenderPass.hpp"
 
-Render::Render(WGPU::Device& device, WindowAPI& window)
+Render::Render(Wgpu::Device& device, WindowAPI& window)
     : device_(device), window_(window), surface_(device, window.native()),
       layout_(device, surface_.format()) {}
 
@@ -47,15 +47,15 @@ void Render::frame(float) {
     if (!framebuffer.x || !framebuffer.y)
         return;
     if (!depth_ || depth_->width() != framebuffer.x || depth_->height() != framebuffer.y)
-        depth_ = std::make_unique<WGPU::Texture>(device_, WGPU::TextureDesc{
+        depth_ = std::make_unique<Wgpu::Texture>(device_, Wgpu::TextureDesc{
             .width = framebuffer.x, .height = framebuffer.y, .format = layout_.depthFormat(),
-            .usage = WGPU::TextureUsage::RenderAttachment, .label = "render/depth"});
+            .usage = Wgpu::TextureUsage::RenderAttachment, .label = "render/depth"});
     if (!surface_.acquire())
         return;
 
     try {
-        WGPU::CommandList commands{device_};
-        auto& pass = commands.beginRenderPass(surface_, {0.1f, 0.2f, 0.3f, 1.0f}, depth_.get());
+        Wgpu::CommandList commands{device_};
+        RenderPass pass{commands, surface_, {0.1f, 0.2f, 0.3f, 1.0f}, depth_.get()};
         for (Viewport* viewport : viewports_)
             viewport->render(pass, framebuffer);
         pass.end();

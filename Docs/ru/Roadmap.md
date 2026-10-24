@@ -65,8 +65,8 @@
 Модуль алгоритма — модель + бэкенды рядом: `Libs/<Name>/` с целями `<Name>` (модель),
 `<Name>.cpu`, `<Name>.wgpu`, позже `<Name>.cuda`. Нижние библиотеки — по бэкенду.
 
-- [ ] `Libs/Wgpu` — вычислительная GPU-библиотека из `WGPU.core`: ядро (Device, Buffer, BindingLayout, ошибки, учёт ресурсов), данные (`GpuSoA`), без рендера; `Packages/WGPU` — только `compose.cpp` (публикует общий `Device`); Logger — допустимая зависимость
-- [ ] Рендерные части (`Surface`, `RenderPass`, render pipeline, `Texture` для depth) — в `Graphics.core`
+- [x] `Libs/Wgpu` (namespace `Wgpu`) — вычислительная GPU-библиотека из `WGPU.core`: ядро (Device, Buffer, Texture, Shader, BindingLayout/BindingSet, CommandList, ошибки, учёт ресурсов), данные (`GpuSoA`), без рендера; `Packages/WGPU` — только `compose.cpp`
+- [x] Рендерные части (`Surface`, `RenderPass`, `RenderPipeline`, `Color`/`Rect`) — в `Graphics.core`; `NativeWindow` — в Shell, Shell больше не зависит от GPU
 - [ ] `Libs/Wgpu`: compute pipeline и dispatch, тесты
 - [ ] `Libs/Wgpu`: алгоритмы по мере надобности — prefix scan, stream compaction (частицы у стенки), reduction (min/max/sum), radix sort и сетка соседей
 - [ ] Перевести `Integrators`, `ParticleDynamics::SpatialGrid` на раскладку «модель + `cpu`» при переносе соответствующих пунктов

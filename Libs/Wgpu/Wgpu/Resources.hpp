@@ -8,7 +8,7 @@
 #include "Device.hpp"
 #include "Types.hpp"
 
-namespace WGPU {
+namespace Wgpu {
 
 class Buffer final : Tracked {
 public:
@@ -53,18 +53,6 @@ private:
     WGPUShaderModule shader_ = nullptr;
 };
 
-class Pipeline final : Tracked {
-public:
-    Pipeline(Device& device, Shader& shader, const PipelineDesc& desc);
-    ~Pipeline();
-
-    WGPURenderPipeline native() const noexcept { return pipeline_; }
-    Device& device() const noexcept { return Tracked::device(); }
-
-private:
-    WGPURenderPipeline pipeline_ = nullptr;
-};
-
 /// Explicit bind group layout: shareable between pipelines and bind groups.
 class BindingLayout final : Tracked {
 public:
@@ -79,8 +67,6 @@ private:
 
 class BindingSet final : Tracked {
 public:
-    /// Bind group for a group of a pipeline with an inferred layout.
-    BindingSet(Device& device, Pipeline& pipeline, uint32_t group, std::span<const Binding> bindings);
     /// Bind group for an explicit layout: usable with every pipeline built on it.
     BindingSet(Device& device, BindingLayout& layout, std::span<const Binding> bindings);
     ~BindingSet();
@@ -91,29 +77,6 @@ private:
     void create(WGPUBindGroupLayout layout, std::span<const Binding> bindings);
 
     WGPUBindGroup bindGroup_ = nullptr;
-};
-
-/// Presentation target of one native window.
-class Surface final : Tracked {
-public:
-    Surface(Device& device, const NativeWindow& window);
-    ~Surface();
-
-    TextureFormat format() const;
-    void attach(const NativeWindow& window);
-    void resize(uint32_t width, uint32_t height);
-    bool acquire();
-    void present();
-    void releaseFrame();
-
-    WGPUTextureView view() const noexcept;
-    Device& device() const noexcept { return Tracked::device(); }
-
-private:
-    void releaseSurface();
-
-    struct State;
-    std::unique_ptr<State> state_;
 };
 
 }

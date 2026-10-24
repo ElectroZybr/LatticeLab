@@ -18,10 +18,10 @@ std::string readShader(const std::filesystem::path& path) {
     return {std::istreambuf_iterator<char>(file), {}};
 }
 
-constexpr std::array<WGPU::LayoutEntry, 1> modelEntries{{{.binding = 0, .type = WGPU::BindingType::Uniform,
-    .visibility = WGPU::ShaderStage::Vertex}}};
+constexpr std::array<Wgpu::LayoutEntry, 1> modelEntries{{{.binding = 0, .type = Wgpu::BindingType::Uniform,
+    .visibility = Wgpu::ShaderStage::Vertex}}};
 
-WGPU::Binding modelBinding(WGPU::Buffer& buffer) {
+Wgpu::Binding modelBinding(Wgpu::Buffer& buffer) {
     return {.binding = 0, .buffer = &buffer, .size = sizeof(glm::mat4)};
 }
 
@@ -31,13 +31,13 @@ TestObject::TestObject(RenderLayout& layout, const std::filesystem::path& shader
     : device_(layout.device()),
       modelLayout_(device_, modelEntries, "test/model"),
       model_(device_, {.size = sizeof(glm::mat4),
-          .usage = WGPU::BufferUsage::Uniform | WGPU::BufferUsage::CopyDestination, .label = "test/model"}),
-      modelGroup_(device_, modelLayout_, std::span<const WGPU::Binding>{std::array{modelBinding(model_)}}),
+          .usage = Wgpu::BufferUsage::Uniform | Wgpu::BufferUsage::CopyDestination, .label = "test/model"}),
+      modelGroup_(device_, modelLayout_, std::span<const Wgpu::Binding>{std::array{modelBinding(model_)}}),
       shader_(device_, {.source = readShader(shader), .label = shader.filename().string()}),
       pipeline_(device_, shader_, {.colorFormat = layout.colorFormat(), .depthFormat = layout.depthFormat(),
           .layouts = {&layout.camera(), &modelLayout_}, .label = "test"}) {}
 
-void TestObject::render(WGPU::RenderPass& pass, const ViewState& view) {
+void TestObject::render(RenderPass& pass, const ViewState& view) {
     const glm::mat4 matrix = model();
     device_.writeBuffer(model_, 0, std::as_bytes(std::span(&matrix, 1)));
     pass.setPipeline(pipeline_);

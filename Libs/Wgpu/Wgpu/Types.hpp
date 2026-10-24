@@ -2,14 +2,11 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <string>
-#include <vector>
 
-namespace WGPU {
+namespace Wgpu {
 
 class Buffer;
-class BindingLayout;
 
 enum class BufferUsage : uint64_t {
     None            = 0,
@@ -105,47 +102,11 @@ struct LayoutEntry {
     ShaderStage visibility = ShaderStage::Vertex | ShaderStage::Fragment;
 };
 
-struct PipelineDesc {
-    TextureFormat colorFormat = TextureFormat::BGRA8Unorm;
-    /// Undefined: no depth test. Otherwise the render pass must have a depth target.
-    TextureFormat depthFormat = TextureFormat::Undefined;
-    bool depthWrite = true;
-    /// Explicit bind group layouts, group i = layouts[i]; shared between pipelines
-    /// (a viewport's camera group). Empty: layout inferred from the shader (not shareable).
-    std::vector<BindingLayout*> layouts;
-    std::string vertexEntry = "vs";
-    std::string fragmentEntry = "fs";
-    std::string label;
-};
-
-struct Color {
-    float r = 0.0f;
-    float g = 0.0f;
-    float b = 0.0f;
-    float a = 1.0f;
-};
-
-// Pixel coordinates, measured from the top-left of the surface.
-struct Rect {
-    uint32_t x = 0, y = 0, width = 0, height = 0;
-};
-
 struct Binding {
     uint32_t binding = 0;
     Buffer* buffer = nullptr;
     uint64_t offset = 0;
     uint64_t size = 0;
-};
-
-/// Native window handles a surface presents to. Produced by the window layer.
-struct NativeWindow {
-    enum class Kind { None, Win32, X11, Wayland, Cocoa, Metal, Web, Headless };
-    Kind kind = Kind::None;
-    void* display = nullptr;
-    void* window = nullptr;
-    void* extra = nullptr;
-    std::shared_ptr<void> owner;
-    bool operator==(const NativeWindow&) const = default;
 };
 
 }

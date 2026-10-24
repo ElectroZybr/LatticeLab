@@ -12,7 +12,7 @@
 #include <Graphics/Viewport.hpp>
 #include <ParticleDynamics/ParticleSystemAPI.hpp>
 #include <Shell/WindowAPI.hpp>
-#include <WGPU/GpuSoA.hpp>
+#include <Wgpu/GpuSoA.hpp>
 
 extern "C" constinit const Lattice::Package lattice_package{
     .id = "Graphics",
@@ -57,18 +57,18 @@ auto composeOrbitCamera(NodeBuild& slot) {
 //   GPU data shared by the viewports (a copy of the simulation's particles) →
 //   viewports: each is a scene — area, camera, controller and what it draws.
 extern "C" void compose(NodeBuild root) {
-    auto device = root.mount<WGPU::Device>();
+    auto device = root.mount<Wgpu::Device>();
     auto render = root.construct<Render, FrameAPI>(device.ref(), root.require<WindowAPI>("window"));
     render.param("cursor", render->cursor());
 
     // The GPU copy belongs to the render branch: removing it frees the copy and the
     // simulation keeps running. Copies are commands of the simulation thread.
     auto system = root.mount<ParticleDynamics::ParticleSystemAPI>().ref();
-    auto particles = root.emplace<WGPU::GpuSoA>("particles", device.ref(),
-        WGPU::GpuSoA::CpuSource{.table = system->particles(), .owner = system->commands()},
+    auto particles = root.emplace<Wgpu::GpuSoA>("particles", device.ref(),
+        Wgpu::GpuSoA::CpuSource{.table = system->particles(), .owner = system->commands()},
         std::string("particles"));
-    particles.onRetire([](WGPU::GpuSoA& self) { self.detach(); });
-    particles.readyToDestroy([](const WGPU::GpuSoA& self) { return self.idle(); });
+    particles.onRetire([](Wgpu::GpuSoA& self) { self.detach(); });
+    particles.readyToDestroy([](const Wgpu::GpuSoA& self) { return self.idle(); });
 
     const auto addViewport = [&](std::string_view name, glm::vec3 eye) {
         auto viewport = root.branch(name);

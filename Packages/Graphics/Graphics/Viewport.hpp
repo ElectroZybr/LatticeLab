@@ -2,8 +2,8 @@
 
 #include <vector>
 
-#include <WGPU/CommandList.hpp>
-#include <WGPU/Resources.hpp>
+#include "RenderPass.hpp"
+#include <Wgpu/Resources.hpp>
 
 #include "Camera.hpp"
 #include "RenderLayout.hpp"
@@ -20,7 +20,7 @@ public:
     Viewport(RenderLayout& layout, Camera& camera);
 
     /// Write the camera and record every object into its rectangle.
-    void render(WGPU::RenderPass& pass, glm::uvec2 surfaceSize);
+    void render(RenderPass& pass, glm::uvec2 surfaceSize);
 
     Camera& camera() const noexcept { return camera_; }
 
@@ -32,9 +32,9 @@ public:
     TransformController* controller = nullptr;
 
 private:
-    WGPU::Device& device_;
+    Wgpu::Device& device_;
     Camera& camera_;
-    WGPU::Buffer uniform_;
-    WGPU::BindingSet group_;
+    Wgpu::Buffer uniform_;
+    Wgpu::BindingSet group_;
     std::vector<SceneObject*> objects_;
 };

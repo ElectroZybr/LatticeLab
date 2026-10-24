@@ -3,7 +3,7 @@
 #include <string_view>
 #include <glm/vec2.hpp>
 
-#include <WGPU/Types.hpp>
+#include "NativeWindow.hpp"
 
 
 namespace Input { 
@@ -42,7 +42,7 @@ public:
     virtual void setFullscreen(bool enabled) = 0;
 
     // for GPU surface
-    virtual WGPU::NativeWindow native() const = 0;
+    virtual NativeWindow native() const = 0;
 
     // optional
     virtual void show() = 0;
