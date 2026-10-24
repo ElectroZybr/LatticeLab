@@ -67,7 +67,7 @@ void CommandDispatcher::execute(
                 reply(terminal, Level::Warning, std::format("Invalid export id '{}'", selector));
                 return;
             }
-            resolved = exports_.resolveExport(*id, terminal.current());
+            resolved = exports_.resolveExport(*id);
             if (resolved)
                 name = exports_.name(*id);
         } else {

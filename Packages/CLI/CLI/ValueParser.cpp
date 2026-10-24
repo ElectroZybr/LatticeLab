@@ -112,6 +112,13 @@ Lattice::NodeId resolveTreePath(
     if (expression.empty())
         return current;
 
+    if (expression.front() == '#') {
+        Lattice::NodeId id = Lattice::InvalidNodeId;
+        const char* end = expression.data() + expression.size();
+        const auto [position, error] = std::from_chars(expression.data() + 1, end, id);
+        return error == std::errc{} && position == end && tree.contains(id) ? id : Lattice::InvalidNodeId;
+    }
+
     if (expression.front() == '/') {
         current = root;
         expression.remove_prefix(1);

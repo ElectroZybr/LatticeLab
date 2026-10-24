@@ -3,6 +3,7 @@
 #include <atomic>
 #include <deque>
 #include <chrono>
+#include <format>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -66,6 +67,8 @@ void resolvesTreePaths() {
         check(Console::resolveTreePath(tree, component.id(), "/") == rootId, "root");
         check(Console::resolveTreePath(tree, component.id(), "Root/folder") == folderId, "absolute");
         check(Console::resolveTreePath(tree, rootId, "missing") == InvalidNodeId, "missing");
+        check(Console::resolveTreePath(tree, rootId, std::format("#{}", component.id())) == component.id(), "node id");
+        check(Console::resolveTreePath(tree, rootId, "#999999") == InvalidNodeId, "missing node id");
     }
     runtime.nodes.ops.destroyBranch(rootId);
 }
@@ -149,6 +152,27 @@ void explicitAssignmentsAndReset() {
         cli->run([&] { cli->processCommands(); });
         check(gain == 4 && sets == 1 && resets == 1, "CLI records edits and reset without rewriting state");
         runtime.nodes.exports.unobserveParameters(observer);
+    }
+    runtime.nodes.ops.destroyBranch(rootId);
+}
+
+struct Gain { int value = 1; };
+
+void assignsByExportIdWithoutContext() {
+    Context runtime;
+    const auto rootId = runtime.nodes.factory.folder(InvalidNodeId, "Root");
+    {
+        NodeBuild root{rootId, runtime.nodes};
+        auto first = root.emplace<Gain>("first");
+        auto second = root.emplace<Gain>("second");
+        first.param("gain", &Gain::value);
+        const ExportId id = second.param("gain", &Gain::value);
+        auto terminal = root.emplace<ScriptTerminal, Console::Terminal>("script");
+        terminal->lines = {"gain 5", std::format("#{} 7", id)};
+        auto cli = root.emplace<Console::CLI>("cli", root.exports(), root.tree(), root.id());
+        cli->setTerminals({terminal.get()});
+        cli->run([&] { cli->processCommands(); });
+        check(first->value == 1 && second->value == 7, "an export id selects its owner without Context");
     }
     runtime.nodes.ops.destroyBranch(rootId);
 }
@@ -246,6 +270,7 @@ int main() {
     servesScriptedTerminal();
     terminalsChangeWhileServing();
     explicitAssignmentsAndReset();
+    assignsByExportIdWithoutContext();
     commandsRunOnHostAndSurviveErrors();
     removingTerminalCancelsRequestsAndStopDoesNotWait();
     std::cout << "CLI: arguments, tree paths and scripted terminal passed\n";
