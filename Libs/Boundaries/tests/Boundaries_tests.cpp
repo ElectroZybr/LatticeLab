@@ -11,6 +11,7 @@
 #include <BoundariesCpu/Checks.hpp>
 #include <BoundariesCpu/Geometry.hpp>
 #include <BoundariesCpu/Walls.hpp>
+#include <Tasks/Pool.hpp>
 #include <BoundariesCpu/Wrap.hpp>
 #include <Lattice/Tools/TypeName.hpp>
 #include <Lattice/Tools/Exception.hpp>
@@ -286,6 +287,31 @@ void wallsCoverEveryChunk() {
     check(all, "every chunk is processed");
 }
 
+/// Stages over partitions on a pool give the same particles as one pass over all rows.
+void partitionsMatchOnePass() {
+    const Geometry geometry{Shape::capsule({0, -2, 0}, {0, 2, 0}, 1.8f) - Shape::sphere(0.5f)};
+    const Walls walls{geometry, layout, {Laws::Hard::make(0.8f), Laws::Soft::make(10, 0.5f, 6)}};
+    const Walls soft{geometry, layout, {Laws::Soft::make(10, 0.5f, 6)}};
+    std::mt19937 random(9);
+    std::uniform_real_distribution<float> coordinate(-2.5f, 2.5f), speed(-1, 1);
+    Particles serial(10'000), parallel(10'000);
+    for (size_t i = 0; i < serial.x.size(); ++i) {
+        const float x = coordinate(random), y = coordinate(random), z = coordinate(random), v = speed(random);
+        for (auto* p : {&serial, &parallel})
+            p->x[i] = x, p->y[i] = y, p->z[i] = z, p->vx[i] = v, p->vy[i] = -v, p->vz[i] = v;
+    }
+    walls.constrain(serial.table, serial.table.size());
+    soft.addForces(serial.table, serial.table.size());
+    Tasks::Pool pool{4};
+    pool.forPartitions(parallel.table.size(), 4, [&](size_t begin, size_t end) { walls.constrain(parallel.table, begin, end); });
+    pool.forPartitions(parallel.table.size(), 4, [&](size_t begin, size_t end) { soft.addForces(parallel.table, begin, end); });
+    bool same = true;
+    for (size_t i = 0; i < serial.x.size(); ++i)
+        same &= serial.position(i) == parallel.position(i) && serial.velocity(i) == parallel.velocity(i) &&
+                serial.fx[i] == parallel.fx[i] && serial.fy[i] == parallel.fy[i] && serial.fz[i] == parallel.fz[i];
+    check(same, "partitions on a pool give exactly one pass");
+}
+
 void periodicSeamsAreChecked() {
     const Space space{{-5, -5, -5}, {10, 10, 10}, {true, false, false}};
     const auto alongX = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 0, 1));
@@ -311,6 +337,7 @@ int main() {
     softWallsPushBack();
     materialsChooseTheLaw();
     wallsCoverEveryChunk();
+    partitionsMatchOnePass();
     periodicSeamsAreChecked();
     std::cout << "Boundaries: space, geometry, walls and seam checks passed\n";
     wgpuMatchesTheCpu();

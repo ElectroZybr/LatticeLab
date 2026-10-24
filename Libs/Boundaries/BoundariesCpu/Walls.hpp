@@ -26,10 +26,15 @@ public:
     Walls(const Geometry& geometry, ParticleLayout layout, std::vector<Material> materials = {Laws::Hard::make()});
 
     /// Force stage: add wall forces (Soft) to the force columns of rows [0, rows).
-    void addForces(StdData::SoA& particles, size_t rows) const;
+    void addForces(StdData::SoA& particles, size_t rows) const { addForces(particles, 0, rows); }
     /// Constrain stage: move rows [0, rows) out of walls and reflect their velocities (Hard).
     /// Pass the mobile rows: fixed particles are not moved by walls.
-    void constrain(StdData::SoA& particles, size_t rows) const;
+    void constrain(StdData::SoA& particles, size_t rows) const { constrain(particles, 0, rows); }
+
+    /// The stages over a partition [begin, end): a kernel touches only its rows and reads
+    /// the geometry, so partitions run in parallel (Tasks::Pool::forPartitions).
+    void addForces(StdData::SoA& particles, size_t begin, size_t end) const;
+    void constrain(StdData::SoA& particles, size_t begin, size_t end) const;
 
     const ParticleLayout& layout() const noexcept { return layout_; }
 
@@ -40,7 +45,7 @@ private:
     struct Columns {
         std::span<float> x, y, z, vx, vy, vz, fx, fy, fz;
     };
-    Columns columns(StdData::SoA& particles, size_t rows, bool velocities, bool forces) const;
+    Columns columns(StdData::SoA& particles, size_t begin, size_t end, bool velocities, bool forces) const;
 
     const Geometry& geometry_;
     ParticleLayout layout_;

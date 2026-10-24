@@ -65,10 +65,10 @@ Walls::Walls(const Geometry& geometry, ParticleLayout layout, std::vector<Materi
     : geometry_(geometry), layout_(std::move(layout)), materials_(std::move(materials)),
       forceRange_(checkMaterials(geometry_.program(), materials_)) {}
 
-Walls::Columns Walls::columns(StdData::SoA& particles, size_t rows, bool velocities, bool forces) const {
-    if (rows > particles.size())
-        throw Error("{} rows of a table with {}", rows, particles.size());
-    const auto column = [&](const std::string& name) { return particles.span<float>(name).first(rows); };
+Walls::Columns Walls::columns(StdData::SoA& particles, size_t begin, size_t end, bool velocities, bool forces) const {
+    if (begin > end || end > particles.size())
+        throw Error("rows [{}, {}) of a table with {}", begin, end, particles.size());
+    const auto column = [&](const std::string& name) { return particles.span<float>(name).subspan(begin, end - begin); };
     Columns c{column(layout_.x), column(layout_.y), column(layout_.z)};
     if (velocities)
         c.vx = column(layout_.vx), c.vy = column(layout_.vy), c.vz = column(layout_.vz);
@@ -77,10 +77,10 @@ Walls::Columns Walls::columns(StdData::SoA& particles, size_t rows, bool velocit
     return c;
 }
 
-void Walls::addForces(StdData::SoA& particles, size_t rows) const {
+void Walls::addForces(StdData::SoA& particles, size_t begin, size_t end) const {
     if (forceRange_ <= 0.0f)
         return;
-    const Columns p = columns(particles, rows, false, true);
+    const Columns p = columns(particles, begin, end, false, true);
     forNear(geometry_, materials_, p.x, p.y, p.z, forceRange_, [&](size_t i, const Contact& contact, const Material& material) {
         if (material.law != Laws::Soft::id)
             return;
@@ -89,8 +89,8 @@ void Walls::addForces(StdData::SoA& particles, size_t rows) const {
     });
 }
 
-void Walls::constrain(StdData::SoA& particles, size_t rows) const {
-    const Columns p = columns(particles, rows, true, false);
+void Walls::constrain(StdData::SoA& particles, size_t first, size_t last) const {
+    const Columns p = columns(particles, first, last, true, false);
     std::array<float, Chunk> distance;
     std::array<uint32_t, Chunk> material;
     // Particles of the chunk in Hard walls: their index, position, distance, normal.

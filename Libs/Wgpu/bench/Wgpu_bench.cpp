@@ -1,8 +1,9 @@
 // GPU compute against the CPU on the same work: run `xmake run Wgpu.bench [name]`.
 // Iterations are split into phases (BmRunner Trace): recording, submit, waiting, copies
 // with their bytes, and the GPU time of the pass from timestamp queries (Execute@dev).
-// Pairs of one work: Resident (data stays on the device / in the cache) and Offload
-// (copied there and back / cold cache); the group run prints the crossover N*.
+// Implementations of one work side by side: cpu (one thread and all, the `workers` axis)
+// and gpu; ScaleAddOffload measures data coming from memory (cold cache / copies there and
+// back). A group run prints the crossovers N*.
 #include <array>
 #include <memory>
 #include <span>
@@ -16,6 +17,7 @@
 #include <Wgpu/Device.hpp>
 #include <Wgpu/Resources.hpp>
 #include <Wgpu/Timer.hpp>
+#include <Tasks/Pool.hpp>
 
 namespace {
 
@@ -32,7 +34,6 @@ Wgpu::Device& device() {
     return device;
 }
 
-using Lattice::Benchmarks::Mode;
 using Lattice::Benchmarks::Phase;
 using Lattice::Benchmarks::Trace;
 
@@ -74,9 +75,17 @@ struct GpuValues : Lattice::Fixture {
     Wgpu::Timer timer{device(), 1024, "bench/timer"};
 };
 
-void scaleAdd(std::vector<float>& values) {
-    for (float& x : values)
-        x = x * 1.0001f + 1.0f;
+Tasks::Pool& pool() {
+    static Tasks::Pool pool;
+    return pool;
+}
+
+/// The CPU kernel over partitions of the array on `workers` threads.
+void scaleAddOnCpu(std::vector<float>& values, size_t workers) {
+    pool().forPartitions(values.size(), workers, [&](size_t begin, size_t end) {
+        for (size_t i = begin; i < end; ++i)
+            values[i] = values[i] * 1.0001f + 1.0f;
+    });
 }
 
 /// Record, submit and wait for one pass; the GPU time comes from the timer.
@@ -104,30 +113,21 @@ void scaleAddOnGpu(GpuValues& values, Trace& trace) {
 
 BENCH_GROUP(Compute) { bench.config.sizes = Sizes; }
 
-BENCH_GROUPED(Compute, ScaleAddCpu, Values, "x = 1.0001·x + 1 on the CPU, data in the cache") {
-    bench.work("ScaleAdd").executor("cpu").mode(Mode::Resident);
-    bench.measure<Values>([](Values& values, Trace& trace) {
+BENCH_GROUPED(Compute, ScaleAdd, Values, "x = 1.0001·x + 1: data in the cache / on the device") {
+    bench.implementation<Values>("cpu", [&](Values& values, Trace& trace) {
         auto execute = trace.span(Phase::Execute);
-        scaleAdd(values.host);
-    });
+        scaleAddOnCpu(values.host, size_t(bench.parameter("workers")));
+    }).axis("workers", {1, Lattice::Benchmarks::Threads});
+    bench.implementation<GpuValues>("gpu", scaleAddOnGpu);
 }
 
-BENCH_GROUPED(Compute, ScaleAddGpu, GpuValues, "same on the GPU, data on the device") {
-    bench.work("ScaleAdd").executor("gpu").mode(Mode::Resident);
-    bench.measure<GpuValues>(scaleAddOnGpu);
-}
-
-BENCH_GROUPED(Compute, ScaleAddCpuCold, ColdValues, "on the CPU from a cold cache") {
-    bench.work("ScaleAdd").executor("cpu").mode(Mode::Offload);
-    bench.measure<ColdValues>([](ColdValues& values, Trace& trace) {
+BENCH_GROUPED(Compute, ScaleAddOffload, Values,
+              "same, data from memory: CPU from a cold cache, GPU with the copies there and back") {
+    bench.implementation<ColdValues>("cpu", [&](ColdValues& values, Trace& trace) {
         auto execute = trace.span(Phase::Execute);
-        scaleAdd(values.host);
-    });
-}
-
-BENCH_GROUPED(Compute, ScaleAddGpuOffload, GpuValues, "on the GPU with the copies there and back") {
-    bench.work("ScaleAdd").executor("gpu").mode(Mode::Offload);
-    bench.measure<GpuValues>([](GpuValues& values, Trace& trace) {
+        scaleAddOnCpu(values.host, size_t(bench.parameter("workers")));
+    }).axis("workers", {1, Lattice::Benchmarks::Threads});
+    bench.implementation<GpuValues>("gpu", [](GpuValues& values, Trace& trace) {
         const auto bytes = std::as_bytes(std::span(values.host));
         {
             // writeBuffer only stages; flush() makes the copy to the device part of this phase.
