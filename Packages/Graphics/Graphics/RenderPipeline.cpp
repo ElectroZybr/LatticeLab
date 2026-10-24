@@ -17,6 +17,14 @@ RenderPipeline::RenderPipeline(Wgpu::Device& device, Wgpu::Shader& shader, const
     WGPUColorTargetState color{};
     color.format = nativeFormat(desc.colorFormat);
     color.writeMask = WGPUColorWriteMask_All;
+    WGPUBlendState blend{};
+    if (desc.blend) {
+        blend.color = {.operation = WGPUBlendOperation_Add, .srcFactor = WGPUBlendFactor_SrcAlpha,
+                       .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha};
+        blend.alpha = {.operation = WGPUBlendOperation_Add, .srcFactor = WGPUBlendFactor_One,
+                       .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha};
+        color.blend = &blend;
+    }
 
     WGPUFragmentState fragment{};
     fragment.module = shader.native();
@@ -30,6 +38,8 @@ RenderPipeline::RenderPipeline(Wgpu::Device& device, Wgpu::Shader& shader, const
     pipeline.vertex.entryPoint = nativeString(desc.vertexEntry);
     pipeline.fragment = &fragment;
     pipeline.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+    pipeline.primitive.frontFace = WGPUFrontFace_CCW;
+    pipeline.primitive.cullMode = desc.cull == CullMode::Back ? WGPUCullMode_Back : WGPUCullMode_None;
     pipeline.multisample.count = 1;
     pipeline.multisample.mask = 0xFFFFFFFF;
 

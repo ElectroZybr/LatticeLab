@@ -34,6 +34,8 @@ public:
 
     /// Record draw commands for one viewport. Objects without visuals draw nothing.
     virtual void render(RenderPass&, const ViewState&) {}
+    /// Blends over what is behind it: drawn after every opaque object of the viewport.
+    virtual bool transparent() const { return false; }
 
     /// Model matrix of the transform.
     glm::mat4 model() const noexcept {

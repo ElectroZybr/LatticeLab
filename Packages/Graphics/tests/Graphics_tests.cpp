@@ -1,11 +1,18 @@
 // Camera math and controllers without GPU; scene resources only when an adapter exists.
 #include <array>
+#include <cstring>
+#include <map>
+#include <tuple>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
 #include <Boundaries/Shape.hpp>
 #include <Graphics/Camera.hpp>
 #include <Graphics/GeometrySurface.hpp>
+#include <Graphics/GpuMesh.hpp>
+#include <Graphics/MeshObject.hpp>
+#include <Graphics/MeshShapes.hpp>
+#include <Graphics/RenderPass.hpp>
 #include <Graphics/RenderLayout.hpp>
 #include <Graphics/RenderPipeline.hpp>
 #include <Graphics/Spheres.hpp>
@@ -61,6 +68,96 @@ void orbitControllerKeepsDistance() {
     check(std::abs(glm::length(camera.transform().position) - 5.0f) < 1e-3f, "orbit keeps the distance to the pivot");
 }
 
+/// Closed and consistently oriented: welded by position, every edge is walked once in
+/// each direction; faces turn the way their vertex normals point; normals are unit.
+void checkClosed(const MeshData& mesh, const char* name) {
+    std::map<std::tuple<long, long, long>, uint32_t> welded;
+    std::vector<uint32_t> id(mesh.vertices.size());
+    for (size_t i = 0; i < mesh.vertices.size(); ++i) {
+        const glm::vec3 p = mesh.vertices[i].position * 1e4f;
+        id[i] = welded.try_emplace({std::lround(p.x), std::lround(p.y), std::lround(p.z)}, uint32_t(welded.size()))
+            .first->second;
+        check(std::abs(glm::length(mesh.vertices[i].normal) - 1.0f) < 1e-4f, name);
+    }
+    std::map<std::pair<uint32_t, uint32_t>, int> edges;
+    for (size_t t = 0; t < mesh.indices.size(); t += 3) {
+        const auto& a = mesh.vertices[mesh.indices[t]];
+        const auto& b = mesh.vertices[mesh.indices[t + 1]];
+        const auto& c = mesh.vertices[mesh.indices[t + 2]];
+        check(glm::dot(glm::cross(b.position - a.position, c.position - a.position), a.normal + b.normal + c.normal) > 0,
+              name);
+        for (int k = 0; k < 3; ++k)
+            ++edges[{id[mesh.indices[t + k]], id[mesh.indices[t + (k + 1) % 3]]}];
+    }
+    for (const auto& [edge, count] : edges)
+        check(count == 1 && edges.contains({edge.second, edge.first}), name);
+}
+
+void meshShapesAreClosed() {
+    checkClosed(MeshShapes::box({1.0f, 0.5f, 0.25f}), "box is closed and outward");
+    checkClosed(MeshShapes::sphere(1.0f, 24, 12), "sphere is closed and outward");
+    const MeshData torus = MeshShapes::torus(1.0f, 0.3f, 32, 12);
+    checkClosed(torus, "torus is closed and outward");
+    check(torus.triangles() == 2 * 32 * 12, "torus has 2 · segments · sides triangles");
+}
+
+/// A frame of 64×64 into a texture, read back as RGBA8.
+std::vector<uint8_t> drawFrame(Wgpu::Device& device, RenderLayout& layout, Viewport& viewport) {
+    constexpr uint32_t size = 64, row = Wgpu::CommandList::RowAlignment;
+    Wgpu::Texture color{device, {.width = size, .height = size, .format = Wgpu::TextureFormat::RGBA8Unorm,
+        .usage = Wgpu::TextureUsage::RenderAttachment | Wgpu::TextureUsage::CopySource, .label = "test/color"}};
+    Wgpu::Texture depth{device, {.width = size, .height = size, .format = layout.depthFormat(),
+        .usage = Wgpu::TextureUsage::RenderAttachment, .label = "test/depth"}};
+    Wgpu::Buffer staging{device, {.size = row * size,
+        .usage = Wgpu::BufferUsage::CopySource | Wgpu::BufferUsage::CopyDestination, .label = "test/frame"}};
+    Wgpu::CommandList commands{device};
+    {
+        RenderPass pass{commands, color, {0, 0, 0, 1}, &depth};
+        viewport.render(pass, {size, size});
+    }
+    commands.copyTexture(color, staging, row);
+    commands.submit();
+    const auto bytes = device.readBuffer(staging, 0, staging.size());
+    std::vector<uint8_t> pixels(size * size * 4);
+    for (uint32_t y = 0; y < size; ++y)
+        std::memcpy(pixels.data() + y * size * 4, bytes.data() + y * row, size * 4);
+    return pixels;
+}
+
+/// A lit sphere in front of the camera covers the center and leaves the corners clear;
+/// every display mode builds its pipeline without validation errors.
+void meshIsDrawnAndLit(Wgpu::Device& device) {
+    const auto errors = Wgpu::errorCount();
+    {
+        RenderLayout layout{device, Wgpu::TextureFormat::RGBA8Unorm};
+        Camera camera;
+        camera.setPosition({0, 0, 3});
+        Viewport viewport{layout, camera};
+        GpuMesh mesh{device, MeshShapes::sphere(1.0f, 32, 16), "sphere"};
+        MeshObject object{layout, mesh};
+        Light light{.direction = {0, 0, -1}};
+        viewport.setObjects({&object});
+        viewport.setLights({&light});
+
+        auto pixels = drawFrame(device, layout, viewport);
+        const auto at = [&](uint32_t x, uint32_t y) { return pixels[(y * 64 + x) * 4]; };
+        check(at(32, 32) > 100, "the lit sphere covers the center");
+        check(at(1, 1) == 0, "corners stay clear");
+        viewport.setLights({});
+        pixels = drawFrame(device, layout, viewport);
+        check(at(32, 32) < 50, "without lights only the ambient light is left");
+
+        object.wireframe = true;
+        object.opacity = 0.5f;
+        object.cullBack = false;
+        drawFrame(device, layout, viewport);
+        object.solid = false;
+        drawFrame(device, layout, viewport);
+    }
+    check(device.resources().size() == 0, "mesh resources are released");
+    check(Wgpu::errorCount() == errors, "mesh pipelines in every mode match the layouts");
+}
+
 constexpr unsigned char LayoutShader[] = {
 #include "layouts.wgsl.h"
 };
@@ -103,9 +200,9 @@ bool sceneResourcesOnDevice() {
             TestObject marker{layout, GRAPHICS_SHADERS "/circle.wgsl"};
             viewport.setObjects({&marker});
             check(viewport.objects().size() == 1, "viewport draws its objects");
-            // layout (camera group) + viewport (uniform, group) + object (layout, uniform,
-            // group, shader, pipeline)
-            check(device.resources().size() == 8, "scene owns its GPU resources");
+            // layout (camera group) + viewport (camera, lights, group) + object (layout,
+            // uniform, group, shader, pipeline)
+            check(device.resources().size() == 9, "scene owns its GPU resources");
         }
         check(device.resources().size() == 0, "scene releases its resources");
         {
@@ -128,6 +225,7 @@ bool sceneResourcesOnDevice() {
         check(device.resources().size() == 0, "geometry surface releases its resources");
         check(Wgpu::errorCount() == errors, "object pipeline matches the shared camera layout");
         pipelinesShareTheCameraLayout(device);
+        meshIsDrawnAndLit(device);
         return true;
     } catch (const Lattice::ExceptionBase& error) {
         std::cout << "Graphics: GPU checks skipped (" << error.what() << ")\n";
@@ -141,6 +239,7 @@ int main() {
     freeControllerConsumesInput();
     viewportHitTestAndLocalCursor();
     orbitControllerKeepsDistance();
+    meshShapesAreClosed();
     const bool gpu = sceneResourcesOnDevice();
-    std::cout << "Graphics: camera, controllers" << (gpu ? " and scene/spheres/geometry resources" : "") << " passed\n";
+    std::cout << "Graphics: camera, controllers, mesh shapes" << (gpu ? " and scene/spheres/geometry/mesh resources" : "") << " passed\n";
 }

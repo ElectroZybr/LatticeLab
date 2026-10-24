@@ -10,6 +10,10 @@
 #include <BoundariesWgpu/GpuGeometry.hpp>
 #include <Graphics/Camera.hpp>
 #include <Graphics/GeometrySurface.hpp>
+#include <Graphics/GpuMesh.hpp>
+#include <Graphics/Light.hpp>
+#include <Graphics/MeshObject.hpp>
+#include <Graphics/MeshShapes.hpp>
 #include <Graphics/Render.hpp>
 #include <Graphics/Spheres.hpp>
 #include <Graphics/TransformMode.hpp>
@@ -54,6 +58,30 @@ auto composeOrbitCamera(NodeBuild& slot) {
         slot.require<Camera>("camera"), slot.owner<Viewport>()));
 }
 
+// Material and display modes of a drawn mesh.
+void exportMesh(Lattice::ObjectBuild<MeshObject>& mesh) {
+    mesh.param("color", &MeshObject::color);
+    mesh.param("opacity", &MeshObject::opacity);
+    mesh.param("specular", &MeshObject::specular);
+    mesh.param("shininess", &MeshObject::shininess);
+    mesh.param("solid", &MeshObject::solid);
+    mesh.param("wireframe", &MeshObject::wireframe);
+    mesh.param("wireColor", &MeshObject::wireColor);
+    mesh.param("wireWidth", &MeshObject::wireWidth);
+    mesh.param("cullBack", &MeshObject::cullBack);
+}
+
+Lattice::ObjectBuild<Light> addLight(NodeBuild& scene, std::string_view name, Light light) {
+    auto node = scene.emplace<Light>(name, light);
+    node.param("color", &Light::color);
+    node.param("intensity", &Light::intensity);
+    node.param("point", &Light::point);
+    node.param("direction", &Light::direction);
+    node.param("position", &Light::position);
+    node.param("range", &Light::range);
+    return node;
+}
+
 // Demo geometry until the simulation publishes its own: a rounded cylindrical container
 // with an obstacle (a sphere smoothly joined with a bar) in the middle.
 Boundaries::Program demoGeometry() {
@@ -88,12 +116,17 @@ extern "C" void compose(NodeBuild root) {
     auto space = root.emplace<Boundaries::Space>("space", glm::vec3(-2.0f), glm::vec3(4.0f));
     auto geometry = root.emplace<Boundaries::Wgpu::GpuGeometry>("geometry", device.ref(), demoGeometry());
 
+    // Demo mesh: shared data, drawn by the viewports' mesh objects.
+    auto torus = root.emplace<GpuMesh>("torus", device.ref(), MeshShapes::torus(0.8f, 0.25f, 96, 32),
+        std::string("torus"));
+
     const auto addViewport = [&](std::string_view name, glm::vec3 eye) {
         auto viewport = root.branch(name);
         auto camera = viewport.emplace<Camera>("camera");
         camera->setPosition(eye);
         camera.param("position", camera->transform().position);
-        viewport.construct<Viewport>(render->layout(), camera);
+        auto view = viewport.construct<Viewport>(render->layout(), camera);
+        view.param("ambient", &Viewport::ambient);
         auto controller = viewport.addSlot<TransformController>("controller");
         controller.choice("Graphics::FreeCamera", composeFreeCamera);
         viewport.emplace<Spheres, SceneObject>("particles", render->layout(), particles,
@@ -104,6 +137,12 @@ extern "C" void compose(NodeBuild root) {
             },
             std::filesystem::path("Packages/Graphics/shaders/spheres3d.wgsl"));
         viewport.emplace<GeometrySurface, SceneObject>("geometry", render->layout(), geometry, space);
+        auto mesh = viewport.emplace<MeshObject, SceneObject>("torus", render->layout(), torus);
+        mesh->setPosition({3.2f, 0.0f, 0.0f});
+        mesh->wireframe = true;
+        exportMesh(mesh);
+        addLight(viewport, "sun", Light{.color = {1.0f, 0.96f, 0.9f}, .intensity = 0.9f, .direction = {-0.4f, -1.0f, -0.6f}});
+        addLight(viewport, "fill", Light{.color = {0.6f, 0.7f, 1.0f}, .intensity = 0.35f, .direction = {0.7f, 0.2f, 0.5f}});
     };
     addViewport("main", {0.0f, 0.0f, 5.0f});
 
@@ -116,11 +155,12 @@ extern "C" void compose(NodeBuild root) {
 }
 
 // Live wiring with the tree: Render draws the current viewports; each viewport draws
-// its scene objects and is driven by the controller below it.
+// its scene objects under its lights and is driven by the controller below it.
 extern "C" void configure(NodeConfigure root) {
     root.self<Render>()->setViewports(root.collect<Viewport>());
     for (auto [viewport, node] : root.collectNodes<Viewport>()) {
         viewport->setObjects(node.children<SceneObject>());
+        viewport->setLights(node.children<Light>());
         const auto controllers = node.children<TransformController>();
         if (controllers.size() > 1)
             throw Lattice::Exception<Viewport>("Viewport #{} has {} controllers", node.id(), controllers.size());

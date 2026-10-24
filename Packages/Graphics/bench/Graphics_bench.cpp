@@ -1,4 +1,5 @@
 // Frame costs of scene objects on the GPU: run `xmake run Graphics.bench [name or group]`.
+// Mesh: a lit torus of N triangles at 1920×1080 — solid, with the wireframe, transparent.
 // N is the number of pixels of the frame (16:9); a frame is recorded, submitted and waited
 // for, its GPU time comes from timestamps of the render pass (BmRunner Trace).
 // GeometrySurface: the demo container from different camera positions — the cost of
@@ -20,6 +21,10 @@
 #include <BoundariesWgpu/GpuGeometry.hpp>
 #include <Graphics/Camera.hpp>
 #include <Graphics/GeometrySurface.hpp>
+#include <Graphics/GpuMesh.hpp>
+#include <Graphics/Light.hpp>
+#include <Graphics/MeshObject.hpp>
+#include <Graphics/MeshShapes.hpp>
 #include <Graphics/RenderLayout.hpp>
 #include <Graphics/RenderPass.hpp>
 #include <Graphics/Viewport.hpp>
@@ -90,28 +95,21 @@ bool near(const View& expectedView, const View& actualView) {
     return differing * 200 <= expected.rgba.size() / 4;
 }
 
-/// A frame target of N pixels and one viewport drawing the container; one per point N.
-struct Frame : Lattice::Fixture {
-    using Input = View;
-    static constexpr bool Reuse = true;
-    Frame(const View& view, Boundaries::Wgpu::DistanceSource distance)
-        : pixels(view.pixels),
-          size(resolution(view.pixels)),
+/// A frame target (color, depth) with one viewport, its camera and lights; a frame is
+/// recorded, submitted and waited for, the pass time comes from the timer.
+struct Target {
+    explicit Target(glm::uvec2 size)
+        : size(size),
           layout(device(), Wgpu::TextureFormat::RGBA8Unorm),
           color(device(), {.width = size.x, .height = size.y, .format = Wgpu::TextureFormat::RGBA8Unorm,
               .usage = Wgpu::TextureUsage::RenderAttachment | Wgpu::TextureUsage::CopySource, .label = "bench/color"}),
           depth(device(), {.width = size.x, .height = size.y, .format = Wgpu::TextureFormat::Depth32Float,
               .usage = Wgpu::TextureUsage::RenderAttachment, .label = "bench/depth"}),
-          space(glm::vec3(-2.0f), glm::vec3(4.0f)),
-          geometry(device(), container()),
-          surface(layout, geometry, space, distance),
           viewport(layout, camera),
           timer(device(), 1024, "bench/frame") {
-        camera.setPosition(view.eye);
-        viewport.setObjects({&surface});
+        viewport.setLights({&sun, &fill});
     }
 
-    /// One frame: record the pass, submit, wait; the pass time on the GPU from the timer.
     void draw(Trace& trace) {
         Wgpu::CommandList commands{device()};
         {
@@ -147,16 +145,35 @@ struct Frame : Lattice::Fixture {
         return result;
     }
 
-    size_t pixels;
     glm::uvec2 size;
     RenderLayout layout;
     Wgpu::Texture color, depth;
+    Camera camera;
+    Light sun{.direction = {-0.4f, -1.0f, -0.6f}};
+    Light fill{.intensity = 0.35f, .direction = {0.7f, 0.2f, 0.5f}};
+    Viewport viewport;
+    Wgpu::Timer timer;
+};
+
+/// A frame target of N pixels drawing the container; one per point N.
+struct Frame : Lattice::Fixture {
+    using Input = View;
+    static constexpr bool Reuse = true;
+    Frame(const View& view, Boundaries::Wgpu::DistanceSource distance)
+        : pixels(view.pixels),
+          target(resolution(view.pixels)),
+          space(glm::vec3(-2.0f), glm::vec3(4.0f)),
+          geometry(device(), container()),
+          surface(target.layout, geometry, space, distance) {
+        target.camera.setPosition(view.eye);
+        target.viewport.setObjects({&surface});
+    }
+
+    size_t pixels;
+    Target target;
     Boundaries::Space space;
     Boundaries::Wgpu::GpuGeometry geometry;
     GeometrySurface surface;
-    Camera camera;
-    Viewport viewport;
-    Wgpu::Timer timer;
 };
 
 struct InterpretedFrame : Frame {
@@ -170,8 +187,10 @@ struct GeneratedFrame : Frame {
 /// An implementation of a view work: draw frames, output the last one.
 template<class Implementation>
 void frames(Implementation& impl) {
-    impl.output([](Frame& frame) { return View{frame.pixels, frame.camera.transform().position, frame.image()}; });
-    impl.measure([](Frame& frame, Run& run) { frame.draw(run.trace()); });
+    impl.output([](Frame& frame) {
+        return View{frame.pixels, frame.target.camera.transform().position, frame.target.image()};
+    });
+    impl.measure([](Frame& frame, Run& run) { frame.target.draw(run.trace()); });
 }
 
 }
@@ -190,6 +209,52 @@ BENCH_GROUP(GeometrySurface) { bench.config.sizes = Pixels; }
 VIEW_WORK(Far, glm::vec3(0.0f, 0.0f, 5.0f), "the whole container in view, outside the box")
 VIEW_WORK(NearWall, glm::vec3(0.0f, 0.0f, 1.9f), "inside the box, in the wall next to the cut-away side")
 VIEW_WORK(Inside, glm::vec3(0.0f, 0.0f, 0.9f), "in the region, 0.4 in front of the obstacle")
+
+namespace {
+
+/// A torus of N triangles (√N segments and sides) filling a 1920×1080 frame; one per point N.
+struct MeshFrame : Lattice::Fixture {
+    static constexpr bool Reuse = true;
+    explicit MeshFrame(size_t triangles)
+        : target({1920, 1080}),
+          mesh(device(), torus(triangles), "bench/torus"),
+          object(target.layout, mesh) {
+        target.camera.setPosition({0.0f, 0.6f, 2.4f});
+        target.viewport.setObjects({&object});
+    }
+
+    static MeshData torus(size_t triangles) {
+        const auto sides = uint32_t(std::max(3.0, std::round(std::sqrt(double(triangles) / 2.0))));
+        return MeshShapes::torus(0.8f, 0.3f, sides, sides);
+    }
+
+    Target target;
+    GpuMesh mesh;
+    MeshObject object;
+};
+
+}
+
+BENCH_GROUP(Mesh) { bench.config.sizes = {10'000, 100'000, 1'000'000, 4'000'000}; }
+
+BENCH_GROUPED(Mesh, Solid, MeshFrame, "lit torus of N triangles, 1920×1080") {
+    bench.measure<MeshFrame>([](MeshFrame& frame, Trace& trace) { frame.target.draw(trace); });
+}
+
+BENCH_GROUPED(Mesh, Wireframe, MeshFrame, "the same torus with the wireframe over it") {
+    bench.measure<MeshFrame>([](MeshFrame& frame, Trace& trace) {
+        frame.object.wireframe = true;
+        frame.target.draw(trace);
+    });
+}
+
+BENCH_GROUPED(Mesh, Transparent, MeshFrame, "the same torus at half opacity, both sides") {
+    bench.measure<MeshFrame>([](MeshFrame& frame, Trace& trace) {
+        frame.object.opacity = 0.5f;
+        frame.object.cullBack = false;
+        frame.target.draw(trace);
+    });
+}
 
 // [filter] [--filter <group|bench|mask>] [--tsv <file>] [--list]; a group run compares
 // the implementations of each view.
