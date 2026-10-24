@@ -4,6 +4,7 @@
 #include <array>
 #include <tuple>
 
+#include <Boundaries/Materials.hpp>
 #include <Lattice/Tools/Exception.hpp>
 
 namespace Boundaries::Cpu {
@@ -61,31 +62,8 @@ void forNear(const Geometry& geometry_, const std::vector<Material>& materials_,
 }
 
 Walls::Walls(const Geometry& geometry, ParticleLayout layout, std::vector<Material> materials)
-    : geometry_(geometry), layout_(std::move(layout)), materials_(std::move(materials)) {
-    if (materials_.empty())
-        throw Error("walls need at least the default material");
-    for (const auto& instruction : geometry_.program().code)
-        if (isPrimitive(instruction.op) && instruction.material >= materials_.size())
-            throw Error("geometry uses material {}, only {} defined", instruction.material, materials_.size());
-    for (size_t i = 0; i < materials_.size(); ++i) {
-        const auto& material = materials_[i];
-        switch (material.law) {
-            case Laws::Open::id:
-                break;
-            case Laws::Hard::id:
-                if (material.params[0] < 0.0f || material.params[0] > 1.0f)
-                    throw Error("material {}: restitution {} is outside [0, 1]", i, material.params[0]);
-                break;
-            case Laws::Soft::id:
-                if (material.params[0] <= 0.0f || material.params[1] <= 0.0f || material.params[2] < 1.0f)
-                    throw Error("material {}: soft wall needs stiffness > 0, range > 0, exponent >= 1", i);
-                forceRange_ = std::max(forceRange_, Laws::Soft::range(material));
-                break;
-            default:
-                throw Error("material {}: unknown law {}", i, material.law);
-        }
-    }
-}
+    : geometry_(geometry), layout_(std::move(layout)), materials_(std::move(materials)),
+      forceRange_(checkMaterials(geometry_.program(), materials_)) {}
 
 Walls::Columns Walls::columns(StdData::SoA& particles, size_t rows, bool velocities, bool forces) const {
     if (rows > particles.size())
@@ -139,7 +117,7 @@ void Walls::constrain(StdData::SoA& particles, size_t rows) const {
         // bound, so repeat while some are still inside (rarely more than one pass).
         const auto positions = [&] { return std::tuple{std::span(sx).first(count), std::span(sy).first(count),
             std::span(sz).first(count)}; };
-        for (int pass = 0; pass < ProjectionPasses; ++pass) {
+        for (int pass = 0; pass < Laws::Hard::ProjectionPasses; ++pass) {
             auto [x, y, z] = positions();
             geometry_.normals(x, y, z, std::span(nx).first(count), std::span(ny).first(count), std::span(nz).first(count));
             bool inside = false;

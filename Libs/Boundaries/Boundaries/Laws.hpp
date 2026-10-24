@@ -48,6 +48,8 @@ struct Open {
 struct Hard {
     static constexpr uint32_t id = 1;
     static constexpr Stage stage = Stage::Constrain;
+    /// Projection passes for a particle in a wall (blends give distance bounds).
+    static constexpr int ProjectionPasses = 3;
     static Material make(float restitution = 1.0f) { return {.law = id, .params = {restitution}}; }
 
     static glm::vec3 reflect(glm::vec3 velocity, glm::vec3 normal, const Material& material) {

@@ -30,14 +30,9 @@ void registryTracksLiveResources() {
     check(registry.report().find("1 live, 0 bytes") != std::string::npos, "report summary");
 }
 
-const char* shaderSource = R"(
-@group(0) @binding(0) var<uniform> scale : vec4<f32>;
-@vertex fn vs(@builtin(vertex_index) i : u32) -> @builtin(position) vec4<f32> {
-    let p = array<vec2<f32>, 3>(vec2(0.0, 0.5), vec2(-0.5, -0.5), vec2(0.5, -0.5));
-    return vec4<f32>(p[i] * scale.x, 0.0, 1.0);
-}
-@fragment fn fs() -> @location(0) vec4<f32> { return vec4<f32>(1.0); }
-)";
+constexpr unsigned char TriangleShader[] = {
+#include "triangle.wgsl.h"
+};
 
 struct PosX { using type = float; };
 struct PosY { using type = float; };
@@ -138,15 +133,9 @@ void layoutsAndTexturesOnDevice(Wgpu::Device& device) {
     check(device.resources().size() == 0, "layouts and textures are released");
 }
 
-const char* doubleShader = R"(
-@group(0) @binding(0) var<storage, read_write> data : array<f32>;
-@compute @workgroup_size(64)
-fn main(@builtin(global_invocation_id) id : vec3<u32>) {
-    if (id.x < arrayLength(&data)) {
-        data[id.x] = data[id.x] * 2.0;
-    }
-}
-)";
+constexpr unsigned char DoubleShader[] = {
+#include "double.wgsl.h"
+};
 
 void computeDoublesAnArray(Wgpu::Device& device) {
     const auto errors = Wgpu::errorCount();
@@ -164,7 +153,7 @@ void computeDoublesAnArray(Wgpu::Device& device) {
         Wgpu::BindingLayout layout{device, entries, "data"};
         const Wgpu::Binding binding{.binding = 0, .buffer = &data};
         Wgpu::BindingSet set{device, layout, std::span(&binding, 1)};
-        Wgpu::Shader shader{device, {.source = doubleShader, .label = "double"}};
+        Wgpu::Shader shader{device, {.source = reinterpret_cast<const char*>(DoubleShader), .label = "double"}};
         Wgpu::ComputePipeline pipeline{device, shader, {.layouts = {&layout}, .label = "double"}};
 
         Wgpu::CommandList commands{device};
@@ -236,7 +225,7 @@ bool resourcesRegisterOnDevice() {
     {
         Wgpu::Buffer uniform{*device, {.size = 16,
             .usage = Wgpu::BufferUsage::Uniform | Wgpu::BufferUsage::CopyDestination, .label = "scale"}};
-        Wgpu::Shader shader{*device, {.source = shaderSource, .label = "triangle"}};
+        Wgpu::Shader shader{*device, {.source = reinterpret_cast<const char*>(TriangleShader), .label = "triangle"}};
         const std::array<Wgpu::LayoutEntry, 1> entries{{{.binding = 0, .type = Wgpu::BindingType::Uniform}}};
         Wgpu::BindingLayout layout{*device, entries, "scale"};
         const Wgpu::Binding binding{.binding = 0, .buffer = &uniform};

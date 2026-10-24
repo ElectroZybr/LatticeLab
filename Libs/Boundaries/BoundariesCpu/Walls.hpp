@@ -36,9 +36,6 @@ public:
     const std::vector<Material>& materials() const noexcept { return materials_; }
     const Geometry& geometry() const noexcept { return geometry_; }
 
-    /// Projection passes for a particle in a wall (blends give distance bounds).
-    static constexpr int ProjectionPasses = 3;
-
 private:
     struct Columns {
         std::span<float> x, y, z, vx, vy, vz, fx, fy, fz;

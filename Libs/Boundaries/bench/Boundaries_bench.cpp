@@ -9,6 +9,11 @@
 #include <BoundariesCpu/Geometry.hpp>
 #include <BoundariesCpu/Walls.hpp>
 #include <BoundariesCpu/Wrap.hpp>
+#include <BoundariesWgpu/GpuGeometry.hpp>
+#include <BoundariesWgpu/GpuWalls.hpp>
+#include <Wgpu/CommandList.hpp>
+#include <Wgpu/Device.hpp>
+#include <Wgpu/GpuSoA.hpp>
 #include <Lattice/Tools/TypeName.hpp>
 
 using namespace Boundaries;
@@ -166,6 +171,49 @@ BENCH_GROUPED(Walls, SoftForces, TubeParticles, "soft tube walls, layer 0.5 thic
     const Geometry geometry{tube()};
     const Walls walls{geometry, Layout, {Laws::Soft::make(10, 0.5f, 6)}};
     bench.measure<TubeParticles>([&](TubeParticles& p) { walls.addForces(p.table, p.table.size()); });
+}
+
+namespace {
+
+::Wgpu::Device& device() {
+    static ::Wgpu::Instance instance;
+    static ::Wgpu::Device device{instance};
+    return device;
+}
+
+/// The tube particles resident on the GPU; prepare() uploads the initial state again.
+struct GpuTubeParticles : TubeParticles {
+    explicit GpuTubeParticles(size_t n) : TubeParticles(n), gpu(device(), "bench/particles") { prepare(); }
+    void prepare() override {
+        TubeParticles::prepare();
+        gpu.upload(table);
+        device().wait();
+    }
+    ::Wgpu::GpuSoA gpu;
+};
+
+}
+
+BENCH_GROUPED(Walls, ConstrainGpu, GpuTubeParticles, "hard tube walls on the GPU: record, submit, wait") {
+    const Boundaries::Wgpu::GpuGeometry geometry{device(), tube().compile()};
+    Boundaries::Wgpu::GpuWalls walls{geometry, Layout};
+    bench.measure<GpuTubeParticles>([&](GpuTubeParticles& p) {
+        ::Wgpu::CommandList commands{device()};
+        walls.constrain(commands, p.gpu, p.table.size());
+        commands.submit();
+        device().wait();
+    });
+}
+
+BENCH_GROUPED(Walls, SoftForcesGpu, GpuTubeParticles, "soft tube walls on the GPU: record, submit, wait") {
+    const Boundaries::Wgpu::GpuGeometry geometry{device(), tube().compile()};
+    Boundaries::Wgpu::GpuWalls walls{geometry, Layout, {Laws::Soft::make(10, 0.5f, 6)}};
+    bench.measure<GpuTubeParticles>([&](GpuTubeParticles& p) {
+        ::Wgpu::CommandList commands{device()};
+        walls.addForces(commands, p.gpu, p.table.size());
+        commands.submit();
+        device().wait();
+    });
 }
 
 int main(int argc, char** argv) {

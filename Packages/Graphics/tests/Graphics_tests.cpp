@@ -59,15 +59,9 @@ void orbitControllerKeepsDistance() {
     check(std::abs(glm::length(camera.transform().position) - 5.0f) < 1e-3f, "orbit keeps the distance to the pivot");
 }
 
-const char* layoutShader = R"(
-struct Camera { viewProjection : mat4x4<f32> }
-@group(0) @binding(0) var<uniform> camera : Camera;
-@group(1) @binding(0) var<storage, read> data : array<f32>;
-@vertex fn vs(@builtin(vertex_index) i : u32, @builtin(instance_index) n : u32) -> @builtin(position) vec4<f32> {
-    return camera.viewProjection * vec4<f32>(data[n], f32(i), 0.0, 1.0);
-}
-@fragment fn fs() -> @location(0) vec4<f32> { return vec4<f32>(1.0); }
-)";
+constexpr unsigned char LayoutShader[] = {
+#include "layouts.wgsl.h"
+};
 
 void pipelinesShareTheCameraLayout(Wgpu::Device& device) {
     const auto errors = Wgpu::errorCount();
@@ -77,7 +71,7 @@ void pipelinesShareTheCameraLayout(Wgpu::Device& device) {
             .type = Wgpu::BindingType::ReadOnlyStorage, .visibility = Wgpu::ShaderStage::Vertex}}};
         Wgpu::BindingLayout cameraLayout{device, cameraEntries, "camera"};
         Wgpu::BindingLayout dataLayout{device, dataEntries, "data"};
-        Wgpu::Shader shader{device, {.source = layoutShader, .label = "layouts"}};
+        Wgpu::Shader shader{device, {.source = reinterpret_cast<const char*>(LayoutShader), .label = "layouts"}};
         // Two pipelines on the same camera layout: one bind group serves both.
         RenderPipeline flat{device, shader, {.layouts = {&cameraLayout, &dataLayout}, .label = "flat"}};
         RenderPipeline deep{device, shader, {.depthFormat = Wgpu::TextureFormat::Depth32Float,
@@ -87,7 +81,7 @@ void pipelinesShareTheCameraLayout(Wgpu::Device& device) {
     {
         const std::array<Wgpu::LayoutEntry, 1> cameraEntries{{{.binding = 0, .type = Wgpu::BindingType::Uniform}}};
         Wgpu::BindingLayout cameraLayout{device, cameraEntries, "camera"};
-        Wgpu::Shader shader{device, {.source = layoutShader, .label = "layouts"}};
+        Wgpu::Shader shader{device, {.source = reinterpret_cast<const char*>(LayoutShader), .label = "layouts"}};
         try {
             RenderPipeline missing{device, shader, {.layouts = {&cameraLayout}, .label = "missing group 1"}};
         } catch (const Lattice::ExceptionBase&) {}

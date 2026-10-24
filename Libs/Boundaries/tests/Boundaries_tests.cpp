@@ -164,6 +164,39 @@ void normalsPointIntoTheRegion() {
     check(near(floor.normal({3, -1, 7}), {0, -1, 0}, 1e-3f), "half-space normal");
 }
 
+void analyticNormalsMatchTheDistance() {
+    const auto turn = glm::angleAxis(glm::radians(40.0f), glm::normalize(glm::vec3(1, 2, 0)));
+    const Shape shapes[] = {
+        Shape::sphere(1.2f), Shape::box({1, 0.7f, 1.4f}), Shape::capsule({-1, 0, 0}, {1, 0.5f, 0}, 0.4f),
+        Shape::cylinder(0.8f, 1.1f), Shape::halfSpace({0.3f, 1, 0.2f}, 0.5f), Shape::infiniteCylinder(0.9f),
+        Shape::box({1.5f, 1.5f, 1.5f}) - Shape::sphere(1),
+        Shape::smoothUnion(Shape::sphere(0.8f), std::move(Shape::sphere(0.8f)).translated({1.2f, 0, 0}), 0.5f),
+        std::move(Shape::sphere(1.2f)).shell(0.15f),
+        std::move(std::move(Shape::box({1, 0.3f, 0.5f})).rotated(turn)).scaled(1.5f),
+    };
+    std::mt19937 random(11);
+    std::uniform_real_distribution<float> coordinate(-2.5f, 2.5f);
+    for (const auto& shape : shapes) {
+        const Geometry geometry{shape};
+        size_t agree = 0, total = 0;
+        for (int i = 0; i < 500; ++i) {
+            const glm::vec3 p(coordinate(random), coordinate(random), coordinate(random));
+            // Central differences in double steps of 1e-3: away from edges they agree.
+            const float h = 1e-3f;
+            const glm::vec3 numeric(
+                geometry.distance(p + glm::vec3(h, 0, 0)) - geometry.distance(p - glm::vec3(h, 0, 0)),
+                geometry.distance(p + glm::vec3(0, h, 0)) - geometry.distance(p - glm::vec3(0, h, 0)),
+                geometry.distance(p + glm::vec3(0, 0, h)) - geometry.distance(p - glm::vec3(0, 0, h)));
+            if (glm::length(numeric) < 1e-6f)
+                continue;
+            ++total;
+            agree += glm::dot(glm::normalize(numeric), geometry.normal(p)) > 0.999f;
+        }
+        // Points on medial surfaces (edges of boxes, blends) may disagree: allow a few.
+        check(agree * 100 >= total * 97, "analytic normals agree with differences of the distance");
+    }
+}
+
 void batchesMatchPointsAndStayLipschitz() {
     const Geometry geometry{(Shape::box({2, 2, 2}) - Shape::sphere(1)) |
         std::move(Shape::capsule({0, 0, 0}, {3, 0, 0}, 0.3f)).translated({0, 1, 0})};
@@ -263,6 +296,8 @@ void periodicSeamsAreChecked() {
 
 }
 
+void wgpuMatchesTheCpu();
+
 int main() {
     spaceWrapsAndTakesMinimumImage();
     primitivesGiveExactDistances();
@@ -270,6 +305,7 @@ int main() {
     transformsKeepDistancesExact();
     materialOfTheNearestSurface();
     normalsPointIntoTheRegion();
+    analyticNormalsMatchTheDistance();
     batchesMatchPointsAndStayLipschitz();
     hardWallsReflect();
     softWallsPushBack();
@@ -277,4 +313,5 @@ int main() {
     wallsCoverEveryChunk();
     periodicSeamsAreChecked();
     std::cout << "Boundaries: space, geometry, walls and seam checks passed\n";
+    wgpuMatchesTheCpu();
 }

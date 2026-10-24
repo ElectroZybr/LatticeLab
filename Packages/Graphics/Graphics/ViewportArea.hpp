@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <optional>
 
 #include <glm/glm.hpp>
@@ -30,10 +31,26 @@ public:
     void setLayer(int layer) noexcept { layer_ = layer; }
 
     /// Whether a surface position falls inside this area.
-    bool contains(glm::vec2 position, glm::uvec2 surfaceSize) const noexcept;
+    bool contains(glm::vec2 position, glm::uvec2 surfaceSize) const noexcept {
+        Rect rect;
+        return resolveRect(surfaceSize, rect) &&
+            position.x >= float(rect.x) && position.x < float(rect.x + rect.width) &&
+            position.y >= float(rect.y) && position.y < float(rect.y + rect.height);
+    }
 
     /// Pixel rectangle on a surface of this size; false when nothing is visible.
-    bool resolveRect(glm::uvec2 surfaceSize, Rect& rect) const noexcept;
+    bool resolveRect(glm::uvec2 surfaceSize, Rect& rect) const noexcept {
+        const auto origin = position();
+        if (origin.x >= surfaceSize.x || origin.y >= surfaceSize.y)
+            return false;
+        const auto available = surfaceSize - origin;
+        const auto requested = sizeMode_ == ViewportSizeMode::Fill ? available : size();
+        const glm::uvec2 extent{std::min(requested.x, available.x), std::min(requested.y, available.y)};
+        if (!extent.x || !extent.y)
+            return false;
+        rect = {origin.x, origin.y, extent.x, extent.y};
+        return true;
+    }
 
     /// Cursor in local coordinates; valid while hovered().
     glm::vec2 cursor() const noexcept { return cursor_; }

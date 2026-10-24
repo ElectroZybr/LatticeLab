@@ -57,7 +57,8 @@
 - [ ] Разметка ячеек сетки соседей (внутри / у поверхности / снаружи) с запасом на движение; `SpatialGrid` по `Space`
 - [ ] Встраивание в ClassicMD: стадии шага, узлы и параметры через `executeOn(commands)`
 - [x] Раскладка модели и бэкендов: `Boundaries` (модель: Space, Shape/Program, материалы, законы, `ParticleLayout`) и `Boundaries.cpu` (`BoundariesCpu/`, namespace `Boundaries::Cpu`: Geometry, Walls, `wrapPositions`, проверки); `Walls` на `StdData::SoA` + `ParticleLayout` (имена колонок, строки `[0, rows)`); `SoA::span<T>(name)`
-- [ ] `Boundaries.wgpu` (`wgpu/`): стековая машина и законы в WGSL, compute-проход по `GpuSoA` + `ParticleLayout`; тест эквивалентности CPU и WGPU для каждой операции и закона; бенчи CPU против WGPU
+- [x] `Boundaries.wgpu` (`BoundariesWgpu/`, `Boundaries::Wgpu`): WGSL-стековая машина из C++ (коды операций и законов — из моделей), `GpuGeometry`, `GpuWalls` (стадии записывают проходы в чужой `CommandList`, без submit), `GpuDistances`; ошибки шейдера — исключение при создании; тест эквивалентности CPU и WGPU (расстояния каждого примитива и операции, стенки, лимит глубины); бенчи CPU против WGPU
+- [x] Аналитические нормали в стековой машине (CPU и WGSL): градиент идёт со значением через операции, одно вычисление вместо четырёх; проверка материалов — общая `checkMaterials` в модели
 - [ ] Отрисовка геометрии в Graphics: трассировка лучей по WGSL-машине `Boundaries.wgpu`, `frag_depth`; сначала непрозрачная, затем полупрозрачная; копия программы командой очереди симуляции
 
 ### Бэкенды вычислений

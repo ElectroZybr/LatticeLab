@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include <Wgpu/Device.hpp>
 #include <Wgpu/Resources.hpp>
 
@@ -9,7 +11,9 @@
 class RenderLayout final {
 public:
     RenderLayout(Wgpu::Device& device, Wgpu::TextureFormat colorFormat,
-                 Wgpu::TextureFormat depthFormat = Wgpu::TextureFormat::Depth32Float);
+                 Wgpu::TextureFormat depthFormat = Wgpu::TextureFormat::Depth32Float)
+        : device_(device), colorFormat_(colorFormat), depthFormat_(depthFormat),
+          camera_(device, CameraEntries, "camera") {}
 
     Wgpu::Device& device() const noexcept { return device_; }
     Wgpu::TextureFormat colorFormat() const noexcept { return colorFormat_; }
@@ -18,6 +22,8 @@ public:
     Wgpu::BindingLayout& camera() noexcept { return camera_; }
 
 private:
+    static constexpr std::array<Wgpu::LayoutEntry, 1> CameraEntries{{{.binding = 0, .type = Wgpu::BindingType::Uniform}}};
+
     Wgpu::Device& device_;
     Wgpu::TextureFormat colorFormat_;
     Wgpu::TextureFormat depthFormat_;

@@ -15,15 +15,9 @@ namespace {
 
 const std::vector<size_t> Sizes = {1'000, 10'000, 100'000, 1'000'000, 10'000'000};
 
-const char* doubleShader = R"(
-@group(0) @binding(0) var<storage, read_write> data : array<f32>;
-@compute @workgroup_size(256)
-fn main(@builtin(global_invocation_id) id : vec3<u32>) {
-    if (id.x < arrayLength(&data)) {
-        data[id.x] = data[id.x] * 1.0001 + 1.0;
-    }
-}
-)";
+constexpr unsigned char DoubleShader[] = {
+#include "double.wgsl.h"
+};
 
 /// One device for the whole run (creating it costs far more than any measured step).
 Wgpu::Device& device() {
@@ -47,7 +41,7 @@ struct GpuValues : Lattice::Fixture {
           layout(device(), std::array<Wgpu::LayoutEntry, 1>{{{.binding = 0, .type = Wgpu::BindingType::Storage,
               .visibility = Wgpu::ShaderStage::Compute}}}, "bench/data"),
           set(device(), layout, std::array{Wgpu::Binding{.binding = 0, .buffer = &data}}),
-          shader(device(), {.source = doubleShader, .label = "bench/double"}),
+          shader(device(), {.source = reinterpret_cast<const char*>(DoubleShader), .label = "bench/double"}),
           pipeline(device(), shader, {.layouts = {&layout}, .label = "bench/double"}) {
         device().writeBuffer(data, 0, std::as_bytes(std::span(host)));
         device().wait();
