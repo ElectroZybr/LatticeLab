@@ -68,47 +68,39 @@ Here, you can watch complex behavior emerge from simple interaction rules:
 
 ## Documentation
 
-- [English documentation entry](Docs/en/Main.md)
-- [Russian documentation entry](Docs/ru/Main.md)
+Documentation is in Russian for now: [docs/ru/README.md](docs/ru/README.md).
 
-If you want to start with project internals, the best first articles are:
-
-- [Architecture](Docs/en/articles/Architecture.md)
-- [Build Guide](Docs/en/articles/Build.md)
-- [LATTICE Engine](Docs/en/articles/Lattice.md)
-- [Rendering](Docs/en/articles/Rendering.md)
+- [Architecture](docs/ru/articles/Architecture.md) — how the project is built on the Lattice runtime
+- [Build and run](docs/ru/Build.md)
+- [Development rules](docs/ru/Rules.md) and [antipatterns](docs/ru/Antipatterns.md)
+- [Plans](docs/ru/plans/README.md)
 
 ---
 
 ## Build
 
-The project uses `CMakePresets`.
-
-Typical local build:
-
-```bash
-cmake --preset debug
-cmake --build --preset debug
-```
-
-Release build:
+The project uses [xmake](https://xmake.io) and a C++23 compiler. The Lattice runtime is expected next to
+this repository (`../Lattice`, see the `lattice_source` option); third-party dependencies are installed by xmake.
 
 ```bash
-cmake --preset release
-cmake --build --preset release
+xmake f -y
+xmake build -y
+./LatticeLab
 ```
+
+What starts is configured in `lattice.toml`. Details: [Build.md](docs/ru/Build.md).
 
 ---
 
 ## Repository Structure
 
-- `App/` - application layer, UI, viewport, input, and integration code
-- `Lattice/` - simulation engine, physical model, and core data structures
-- `Rendering/` - rendering backend, GPU pipelines, camera, and draw logic
-- `Mods/Base/scenes/` - built-in base scenes shipped with the base mod
-- `Docs/` - project documentation
-- `assets/` - runtime assets
-- `User/` - local user data such as saved scenes, not tracked in git
+- `packages/` - Lattice packages: each composes its own branch of the runtime tree (`compose.cpp`)
+- `libs/` - plain libraries: models, algorithms and their CPU/GPU backends, no runtime
+- `docs/` - documentation
+- `config/` - runtime defaults
+- `user/` - local user data such as saved configuration, not tracked in git
+- `assets/` - resources
+- `app/`, `legacy/` - the old application, being moved into packages
 
 ---
 
@@ -117,6 +109,3 @@ cmake --build --preset release
 #### [Official site](https://latticelab.dev)
 #### [YouTube channel](https://www.youtube.com/@ElectroChajnik) (Russian)
 #### [Support the project!](https://latticelab.dev/donate.html)
-
-Сериализация частичной runtime-конфигурации и подключение внешнего Lattice:
-[Serialization](Packages/Serialization/README.md).
